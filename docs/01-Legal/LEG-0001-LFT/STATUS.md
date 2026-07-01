@@ -1,70 +1,74 @@
-# STATUS.md
-
 ---
-
 id: LEG-0001-STATUS
-title: Estado de la Investigación Jurídica
+title: Estado de la investigación jurídica
 project: Jornada 360
 version: 1.0.0
-status: Active
+status: Closed
 owner: Product Architecture
-updated: 2026-06-29
--------------------
-
-# Estado General
-
-**Proyecto:** Jornada 360
-
-**Investigación:** Ley Federal del Trabajo
-
-**Estado:** 🟡 En progreso
-
-## Objetivo
-
-Dar seguimiento al avance de la investigación jurídica y conocer en todo momento qué temas han sido investigados, cuáles están en revisión y cuáles han sido aprobados.
-
+created: 2026-06-29
+updated: 2026-06-30
+tags:
+  - legal
+  - estado
+  - lft
 ---
 
-# Progreso General
+# Estado de la investigación jurídica
 
-| Capítulo                      | Estado | Prioridad | Dependencias |
-| ----------------------------- | :----: | :-------: | ------------ |
-| README                        |    ✅   |    Alta   | Ninguna      |
-| 01 - Jornada Laboral          |    ⏳   |  Crítica  | LFT          |
-| 02 - Tipos de Jornada         |    ⏳   |  Crítica  | 01           |
-| 03 - Horas Extra              |    ⏳   |  Crítica  | 01           |
-| 04 - Descansos                |    ⏳   |    Alta   | 01           |
-| 05 - Registro Electrónico     |    ⏳   |  Crítica  | Reforma 2026 |
-| 06 - Teletrabajo              |    ⏳   |    Alta   | LFT          |
-| 07 - Inspecciones y Sanciones |    ⏳   |    Alta   | STPS         |
-| 08 - Reglas Derivadas         |    ⏳   |  Crítica  | Todos        |
-| 09 - Matriz de Trazabilidad   |    ⏳   |  Crítica  | Todos        |
+## Estado general
 
----
+**Proyecto:** Jornada 360  
+**Investigación:** Ley Federal del Trabajo  
+**Versión:** 1.0.0  
+**Estado:** Cerrada con pendientes normativos identificados  
+**Fecha de corte:** 2026-06-30
 
-# Leyenda
+## Progreso general
 
-* ⏳ Pendiente
-* 🟡 En investigación
-* 🔵 En revisión
-* ✅ Aprobado
-* 🔴 Requiere actualización
+| Capítulo | Estado | Prioridad | Dependencias |
+|---|---|---|---|
+| README | Aprobado | Alta | Ninguna |
+| 01 - Jornada Laboral | Aprobado | Crítica | LFT |
+| 02 - Tipos de Jornada | Aprobado | Crítica | 01 |
+| 03 - Horas Extra | Aprobado | Crítica | 01, 02 |
+| 04 - Descansos | Aprobado | Alta | 01 |
+| 05 - Registro Electrónico | Aprobado | Crítica | LFT, reforma 2026, privacidad |
+| 06 - Teletrabajo | Aprobado | Alta | LFT, NOM-037, privacidad |
+| 07 - Inspecciones y Sanciones | Aprobado | Alta | LFT, RGITAS, STPS |
+| 08 - Reglas Derivadas | Aprobado | Crítica | 01 a 07 |
+| 09 - Matriz de Trazabilidad | Aprobado | Crítica | 01 a 08 |
+| SOURCES | Aprobado | Alta | Fuentes oficiales |
+| CHANGELOG | Aprobado | Media | Control documental |
 
----
+## Indicadores
 
-# Indicadores
+| Indicador | Resultado |
+|---|---:|
+| Documentos principales completados | 9 / 9 |
+| Documentos de control actualizados | 3 / 3 |
+| Investigación jurídica | 100 % |
+| Reglas específicas identificadas | 132 |
+| Requisitos funcionales derivados | 129 |
+| Reglas maestras consolidadas | 80 |
+| Matriz de trazabilidad | 100 % |
 
-* Documentos completados: **1 / 10**
-* Investigación jurídica: **10 %**
-* Reglas de negocio derivadas: **0 %**
-* Matriz de trazabilidad: **0 %**
+## Pendientes abiertos
 
----
+| ID | Pendiente | Estado | Acción |
+|---|---|---|---|
+| PEND-001 | Disposiciones generales STPS del registro electrónico. | Abierto | Monitorear DOF y STPS. |
+| PEND-002 | Formato o canal oficial de entrega electrónica. | Abierto | Mantener exportaciones configurables. |
+| PEND-003 | Plazo específico de conservación del nuevo registro. | Abierto | Aplicar política conservadora y retención legal. |
+| PEND-004 | Reglas sectoriales o trabajos especiales. | Abierto | Analizar antes de activar módulos especializados. |
+| PEND-005 | Fórmulas monetarias completas de nómina. | Abierto | Documentar en especificación de nómina. |
 
-# Próximo entregable
+## Próximo paso recomendado
 
-**01-Jornada-Laboral.md**
+Trasladar las reglas aprobadas a:
 
-Objetivo:
-
-Analizar la definición jurídica de jornada laboral y convertirla en reglas de negocio para Jornada 360.
+- Product Bible.
+- Arquitectura.
+- Base de datos.
+- Reglas de negocio.
+- API.
+- Plan de pruebas.
