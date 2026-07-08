@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-02
 title: Tipos de jornada
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -21,7 +21,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir cómo debe representar Jornada 360 las jornadas **diurna, nocturna y mixta**, así como los límites diarios asociados y las reglas necesarias para clasificar jornadas que cruzan distintos periodos horarios.
+Definir cómo debe representar Vera Time las jornadas **diurna, nocturna y mixta**, así como los límites diarios asociados y las reglas necesarias para clasificar jornadas que cruzan distintos periodos horarios.
 
 > Este documento traduce los artículos 60 y 61 de la LFT a especificaciones de producto. Cuando exista ambigüedad en un caso concreto, el sistema deberá conservar los hechos y permitir revisión, en lugar de emitir una conclusión jurídica irreversible.
 
@@ -51,7 +51,7 @@ La duración diaria máxima es:
 
 Estos máximos diarios coexisten con el máximo semanal aplicable por año. El cumplimiento de uno no sustituye la validación del otro.
 
-## 3. Interpretación para Jornada 360
+## 3. Interpretación para Vera Time
 
 ### 3.1 La clasificación depende del tiempo dentro de cada franja
 
@@ -69,7 +69,7 @@ La palabra **candidata** se utiliza porque un registro incompleto, una pausa sin
 
 ### 3.2 Deben existir dos clasificaciones
 
-Jornada 360 debe distinguir:
+Vera Time debe distinguir:
 
 1. **Tipo programado:** el definido en el horario o turno asignado.
 2. **Tipo resultante:** el calculado con los intervalos realmente registrados.
@@ -100,7 +100,7 @@ El motor no debe asumir que toda diferencia entre entrada y salida es tiempo efe
 
 Una empresa puede llamar a un turno `vespertino`, `tercero` o `guardia B`. Esa etiqueta no determina su clasificación legal.
 
-Jornada 360 conservará:
+Vera Time conservará:
 
 - Nombre operativo del turno.
 - Tipo legal programado.
@@ -325,7 +325,7 @@ Sin definir todavía tablas físicas, el dominio requerirá:
 
 ## 11. Decisiones de producto resultantes
 
-1. Jornada 360 calculará el tipo legal; no dependerá únicamente de una selección manual.
+1. Vera Time calculará el tipo legal; no dependerá únicamente de una selección manual.
 2. El tipo programado y el resultante se conservarán por separado.
 3. La clasificación trabajará con minutos, no con horas redondeadas.
 4. Las jornadas incompletas no serán clasificadas mediante suposiciones.
@@ -359,3 +359,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
 - Diario Oficial de la Federación, **Decreto en materia de reducción de la jornada laboral**, publicado el 01-05-2026:  
   https://www.dof.gob.mx/nota_to_pdf.php?edicion=VES&fecha=01%2F05%2F2026
+
+

@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-05
 title: Registro electrónico de jornada
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -24,7 +24,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir los requisitos mínimos que Jornada 360 deberá cumplir para registrar electrónicamente la jornada laboral de cada persona trabajadora, conservar su integridad, permitir su consulta y proporcionarla a la autoridad cuando sea requerida.
+Definir los requisitos mínimos que Vera Time deberá cumplir para registrar electrónicamente la jornada laboral de cada persona trabajadora, conservar su integridad, permitir su consulta y proporcionarla a la autoridad cuando sea requerida.
 
 Este documento distingue entre:
 
@@ -54,7 +54,7 @@ El decreto señala que esas disposiciones generales entrarán en vigor el 1 de e
 
 Durante la revisión realizada para este documento no se localizaron todavía disposiciones generales definitivas publicadas por la STPS que detallen el formato técnico, los mecanismos de identificación, la conservación, la entrega o las excepciones.
 
-Por lo tanto, Jornada 360 debe:
+Por lo tanto, Vera Time debe:
 
 - Implementar desde ahora el núcleo legal confirmado.
 - Mantener configurables los aspectos que todavía no están regulados.
@@ -63,7 +63,7 @@ Por lo tanto, Jornada 360 debe:
 
 ## 3. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 132, fracción XXXIV | Obliga a registrar electrónicamente la jornada de cada persona, incluyendo inicio y finalización, y a proporcionarla a la autoridad cuando sea requerida. | Construir el registro electrónico individual como núcleo del producto. |
 | LFT, artículo 132, fracción XXXIV, segundo párrafo | La STPS deberá determinar el ámbito de aplicación y las excepciones. | Mantener parámetros configurables hasta que existan disposiciones generales definitivas. |
@@ -105,7 +105,7 @@ Cada jornada debe relacionarse de manera inequívoca con:
 
 La LFT exige que el registro incluya el horario de inicio y finalización.
 
-Jornada 360 también podrá registrar otros eventos necesarios para reconstruir la jornada, como:
+Vera Time también podrá registrar otros eventos necesarios para reconstruir la jornada, como:
 
 - Inicio y fin de descanso.
 - Inicio y fin de una interrupción.
@@ -141,7 +141,7 @@ El formato definitivo deberá adaptarse a las disposiciones que publique la STPS
 
 La ley señala que el contenido del registro electrónico hará prueba plena cuando se acredite que fue acordado entre la persona trabajadora y la empleadora.
 
-Jornada 360 deberá permitir conservar evidencia del acuerdo sobre el mecanismo de registro, por ejemplo:
+Vera Time deberá permitir conservar evidencia del acuerdo sobre el mecanismo de registro, por ejemplo:
 
 - Contrato individual.
 - Convenio.
@@ -183,7 +183,7 @@ Los siguientes puntos no deben cerrarse como requisitos legales definitivos hast
 
 ## 6. Modelo conceptual del registro
 
-Jornada 360 deberá separar las siguientes entidades conceptuales:
+Vera Time deberá separar las siguientes entidades conceptuales:
 
 | Concepto | Descripción | Debe conservar |
 | --- | --- | --- |
@@ -233,7 +233,7 @@ Esos datos solo podrán habilitarse cuando exista una finalidad válida, base ju
 
 ## 8. Métodos de registro permitidos por el producto
 
-Jornada 360 podrá recibir eventos mediante:
+Vera Time podrá recibir eventos mediante:
 
 - Portal web.
 - Aplicación móvil.
@@ -327,7 +327,7 @@ La empresa podrá proponer una corrección, pero deberá:
 
 ### 11.3 Desacuerdo
 
-Si las partes no coinciden, Jornada 360 no debe escoger silenciosamente una versión.
+Si las partes no coinciden, Vera Time no debe escoger silenciosamente una versión.
 
 Deberá conservar:
 
@@ -383,7 +383,7 @@ Se conservará:
 
 El registro de jornada contiene datos personales laborales.
 
-Jornada 360 deberá aplicar:
+Vera Time deberá aplicar:
 
 - Finalidad definida.
 - Proporcionalidad.
@@ -397,7 +397,7 @@ Jornada 360 deberá aplicar:
 - Separación entre empresas.
 - Contratos que definan las responsabilidades de la empresa usuaria y del proveedor SaaS.
 
-La empresa usuaria normalmente determinará las finalidades del tratamiento. Jornada 360 deberá documentar contractualmente su función como proveedor y encargado del tratamiento cuando corresponda.
+La empresa usuaria normalmente determinará las finalidades del tratamiento. Vera Time deberá documentar contractualmente su función como proveedor y encargado del tratamiento cuando corresponda.
 
 ## 14. Conservación
 
@@ -590,7 +590,7 @@ Los mecanismos de registro serán proporcionales y recopilarán únicamente los 
 
 ## 20. Decisiones de producto resultantes
 
-1. Jornada 360 será independiente del dispositivo de captura.
+1. Vera Time será independiente del dispositivo de captura.
 2. El núcleo registrará eventos, no solamente totales diarios.
 3. Inicio y finalización serán el mínimo obligatorio confirmado.
 4. Las correcciones serán versionadas y no destructivas.
@@ -633,3 +633,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/ref/lft/LFT_ref52_01may26.pdf
 - `SRC-004`: Cámara de Diputados, **Ley Federal de Protección de Datos Personales en Posesión de los Particulares**, última reforma DOF 14-11-2025.  
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf
+
+

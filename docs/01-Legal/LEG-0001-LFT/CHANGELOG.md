@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-CHANGELOG
 title: Historial de cambios
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Active
 owner: Product Architecture
@@ -57,3 +57,5 @@ Toda modificación futura deberá registrar:
 - Impacto sobre otros documentos.
 
 No se eliminará información histórica; cualquier ajuste deberá documentarse como una nueva versión.
+
+

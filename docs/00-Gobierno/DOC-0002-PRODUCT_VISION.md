@@ -1,8 +1,8 @@
----
+﻿---
 
 id: DOC-0002
 title: Product Vision
-project: Jornada 360
+project: Vera Time
 version: 0.1.0
 status: Draft
 owner: Product Architecture
@@ -18,11 +18,11 @@ tags:
 
 # DOC-0002 - Product Vision
 
-# Jornada 360
+# Vera Time
 
 ## 1. Visión
 
-Jornada 360 será la plataforma SaaS de referencia en México para el cumplimiento de la jornada laboral, ayudando a empresas de cualquier tamaño a registrar, administrar, demostrar y auditar el cumplimiento de sus obligaciones laborales mediante tecnología flexible, segura y preparada para evolucionar junto con la legislación.
+Vera Time será la plataforma SaaS de referencia en México para el cumplimiento de la jornada laboral, ayudando a empresas de cualquier tamaño a registrar, administrar, demostrar y auditar el cumplimiento de sus obligaciones laborales mediante tecnología flexible, segura y preparada para evolucionar junto con la legislación.
 
 No buscamos desarrollar un reloj checador.
 
@@ -38,7 +38,7 @@ Ayudar a las empresas mexicanas a cumplir con la legislación laboral mediante u
 
 # 3. Nuestra propuesta de valor
 
-Jornada 360 permitirá que una empresa pueda:
+Vera Time permitirá que una empresa pueda:
 
 * Registrar jornadas laborales.
 * Configurar políticas de operación.
@@ -56,7 +56,7 @@ Las empresas enfrentan nuevos retos derivados de la evolución de la legislació
 
 Las soluciones tradicionales de asistencia normalmente registran entradas y salidas, pero pocas ayudan realmente a demostrar cumplimiento.
 
-Jornada 360 busca cerrar esa brecha.
+Vera Time busca cerrar esa brecha.
 
 ---
 
@@ -80,7 +80,7 @@ Especialistas laborales y de recursos humanos.
 
 ---
 
-# 6. Qué hace diferente a Jornada 360
+# 6. Qué hace diferente a Vera Time
 
 * Arquitectura multi-tenant.
 * Configuración por empresa.
@@ -93,7 +93,7 @@ Especialistas laborales y de recursos humanos.
 
 ---
 
-# 7. Qué NO será Jornada 360
+# 7. Qué NO será Vera Time
 
 No será:
 
@@ -134,7 +134,7 @@ Los ingresos provendrán de planes de suscripción, integraciones y funcionalida
 
 # 10. Visión a cinco años
 
-En cinco años Jornada 360 deberá ser reconocida como una plataforma nacional de cumplimiento laboral, capaz de integrarse con múltiples proveedores de nómina y recursos humanos, ofrecer evidencia digital robusta y adaptarse rápidamente a cambios regulatorios.
+En cinco años Vera Time deberá ser reconocida como una plataforma nacional de cumplimiento laboral, capaz de integrarse con múltiples proveedores de nómina y recursos humanos, ofrecer evidencia digital robusta y adaptarse rápidamente a cambios regulatorios.
 
 ---
 
@@ -153,7 +153,7 @@ En cinco años Jornada 360 deberá ser reconocida como una plataforma nacional d
 
 # 12. Definición de éxito
 
-Jornada 360 será exitoso cuando:
+Vera Time será exitoso cuando:
 
 * Sea utilizado por empresas de distintos sectores.
 * Permita demostrar cumplimiento laboral de forma sencilla.
@@ -169,3 +169,5 @@ Jornada 360 será exitoso cuando:
 **Estado:** Draft.
 
 Este documento deberá aprobarse antes de iniciar la Product Bible y la investigación legal detallada.
+
+

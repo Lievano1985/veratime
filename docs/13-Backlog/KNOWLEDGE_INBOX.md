@@ -1,8 +1,8 @@
----
+﻿---
 
 id: BACKLOG-KNOWLEDGE-INBOX
 title: Knowledge Inbox
-project: Jornada 360
+project: Vera Time
 version: 0.1.0
 status: Draft
 owner: Product Architecture
@@ -19,7 +19,7 @@ tags:
 
 # KNOWLEDGE INBOX
 
-* Este documento funciona como la bandeja de entrada de conocimiento de Jornada 360.
+* Este documento funciona como la bandeja de entrada de conocimiento de Vera Time.
 
 * Aquí se registran ideas, preguntas, riesgos, principios y oportunidades detectadas durante el diseño del producto.
 
@@ -49,7 +49,7 @@ La plataforma protege a la empresa y al trabajador.
 
 **Descripción:**
 
-Jornada 360 no tiene como finalidad vigilar o sancionar a las empresas.
+Vera Time no tiene como finalidad vigilar o sancionar a las empresas.
 
 Su propósito es ayudar a las organizaciones a demostrar cumplimiento, reducir riesgos legales y mantener evidencia confiable de sus procesos.
 
@@ -72,7 +72,7 @@ Arquitectura basada en conectores.
 
 **Descripción:**
 
-Las integraciones con sistemas externos deberán desarrollarse mediante conectores independientes para evitar acoplamiento con el núcleo de Jornada 360.
+Las integraciones con sistemas externos deberán desarrollarse mediante conectores independientes para evitar acoplamiento con el núcleo de Vera Time.
 
 La primera integración prevista será ClickBalance.
 
@@ -124,7 +124,7 @@ Modelo híbrido de trabajadores.
 
 **Descripción:**
 
-Jornada 360 deberá permitir administrar trabajadores propios dentro de la plataforma y, al mismo tiempo, sincronizar trabajadores provenientes de sistemas externos mediante conectores.
+Vera Time deberá permitir administrar trabajadores propios dentro de la plataforma y, al mismo tiempo, sincronizar trabajadores provenientes de sistemas externos mediante conectores.
 
 La empresa decidirá cuál estrategia utilizar.
 
@@ -206,7 +206,7 @@ Motor de Políticas Empresariales.
 
 **Descripción:**
 
-Jornada 360 no implementará reglas fijas de registro.
+Vera Time no implementará reglas fijas de registro.
 
 Cada empresa podrá configurar sus propias políticas de operación dentro de los límites permitidos por la legislación.
 
@@ -244,7 +244,7 @@ Estas políticas determinarán:
 
 **Descripción:**
 
-Determinar exactamente qué datos son obligatorios por ley, cuáles dependerán de lineamientos de la STPS y cuáles serán funcionalidades opcionales de Jornada 360.
+Determinar exactamente qué datos son obligatorios por ley, cuáles dependerán de lineamientos de la STPS y cuáles serán funcionalidades opcionales de Vera Time.
 
 **Destino:**
 
@@ -322,3 +322,5 @@ En cada sesión de trabajo, los registros de este documento deberán revisarse p
 * Se transforman en una tarea del backlog.
 * Se descartan.
 * Permanecen en análisis.
+
+

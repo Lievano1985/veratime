@@ -1,7 +1,7 @@
----
+﻿---
 id: DOC-0003
 title: Propuesta de incorporación de socio inversionista
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft for Negotiation
 owner: Founder
@@ -18,13 +18,13 @@ tags:
 
 ## 1. Propósito
 
-Presentar una propuesta clara para incorporar a un socio que aporte capital y, cuando sea posible, experiencia o relaciones comerciales para continuar el desarrollo de Jornada 360 sin que todo el costo y riesgo recaiga en una sola persona.
+Presentar una propuesta clara para incorporar a un socio que aporte capital y, cuando sea posible, experiencia o relaciones comerciales para continuar el desarrollo de Vera Time sin que todo el costo y riesgo recaiga en una sola persona.
 
 Este documento sirve como base de conversación. Los montos, porcentajes y condiciones finales deberán acordarse por escrito y formalizarse con asesoría legal, fiscal y contable.
 
 ## 2. Resumen ejecutivo
 
-Jornada 360 es una plataforma SaaS multi-tenant orientada a empresas, despachos y corporativos que necesitan administrar el Registro Electrónico de la Jornada Laboral, controlar horarios, incidencias, descansos y tiempo extraordinario, y conservar evidencia digital confiable para auditorías e inspecciones.
+Vera Time es una plataforma SaaS multi-tenant orientada a empresas, despachos y corporativos que necesitan administrar el Registro Electrónico de la Jornada Laboral, controlar horarios, incidencias, descansos y tiempo extraordinario, y conservar evidencia digital confiable para auditorías e inspecciones.
 
 El proyecto ya cuenta con una base documental y técnica inicial:
 
@@ -55,7 +55,7 @@ Esto genera problemas como:
 
 ## 4. Solución propuesta
 
-Jornada 360 concentrará en una sola plataforma:
+Vera Time concentrará en una sola plataforma:
 
 - Administración multiempresa y multi-tenant.
 - Empresas, centros de trabajo y personas trabajadoras.
@@ -78,7 +78,7 @@ Jornada 360 concentrará en una sola plataforma:
 5. **Arquitectura multi-tenant:** permitirá atender empresas, despachos y corporativos desde una misma plataforma.
 6. **Lenguaje neutral:** informará alertas y riesgos sin emitir automáticamente sentencias jurídicas.
 7. **Preparación para integraciones:** el núcleo no dependerá de un solo proveedor de nómina o checador.
-8. **Arquitectura integrable:** estará preparada para integraciones mediante API, permitiendo conectar Jornada 360 con sistemas de nómina, relojes checadores, ERPs o plataformas internas conforme exista documentación técnica, credenciales y viabilidad operativa.
+8. **Arquitectura integrable:** estará preparada para integraciones mediante API, permitiendo conectar Vera Time con sistemas de nómina, relojes checadores, ERPs o plataformas internas conforme exista documentación técnica, credenciales y viabilidad operativa.
 
 ## 6. Estado actual del proyecto
 
@@ -301,6 +301,8 @@ Se propone realizar una sesión formal para acordar:
 
 ## 18. Cierre
 
-Jornada 360 ha superado la etapa de idea informal: ya cuenta con visión, investigación, trazabilidad y base técnica. La incorporación de un socio permitirá convertir ese trabajo en un producto funcional, validarlo con empresas y preparar una salida comercial sin que el esfuerzo financiero y operativo recaiga en una sola persona.
+Vera Time ha superado la etapa de idea informal: ya cuenta con visión, investigación, trazabilidad y base técnica. La incorporación de un socio permitirá convertir ese trabajo en un producto funcional, validarlo con empresas y preparar una salida comercial sin que el esfuerzo financiero y operativo recaiga en una sola persona.
 
 La propuesta busca construir una relación equilibrada: el fundador aporta el proyecto, trabajo previo, dirección y ejecución; el socio aporta capital y apoyo estratégico. Ambas partes comparten riesgos, decisiones relevantes y el valor futuro que pueda generar la plataforma.
+
+

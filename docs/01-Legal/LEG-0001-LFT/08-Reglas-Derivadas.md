@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-08
 title: Reglas derivadas de la investigación LFT
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -26,7 +26,7 @@ tags:
 
 ## 1. Objetivo
 
-Consolidar las reglas maestras que deben gobernar Jornada 360 a partir de la investigación contenida en los documentos `01` a `07`.
+Consolidar las reglas maestras que deben gobernar Vera Time a partir de la investigación contenida en los documentos `01` a `07`.
 
 Este archivo no repite toda la investigación jurídica. Su función es:
 
@@ -231,7 +231,7 @@ La falta de autorización no elimina el tiempo realmente trabajado.
 
 ### RG-040 — Nómina recibe conceptos
 
-Jornada 360 entregará minutos, bandas y multiplicadores; el sistema de nómina determinará el importe definitivo.
+Vera Time entregará minutos, bandas y multiplicadores; el sistema de nómina determinará el importe definitivo.
 
 ## 9. Descansos y calendario
 
@@ -515,3 +515,5 @@ Este documento se considerará aprobado cuando:
 - `06-Teletrabajo.md`
 - `07-Inspecciones-y-Sanciones.md`
 - `SOURCES.md`
+
+

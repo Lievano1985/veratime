@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-07
 title: Inspecciones y sanciones
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -27,11 +27,11 @@ tags:
 
 ## 1. Objetivo
 
-Definir cómo debe apoyar Jornada 360 la atención de inspecciones laborales relacionadas con jornada, asistencia, descansos, horas extraordinarias, teletrabajo y registro electrónico.
+Definir cómo debe apoyar Vera Time la atención de inspecciones laborales relacionadas con jornada, asistencia, descansos, horas extraordinarias, teletrabajo y registro electrónico.
 
 El sistema deberá permitir reunir, revisar, entregar y conservar evidencia sin sustituir a la autoridad, al representante legal ni al equipo responsable de cumplimiento.
 
-> Jornada 360 no determinará automáticamente que una empresa cometió una infracción ni calculará una multa definitiva. Identificará riesgos, conservará evidencia y administrará el expediente.
+> Vera Time no determinará automáticamente que una empresa cometió una infracción ni calculará una multa definitiva. Identificará riesgos, conservará evidencia y administrará el expediente.
 
 ## 2. Alcance
 
@@ -44,7 +44,7 @@ Incluye:
 - Preparación y entrega de información.
 - Actas, observaciones, pruebas y requerimientos.
 - Conservación de controles de asistencia.
-- Sanciones directamente relacionadas con el alcance de Jornada 360.
+- Sanciones directamente relacionadas con el alcance de Vera Time.
 - Trazabilidad del expediente.
 
 No incluye:
@@ -57,7 +57,7 @@ No incluye:
 
 ## 3. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículos 540 a 543 | Definen funciones, facultades, obligaciones de la inspección y valor de los hechos asentados en actas. | Modelar actas, hechos observados y evidencia relacionada. |
 | LFT, artículo 541, fracción IV | El inspector puede exigir libros, registros y documentos exigidos por las normas laborales. | Preparar paquetes documentales por alcance y materia. |
@@ -82,7 +82,7 @@ La Inspección del Trabajo puede:
 - Hacer constar incumplimientos en actas.
 - Dar vista a otras autoridades cuando corresponda.
 
-Los hechos certificados por los inspectores en el ejercicio de sus funciones se tienen por ciertos mientras no se demuestre lo contrario. Por ello, Jornada 360 deberá permitir relacionar cada observación con la evidencia que la confirma, aclara o controvierte.
+Los hechos certificados por los inspectores en el ejercicio de sus funciones se tienen por ciertos mientras no se demuestre lo contrario. Por ello, Vera Time deberá permitir relacionar cada observación con la evidencia que la confirma, aclara o controvierte.
 
 ## 5. Formas de inspección
 
@@ -138,7 +138,7 @@ Antes de entregar información, la empresa deberá poder registrar y verificar:
 - Persona que atenderá.
 - Documentos solicitados.
 
-Jornada 360 podrá enlazar al mecanismo oficial de validación, pero no deberá afirmar que verificó una orden cuando la consulta oficial no se haya completado.
+Vera Time podrá enlazar al mecanismo oficial de validación, pero no deberá afirmar que verificó una orden cuando la consulta oficial no se haya completado.
 
 ## 8. Derechos y obligaciones durante la inspección
 
@@ -183,7 +183,7 @@ Dependiendo del alcance, una inspección puede requerir:
 - Políticas y evidencia de teletrabajo.
 - Inventarios, listas y capacitación de NOM-037, cuando aplique.
 
-Jornada 360 deberá generar la evidencia desde sus fuentes originales y no desde tablas editadas manualmente para la inspección.
+Vera Time deberá generar la evidencia desde sus fuentes originales y no desde tablas editadas manualmente para la inspección.
 
 ## 10. Conservación documental
 
@@ -193,7 +193,7 @@ El artículo 804 de la LFT establece, para los documentos ahí señalados:
 - Nóminas, recibos, controles de asistencia y comprobantes de determinadas prestaciones: durante el último año y un año después de que termine la relación laboral.
 - Otros documentos: conforme a la ley que los rija.
 
-La nueva obligación de registro electrónico puede recibir reglas específicas adicionales mediante disposiciones de la STPS. Por ello, Jornada 360 deberá:
+La nueva obligación de registro electrónico puede recibir reglas específicas adicionales mediante disposiciones de la STPS. Por ello, Vera Time deberá:
 
 - Administrar políticas de conservación versionadas.
 - Aplicar el plazo más amplio que corresponda entre obligaciones configuradas.
@@ -280,7 +280,7 @@ El sistema deberá impedir que una exportación mezcle accidentalmente datos de 
 
 ### 13.1 Acta
 
-El acta registra cumplimientos e incumplimientos detectados. Jornada 360 deberá permitir capturar:
+El acta registra cumplimientos e incumplimientos detectados. Vera Time deberá permitir capturar:
 
 - Hecho asentado.
 - Fundamento citado.
@@ -318,7 +318,7 @@ La corrección de un proceso no deberá alterar retroactivamente la evidencia hi
 
 Cuando las actas y pruebas no desvirtúan un posible incumplimiento, la autoridad puede iniciar el procedimiento administrativo sancionador.
 
-Jornada 360 deberá registrar, sin automatizar la estrategia jurídica:
+Vera Time deberá registrar, sin automatizar la estrategia jurídica:
 
 - Emplazamiento.
 - Hechos imputados.
@@ -336,7 +336,7 @@ El reglamento establece que el término para contestar el emplazamiento no puede
 
 ## 15. Sanciones relevantes para el producto
 
-| Supuesto | Fundamento | Rango legal | Tratamiento en Jornada 360 |
+| Supuesto | Fundamento | Rango legal | Tratamiento en Vera Time |
 | --- | --- | ---: | --- |
 | Incumplimiento de duración diaria del artículo 61 o descanso semanal del artículo 69 | LFT 994, fracción I | 50 a 250 UMA | Mostrar como riesgo vinculado a jornada o descanso. |
 | Incumplimiento del registro electrónico por la persona empleadora obligada | LFT 994, fracción IV Bis | 250 a 5000 UMA | Mostrar como riesgo vinculado al registro electrónico. |
@@ -423,7 +423,7 @@ Los valores de UMA se almacenarán por fecha de vigencia.
 
 ### IS-RN-016 — Sin determinación automática
 
-Una alerta de Jornada 360 no se convertirá automáticamente en infracción o sanción.
+Una alerta de Vera Time no se convertirá automáticamente en infracción o sanción.
 
 ### IS-RN-017 — Multiplicidad no calculada sin revisión
 
@@ -520,7 +520,7 @@ El cierre de una sanción no cerrará automáticamente las medidas correctivas p
 ## 21. Decisiones de producto resultantes
 
 1. La inspección será un expediente, no una simple exportación.
-2. Jornada 360 permitirá inspecciones presenciales, remotas y documentales.
+2. Vera Time permitirá inspecciones presenciales, remotas y documentales.
 3. Los plazos serán datos capturados y auditables.
 4. El paquete entregado será inmutable y versionado.
 5. Las sanciones se registrarán, pero no se resolverán automáticamente.
@@ -564,3 +564,5 @@ Este documento se considerará aprobado cuando:
   https://conocetuinspector.stps.gob.mx/Publico/ProcesoInspeccion.aspx
 - `SRC-010`: Secretaría del Trabajo y Previsión Social, **Lineamientos Operativos en Materia de Inspección Federal del Trabajo 2025**.  
   https://www.dof.gob.mx/2025/STPS/AvisoIFT.pdf
+
+

@@ -1,7 +1,7 @@
 ﻿---
 id: TEST-0001
 title: Estrategia de pruebas del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -16,14 +16,14 @@ tags:
   - api
   - motor-legal
   - multi-tenant
-  - jornada360
+  - veratime
 ---
 
 # TEST-0001 — Estrategia de pruebas del MVP
 
 ## 1. Objetivo
 
-Definir la estrategia mínima de pruebas para liberar el MVP de Jornada 360 con un nivel aceptable de confianza técnica, operativa y legal.
+Definir la estrategia mínima de pruebas para liberar el MVP de Vera Time con un nivel aceptable de confianza técnica, operativa y legal.
 
 El objetivo no es probar absolutamente todo, sino cubrir los riesgos críticos del producto:
 
@@ -59,7 +59,7 @@ docs/07-API/API-0001-ESPECIFICACION-API-MVP.md
 
 ## 3. Principio de calidad
 
-Jornada 360 no puede tratarse como una app administrativa común.
+Vera Time no puede tratarse como una app administrativa común.
 
 El sistema genera evidencia laboral, cálculos, alertas, reportes y confirmaciones que pueden usarse para operación, nómina, auditoría o defensa documental.
 
@@ -1281,4 +1281,5 @@ Ahí se definirá:
 - Variables de entorno.
 - AWS u otra nube como evolución posterior al MVP/piloto.
 - Checklist de despliegue.
+
 

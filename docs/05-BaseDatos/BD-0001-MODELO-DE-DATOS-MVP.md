@@ -1,7 +1,7 @@
 ﻿---
 id: BD-0001
 title: Modelo de datos del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -15,14 +15,14 @@ tags:
   - mvp
   - multi-tenant
   - api-first
-  - jornada360
+  - veratime
 ---
 
 # BD-0001 — Modelo de datos del MVP
 
 ## 1. Objetivo
 
-Definir el modelo de datos base para el MVP de Jornada 360.
+Definir el modelo de datos base para el MVP de Vera Time.
 
 Este documento aterriza en tablas, relaciones, estados, campos principales, índices y reglas de integridad las decisiones aprobadas en:
 
@@ -1926,4 +1926,5 @@ Ese documento definirá:
 - Reportes.
 - Importaciones.
 - Administración.
+
 

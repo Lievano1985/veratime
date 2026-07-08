@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-STATUS
 title: Estado de la investigación jurídica
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Closed
 owner: Product Architecture
@@ -17,7 +17,7 @@ tags:
 
 ## Estado general
 
-**Proyecto:** Jornada 360  
+**Proyecto:** Vera Time  
 **Investigación:** Ley Federal del Trabajo  
 **Versión:** 1.0.0  
 **Estado:** Cerrada con pendientes normativos identificados  
@@ -72,3 +72,5 @@ Trasladar las reglas aprobadas a:
 - Reglas de negocio.
 - API.
 - Plan de pruebas.
+
+

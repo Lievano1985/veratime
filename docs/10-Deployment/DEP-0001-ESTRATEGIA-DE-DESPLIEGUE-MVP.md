@@ -1,7 +1,7 @@
----
+﻿---
 id: DEP-0001
 title: Estrategia de despliegue del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -17,14 +17,14 @@ tags:
   - laravel
   - mvp
   - aws-futuro
-  - jornada360
+  - veratime
 ---
 
 # DEP-0001 — Estrategia de despliegue del MVP
 
 ## 1. Objetivo
 
-Definir la estrategia de despliegue del MVP de Jornada 360 considerando la infraestructura disponible actualmente:
+Definir la estrategia de despliegue del MVP de Vera Time considerando la infraestructura disponible actualmente:
 
 ```text
 GoDaddy cPanel
@@ -42,7 +42,7 @@ El objetivo es iniciar el desarrollo y pruebas del MVP sin elevar costos, manten
 
 ## 2. Decisión principal de despliegue
 
-Jornada 360 se desplegará por etapas.
+Vera Time se desplegará por etapas.
 
 ```text
 Fase 1 — Desarrollo / demo inicial:
@@ -144,7 +144,7 @@ Datos ficticios
 Ejemplo de dominio:
 
 ```text
-staging.jornada360.com
+staging.veratime.com
 ```
 
 ## 4.3 Producción inicial / MVP privado
@@ -210,7 +210,7 @@ Ejemplo conceptual:
 
 ```text
 /home/usuario/
-├── jornada360/
+├── veratime/
 │   ├── app/
 │   ├── bootstrap/
 │   ├── config/
@@ -233,7 +233,7 @@ Ejemplo conceptual:
 Configurar el dominio o subdominio para que su document root apunte a:
 
 ```text
-/home/usuario/jornada360/public
+/home/usuario/veratime/public
 ```
 
 ### Opción alternativa
@@ -362,11 +362,11 @@ No se sube a Git.
 ## 7.2 Variables mínimas
 
 ```env
-APP_NAME="Jornada 360"
+APP_NAME="Vera Time"
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://app.jornada360.com
+APP_URL=https://app.veratime.com
 
 LOG_CHANNEL=stack
 LOG_LEVEL=warning
@@ -390,7 +390,7 @@ FILESYSTEM_DISK=local
 ```env
 APP_ENV=staging
 APP_DEBUG=false
-APP_URL=https://staging.jornada360.com
+APP_URL=https://staging.veratime.com
 LOG_LEVEL=debug
 ```
 
@@ -523,7 +523,7 @@ Usar Laravel Scheduler.
 En cPanel se configurará una tarea cron para ejecutar:
 
 ```bash
-php /home/usuario/jornada360/artisan schedule:run >> /dev/null 2>&1
+php /home/usuario/veratime/artisan schedule:run >> /dev/null 2>&1
 ```
 
 La ruta exacta deberá ajustarse según el hosting.
@@ -1250,7 +1250,7 @@ php artisan view:cache
 ## 28.3 Scheduler
 
 ```bash
-php /home/usuario/jornada360/artisan schedule:run >> /dev/null 2>&1
+php /home/usuario/veratime/artisan schedule:run >> /dev/null 2>&1
 ```
 
 ## 28.4 Queue
@@ -1322,3 +1322,5 @@ docs/13-Backlog/BL-0001-BACKLOG-MVP-INICIAL.md
 ```
 
 Ese documento convertirá todo lo definido en épicas, módulos, historias y prioridades para iniciar desarrollo con Codex.
+
+

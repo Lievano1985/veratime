@@ -1,7 +1,7 @@
----
+﻿---
 id: REQ-0001
 title: Especificación de requisitos del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -12,14 +12,14 @@ tags:
   - mvp
   - funcionales
   - no-funcionales
-  - jornada360
+  - veratime
 ---
 
 # REQ-0001 — Especificación de requisitos del MVP
 
 ## 1. Objetivo
 
-Definir los requisitos funcionales y no funcionales del MVP de Jornada 360 que deberá estar listo para producción antes del 1 de enero de 2027.
+Definir los requisitos funcionales y no funcionales del MVP de Vera Time que deberá estar listo para producción antes del 1 de enero de 2027.
 
 Este documento convierte en especificaciones de producto:
 
@@ -37,7 +37,7 @@ No define todavía tablas físicas, endpoints, componentes de interfaz ni arquit
 
 ## 2. Alcance del MVP
 
-El MVP de Jornada 360 deberá concentrarse en entregar una plataforma operativa, vendible y legalmente útil antes del 1 de enero de 2027.
+El MVP de Vera Time deberá concentrarse en entregar una plataforma operativa, vendible y legalmente útil antes del 1 de enero de 2027.
 
 El alcance se divide en capacidades indispensables. Cada capacidad debe aportar valor directo al cumplimiento, a la operación diaria o a la evidencia documental.
 
@@ -62,7 +62,7 @@ El alcance se divide en capacidades indispensables. Cada capacidad debe aportar 
 - Facturación automatizada avanzada.
 - Marketplace de integraciones.
 
-**Valor:** permite operar Jornada 360 como SaaS real, atendiendo varias empresas sin crear una instalación separada para cada cliente.
+**Valor:** permite operar Vera Time como SaaS real, atendiendo varias empresas sin crear una instalación separada para cada cliente.
 
 **Criterio de validación:** una empresa no debe poder ver, modificar ni exportar información de otra empresa bajo ninguna condición.
 
@@ -635,7 +635,7 @@ Quedan fuera:
 | ACT-007 | Persona trabajadora | Registra eventos, consulta jornadas y manifiesta conformidad o inconformidad. |
 | ACT-008 | Auditor/Inspector autorizado | Recibe un expediente delimitado y previamente autorizado. |
 | ACT-009 | Integración externa | Envía o consulta información mediante API o importación. |
-| ACT-010 | Soporte Jornada 360 | Atiende incidencias técnicas con acceso restringido y auditado. |
+| ACT-010 | Soporte Vera Time | Atiende incidencias técnicas con acceso restringido y auditado. |
 
 ---
 
@@ -2007,3 +2007,5 @@ Ahí se definirán:
 - Seguridad.
 - Integraciones.
 - Despliegue.
+
+

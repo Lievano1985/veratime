@@ -1,7 +1,7 @@
 ﻿---
 id: ARQ-0001
 title: Arquitectura del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -14,14 +14,14 @@ tags:
   - livewire
   - multi-tenant
   - motor-legal
-  - jornada360
+  - veratime
 ---
 
 # ARQ-0001 — Arquitectura del MVP
 
 ## 1. Objetivo
 
-Definir la arquitectura técnica del MVP de Jornada 360 para construir una plataforma SaaS multi-tenant capaz de:
+Definir la arquitectura técnica del MVP de Vera Time para construir una plataforma SaaS multi-tenant capaz de:
 
 - Registrar electrónicamente la jornada laboral.
 - Calcular resultados con reglas legales versionadas.
@@ -37,7 +37,7 @@ Este documento no define todavía el modelo físico de base de datos, pantallas 
 
 ## 2. Decisión arquitectónica principal
 
-Jornada 360 se construirá como:
+Vera Time se construirá como:
 
 ```text
 Monolito modular Laravel
@@ -95,7 +95,7 @@ El dominio es complejo, pero el equipo y la fecha objetivo no justifican dividir
 
 ## 4.1 Domain-first con exposición API-first bidireccional
 
-Jornada 360 adoptará una arquitectura **domain-first** con exposición **API-first pragmática y bidireccional**.
+Vera Time adoptará una arquitectura **domain-first** con exposición **API-first pragmática y bidireccional**.
 
 La lógica principal del producto deberá vivir en acciones, servicios de aplicación y servicios de dominio reutilizables. Livewire, API, CSV, jobs e integraciones serán entradas al sistema, pero ninguna de esas entradas deberá contener la lógica principal de negocio de forma aislada.
 
@@ -1093,4 +1093,5 @@ Ese documento definirá:
 - Laravel Sanctum: https://laravel.com/docs/sanctum
 - Livewire Documentation: https://livewire.laravel.com/docs
 - Pest Documentation: https://pestphp.com/docs
+
 

@@ -1,7 +1,7 @@
 ﻿---
 id: UX-0001
 title: Mapa de pantallas del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -12,14 +12,14 @@ tags:
   - pantallas
   - mvp
   - livewire
-  - jornada360
+  - veratime
 ---
 
 # UX-0001 — Mapa de pantallas del MVP
 
 ## 1. Objetivo
 
-Definir el mapa de pantallas, flujos principales y estructura de navegación del MVP de Jornada 360.
+Definir el mapa de pantallas, flujos principales y estructura de navegación del MVP de Vera Time.
 
 Este documento convierte los requisitos, arquitectura y modelo de datos en una guía clara para diseñar las interfaces Livewire, el portal de la persona trabajadora, el modo kiosco y los módulos administrativos.
 
@@ -72,7 +72,7 @@ No define todavía diseño visual final, colores, componentes HTML ni código.
 | Nómina / Prenómina | Consultar y exportar horas y conceptos |
 | Jurídico / Cumplimiento | Consultar evidencia, reportes, auditoría y expedientes |
 | Persona trabajadora | Registrar jornada, consultar reporte y manifestar conformidad/no conformidad |
-| Soporte Jornada 360 | Revisar incidencias técnicas con acceso controlado |
+| Soporte Vera Time | Revisar incidencias técnicas con acceso controlado |
 
 ---
 
@@ -1837,4 +1837,5 @@ Ahí se definirá:
 - Errores estándar.
 - Ejemplos request/response.
 - Webhooks o integraciones futuras.
+
 

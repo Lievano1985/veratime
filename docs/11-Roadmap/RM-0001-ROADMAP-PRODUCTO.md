@@ -1,7 +1,7 @@
----
+﻿---
 id: RM-0001
 title: Roadmap de producto
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Founder
@@ -18,7 +18,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir las fases de producto necesarias para construir el MVP de Jornada 360 antes de enero de 2027, manteniendo el alcance alineado con la investigación legal, el modelo de negocio y el presupuesto preliminar.
+Definir las fases de producto necesarias para construir el MVP de Vera Time antes de enero de 2027, manteniendo el alcance alineado con la investigación legal, el modelo de negocio y el presupuesto preliminar.
 
 Este roadmap no cambia la fecha final del MVP. Organiza las capacidades dentro de las fases existentes para evitar que funciones relacionadas con alertas, conformidad digital y evidencia se traten como módulos nuevos.
 
@@ -203,3 +203,5 @@ Una función permanece dentro del MVP si cumple al menos una de estas condicione
 - Es necesaria para operar el piloto antes de enero de 2027.
 
 Toda función que no cumpla estos criterios deberá enviarse a una fase posterior.
+
+

@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-04
 title: Descansos
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -22,7 +22,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir cómo debe representar Jornada 360 los descansos relacionados con la jornada laboral y diferenciar:
+Definir cómo debe representar Vera Time los descansos relacionados con la jornada laboral y diferenciar:
 
 - Descanso durante una jornada continua.
 - Tiempo de comida o reposo computable.
@@ -47,7 +47,7 @@ Incluye:
 - Descanso semanal y operaciones continuas.
 - Prima dominical.
 - Descansos obligatorios.
-- Datos y alertas necesarias para Jornada 360.
+- Datos y alertas necesarias para Vera Time.
 
 No incluye:
 
@@ -59,7 +59,7 @@ No incluye:
 
 ## 3. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 63 | En una jornada continua debe concederse al menos media hora de descanso. | Detectar descanso mínimo programado y realmente disfrutado. |
 | LFT, artículo 64 | Si la persona no puede salir del lugar de trabajo durante reposo o comida, ese tiempo se computa como efectivo. | Registrar si la pausa es computable y por qué. |
@@ -94,7 +94,7 @@ Una misma jornada puede tener más de una clasificación. Por ejemplo, una perso
 
 Durante una jornada continua debe concederse un descanso de por lo menos treinta minutos.
 
-Jornada 360 deberá comparar:
+Vera Time deberá comparar:
 
 - Descanso programado.
 - Descanso realmente iniciado.
@@ -134,7 +134,7 @@ La empresa no debe poder marcar de forma masiva una pausa como no computable si 
 
 La LFT establece un descanso mínimo de media hora, pero no desarrolla en estos artículos una regla general para sustituirlo por varias pausas menores.
 
-Por seguridad, Jornada 360:
+Por seguridad, Vera Time:
 
 - Permitirá registrar varias pausas reales.
 - No asumirá automáticamente que dos pausas de quince minutos equivalen al descanso legal mínimo.
@@ -157,7 +157,7 @@ El sistema debe poder detectar:
 
 ### 6.2 Operaciones continuas
 
-En operaciones que no pueden detenerse, los días de descanso pueden acordarse. Jornada 360 deberá permitir calendarios rotativos sin asumir que el domingo siempre es el descanso semanal.
+En operaciones que no pueden detenerse, los días de descanso pueden acordarse. Vera Time deberá permitir calendarios rotativos sin asumir que el domingo siempre es el descanso semanal.
 
 ### 6.3 Domingo y descanso semanal no son sinónimos
 
@@ -174,7 +174,7 @@ El sistema conservará banderas independientes para cada supuesto.
 
 Quien labore en domingo tiene derecho a una prima adicional mínima del 25 % sobre el salario de los días ordinarios.
 
-Para Jornada 360:
+Para Vera Time:
 
 - La prima se identificará por tiempo trabajado en la fecha local de domingo.
 - La zona horaria del centro o asignación será obligatoria.
@@ -242,7 +242,7 @@ Cada entrada deberá tener:
 
 El día electoral no puede calcularse únicamente con una lista federal estática. Puede depender de leyes federales o locales.
 
-Jornada 360 necesitará:
+Vera Time necesitará:
 
 - Catálogo por jurisdicción.
 - Actualización documentada.
@@ -271,7 +271,7 @@ El sistema deberá mantener por separado otros conceptos potencialmente concurre
 - Horas extraordinarias.
 - Condiciones contractuales superiores.
 
-Jornada 360 no deberá fusionar esos conceptos en uno solo ni resolver automáticamente posibles acumulaciones que requieran validación de nómina o jurídica.
+Vera Time no deberá fusionar esos conceptos en uno solo ni resolver automáticamente posibles acumulaciones que requieran validación de nómina o jurídica.
 
 ## 11. Reglas de negocio derivadas
 
@@ -451,7 +451,7 @@ Sin definir todavía tablas físicas, el dominio requerirá:
 ## 16. Decisiones de producto resultantes
 
 1. Una pausa programada no se descontará automáticamente.
-2. Jornada 360 distinguirá descanso dentro del turno, descanso semanal y descanso obligatorio.
+2. Vera Time distinguirá descanso dentro del turno, descanso semanal y descanso obligatorio.
 3. El domingo será una dimensión independiente del descanso semanal.
 4. Los descansos obligatorios serán reglas versionadas por jurisdicción.
 5. Los conceptos concurrentes se conservarán separados para nómina.
@@ -488,3 +488,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
 - `SRC-002`: Diario Oficial de la Federación, **Decreto en materia de reducción de la jornada laboral**, publicado el 01-05-2026.  
   https://www.diputados.gob.mx/LeyesBiblio/ref/lft/LFT_ref52_01may26.pdf
+
+

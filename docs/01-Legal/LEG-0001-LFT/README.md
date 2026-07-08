@@ -1,15 +1,15 @@
-# LEG-0001-LFT - Investigación jurídica de la Ley Federal del Trabajo
+﻿# LEG-0001-LFT - Investigación jurídica de la Ley Federal del Trabajo
 
 ## Estado
 
 **Versión:** 1.0.0  
 **Estado:** Cerrada con pendientes normativos identificados  
 **Fecha de cierre:** 2026-06-30  
-**Proyecto:** Jornada 360
+**Proyecto:** Vera Time
 
 ## Objetivo
 
-Investigar la legislación aplicable al registro electrónico de la jornada laboral y convertir sus obligaciones en reglas de negocio, requisitos funcionales y criterios de trazabilidad para Jornada 360.
+Investigar la legislación aplicable al registro electrónico de la jornada laboral y convertir sus obligaciones en reglas de negocio, requisitos funcionales y criterios de trazabilidad para Vera Time.
 
 ## Alcance
 
@@ -66,3 +66,5 @@ La investigación queda cerrada para la versión 1.0.0, pero requiere seguimient
 - Plazo específico de conservación del nuevo registro.
 - Reglas sectoriales o de trabajos especiales fuera del alcance actual.
 - Especificaciones monetarias completas para nómina.
+
+

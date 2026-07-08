@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-06
 title: Teletrabajo
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -24,7 +24,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir cómo debe identificar y administrar Jornada 360 las relaciones laborales bajo la modalidad de teletrabajo, incluyendo:
+Definir cómo debe identificar y administrar Vera Time las relaciones laborales bajo la modalidad de teletrabajo, incluyendo:
 
 - Aplicabilidad.
 - Condiciones pactadas.
@@ -38,7 +38,7 @@ Definir cómo debe identificar y administrar Jornada 360 las relaciones laborale
 - Reversibilidad.
 - Evidencia documental.
 
-Este documento no convierte Jornada 360 en un sistema completo de seguridad y salud en el trabajo. Define la información y flujos que la plataforma deberá conservar o integrar para respaldar el cumplimiento.
+Este documento no convierte Vera Time en un sistema completo de seguridad y salud en el trabajo. Define la información y flujos que la plataforma deberá conservar o integrar para respaldar el cumplimiento.
 
 ## 2. Alcance normativo
 
@@ -61,7 +61,7 @@ No incluye:
 
 ## 3. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 330-A | Define teletrabajo y establece el umbral de más del 40 % del tiempo fuera del centro, en el domicilio de la persona o el elegido por ella. Excluye lo ocasional o esporádico. | Calcular porcentaje pactado y observado sin clasificar automáticamente todo trabajo remoto como teletrabajo. |
 | LFT, artículo 330-B | Exige condiciones por escrito y establece contenido mínimo del contrato. | Vincular modalidad, lugar, horario, equipo y costos con documentos versionados. |
@@ -95,7 +95,7 @@ El teletrabajo ocasional o esporádico no se considera incluido en esta modalida
 
 ### 4.2 El sistema debe calcular, no solo preguntar
 
-Jornada 360 deberá conservar:
+Vera Time deberá conservar:
 
 - Porcentaje pactado de teletrabajo.
 - Días o periodos remotos programados.
@@ -134,7 +134,7 @@ El contrato de teletrabajo debe contener, además de las condiciones generales:
 - Duración y distribución de horarios.
 - Otras estipulaciones acordadas.
 
-Jornada 360 deberá permitir vincular:
+Vera Time deberá permitir vincular:
 
 - Contrato o convenio.
 - Versión.
@@ -149,7 +149,7 @@ El sistema no sustituirá el documento jurídico con una simple configuración i
 
 ## 6. Obligaciones especiales de la empresa
 
-Jornada 360 deberá permitir registrar o integrar evidencia de:
+Vera Time deberá permitir registrar o integrar evidencia de:
 
 1. Equipos proporcionados.
 2. Instalación y mantenimiento.
@@ -167,7 +167,7 @@ Jornada 360 deberá permitir registrar o integrar evidencia de:
 14. Reversibilidad.
 15. Mecanismos de atención en casos de violencia familiar cuando corresponda.
 
-No todos estos procesos deben ejecutarse dentro de Jornada 360. La plataforma deberá definir cuáles administra directamente y cuáles acredita mediante integración o documento.
+No todos estos procesos deben ejecutarse dentro de Vera Time. La plataforma deberá definir cuáles administra directamente y cuáles acredita mediante integración o documento.
 
 ## 7. Obligaciones especiales de la persona trabajadora
 
@@ -249,7 +249,7 @@ La NOM permite:
 - Autoaplicación de la lista de verificación.
 - Comprobación a distancia mediante TIC o evidencias, cuando corresponda.
 
-Jornada 360 no deberá asumir que la empresa puede entrar al domicilio sin consentimiento.
+Vera Time no deberá asumir que la empresa puede entrar al domicilio sin consentimiento.
 
 ### 9.2 Lista inicial y periódica
 
@@ -323,7 +323,7 @@ Por cada concepto:
 - Estado de pago.
 - Integración con nómina o cuentas por pagar.
 
-Jornada 360 no determinará unilateralmente el monto legal correcto. Conservará la regla pactada y su ejecución.
+Vera Time no determinará unilateralmente el monto legal correcto. Conservará la regla pactada y su ejecución.
 
 ## 12. Jornada, pausas y desconexión
 
@@ -355,7 +355,7 @@ La desconexión implica que la persona pueda apartarse del trabajo y abstenerse 
 
 Un correo o mensaje fuera de horario no debe convertirse automáticamente en tiempo trabajado sin análisis.
 
-Jornada 360 deberá distinguir:
+Vera Time deberá distinguir:
 
 - Comunicación enviada.
 - Comunicación recibida.
@@ -453,7 +453,7 @@ La reversibilidad no deberá ejecutarse mediante modificación directa del regis
 
 La NOM exige capacitación al menos una vez al año sobre las condiciones de seguridad y salud que deben mantenerse en el lugar de trabajo.
 
-Jornada 360 deberá permitir registrar o integrar:
+Vera Time deberá permitir registrar o integrar:
 
 - Curso.
 - Versión.
@@ -500,7 +500,7 @@ El sistema no emitirá diagnósticos médicos.
 
 La NOM exige un listado actualizado con información de las personas bajo esta modalidad.
 
-Jornada 360 deberá permitir generar el listado con:
+Vera Time deberá permitir generar el listado con:
 
 - Nombre.
 - Datos requeridos por la NOM.
@@ -763,3 +763,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf
 - `SRC-005`: Secretaría del Trabajo y Previsión Social, **NOM-037-STPS-2023, Teletrabajo - Condiciones de seguridad y salud en el trabajo**, DOF 08-06-2023.  
   https://asinom.stps.gob.mx/upload/nom/51.pdf
+
+

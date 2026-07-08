@@ -1,7 +1,7 @@
----
+﻿---
 id: NEG-0001
-title: Modelo de negocio de Jornada 360
-project: Jornada 360
+title: Modelo de negocio de Vera Time
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Founder
@@ -15,11 +15,11 @@ tags:
   - mvp
 ---
 
-# NEG-0001 — Modelo de negocio de Jornada 360
+# NEG-0001 — Modelo de negocio de Vera Time
 
 ## 1. Objetivo
 
-Definir cómo Jornada 360 generará valor, quién pagará por la plataforma, quién la utilizará, qué se venderá durante el MVP y cómo podrá convertirse en un negocio SaaS sostenible.
+Definir cómo Vera Time generará valor, quién pagará por la plataforma, quién la utilizará, qué se venderá durante el MVP y cómo podrá convertirse en un negocio SaaS sostenible.
 
 Este documento transforma la investigación jurídica y el alcance aprobado del MVP en una propuesta comercial y operativa.
 
@@ -29,7 +29,11 @@ No define todavía pantallas, tablas, endpoints ni casos de uso detallados. Esos
 
 ## 2. Resumen ejecutivo
 
-Jornada 360 será una plataforma SaaS multi-tenant especializada en el **Registro Electrónico de la Jornada Laboral en México**.
+**Vera** será la marca principal para una futura familia de aplicaciones empresariales.
+
+**Vera Time** será el primer producto de esa familia, enfocado en medir, administrar y evidenciar el tiempo laboral de las personas trabajadoras.
+
+Vera Time será una plataforma SaaS multi-tenant especializada en el **Registro Electrónico de la Jornada Laboral en México**.
 
 Su propósito no será únicamente registrar entradas y salidas. La plataforma deberá ayudar a las empresas a:
 
@@ -53,9 +57,9 @@ Suscripción mensual por persona trabajadora activa
 
 La posición comercial será:
 
-> **Jornada 360 convierte el registro de asistencia en evidencia laboral explicable, trazable y preparada para el cumplimiento mexicano.**
+> **Vera Time convierte el registro de asistencia en evidencia laboral explicable, trazable y preparada para el cumplimiento mexicano.**
 
-Jornada 360 será una plataforma integrable, preparada para operar mediante interfaz web, importaciones, API y futuras integraciones, sin depender de un solo canal de captura.
+Vera Time será una plataforma integrable, preparada para operar mediante interfaz web, importaciones, API y futuras integraciones, sin depender de un solo canal de captura.
 
 ---
 
@@ -93,7 +97,7 @@ El problema es:
 
 ## 4. Solución propuesta
 
-Jornada 360 proporcionará un núcleo especializado compuesto por:
+Vera Time proporcionará un núcleo especializado compuesto por:
 
 1. Configuración de empresas, centros y relaciones laborales.
 2. Administración de horarios, turnos y vigencias.
@@ -117,7 +121,7 @@ Además, identificará posibles desviaciones antes del cierre del periodo y perm
 
 ## 5. Posicionamiento
 
-### 5.1 Lo que Jornada 360 sí será
+### 5.1 Lo que Vera Time sí será
 
 - Una plataforma mexicana especializada en jornada laboral.
 - Un sistema de evidencia y trazabilidad.
@@ -139,9 +143,9 @@ Además, identificará posibles desviaciones antes del cierre del periodo y perm
 
 ### 5.3 Diferenciación principal
 
-Las plataformas actuales de recursos humanos ofrecen control de asistencia, turnos, geolocalización, nómina u otros módulos amplios. Jornada 360 competirá mediante profundidad y especialización:
+Las plataformas actuales de recursos humanos ofrecen control de asistencia, turnos, geolocalización, nómina u otros módulos amplios. Vera Time competirá mediante profundidad y especialización:
 
-| Plataforma generalista | Jornada 360 |
+| Plataforma generalista | Vera Time |
 |---|---|
 | Control de asistencia como un módulo más | Jornada y evidencia como núcleo del producto |
 | Resultados orientados principalmente a operación o nómina | Resultados explicables desde la regla y los eventos |
@@ -158,7 +162,7 @@ Las plataformas actuales de recursos humanos ofrecen control de asistencia, turn
 
 ## 6. Mercado objetivo
 
-Los Censos Económicos 2024 reportaron más de 5.4 millones de unidades económicas en México. La mayoría son microempresas; sin embargo, el mercado inicial de Jornada 360 no debe intentar abarcar a todas.
+Los Censos Económicos 2024 reportaron más de 5.4 millones de unidades económicas en México. La mayoría son microempresas; sin embargo, el mercado inicial de Vera Time no debe intentar abarcar a todas.
 
 ### 6.1 Segmento inicial prioritario
 
@@ -269,7 +273,7 @@ Utilizará la plataforma para:
 - Consultar resoluciones.
 - Conocer el horario o turno aplicable.
 
-### 7.5 Administrador de Jornada 360
+### 7.5 Administrador de Vera Time
 
 El equipo interno del SaaS deberá:
 
@@ -296,7 +300,7 @@ El equipo interno del SaaS deberá:
 | Despacho o aliado | Administración de varias empresas desde una plataforma |
 | Autoridad o auditor | Información delimitada, comprensible y verificable |
 
-Jornada 360 identifica posibles desviaciones antes del cierre del periodo y permite que la persona trabajadora revise sus registros, manifieste conformidad o solicite una aclaración.
+Vera Time identifica posibles desviaciones antes del cierre del periodo y permite que la persona trabajadora revise sus registros, manifieste conformidad o solicite una aclaración.
 
 ---
 
@@ -373,7 +377,7 @@ Para no debilitar la propuesta principal, los siguientes elementos deberán form
 
 Los precios actuales de plataformas de RH y asistencia en México muestran referencias aproximadas desde $45 hasta más de $100 MXN por persona al mes, dependiendo de módulos, forma de pago y alcance.
 
-Jornada 360 deberá validar sus precios con empresas piloto. La siguiente estructura es una hipótesis comercial, no una tarifa definitiva.
+Vera Time deberá validar sus precios con empresas piloto. La siguiente estructura es una hipótesis comercial, no una tarifa definitiva.
 
 ### 10.1 Plan Cumplimiento
 
@@ -497,7 +501,7 @@ Proceso recomendado:
 
 Un despacho podrá:
 
-- Recomendar Jornada 360.
+- Recomendar Vera Time.
 - Revender el servicio.
 - Administrar clientes con permiso.
 - Ofrecer implementación.
@@ -816,3 +820,5 @@ Ahí el alcance comercial del MVP se convertirá en:
   https://www.worky.mx/precios-y-planes-software-rrhh
 - Ley Federal del Trabajo vigente:  
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+
+

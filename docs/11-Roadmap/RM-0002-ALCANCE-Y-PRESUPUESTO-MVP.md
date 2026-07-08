@@ -1,7 +1,7 @@
----
+﻿---
 id: RM-0002
 title: Alcance y presupuesto preliminar del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Founder
@@ -18,7 +18,7 @@ tags:
 
 ## 1. Decisión ejecutiva
 
-Jornada 360 deberá tener un MVP operativo y listo para producción **a más tardar el 31 de diciembre de 2026**.
+Vera Time deberá tener un MVP operativo y listo para producción **a más tardar el 31 de diciembre de 2026**.
 
 El presupuesto preliminar recomendado para presentar al posible socio es:
 
@@ -225,3 +225,5 @@ Estas decisiones pueden ajustar partidas, pero la propuesta al inversionista deb
   https://talently.tech/en/tools/mexico/salary/developer/qa-engineer
 - Precios de infraestructura utilizados como referencia:  
   https://www.digitalocean.com/pricing
+
+

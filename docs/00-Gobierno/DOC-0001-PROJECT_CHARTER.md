@@ -1,8 +1,8 @@
----
+﻿---
 
 id: DOC-0001
 title: Project Charter
-project: Jornada 360
+project: Vera Time
 version: 0.1.0
 status: Draft
 owner: Product Architecture
@@ -13,13 +13,13 @@ tags:
 * gobierno
 * producto
 * charter
-* jornada-360
+* vera-time
 
 ---
 
 # DOC-0001 - Project Charter
 
-# Jornada 360
+# Vera Time
 
 ## Plataforma SaaS de Cumplimiento de Jornada Laboral
 
@@ -27,7 +27,7 @@ tags:
 
 ## 1. Propósito del documento
 
-Este documento establece formalmente el inicio del producto **Jornada 360**.
+Este documento establece formalmente el inicio del producto **Vera Time**.
 
 Su propósito es definir la razón de existencia del producto, el problema que busca resolver, el alcance inicial, los límites del proyecto, los principios rectores, los riesgos principales y los criterios que guiarán las decisiones futuras.
 
@@ -37,17 +37,21 @@ Este documento será la base para los documentos posteriores de investigación l
 
 ## 2. Nombre del producto
 
-**Jornada 360**
+**Marca principal:** Vera
+
+**Producto:** Vera Time
+
+**Vera Time**
 
 ---
 
 ## 3. Descripción general
 
-Jornada 360 será una plataforma SaaS multi-tenant orientada al cumplimiento laboral en México.
+Vera Time será una plataforma SaaS multi-tenant orientada al cumplimiento laboral en México.
 
 Su objetivo principal será permitir que empresas, despachos y corporativos administren el Registro Electrónico de la Jornada Laboral, controlen jornadas, turnos, horas extraordinarias, evidencias digitales, reportes e integraciones con sistemas externos de nómina o recursos humanos.
 
-Jornada 360 no será únicamente un reloj checador digital.
+Vera Time no será únicamente un reloj checador digital.
 
 Será una plataforma de cumplimiento laboral basada en evidencia, configuración, trazabilidad e integraciones.
 
@@ -61,7 +65,7 @@ La reforma a la Ley Federal del Trabajo establece la obligación patronal de reg
 
 Adicionalmente, la reducción gradual de la jornada laboral y los límites a las horas extraordinarias generan una necesidad operativa y legal para que las empresas cuenten con herramientas tecnológicas capaces de administrar, calcular, auditar y demostrar el cumplimiento.
 
-Jornada 360 nace como respuesta a esa necesidad.
+Vera Time nace como respuesta a esa necesidad.
 
 ---
 
@@ -91,7 +95,7 @@ Las soluciones tradicionales de asistencia pueden ser insuficientes cuando no co
 
 ## 6. Oportunidad
 
-Jornada 360 tiene la oportunidad de posicionarse como una plataforma especializada en cumplimiento laboral mexicano.
+Vera Time tiene la oportunidad de posicionarse como una plataforma especializada en cumplimiento laboral mexicano.
 
 El mercado potencial incluye:
 
@@ -212,7 +216,7 @@ Su uso dependerá de la ley, lineamientos futuros, política de empresa, proporc
 
 ## 10. Fuera del alcance inicial
 
-Jornada 360 no será inicialmente:
+Vera Time no será inicialmente:
 
 * Sistema de nómina.
 * Sistema contable.
@@ -245,7 +249,7 @@ Empresas con múltiples centros de trabajo, áreas, sucursales, razones sociales
 
 ### 11.4 Consultores laborales
 
-Profesionales que asesoran empresas en cumplimiento laboral y podrían usar Jornada 360 como herramienta de gestión y evidencia.
+Profesionales que asesoran empresas en cumplimiento laboral y podrían usar Vera Time como herramienta de gestión y evidencia.
 
 ---
 
@@ -253,7 +257,7 @@ Profesionales que asesoran empresas en cumplimiento laboral y podrían usar Jorn
 
 ### 12.1 Super administrador de plataforma
 
-Usuario interno de Jornada 360 con capacidad de administrar empresas, planes, suscripciones, integraciones globales y configuración general de la plataforma.
+Usuario interno de Vera Time con capacidad de administrar empresas, planes, suscripciones, integraciones globales y configuración general de la plataforma.
 
 ### 12.2 Administrador de despacho
 
@@ -317,7 +321,7 @@ El uso de datos como GPS, fotografía, biometría, IP o dispositivo deberá just
 
 ### 13.10 Producto enfocado
 
-Jornada 360 deberá evitar convertirse en un ERP o sistema generalista de recursos humanos. Su enfoque principal será cumplimiento laboral relacionado con jornada, evidencia e inspección.
+Vera Time deberá evitar convertirse en un ERP o sistema generalista de recursos humanos. Su enfoque principal será cumplimiento laboral relacionado con jornada, evidencia e inspección.
 
 ---
 
@@ -464,13 +468,13 @@ El proyecto inicial se considerará listo para entrar a fase de desarrollo cuand
 
 | ID       | Decisión                                                                        |
 | -------- | ------------------------------------------------------------------------------- |
-| DEC-0001 | Jornada 360 será SaaS multi-tenant.                                             |
-| DEC-0002 | Jornada 360 será API First.                                                     |
+| DEC-0001 | Vera Time será SaaS multi-tenant.                                             |
+| DEC-0002 | Vera Time será API First.                                                     |
 | DEC-0003 | Las integraciones serán desacopladas mediante conectores/plugins.               |
 | DEC-0004 | Las reglas legales vivirán en un motor configurable.                            |
 | DEC-0005 | Todo será parametrizable por empresa cuando aplique.                            |
 | DEC-0006 | No se desarrollará funcionalidad sin documentación previa.                      |
-| DEC-0007 | Jornada 360 será Compliance First.                                              |
+| DEC-0007 | Vera Time será Compliance First.                                              |
 | DEC-0008 | Toda investigación deberá terminar en requisitos funcionales accionables.       |
 | DEC-0009 | El stack base propuesto será Laravel, PostgreSQL, Redis y arquitectura modular. |
 
@@ -480,7 +484,7 @@ El proyecto inicial se considerará listo para entrar a fase de desarrollo cuand
 
 Este documento será aceptado cuando:
 
-* Defina claramente qué es Jornada 360.
+* Defina claramente qué es Vera Time.
 * Defina el problema que resuelve.
 * Defina el alcance inicial.
 * Defina lo que queda fuera del alcance inicial.
@@ -506,3 +510,5 @@ Este documento no sustituye la investigación legal detallada.
 Los fundamentos legales, artículos específicos, criterios de cumplimiento, obligaciones, excepciones y reglas derivadas serán desarrollados en los documentos legales correspondientes dentro de la carpeta `docs/01-Legal/`.
 
 ---
+
+

@@ -1,7 +1,7 @@
 ﻿---
 id: API-0001
 title: Especificación API del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -14,14 +14,14 @@ tags:
   - sanctum
   - domain-first
   - integraciones
-  - jornada360
+  - veratime
 ---
 
 # API-0001 — Especificación API del MVP
 
 ## 1. Objetivo
 
-Definir la API mínima del MVP de Jornada 360.
+Definir la API mínima del MVP de Vera Time.
 
 La API deberá permitir que funcionalidades clave del sistema puedan operar mediante integraciones externas, importaciones, futuras aplicaciones móviles, clientes empresariales y servicios internos, sin duplicar lógica de negocio.
 
@@ -122,13 +122,13 @@ Queda para fase posterior o habilitación controlada:
 En producción:
 
 ```text
-https://app.jornada360.com/api/v1
+https://app.veratime.com/api/v1
 ```
 
 En desarrollo/staging:
 
 ```text
-https://staging.jornada360.com/api/v1
+https://staging.veratime.com/api/v1
 ```
 
 o según el hosting disponible.
@@ -1415,7 +1415,7 @@ Flujo:
 
 ```text
 ClickBalance / Sistema externo
-→ Jornada 360 API
+→ Vera Time API
 → Actions/Services
 → Motor legal / Reportes
 → Exportación o API de salida
@@ -1667,4 +1667,5 @@ Ahí se definirán:
 - Pruebas de cierre y conformidad.
 - Pruebas de importaciones/exportaciones.
 - Criterios mínimos para piloto.
+
 

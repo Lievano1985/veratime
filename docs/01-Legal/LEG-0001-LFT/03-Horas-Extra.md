@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-03
 title: Horas extraordinarias
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -21,7 +21,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir cómo debe identificar, clasificar y conservar Jornada 360 el tiempo trabajado fuera de la jornada ordinaria, tomando en cuenta los límites diarios y semanales, la aplicación gradual de la reforma de 2026 y la diferencia entre:
+Definir cómo debe identificar, clasificar y conservar Vera Time el tiempo trabajado fuera de la jornada ordinaria, tomando en cuenta los límites diarios y semanales, la aplicación gradual de la reforma de 2026 y la diferencia entre:
 
 - Prolongación por emergencia.
 - Trabajo extraordinario dentro del límite del artículo 66.
@@ -30,7 +30,7 @@ Definir cómo debe identificar, clasificar y conservar Jornada 360 el tiempo tra
 
 Este documento define reglas de control y evidencia. El cálculo final de nómina deberá considerar también el salario aplicable, el contrato, el convenio colectivo y otras disposiciones que correspondan.
 
-> Jornada 360 debe registrar el tiempo realmente trabajado aun cuando exista una desviación. Una alerta no elimina la obligación de revisar y, en su caso, pagar el tiempo correspondiente.
+> Vera Time debe registrar el tiempo realmente trabajado aun cuando exista una desviación. Una alerta no elimina la obligación de revisar y, en su caso, pagar el tiempo correspondiente.
 
 ## 2. Alcance
 
@@ -54,7 +54,7 @@ No incluye:
 
 ## 3. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 65 | Permite prolongar la jornada por el tiempo estrictamente indispensable ante siniestro o riesgo inminente. | Clasificar emergencias por separado y exigir causa documentada. |
 | LFT, artículo 66 | Regula la prolongación por circunstancias extraordinarias, su pago y sus límites de distribución. | Administrar banda ordinaria de tiempo extraordinario con límites diarios, semanales y por días. |
@@ -72,7 +72,7 @@ El artículo 65 contempla situaciones como siniestro o riesgo inminente que pone
 
 El artículo 67 dispone para ese tiempo una retribución equivalente a la hora ordinaria.
 
-Jornada 360 deberá clasificarlo de forma separada y exigir al menos:
+Vera Time deberá clasificarlo de forma separada y exigir al menos:
 
 - Tipo de emergencia.
 - Descripción.
@@ -92,7 +92,7 @@ El artículo 66 establece un pago de cien por ciento adicional sobre la hora ord
 valor total de la hora = hora ordinaria × 2
 ```
 
-Jornada 360 deberá guardar el multiplicador aplicable, pero no asumir que conoce por sí solo el salario base definitivo de nómina.
+Vera Time deberá guardar el multiplicador aplicable, pero no asumir que conoce por sí solo el salario base definitivo de nómina.
 
 ### 4.3 El máximo semanal del artículo 66 cambia según el año
 
@@ -146,7 +146,7 @@ Si el registro real supera ese valor:
 
 ### 4.6 La falta de autorización interna no borra el tiempo registrado
 
-La empresa puede establecer un flujo de autorización previa o posterior. Sin embargo, Jornada 360 no debe convertir automáticamente una hora real en tiempo no trabajado solo porque falte autorización.
+La empresa puede establecer un flujo de autorización previa o posterior. Sin embargo, Vera Time no debe convertir automáticamente una hora real en tiempo no trabajado solo porque falte autorización.
 
 El sistema deberá distinguir:
 
@@ -410,7 +410,7 @@ Las alertas `C` son críticas para revisión, pero no deben borrar los datos rea
 2. Los límites se almacenarán por vigencia.
 3. Emergencia y trabajo extraordinario serán categorías distintas.
 4. La autorización no determinará si el tiempo ocurrió.
-5. Jornada 360 no recortará registros superiores a un límite.
+5. Vera Time no recortará registros superiores a un límite.
 6. El módulo laboral entregará a nómina horas, bandas, multiplicadores y evidencia; nómina determinará el importe final.
 7. Las alertas de cumplimiento no sustituirán una determinación jurídica.
 8. Los cambios de clasificación deberán quedar auditados.
@@ -443,3 +443,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
 - `SRC-002`: Diario Oficial de la Federación, **Decreto en materia de reducción de la jornada laboral**, publicado el 01-05-2026.  
   https://www.diputados.gob.mx/LeyesBiblio/ref/lft/LFT_ref52_01may26.pdf
+
+

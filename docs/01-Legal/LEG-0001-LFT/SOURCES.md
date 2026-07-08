@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-SOURCES
 title: Fuentes oficiales
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Active
 owner: Product Architecture
@@ -50,7 +50,7 @@ Las fuentes de nivel C pueden orientar análisis, pero no sustituyen el texto le
 
 ## Registro de fuentes
 
-| ID | Fuente | Tipo | Uso en Jornada 360 | Estado |
+| ID | Fuente | Tipo | Uso en Vera Time | Estado |
 |---|---|---|---|---|
 | SRC-001 | Ley Federal del Trabajo, Cámara de Diputados | Ley | Fundamento principal sobre jornada, descansos, horas extraordinarias, teletrabajo, inspección, sanciones y conservación documental. | Activa |
 | SRC-002 | Decreto de reforma publicado en el Diario Oficial de la Federación el 01-05-2026 | Decreto | Reglas transitorias de reducción de jornada y límites graduales relacionados. | Activa |
@@ -91,3 +91,5 @@ Cuando una fuente tenga fecha de consulta relevante, deberá registrarse en el d
 - Confirmar si la STPS publica disposiciones generales definitivas sobre el registro electrónico previsto en la LFT.
 - Confirmar si se emite un formato o canal oficial de entrega electrónica.
 - Revisar reformas posteriores que modifiquen jornada, inspección, teletrabajo, protección de datos o conservación documental.
+
+

@@ -1,7 +1,7 @@
 ﻿---
 id: BL-0001
 title: Backlog inicial del MVP
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -15,14 +15,14 @@ tags:
   - livewire
   - api-first
   - domain-first
-  - jornada360
+  - veratime
 ---
 
 # BL-0001 — Backlog inicial del MVP
 
 ## 1. Objetivo
 
-Convertir la documentación aprobada de Jornada 360 en un backlog inicial accionable para iniciar desarrollo con Codex o con equipo técnico.
+Convertir la documentación aprobada de Vera Time en un backlog inicial accionable para iniciar desarrollo con Codex o con equipo técnico.
 
 Este backlog se basa en:
 
@@ -352,6 +352,16 @@ BL-0001, BL-0002, BL-0003, BL-0004, BL-0005, BL-0006
 BL-0101, BL-0102, BL-0103, BL-0104, BL-0107
 ```
 
+Nota de avance:
+
+```text
+Sprint 0 quedo implementado y candidato a cierre.
+Validaciones ejecutadas:
+- php artisan migrate:fresh --seed
+- php artisan test
+- npm run build
+```
+
 ## Sprint 1 — Empresas y trabajadores
 
 ```text
@@ -453,7 +463,7 @@ BL-0107 — Policies multi-tenant
 Trabaja únicamente sobre el proyecto Laravel actual.
 
 Objetivo:
-Implementar el bloque inicial del MVP de Jornada 360.
+Implementar el bloque inicial del MVP de Vera Time.
 
 Documentos base:
 - docs/04-Arquitectura/ARQ-0001-ARQUITECTURA-DEL-MVP.md
@@ -531,4 +541,5 @@ Sprint 0 — Base técnica
 ```
 
 No se recomienda crear más documentos grandes antes de iniciar código, salvo que aparezca una decisión técnica nueva que pueda bloquear el avance.
+
 

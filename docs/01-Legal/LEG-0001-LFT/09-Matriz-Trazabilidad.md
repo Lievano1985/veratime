@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-09
 title: Matriz de trazabilidad jurídica y funcional
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Approved
 owner: Product Architecture
@@ -27,7 +27,7 @@ tags:
 
 ## 1. Objetivo
 
-Relacionar las reglas maestras de Jornada 360 con su fundamento, reglas de origen, requisitos funcionales, dominio responsable y prueba mínima.
+Relacionar las reglas maestras de Vera Time con su fundamento, reglas de origen, requisitos funcionales, dominio responsable y prueba mínima.
 
 Esta matriz permite recorrer la trazabilidad en ambas direcciones:
 
@@ -137,7 +137,7 @@ A la fecha de corte no se identificaron disposiciones generales definitivas de l
 | RG-037 | LEGAL | LFT 68 | HE-RN-004 | HE-RF-002; HE-RF-007 | Horas extraordinarias | Registrar exactamente 12 horas totales y luego 12 h 1 min; alertar solo el segundo caso por máximo absoluto. |
 | RG-038 | DERIVED | LFT 68, 784 y 804 | HE-RN-006 | HE-RF-007; HE-RF-013; TJ-RF-014 | Horas extra / Evidencia | Registrar tiempo superior al límite y verificar que permanezca completo, con alerta, sin recorte. |
 | RG-039 | DERIVED | LFT 66-68 y carga probatoria del 784 | HE-RN-007; HE-RN-016; HE-RN-018 | HE-RF-006; HE-RF-016; HE-RF-017 | Autorizaciones | Rechazar administrativamente horas registradas y comprobar que el hecho y la controversia permanezcan. |
-| RG-040 | PRODUCT | LFT 66-68, 73 y 75 | HE-RN-015; HE-RN-017 | HE-RF-011; HE-RF-012; HE-RF-016; TT-RF-010 | Integración con nómina | Exportar minutos, banda y multiplicador; recibir respuesta de nómina sin recalcular el importe en Jornada 360. |
+| RG-040 | PRODUCT | LFT 66-68, 73 y 75 | HE-RN-015; HE-RN-017 | HE-RF-011; HE-RF-012; HE-RF-016; TT-RF-010 | Integración con nómina | Exportar minutos, banda y multiplicador; recibir respuesta de nómina sin recalcular el importe en Vera Time. |
 
 ## 10. Descansos y calendario
 
@@ -274,3 +274,5 @@ La conclusión de la investigación no significa que el marco normativo quede ce
 - `README.md`
 - `SOURCES.md`
 - `CHANGELOG.md`
+
+

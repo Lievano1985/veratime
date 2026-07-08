@@ -1,7 +1,7 @@
----
+﻿---
 id: LEG-0001-01
 title: Jornada laboral
-project: Jornada 360
+project: Vera Time
 version: 1.0.0
 status: Draft
 owner: Product Architecture
@@ -20,7 +20,7 @@ tags:
 
 ## 1. Objetivo
 
-Definir qué debe entender Jornada 360 por **jornada laboral**, identificar las obligaciones legales que afectan su administración y traducirlas en reglas de negocio y requisitos útiles para construir el producto.
+Definir qué debe entender Vera Time por **jornada laboral**, identificar las obligaciones legales que afectan su administración y traducirlas en reglas de negocio y requisitos útiles para construir el producto.
 
 Este documento se concentra en el concepto general de jornada. La clasificación diurna, nocturna y mixta se desarrolla en `02-Tipos-de-Jornada.md`. Las horas extraordinarias, descansos y registro electrónico se documentarán por separado.
 
@@ -28,7 +28,7 @@ Este documento se concentra en el concepto general de jornada. La clasificación
 
 ## 2. Fundamento legal relevante
 
-| Fundamento | Regla o criterio jurídico | Implicación para Jornada 360 |
+| Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 5, fracciones II y III | No produce efectos una estipulación con jornada mayor a la permitida o notoriamente excesiva. | Validar que contratos, políticas y turnos no autoricen jornadas superiores a los límites aplicables. |
 | LFT, artículo 25, fracción V | La duración de la jornada forma parte de las condiciones de trabajo que deben constar por escrito cuando corresponda. | Conservar la jornada pactada como dato histórico y trazable. |
@@ -46,7 +46,7 @@ Este documento se concentra en el concepto general de jornada. La clasificación
 
 Una marca de entrada o salida es un **evento de registro**. La jornada es el periodo durante el cual la persona trabajadora se encuentra a disposición de la empresa.
 
-Por ello, Jornada 360 no debe modelar la jornada como dos columnas aisladas de entrada y salida. Debe poder relacionar:
+Por ello, Vera Time no debe modelar la jornada como dos columnas aisladas de entrada y salida. Debe poder relacionar:
 
 - Condición de trabajo pactada.
 - Distribución semanal.
@@ -72,7 +72,7 @@ No debe modificarse retroactivamente el significado de jornadas ya cerradas.
 
 El artículo 58 permite distribuir la jornada de común acuerdo. Esto habilita distintos esquemas operativos, pero no autoriza exceder los máximos legales aplicables.
 
-Jornada 360 deberá permitir configurar distribuciones semanales y turnos, validándolos contra:
+Vera Time deberá permitir configurar distribuciones semanales y turnos, validándolos contra:
 
 1. El máximo semanal vigente.
 2. El máximo diario aplicable por tipo de jornada.
@@ -96,7 +96,7 @@ Estos valores no deben quedar escritos directamente en el código. Deben almacen
 
 ### 3.5 El sistema debe registrar la realidad, aun cuando exista una desviación
 
-Jornada 360 no debe impedir una salida, ocultar una marca o recortar automáticamente el tiempo real porque se haya superado un límite. Eso destruiría evidencia.
+Vera Time no debe impedir una salida, ocultar una marca o recortar automáticamente el tiempo real porque se haya superado un límite. Eso destruiría evidencia.
 
 El comportamiento correcto es:
 
@@ -120,7 +120,7 @@ Debe evitar expresiones automáticas como `empresa infractora` o `violación con
 
 ## 4. Modelo conceptual mínimo
 
-Jornada 360 deberá distinguir los siguientes conceptos:
+Vera Time deberá distinguir los siguientes conceptos:
 
 | Concepto | Función en el dominio | Debe conservar |
 | --- | --- | --- |
@@ -263,7 +263,7 @@ Todo cálculo deberá poder explicar:
 
 ## 9. Decisiones de producto resultantes
 
-1. **Jornada 360 registrará hechos y calculará resultados; no ocultará hechos para aparentar cumplimiento.**
+1. **Vera Time registrará hechos y calculará resultados; no ocultará hechos para aparentar cumplimiento.**
 2. **Las reglas legales serán datos versionados, no constantes dispersas en código.**
 3. **La plataforma manejará correcciones, no edición destructiva.**
 4. **La trazabilidad se comunicará como respaldo documental.**
@@ -298,3 +298,5 @@ Este documento se considerará aprobado cuando:
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
 - Diario Oficial de la Federación, **Decreto en materia de reducción de la jornada laboral**, publicado el 01-05-2026:  
   https://www.dof.gob.mx/nota_to_pdf.php?edicion=VES&fecha=01%2F05%2F2026
+
+
