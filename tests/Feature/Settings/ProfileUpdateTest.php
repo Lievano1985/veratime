@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
@@ -13,7 +14,12 @@ class ProfileUpdateTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
+        $company = Company::factory()->create();
         $this->actingAs($user = User::factory()->create());
+        $user->companies()->attach($company, [
+            'status' => 'active',
+            'is_default' => true,
+        ]);
 
         $this->get('/settings/profile')->assertOk();
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -10,26 +11,18 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    public function test_public_registration_route_is_disabled(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertNotFound();
     }
 
-    public function test_new_users_can_register(): void
+    public function test_public_registration_component_does_not_create_active_user(): void
     {
-        $response = Volt::test('auth.register')
-            ->set('name', 'Test User')
-            ->set('email', 'test@example.com')
-            ->set('password', 'password')
-            ->set('password_confirmation', 'password')
-            ->call('register');
+        Volt::test('auth.register')->call('register');
 
-        $response
-            ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
-
-        $this->assertAuthenticated();
+        $this->assertDatabaseCount(User::class, 0);
+        $this->assertGuest();
     }
 }
