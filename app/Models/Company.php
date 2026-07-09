@@ -62,6 +62,16 @@ class Company extends Model
         return $this->hasMany(EmploymentRelationship::class);
     }
 
+    public function laborConditions(): HasMany
+    {
+        return $this->hasMany(LaborCondition::class);
+    }
+
+    public function workerCredentials(): HasMany
+    {
+        return $this->hasMany(WorkerCredential::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [

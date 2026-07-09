@@ -548,10 +548,34 @@ La primera pantalla disponible de trabajadores esta en /workers y cubre:
 Sprint 1C usa started_at como fecha efectiva del cambio de relacion laboral porque BL-0304 todavia no existe.
 
 Quedan pendientes para sprints posteriores:
-- condiciones laborales con vigencia
-- credenciales kiosco / NIP
 - horarios
 - detalle de trabajador
+- importacion CSV
+- jornadas, alertas, reportes y portal trabajador
+```
+
+Nota de implementacion Sprint 1D:
+
+```text
+La pantalla /workers integra administracion minima de:
+- condicion laboral vigente
+- historial simple de condiciones laborales
+- modalidad de trabajo, horas semanales, dia de descanso y vigencia
+- credencial kiosco administrativa
+- codigo de acceso
+- NIP temporal para crear o resetear credencial
+- bloqueo de credencial
+
+Reglas UX/seguridad aplicadas:
+- no se muestra pin_hash
+- el NIP temporal se captura como password y se limpia despues de exito o error
+- no hay pantalla de kiosco operativo
+- no hay registro de entrada, salida o pausas
+- no hay horarios ni asignacion de horarios
+
+Quedan pendientes para sprints posteriores:
+- mover estas secciones a detalle de trabajador cuando se implemente BL-0307
+- horarios
 - importacion CSV
 - jornadas, alertas, reportes y portal trabajador
 ```
