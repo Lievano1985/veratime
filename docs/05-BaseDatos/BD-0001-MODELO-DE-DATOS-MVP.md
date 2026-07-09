@@ -524,6 +524,30 @@ unique(company_id, worker_id)
 unique(company_id, access_code) // MySQL/MariaDB permite múltiples NULL
 ```
 
+Nota de implementacion Sprint 1D:
+
+```text
+La primera migracion de condiciones laborales y credenciales usa los identificadores Laravel existentes del proyecto (`id` y `foreignId`) y mantiene:
+- labor_conditions.company_id obligatorio
+- labor_conditions.employment_relationship_id obligatorio
+- schedule_id nullable sin crear schedules ni schedule_assignments
+- metadata como JSON compatible con MySQL/MariaDB
+- indices por company_id, relacion laboral, fechas, schedule_id y status
+- no se sobrescriben condiciones historicas; una nueva condicion activa reemplaza la anterior cerrando su vigencia
+- no se permiten condiciones activas solapadas para la misma relacion laboral
+- worker_credentials.company_id obligatorio
+- worker_credentials.worker_id obligatorio y unico por empresa
+- access_code unico por empresa y repetible en empresas distintas
+- el NIP solo se guarda como pin_hash con Hash de Laravel
+- temporal_pin no existe como columna y se limpia del formulario en exito y error
+
+No se crearon en Sprint 1D:
+- schedules
+- schedule_assignments
+- time_events
+- kiosk_sessions
+```
+
 ---
 
 # 9. Horarios, turnos y descansos

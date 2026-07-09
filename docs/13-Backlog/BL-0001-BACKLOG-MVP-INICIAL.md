@@ -366,7 +366,7 @@ Validaciones ejecutadas:
 
 ```text
 BL-0105
-BL-0201, BL-0202, BL-0203, BL-0204, BL-0205
+BL-0201, BL-0202, BL-0203, BL-0204
 BL-0301, BL-0302, BL-0303, BL-0304, BL-0305
 ```
 
@@ -387,10 +387,15 @@ Sprint 1C quedo implementado y candidato a cierre para:
 - BL-0302 Baja no destructiva
 - BL-0303 Relaciones laborales
 
-No se marcaron como implementadas:
-- BL-0205 Dashboard inicial
+Sprint 1D quedo implementado y candidato a cierre para:
 - BL-0304 Condiciones laborales con vigencia
 - BL-0305 Credenciales kiosco
+
+No se marcaron como implementadas:
+- BL-0205 Dashboard inicial
+
+BL-0205 se mantiene como P0, pero se reubica para implementarse cuando existan datos reales de jornadas, alertas e incidencias.
+No se marca como completado en Sprint 1.
 ```
 
 ## Sprint 2 — Horarios y registro
@@ -420,6 +425,20 @@ BL-0801, BL-0802, BL-0803, BL-0804, BL-0805, BL-0806
 BL-0807, BL-0808, BL-0809
 BL-0901, BL-0902, BL-0903, BL-0904, BL-0905, BL-0906, BL-0907, BL-0908
 BL-0506, BL-0507
+```
+
+## Sprint 5C — Dashboard operativo inicial
+
+```text
+BL-0205
+```
+
+Nota:
+
+```text
+BL-0205 Dashboard inicial se mantiene como P0, pero se reubica para implementacion en Sprint 5C,
+despues de que existan jornadas calculadas, alertas e incidencias.
+No se marca como completado en Sprint 1.
 ```
 
 ## Sprint 6 — Cierre y conformidad
