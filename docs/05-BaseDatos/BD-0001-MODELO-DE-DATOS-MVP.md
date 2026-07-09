@@ -620,6 +620,32 @@ Pausas programadas del horario.
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
 
+Nota de implementacion Sprint 2A:
+
+```text
+La primera migracion de horarios base usa los identificadores Laravel existentes del proyecto (`id` y `foreignId`) y mantiene:
+- schedules.company_id obligatorio
+- unique(company_id, code)
+- index(company_id, status)
+- metadata como JSON compatible con MySQL/MariaDB
+- schedule_days.company_id obligatorio
+- schedule_days.schedule_id obligatorio
+- unique(schedule_id, day_of_week)
+- index(company_id, schedule_id)
+- schedule_breaks.company_id obligatorio
+- schedule_breaks.schedule_day_id obligatorio
+- index(company_id, schedule_day_id)
+- duration_minutes positivo cuando se proporciona desde formulario/Action
+- selectedDay y saveBreak deben pertenecer al horario actualmente editado
+
+No se crearon en Sprint 2A:
+- schedule_assignments
+- mandatory_rest_days
+- time_events
+- kiosk_sessions
+- work_days
+```
+
 ## 9.4 `schedule_assignments`
 
 Asignación de horarios a relación laboral, persona o grupo.

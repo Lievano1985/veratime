@@ -405,6 +405,23 @@ BL-0401, BL-0402, BL-0403, BL-0404, BL-0405, BL-0406
 BL-0501, BL-0502, BL-0503, BL-0504, BL-0505
 ```
 
+Nota de avance:
+
+```text
+Sprint 2A quedo implementado y candidato a cierre para:
+- BL-0401 CRUD de horarios
+- BL-0402 Pausas programadas
+
+No se marcaron como implementadas:
+- BL-0403 Horarios que cruzan medianoche
+- BL-0404 Asignacion de horario
+- BL-0405 Descansos obligatorios
+- BL-0406 Validar vigencias
+
+crosses_midnight se guarda y muestra, pero no activa logica avanzada de cruce de medianoche.
+No se implementaron asignaciones, registro de jornada, time_events, motor legal ni calculos.
+```
+
 ## Sprint 3 — API y motor legal base
 
 ```text

@@ -647,6 +647,30 @@ No debe solapar asignaciones activas incompatibles.
 
 ---
 
+Nota de implementacion Sprint 2A:
+
+```text
+La primera pantalla disponible de horarios esta en /schedules y cubre:
+- listado de horarios de la empresa activa
+- codigo, nombre, tipo legal, zona horaria, estado y vigencia simple
+- alta, edicion e inactivacion de horarios
+- dias del horario con entrada, salida, dia laboral y crosses_midnight visible
+- pausas programadas por dia con nombre, hora inicio, hora fin, duracion, computable/pagada y requerida
+
+Reglas UX/seguridad aplicadas:
+- solo se muestran horarios de la empresa activa
+- no se acepta company_id manipulable
+- las pausas solo se muestran y guardan para dias del horario actualmente editado
+- crosses_midnight solo se guarda/muestra, sin logica avanzada de BL-0403
+
+Quedan pendientes para sprints posteriores:
+- asignacion de horarios a trabajadores o grupos
+- trabajadores asignados y ver asignados
+- descansos obligatorios
+- validacion avanzada de vigencias
+- registro de jornada, time_events, calculos, alertas y reportes
+```
+
 ## 10.4 Calendario de descansos obligatorios
 
 **Prioridad:** P0 básico
