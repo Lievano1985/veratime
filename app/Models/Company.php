@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
@@ -38,5 +39,10 @@ class Company extends Model
     public function activeUsers(): BelongsToMany
     {
         return $this->users()->wherePivot('status', 'active');
+    }
+
+    public function centers(): HasMany
+    {
+        return $this->hasMany(Center::class);
     }
 }

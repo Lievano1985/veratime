@@ -15,6 +15,10 @@
                 <flux:navbar.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
                     Dashboard
                 </flux:navbar.item>
+
+                <flux:navbar.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
+                    Centros
+                </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
@@ -100,6 +104,9 @@
                 <flux:navlist.group heading="Platform">
                     <flux:navlist.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
                         Dashboard
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
+                        Centros
                     </flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>

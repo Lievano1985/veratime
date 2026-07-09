@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Models\Center;
 use App\Models\Company;
+use App\Policies\CenterPolicy;
 use App\Policies\CompanyPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Center::class, CenterPolicy::class);
         Gate::policy(Company::class, CompanyPolicy::class);
         View::addNamespace('layouts', resource_path('views/components/layouts'));
     }
