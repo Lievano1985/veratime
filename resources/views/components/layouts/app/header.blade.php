@@ -27,6 +27,10 @@
                 <flux:navbar.item icon="users" href="{{ route('workers.index') }}" :current="request()->routeIs('workers.*')" wire:navigate>
                     Trabajadores
                 </flux:navbar.item>
+
+                <flux:navbar.item icon="calendar-days" href="{{ route('schedules.index') }}" :current="request()->routeIs('schedules.*')" wire:navigate>
+                    Horarios
+                </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
@@ -125,6 +129,9 @@
                     </flux:navlist.item>
                     <flux:navlist.item icon="users" href="{{ route('workers.index') }}" :current="request()->routeIs('workers.*')" wire:navigate>
                         Trabajadores
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="calendar-days" href="{{ route('schedules.index') }}" :current="request()->routeIs('schedules.*')" wire:navigate>
+                        Horarios
                     </flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
