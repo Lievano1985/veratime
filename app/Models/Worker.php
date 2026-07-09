@@ -50,4 +50,9 @@ class Worker extends Model
             ->where('status', 'active')
             ->latest('started_at');
     }
+
+    public function credential(): HasOne
+    {
+        return $this->hasOne(WorkerCredential::class);
+    }
 }
