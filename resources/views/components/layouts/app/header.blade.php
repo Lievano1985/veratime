@@ -16,12 +16,20 @@
                     Dashboard
                 </flux:navbar.item>
 
+                <flux:navbar.item icon="building-office" href="{{ route('companies.index') }}" :current="request()->routeIs('companies.*')" wire:navigate>
+                    Empresas
+                </flux:navbar.item>
+
                 <flux:navbar.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
                     Centros
                 </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
+
+            <div class="hidden w-[320px] lg:block">
+                <livewire:companies.company-switcher />
+            </div>
 
             <flux:navbar class="mr-1.5 space-x-0.5 py-0!">
                 <flux:tooltip content="Search" position="bottom">
@@ -96,14 +104,17 @@
         <flux:sidebar stashable sticky class="lg:hidden border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="ml-1 flex items-center space-x-2" wire:navigate>
+            <a href="{{ route('dashboard') }}" class="mb-2 flex w-full justify-center" wire:navigate>
                 <x-app-logo class="size-8" href="#"></x-app-logo>
             </a>
 
             <flux:navlist variant="outline">
-                <flux:navlist.group heading="Platform">
+                <flux:navlist.group heading="Plataforma">
                     <flux:navlist.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
                         Dashboard
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="building-office" href="{{ route('companies.index') }}" :current="request()->routeIs('companies.*')" wire:navigate>
+                        Empresas
                     </flux:navlist.item>
                     <flux:navlist.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
                         Centros
