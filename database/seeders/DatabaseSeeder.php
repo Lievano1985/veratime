@@ -28,6 +28,8 @@ class DatabaseSeeder extends Seeder
             'tax_id' => 'VTIME260705XX1',
         ]);
 
+        $company->setting()->create(Company::defaultSettings());
+
         $role = Role::query()->where('key', 'owner')->first();
 
         $user->companies()->attach($company, [
@@ -37,4 +39,3 @@ class DatabaseSeeder extends Seeder
         ]);
     }
 }
-

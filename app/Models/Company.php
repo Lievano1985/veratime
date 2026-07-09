@@ -6,6 +6,7 @@ use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
@@ -41,8 +42,26 @@ class Company extends Model
         return $this->users()->wherePivot('status', 'active');
     }
 
+    public function setting(): HasOne
+    {
+        return $this->hasOne(CompanySetting::class);
+    }
+
     public function centers(): HasMany
     {
         return $this->hasMany(Center::class);
+    }
+
+    public static function defaultSettings(): array
+    {
+        return [
+            'payroll_period_type' => 'biweekly',
+            'default_timezone' => 'America/Mexico_City',
+            'default_closure_day' => null,
+            'allow_worker_corrections' => false,
+            'require_pin_for_kiosk' => true,
+            'require_pin_for_confirmation' => true,
+            'metadata' => [],
+        ];
     }
 }

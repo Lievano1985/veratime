@@ -12,6 +12,7 @@ Route::view('dashboard', 'dashboard')
     ->name('dashboard');
 
 Route::middleware(['auth', 'current.company'])->group(function () {
+    Volt::route('companies', 'companies.index')->name('companies.index');
     Volt::route('centers', 'centers.index')->name('centers.index');
 
     Route::redirect('settings', 'settings/profile');
