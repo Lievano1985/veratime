@@ -33,6 +33,18 @@ Rutas web disponibles para usuario autenticado con empresa activa:
 - `/centers`
 - `/workers`
 
+## Sprint 2
+
+Avance funcional inicial:
+
+- Horarios: listado, alta/edicion, inactivacion, dias del horario y pausas programadas.
+- `crosses_midnight` solo se guarda y muestra; la logica avanzada queda pendiente.
+- No hay asignacion de horarios a trabajadores, registro de jornada, `time_events`, motor legal ni calculos.
+
+Rutas web disponibles para usuario autenticado con empresa activa:
+
+- `/schedules`
+
 ## Comandos utiles
 
 ```bash

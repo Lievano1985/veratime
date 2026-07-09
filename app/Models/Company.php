@@ -72,6 +72,21 @@ class Company extends Model
         return $this->hasMany(WorkerCredential::class);
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
+    public function scheduleDays(): HasMany
+    {
+        return $this->hasMany(ScheduleDay::class);
+    }
+
+    public function scheduleBreaks(): HasMany
+    {
+        return $this->hasMany(ScheduleBreak::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [
