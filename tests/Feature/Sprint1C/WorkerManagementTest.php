@@ -3,9 +3,11 @@
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\LaborCondition;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Worker;
+use App\Models\WorkerCredential;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -637,9 +639,25 @@ it('manipulated company id does not move existing worker to another company', fu
     ]);
 });
 
-it('does not create labor conditions or worker credentials in sprint 1c', function (): void {
-    expect(Schema::hasTable('labor_conditions'))->toBeFalse()
-        ->and(Schema::hasTable('worker_credentials'))->toBeFalse();
+it('worker creation flow does not create labor conditions or worker credentials by default', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $user = workerUserWithCompany($company);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.index')
+        ->set('form.employee_code', 'NO-1D')
+        ->set('form.full_name', 'Sin Sprint 1D automatico')
+        ->set('form.center_id', (string) $center->id)
+        ->set('form.started_at', '2026-07-01')
+        ->set('form.status', 'active')
+        ->call('save');
+
+    expect(Schema::hasTable('labor_conditions'))->toBeTrue()
+        ->and(Schema::hasTable('worker_credentials'))->toBeTrue()
+        ->and(LaborCondition::query()->count())->toBe(0)
+        ->and(WorkerCredential::query()->count())->toBe(0);
 });
 
 function workerUserWithCompany(Company $company, string $roleKey = 'owner'): User
