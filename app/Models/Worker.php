@@ -2,30 +2,34 @@
 
 namespace App\Models;
 
-use Database\Factories\CenterFactory;
+use Database\Factories\WorkerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Center extends Model
+class Worker extends Model
 {
-    /** @use HasFactory<CenterFactory> */
+    /** @use HasFactory<WorkerFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'code',
-        'name',
-        'timezone',
+        'employee_code',
+        'full_name',
+        'email',
+        'phone',
+        'curp',
+        'rfc',
         'status',
-        'address',
+        'source',
+        'external_id',
         'metadata',
     ];
 
     protected function casts(): array
     {
         return [
-            'address' => 'array',
             'metadata' => 'array',
         ];
     }
@@ -38,5 +42,12 @@ class Center extends Model
     public function employmentRelationships(): HasMany
     {
         return $this->hasMany(EmploymentRelationship::class);
+    }
+
+    public function activeEmploymentRelationship(): HasOne
+    {
+        return $this->hasOne(EmploymentRelationship::class)
+            ->where('status', 'active')
+            ->latest('started_at');
     }
 }

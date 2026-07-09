@@ -23,6 +23,10 @@
                 <flux:navbar.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
                     Centros
                 </flux:navbar.item>
+
+                <flux:navbar.item icon="users" href="{{ route('workers.index') }}" :current="request()->routeIs('workers.*')" wire:navigate>
+                    Trabajadores
+                </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
@@ -118,6 +122,9 @@
                     </flux:navlist.item>
                     <flux:navlist.item icon="map-pin" href="{{ route('centers.index') }}" :current="request()->routeIs('centers.*')" wire:navigate>
                         Centros
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="users" href="{{ route('workers.index') }}" :current="request()->routeIs('workers.*')" wire:navigate>
+                        Trabajadores
                     </flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>

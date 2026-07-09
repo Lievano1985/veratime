@@ -52,6 +52,16 @@ class Company extends Model
         return $this->hasMany(Center::class);
     }
 
+    public function workers(): HasMany
+    {
+        return $this->hasMany(Worker::class);
+    }
+
+    public function employmentRelationships(): HasMany
+    {
+        return $this->hasMany(EmploymentRelationship::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [
