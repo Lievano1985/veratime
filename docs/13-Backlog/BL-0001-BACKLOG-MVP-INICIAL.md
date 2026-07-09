@@ -382,9 +382,15 @@ Sprint 1B quedo implementado y candidato a cierre para:
 - BL-0203 CRUD de centros
 - BL-0204 Zona horaria por centro
 
+Sprint 1C quedo implementado y candidato a cierre para:
+- BL-0301 CRUD de trabajadores
+- BL-0302 Baja no destructiva
+- BL-0303 Relaciones laborales
+
 No se marcaron como implementadas:
 - BL-0205 Dashboard inicial
-- Historias de trabajadores BL-0301 a BL-0305
+- BL-0304 Condiciones laborales con vigencia
+- BL-0305 Credenciales kiosco
 ```
 
 ## Sprint 2 — Horarios y registro
@@ -558,4 +564,3 @@ Sprint 0 — Base técnica
 ```
 
 No se recomienda crear más documentos grandes antes de iniciar código, salvo que aparezca una decisión técnica nueva que pueda bloquear el avance.
-
