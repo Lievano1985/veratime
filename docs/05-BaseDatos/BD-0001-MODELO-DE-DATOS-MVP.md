@@ -373,6 +373,16 @@ unique(company_id, code)
 index(company_id, status)
 ```
 
+Nota de implementacion Sprint 1B:
+
+```text
+La primera migracion de centers usa los identificadores Laravel existentes del proyecto (`id` y `foreignId`) y mantiene:
+- company_id obligatorio
+- unique(company_id, code)
+- index(company_id, status)
+- address y metadata como JSON compatibles con MySQL/MariaDB
+```
+
 ---
 
 # 8. Personas trabajadoras y relación laboral
@@ -1926,5 +1936,4 @@ Ese documento definirá:
 - Reportes.
 - Importaciones.
 - Administración.
-
 

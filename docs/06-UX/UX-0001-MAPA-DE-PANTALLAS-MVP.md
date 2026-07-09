@@ -360,6 +360,20 @@ Acciones:
 - Ver trabajadores.
 - Ver reportes por centro.
 
+Nota de implementacion Sprint 1B:
+
+```text
+La primera pantalla disponible de centros esta en /centers y cubre:
+- listado de centros de la empresa activa
+- codigo, nombre, zona horaria y estado
+- crear centro
+- editar centro
+- inactivar centro
+- direccion opcional como JSON
+
+Trabajadores activos por centro, ver trabajadores y ver reportes por centro quedan pendientes para los sprints correspondientes.
+```
+
 ---
 
 # 8. Usuarios, roles y permisos
@@ -1837,5 +1851,4 @@ Ahí se definirá:
 - Errores estándar.
 - Ejemplos request/response.
 - Webhooks o integraciones futuras.
-
 

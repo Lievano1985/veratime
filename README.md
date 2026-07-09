@@ -18,6 +18,16 @@ Base tecnica inicial:
 - Las pantallas operativas requieren usuario activo con empresa activa asociada.
 - En staging y production configurar `APP_DEBUG=false`.
 
+## Sprint 1B
+
+Avance funcional de centros:
+
+- Centros: listado, alta/edicion, inactivacion y zona horaria por centro.
+
+Ruta web disponible para usuario autenticado con empresa activa:
+
+- `/centers`
+
 ## Comandos utiles
 
 ```bash
