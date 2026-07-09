@@ -370,14 +370,21 @@ BL-0201, BL-0202, BL-0203, BL-0204, BL-0205
 BL-0301, BL-0302, BL-0303, BL-0304, BL-0305
 ```
 
-Nota de avance Sprint 1B:
+Nota de avance:
 
 ```text
+Sprint 1A quedo implementado y candidato a cierre para:
+- BL-0105 Selector de empresa
+- BL-0201 CRUD de empresa
+- BL-0202 Configuracion de empresa
+
 Sprint 1B quedo implementado y candidato a cierre para:
 - BL-0203 CRUD de centros
 - BL-0204 Zona horaria por centro
 
-No se marcaron como implementadas BL-0205 ni historias de trabajadores.
+No se marcaron como implementadas:
+- BL-0205 Dashboard inicial
+- Historias de trabajadores BL-0301 a BL-0305
 ```
 
 ## Sprint 2 — Horarios y registro
@@ -551,5 +558,4 @@ Sprint 0 — Base técnica
 ```
 
 No se recomienda crear más documentos grandes antes de iniciar código, salvo que aparezca una decisión técnica nueva que pueda bloquear el avance.
-
 

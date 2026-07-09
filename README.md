@@ -18,14 +18,16 @@ Base tecnica inicial:
 - Las pantallas operativas requieren usuario activo con empresa activa asociada.
 - En staging y production configurar `APP_DEBUG=false`.
 
-## Sprint 1B
+## Sprint 1
 
-Avance funcional de centros:
+Avance funcional inicial:
 
+- Empresas: selector, listado, alta/edicion y configuracion basica.
 - Centros: listado, alta/edicion, inactivacion y zona horaria por centro.
 
-Ruta web disponible para usuario autenticado con empresa activa:
+Rutas web disponibles para usuario autenticado con empresa activa:
 
+- `/companies`
 - `/centers`
 
 ## Comandos utiles
@@ -45,4 +47,3 @@ php artisan migrate:fresh --seed
 php artisan test
 npm run build
 ```
-
