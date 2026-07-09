@@ -533,6 +533,29 @@ Incluye:
 
 No debe eliminar información histórica.
 
+Nota de implementacion Sprint 1C:
+
+```text
+La primera pantalla disponible de trabajadores esta en /workers y cubre:
+- listado de trabajadores de la empresa activa
+- codigo, nombre, centro actual, puesto y estado
+- crear trabajador
+- editar datos basicos
+- dar de baja sin eliminar historial
+- crear relacion laboral inicial con centro, puesto y fecha de ingreso
+- conservar historial de relaciones laborales cuando cambia centro, puesto o fecha de ingreso
+
+Sprint 1C usa started_at como fecha efectiva del cambio de relacion laboral porque BL-0304 todavia no existe.
+
+Quedan pendientes para sprints posteriores:
+- condiciones laborales con vigencia
+- credenciales kiosco / NIP
+- horarios
+- detalle de trabajador
+- importacion CSV
+- jornadas, alertas, reportes y portal trabajador
+```
+
 ---
 
 # 10. Horarios y turnos
@@ -1851,4 +1874,3 @@ Ahí se definirá:
 - Errores estándar.
 - Ejemplos request/response.
 - Webhooks o integraciones futuras.
-

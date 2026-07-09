@@ -24,11 +24,13 @@ Avance funcional inicial:
 
 - Empresas: selector, listado, alta/edicion y configuracion basica.
 - Centros: listado, alta/edicion, inactivacion y zona horaria por centro.
+- Trabajadores: listado, alta/edicion, baja no destructiva y relacion laboral basica.
 
 Rutas web disponibles para usuario autenticado con empresa activa:
 
 - `/companies`
 - `/centers`
+- `/workers`
 
 ## Comandos utiles
 

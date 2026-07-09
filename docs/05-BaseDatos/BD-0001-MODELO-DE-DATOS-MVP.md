@@ -449,6 +449,24 @@ Regla:
 
 Una persona puede tener varias relaciones históricas, pero normalmente solo una activa por empresa.
 
+Nota de implementacion Sprint 1C:
+
+```text
+La primera migracion de trabajadores y relaciones laborales usa los identificadores Laravel existentes del proyecto (`id` y `foreignId`) y mantiene:
+- workers.company_id obligatorio
+- employment_relationships.company_id obligatorio
+- unique(company_id, employee_code)
+- indices por company_id, status, worker_id, center_id, external_id y fechas de relacion
+- metadata como JSON compatible con MySQL/MariaDB
+- baja no destructiva: el trabajador pasa a terminated y la relacion activa pasa a ended con ended_at
+- si cambia centro, puesto o started_at, se cierra la relacion activa anterior y se crea una nueva relacion activa
+- Sprint 1C usa started_at como fecha efectiva del cambio; BL-0304 debera formalizar condiciones laborales con vigencia
+
+No se crearon en Sprint 1C:
+- labor_conditions
+- worker_credentials
+```
+
 ## 8.3 `labor_conditions`
 
 Condiciones laborales con vigencia.
@@ -1733,6 +1751,8 @@ index(trace_id)
 
 No se eliminarán físicamente en operación ordinaria:
 
+- `workers`
+- `employment_relationships`
 - `time_events`
 - `work_day_calculations`
 - `alerts`
@@ -1936,4 +1956,3 @@ Ese documento definirá:
 - Reportes.
 - Importaciones.
 - Administración.
-
