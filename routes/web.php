@@ -16,6 +16,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('centers', 'centers.index')->name('centers.index');
     Volt::route('workers', 'workers.index')->name('workers.index');
     Volt::route('schedules', 'schedules.index')->name('schedules.index');
+    Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
 
     Route::redirect('settings', 'settings/profile');
 

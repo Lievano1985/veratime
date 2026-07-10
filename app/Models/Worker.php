@@ -55,4 +55,9 @@ class Worker extends Model
     {
         return $this->hasOne(WorkerCredential::class);
     }
+
+    public function scheduleAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleAssignment::class);
+    }
 }

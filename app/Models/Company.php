@@ -87,6 +87,11 @@ class Company extends Model
         return $this->hasMany(ScheduleBreak::class);
     }
 
+    public function scheduleAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleAssignment::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [

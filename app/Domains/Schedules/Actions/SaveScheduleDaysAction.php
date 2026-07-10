@@ -32,6 +32,14 @@ class SaveScheduleDaysAction
                 && (blank($day['start_time'] ?? null) || blank($day['end_time'] ?? null))) {
                 throw new InvalidArgumentException('Working schedule days require start and end time.');
             }
+
+            if ((bool) ($day['is_working_day'] ?? false)
+                && filled($day['start_time'] ?? null)
+                && filled($day['end_time'] ?? null)
+                && ($day['end_time'] <= $day['start_time'])
+                && ! (bool) ($day['crosses_midnight'] ?? false)) {
+                throw new InvalidArgumentException('Schedule days ending before start time must cross midnight.');
+            }
         }
 
         return DB::transaction(function () use ($company, $schedule, $days): Collection {
@@ -47,7 +55,7 @@ class SaveScheduleDaysAction
                     'is_working_day' => $isWorkingDay,
                     'start_time' => $isWorkingDay ? ($day['start_time'] ?? null) : null,
                     'end_time' => $isWorkingDay ? ($day['end_time'] ?? null) : null,
-                    'crosses_midnight' => (bool) ($day['crosses_midnight'] ?? false),
+                    'crosses_midnight' => $isWorkingDay ? (bool) ($day['crosses_midnight'] ?? false) : false,
                 ];
 
                 if ($scheduleDay) {
