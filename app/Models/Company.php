@@ -92,6 +92,11 @@ class Company extends Model
         return $this->hasMany(ScheduleAssignment::class);
     }
 
+    public function mandatoryRestDays(): HasMany
+    {
+        return $this->hasMany(MandatoryRestDay::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [
