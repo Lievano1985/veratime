@@ -1,4 +1,4 @@
-﻿---
+---
 id: UX-0001
 title: Mapa de pantallas del MVP
 project: Vera Time
@@ -661,13 +661,17 @@ Reglas UX/seguridad aplicadas:
 - solo se muestran horarios de la empresa activa
 - no se acepta company_id manipulable
 - las pausas solo se muestran y guardan para dias del horario actualmente editado
-- crosses_midnight solo se guarda/muestra, sin logica avanzada de BL-0403
+- crosses_midnight valida horarios que terminan al dia siguiente, sin calcular jornada
+
+Sprint 2B agrega la pantalla simple /schedule-assignments para:
+- asignar horario a trabajador
+- definir fecha efectiva
+- reemplazar asignaciones conservando historial
+- inactivar asignaciones sin borrarlas
+- resolver vigencia por fecha desde dominio, sin calculos de jornada
 
 Quedan pendientes para sprints posteriores:
-- asignacion de horarios a trabajadores o grupos
-- trabajadores asignados y ver asignados
 - descansos obligatorios
-- validacion avanzada de vigencias
 - registro de jornada, time_events, calculos, alertas y reportes
 ```
 

@@ -1,4 +1,4 @@
-﻿---
+---
 id: AI-0011
 title: Checklist antes de commit para código generado por IA
 project: Vera Time
@@ -115,6 +115,9 @@ Usar esta lista antes de aceptar código generado por Codex.
 ---
 
 # 10. Antes del commit
+
+- [ ] Si el sprint agrega pantallas o flujos funcionales, revisar `docs/09-Testing/GUIA-PRUEBAS-MANUALES-POR-SPRINT.md`.
+- [ ] Si el sprint queda solo en rama de trabajo, no marcarlo como cerrado en documentación final.
 
 Comandos sugeridos:
 
