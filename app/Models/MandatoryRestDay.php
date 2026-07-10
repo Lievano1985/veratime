@@ -2,30 +2,29 @@
 
 namespace App\Models;
 
-use Database\Factories\CenterFactory;
+use Database\Factories\MandatoryRestDayFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Center extends Model
+class MandatoryRestDay extends Model
 {
-    /** @use HasFactory<CenterFactory> */
+    /** @use HasFactory<MandatoryRestDayFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'code',
         'name',
-        'timezone',
+        'date',
+        'scope',
+        'source',
         'status',
-        'address',
         'metadata',
     ];
 
     protected function casts(): array
     {
         return [
-            'address' => 'array',
+            'date' => 'date',
             'metadata' => 'array',
         ];
     }
@@ -35,13 +34,8 @@ class Center extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function employmentRelationships(): HasMany
+    public function center(): BelongsTo
     {
-        return $this->hasMany(EmploymentRelationship::class);
-    }
-
-    public function mandatoryRestDays(): HasMany
-    {
-        return $this->hasMany(MandatoryRestDay::class);
+        return $this->belongsTo(Center::class);
     }
 }

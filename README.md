@@ -40,12 +40,14 @@ Avance funcional inicial:
 - Horarios: listado, alta/edicion, inactivacion, dias del horario y pausas programadas.
 - Horarios con cruce de medianoche: `22:00` a `06:00` requiere `crosses_midnight`.
 - Asignaciones de horario: trabajador, horario, vigencia, reemplazo no destructivo e inactivacion.
-- No hay registro de jornada, `time_events`, motor legal, descansos obligatorios ni calculos.
+- Descansos obligatorios: catalogo por fecha con alcance global, empresa o centro, sin calculos de jornada.
+- No hay registro de jornada, `time_events`, motor legal ni calculos.
 
 Rutas web disponibles para usuario autenticado con empresa activa:
 
 - `/schedules`
 - `/schedule-assignments`
+- `/mandatory-rest-days`
 
 ## Comandos utiles
 
