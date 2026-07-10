@@ -677,15 +677,26 @@ Quedan pendientes para sprints posteriores:
 
 ## 10.4 Calendario de descansos obligatorios
 
-**Prioridad:** P0 básico
+**Prioridad:** P0 basico
+
+Ruta implementada en Sprint 2C:
+
+```text
+/mandatory-rest-days
+```
 
 Incluye:
 
 - Fecha.
 - Nombre.
-- Alcance.
-- Estado.
+- Alcance global, empresa o centro.
+- Estado activo o inactivo.
 - Fuente opcional.
+- Filtros por fecha, alcance, estado y centro.
+
+Nota:
+
+Esta pantalla administra configuracion. No registra jornada, no calcula horas y no genera alertas.
 
 ---
 

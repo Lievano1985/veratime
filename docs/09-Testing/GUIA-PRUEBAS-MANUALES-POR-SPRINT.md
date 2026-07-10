@@ -505,6 +505,58 @@ Si una asignación futura cambia datos históricos, debe reportarse como error c
 
 ---
 
+## Sprint 2C - Descansos obligatorios
+
+**Estado:** En revision o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
+
+### Funcionalidad esperada al cerrar el sprint
+
+- Catalogo de descansos obligatorios.
+- Alcance global, empresa o centro.
+- Alta y edicion desde empresa para alcances empresa y centro.
+- Visualizacion de descansos globales sin permitir modificarlos desde empresa.
+- Inactivacion no destructiva.
+- Resolucion por fecha desde dominio.
+
+### Usuario o rol para probar
+
+- Administrador de empresa.
+- Usuario de otra empresa.
+- Usuario sin empresa activa.
+- Rol no autorizado.
+
+### Ruta o pantalla
+
+- `/mandatory-rest-days`
+
+### Pruebas manuales
+
+| Prueba | Pasos | Resultado esperado |
+|---|---|---|
+| Crear descanso por empresa | Crear descanso con fecha, nombre y alcance Empresa. | Se guarda en la empresa activa. |
+| Crear descanso por centro | Seleccionar alcance Centro y un centro activo de la empresa. | Se guarda asociado al centro correcto. |
+| Editar descanso | Modificar nombre, fecha, fuente o centro de un descanso permitido. | Se actualiza sin cambiar a otra empresa ni borrar historial. |
+| Duplicado mismo alcance/fecha/nombre | Intentar crear otro descanso con el mismo alcance, fecha y nombre. | El sistema rechaza el duplicado. |
+| Centro de otra empresa | Intentar usar un centro ajeno. | El sistema bloquea la operacion. |
+| Alcance global desde UI | Intentar forzar alcance global desde UI de empresa. | El sistema lo rechaza; los globales son solo lectura para empresa. |
+| Inactivar descanso | Inactivar un descanso activo. | El registro queda inactive y no se borra. |
+| Multiempresa | Entrar con Empresa A y revisar datos de Empresa B. | No aparecen descansos de Empresa B. |
+
+### No deberia existir todavia
+
+- Modelo `time_events`.
+- Registro de entrada/salida.
+- Registro de pausas reales.
+- Kiosco operativo.
+- Captura manual justificada.
+- Motor legal.
+- Calculo de horas o jornadas.
+- Alertas.
+- Incidencias.
+- Reportes.
+- Conformidad digital.
+
+---
 ## Pendientes globales que no deben marcarse como listos
 
 | Pendiente | Nota |
@@ -512,7 +564,7 @@ Si una asignación futura cambia datos históricos, debe reportarse como error c
 | `BL-0205` Dashboard inicial | Depende de jornadas, alertas e incidencias reales. |
 | `BL-0306` Importación CSV de trabajadores | No debe aparecer como lista todavía. |
 | `BL-0307` Detalle completo de trabajador | Faltan jornadas, alertas, incidencias y reportes. |
-| `BL-0405` Descansos obligatorios | Pendiente; no debe aparecer como implementado en Sprint 2A ni 2B. |
+| `BL-0405` Descansos obligatorios | Implementado en Sprint 2C; candidato a cierre si las pruebas manuales y automatizadas pasan. |
 | `BL-0501` a `BL-0505` Registro electrónico | Pendiente; no debe haber eventos, kiosco operativo ni captura manual justificada. |
 | API y motor legal | Pendientes; no debe existir API de negocio completa ni cálculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
@@ -558,4 +610,12 @@ Usar esta tabla para marcar validación manual. En observación anotar pantalla,
 | Sprint 2B | Se puede reemplazar asignación |  |  |  |  |
 | Sprint 2B | Se conserva historial |  |  |  |  |
 | Sprint 2B | No se permiten solapamientos |  |  |  |  |
-| Sprint 2B | Se puede inactivar asignación sin borrar |  |  |  |  |
+| Sprint 2B | Se puede inactivar asignacion sin borrar |  |  |  |  |
+| Sprint 2C | Se puede crear descanso obligatorio por empresa |  |  |  |  |
+| Sprint 2C | Se puede crear descanso obligatorio por centro |  |  |  |  |
+| Sprint 2C | Se puede editar descanso obligatorio permitido |  |  |  |  |
+| Sprint 2C | Duplicado por mismo alcance, fecha y nombre se rechaza |  |  |  |  |
+| Sprint 2C | Centro de otra empresa se bloquea |  |  |  |  |
+| Sprint 2C | No se puede crear descanso global desde UI de empresa |  |  |  |  |
+| Sprint 2C | Usuario de Empresa A no ve descansos de Empresa B |  |  |  |  |
+| Sprint 2C | Inactivar descanso no lo borra |  |  |  |  |

@@ -693,30 +693,42 @@ index(company_id, effective_from, effective_to)
 
 ## 9.5 `mandatory_rest_days`
 
-Descansos obligatorios aplicables.
+Descansos obligatorios aplicables por fecha. Sprint 2C implementa este catalogo como configuracion, sin generar eventos, calculos de jornada ni reglas legales automaticas.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `id` | ulid pk |  |
-| `company_id` | ulid nullable | Null si es global |
-| `date` | date | Día |
-| `name` | string | Nombre |
-| `scope` | enum | `global`, `company`, `state`, `electoral` |
-| `state_code` | string nullable | Si aplica |
-| `source` | string nullable | Fuente |
-| `status` | enum | `active`, `inactive` |
+| `id` | bigint pk | Identificador Laravel |
+| `company_id` | bigint nullable fk | Null si el descanso es global |
+| `center_id` | bigint nullable fk | Solo aplica para alcance `center` |
+| `name` | string | Nombre del descanso |
+| `date` | date | Fecha del descanso |
+| `scope` | string | `global`, `company`, `center` |
+| `source` | string nullable | Fuente o captura manual |
+| `status` | string | `active`, `inactive` |
+| `metadata` | JSON nullable | Datos auxiliares compatibles con MySQL/MariaDB |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
 
-Índices:
+Indices:
 
 ```text
+index(date)
+index(scope, date)
 index(company_id, date)
-index(date, scope)
+index(company_id, center_id, date)
+index(scope, company_id, center_id, date)
+```
+
+Reglas de persistencia:
+
+```text
+company_id y center_id usan restrictOnDelete para evitar borrado destructivo de historial.
+La inactivacion conserva el registro con status inactive.
+La unicidad por alcance, fecha y nombre se valida en Actions para evitar depender de indices unique con columnas nullable en MySQL/MariaDB.
+No se define un indice unique nullable como garantia principal porque MySQL/MariaDB permite multiples NULL y podria no bloquear duplicados por alcance.
 ```
 
 ---
-
 # 10. Registro electrónico
 
 ## 10.1 `devices`
