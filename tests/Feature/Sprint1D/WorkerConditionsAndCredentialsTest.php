@@ -382,9 +382,8 @@ it('does not expose pin hash in worker screen', function (): void {
         ->assertDontSee($credential->pin_hash);
 });
 
-it('does not create schedule assignments, kiosk events, labor condition schedules, or worker credential auth flow', function (): void {
-    expect(Schema::hasTable('schedule_assignments'))->toBeFalse()
-        ->and(Schema::hasTable('time_entries'))->toBeFalse()
+it('does not create kiosk events, labor condition schedules, or worker credential auth flow', function (): void {
+    expect(Schema::hasTable('time_entries'))->toBeFalse()
         ->and(Schema::hasTable('labor_conditions'))->toBeTrue()
         ->and(Schema::hasTable('worker_credentials'))->toBeTrue();
 });

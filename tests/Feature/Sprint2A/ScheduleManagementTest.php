@@ -440,11 +440,10 @@ it('does not allow break in schedule day from another company', function (): voi
     ]);
 });
 
-it('sprint 2a does not create schedule assignments time events or jornada registration', function (): void {
+it('sprint 2a does not create time events or jornada registration', function (): void {
     expect(Schema::hasTable('schedules'))->toBeTrue()
         ->and(Schema::hasTable('schedule_days'))->toBeTrue()
         ->and(Schema::hasTable('schedule_breaks'))->toBeTrue()
-        ->and(Schema::hasTable('schedule_assignments'))->toBeFalse()
         ->and(Schema::hasTable('time_events'))->toBeFalse()
         ->and(Schema::hasTable('work_days'))->toBeFalse();
 });

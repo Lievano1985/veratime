@@ -2,25 +2,24 @@
 
 namespace App\Models;
 
-use Database\Factories\ScheduleFactory;
+use Database\Factories\ScheduleAssignmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Schedule extends Model
+class ScheduleAssignment extends Model
 {
-    /** @use HasFactory<ScheduleFactory> */
+    /** @use HasFactory<ScheduleAssignmentFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'code',
-        'name',
-        'legal_type',
-        'timezone',
-        'status',
+        'worker_id',
+        'employment_relationship_id',
+        'schedule_id',
         'effective_from',
         'effective_to',
+        'status',
+        'source',
         'metadata',
     ];
 
@@ -38,13 +37,18 @@ class Schedule extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function days(): HasMany
+    public function worker(): BelongsTo
     {
-        return $this->hasMany(ScheduleDay::class);
+        return $this->belongsTo(Worker::class);
     }
 
-    public function assignments(): HasMany
+    public function employmentRelationship(): BelongsTo
     {
-        return $this->hasMany(ScheduleAssignment::class);
+        return $this->belongsTo(EmploymentRelationship::class);
+    }
+
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class);
     }
 }

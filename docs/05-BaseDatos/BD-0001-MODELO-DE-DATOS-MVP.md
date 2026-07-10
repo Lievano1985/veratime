@@ -1,4 +1,4 @@
-﻿---
+---
 id: BD-0001
 title: Modelo de datos del MVP
 project: Vera Time
@@ -648,25 +648,45 @@ No se crearon en Sprint 2A:
 
 ## 9.4 `schedule_assignments`
 
-Asignación de horarios a relación laboral, persona o grupo.
+Asignación de horarios a una persona trabajadora, con vigencia por fecha efectiva e historial no destructivo.
+
+Implementación inicial Sprint 2B:
+
+- La asignación pertenece siempre a una empresa por `company_id`.
+- La asignación referencia `worker_id` y `schedule_id`.
+- `employment_relationship_id` es nullable para ligar la asignación a una relación laboral cuando aplique.
+- `effective_from` marca el inicio de vigencia.
+- `effective_to` marca el fin de vigencia; `null` significa rango abierto.
+- `status` puede ser `active`, `inactive` o `replaced`.
+- `source` conserva el origen inicial, por ahora `web`.
+- `metadata` permite datos complementarios en JSON.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `id` | ulid pk |  |
-| `company_id` | ulid fk | Empresa |
-| `schedule_id` | ulid fk | Horario |
-| `assignable_type` | string | `worker`, `relationship`, `center`, `group` |
-| `assignable_id` | ulid | ID asignado |
-| `effective_from` | date | Inicio |
-| `effective_to` | date nullable | Fin |
-| `status` | enum | `active`, `inactive`, `replaced` |
+| `id` | bigint pk | Identificador |
+| `company_id` | bigint fk | Empresa; no debe usar borrado destructivo |
+| `worker_id` | bigint fk | Persona trabajadora; no debe usar borrado destructivo |
+| `employment_relationship_id` | bigint fk nullable | Relación laboral asociada; no debe usar borrado destructivo |
+| `schedule_id` | bigint fk | Horario; no debe usar borrado destructivo |
+| `effective_from` | date | Inicio de vigencia |
+| `effective_to` | date nullable | Fin de vigencia; `null` = vigente abierto |
+| `status` | string | `active`, `inactive`, `replaced` |
+| `source` | string nullable | Origen del registro |
+| `metadata` | JSON nullable | Datos complementarios |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
+
+Reglas de historial:
+
+- No se debe hacer hard delete de asignaciones históricas.
+- Las FK de `company_id`, `worker_id`, `employment_relationship_id` y `schedule_id` deben preservar historial; en Sprint 2B se usa `restrictOnDelete`.
+- Reemplazar una asignación cierra la vigencia anterior y crea una nueva.
+- Inactivar una asignación cambia estado, no elimina el registro.
 
 Índices:
 
 ```text
-index(company_id, assignable_type, assignable_id)
+index(company_id, worker_id)
 index(company_id, schedule_id)
 index(company_id, effective_from, effective_to)
 ```

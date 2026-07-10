@@ -1,11 +1,11 @@
-﻿---
+---
 id: AGENT-04
 title: Agente Documentación
 project: Vera Time
 version: 1.0.0
 status: Draft
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-07-09
 tags:
   - ai
   - codex
@@ -15,7 +15,7 @@ tags:
   - veratime
 ---
 
-# AGENT-04 — Documentación
+# AGENT-04 - Documentación
 
 ## 1. Rol
 
@@ -91,6 +91,100 @@ docs/10-Deployment/DEP-0001-ESTRATEGIA-DE-DESPLIEGUE-MVP.md
 - Actualizar criterios de aceptación si se refina una historia.
 - Actualizar ejemplos de uso.
 - Documentar restricciones conocidas.
+
+### Guía de pruebas manuales por sprint
+
+Debe crear y mantener:
+
+```text
+docs/09-Testing/GUIA-PRUEBAS-MANUALES-POR-SPRINT.md
+```
+
+La guía debe servir para que una persona no técnica pueda probar manualmente Vera Time por fases, sin revisar código.
+
+Debe usar lenguaje:
+
+- claro;
+- funcional;
+- no técnico;
+- orientado a QA manual;
+- en español;
+- con pasos fáciles de seguir.
+
+Por cada sprint debe incluir:
+
+- qué funcionalidad ya debe existir;
+- con qué usuario o rol probar;
+- ruta o pantalla donde se prueba;
+- pasos manuales;
+- resultado esperado;
+- cosas que no deberían existir todavía;
+- observaciones o pendientes.
+
+La guía debe incluir, cuando aplique:
+
+- Sprint 0: base técnica, acceso y multiempresa.
+- Sprint 1A: empresa, selector y configuración básica.
+- Sprint 1B: centros de trabajo.
+- Sprint 1C: trabajadores y relaciones laborales.
+- Sprint 1D: condiciones laborales y credenciales de kiosco.
+- Sprint 2A: horarios base y pausas programadas.
+- Sprint 2B: horarios con cruce de medianoche, asignaciones y vigencias.
+
+Si un sprint todavía no está cerrado en `main`, debe marcarse como:
+
+```text
+En revisión o pendiente de cierre.
+```
+
+No debe marcarse como cerrado si solo está implementado en una rama de trabajo.
+
+La guía debe incluir una sección de preparación general con usuarios recomendados:
+
+- administrador de empresa;
+- usuario con acceso a dos empresas;
+- usuario sin empresa activa;
+- usuario de otra empresa;
+- rol no autorizado.
+
+También debe incluir datos recomendados:
+
+- Empresa A activa;
+- Empresa B activa;
+- empresa inactiva;
+- centros;
+- trabajadores;
+- horarios;
+- asignaciones de horarios, solo si el sprint correspondiente está disponible.
+
+La guía debe incluir un checklist rápido por fase para que QA pueda marcar:
+
+- probado;
+- correcto;
+- falla;
+- observación.
+
+La guía debe incluir criterios para reportar problemas críticos, por ejemplo:
+
+- usuario de una empresa ve datos de otra empresa;
+- usuario sin empresa activa puede operar;
+- empresa inactiva permite crear o modificar datos;
+- baja elimina historial;
+- cambio de relación laboral borra historial;
+- cambio de condición laboral sobrescribe historial;
+- NIP visible en texto claro después de guardar;
+- asignación futura modifica historial pasado;
+- aparecen módulos futuros como si ya estuvieran terminados;
+- contadores falsos de jornadas, alertas o incidencias.
+
+La guía debe incluir criterios para reportar mejoras, por ejemplo:
+
+- pantalla confusa;
+- mensajes poco claros;
+- botones poco entendibles;
+- falta de confirmación visual;
+- tabla sin filtros;
+- pantalla saturada.
 
 ### Changelog y commits
 
@@ -189,5 +283,3 @@ El agente de documentación aprueba cuando:
 - el backlog refleja el estado real;
 - los comandos y variables están documentados;
 - los cambios son entendibles para otro desarrollador o para Codex.
-
-

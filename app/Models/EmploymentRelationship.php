@@ -65,4 +65,9 @@ class EmploymentRelationship extends Model
             })
             ->latest('effective_from');
     }
+
+    public function scheduleAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleAssignment::class);
+    }
 }

@@ -38,12 +38,14 @@ Rutas web disponibles para usuario autenticado con empresa activa:
 Avance funcional inicial:
 
 - Horarios: listado, alta/edicion, inactivacion, dias del horario y pausas programadas.
-- `crosses_midnight` solo se guarda y muestra; la logica avanzada queda pendiente.
-- No hay asignacion de horarios a trabajadores, registro de jornada, `time_events`, motor legal ni calculos.
+- Horarios con cruce de medianoche: `22:00` a `06:00` requiere `crosses_midnight`.
+- Asignaciones de horario: trabajador, horario, vigencia, reemplazo no destructivo e inactivacion.
+- No hay registro de jornada, `time_events`, motor legal, descansos obligatorios ni calculos.
 
 Rutas web disponibles para usuario autenticado con empresa activa:
 
 - `/schedules`
+- `/schedule-assignments`
 
 ## Comandos utiles
 

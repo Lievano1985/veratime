@@ -133,8 +133,15 @@ new class extends Component {
         Gate::authorize('update', $schedule);
 
         $validated = $this->validate($this->dayValidationRules())['daysForm'];
+        $this->assertValidCrossMidnightRules($validated);
 
-        $action->handle($schedule->company, $schedule, $validated);
+        try {
+            $action->handle($schedule->company, $schedule, $validated);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'daysForm' => $exception->getMessage(),
+            ]);
+        }
 
         $schedule->refresh();
         $this->daysForm = $this->daysFormForSchedule($schedule);
@@ -314,6 +321,25 @@ new class extends Component {
             })
             ->values()
             ->all();
+    }
+
+    private function assertValidCrossMidnightRules(array $days): void
+    {
+        foreach ($days as $index => $day) {
+            if (! (bool) ($day['is_working_day'] ?? false)) {
+                continue;
+            }
+
+            if (blank($day['start_time'] ?? null) || blank($day['end_time'] ?? null)) {
+                continue;
+            }
+
+            if (($day['end_time'] <= $day['start_time']) && ! (bool) ($day['crosses_midnight'] ?? false)) {
+                throw ValidationException::withMessages([
+                    "daysForm.$index.crosses_midnight" => 'Activa cruce de medianoche cuando la salida es menor o igual a la entrada.',
+                ]);
+            }
+        }
     }
 
     private function emptyForm(?string $timezone = null): array
