@@ -757,55 +757,50 @@ index(company_id, center_id)
 
 ## 10.2 `time_events`
 
-Eventos fuente de jornada.
+Eventos fuente de jornada. Sprint 2D implementa el modelo interno y no crea todavia pantallas de registro, kiosco operativo, calculos, alertas, incidencias ni reportes.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `id` | ulid pk |  |
-| `company_id` | ulid fk | Empresa |
-| `worker_id` | ulid fk | Trabajador |
-| `employment_relationship_id` | ulid nullable | Relación aplicable |
-| `center_id` | ulid nullable | Centro |
-| `device_id` | ulid nullable | Dispositivo |
-| `event_type` | enum | `clock_in`, `clock_out`, `break_start`, `break_end`, `manual_entry`, `logical_void` |
-| `occurred_at_utc` | timestamp | Fecha/hora normalizada |
-| `occurred_local_date` | date | Fecha local |
-| `occurred_local_time` | time | Hora local |
-| `timezone` | string | Zona horaria |
-| `received_at` | timestamp | Cuándo llegó |
-| `source` | enum | `web`, `pwa`, `kiosk`, `api`, `csv`, `admin_manual`, `job`, `integration` |
-| `source_user_id` | ulid nullable | Usuario que capturó |
+| `id` | bigint pk | Identificador Laravel |
+| `company_id` | bigint fk | Empresa activa |
+| `worker_id` | bigint fk | Trabajador |
+| `employment_relationship_id` | bigint nullable fk | Relacion laboral aplicable, si se conoce |
+| `center_id` | bigint nullable fk | Centro, si se conoce |
+| `device_id` | bigint nullable | Reservado para `devices`; sin FK en Sprint 2D porque `devices` aun no existe |
+| `event_type` | string | `clock_in`, `clock_out`, `break_start`, `break_end`, `manual_entry`, `logical_void` |
+| `occurred_at_utc` | dateTime | Fecha/hora normalizada en UTC |
+| `occurred_local_date` | date | Fecha local operativa |
+| `occurred_local_time` | time | Hora local operativa |
+| `timezone` | string | Zona horaria usada para normalizar |
+| `received_at` | dateTime | Fecha/hora de recepcion |
+| `source` | string | `web`, `pwa`, `kiosk`, `api`, `csv`, `admin_manual`, `job`, `integration` |
+| `source_user_id` | bigint nullable fk | Usuario fuente, si aplica |
 | `external_id` | string nullable | ID externo |
-| `idempotency_key` | string nullable | Idempotencia |
-| `status` | enum | `valid`, `pending_review`, `voided`, `replaced`, `ignored` |
-| `voided_by_event_id` | ulid nullable | Anulación lógica |
-| `replaces_event_id` | ulid nullable | Reemplazo |
-| `reason` | text nullable | Motivo manual |
-| `ip_address` | string nullable | Auxiliar |
-| `user_agent` | text nullable | Auxiliar |
-| `metadata` | JSON nullable | Payload/origen |
+| `idempotency_key` | string nullable | Llave de idempotencia |
+| `status` | string | `valid`, `pending_review`, `voided`, `replaced`, `ignored` |
+| `metadata` | JSON nullable | Payload auxiliar compatible con MySQL/MariaDB |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
 
-Índices:
+Indices:
 
 ```text
+index(company_id)
 index(company_id, worker_id, occurred_at_utc)
 index(company_id, worker_id, occurred_local_date)
 index(company_id, center_id, occurred_local_date)
-index(company_id, source, external_id)
-unique(company_id, source, external_id) // MySQL/MariaDB permite múltiples NULL
-unique(company_id, idempotency_key) // MySQL/MariaDB permite múltiples NULL
 index(company_id, status)
+unique(company_id, source, external_id) // MySQL/MariaDB permite multiples NULL
+unique(company_id, idempotency_key) // MySQL/MariaDB permite multiples NULL
 ```
 
 Reglas:
 
-- No eliminación física ordinaria.
-- Si se corrige, se crea relación con evento original.
-- Si se anula, se marca como `voided` con motivo y auditoría.
-- Todo evento de API/CSV debe soportar idempotencia.
-
+- No eliminacion fisica ordinaria desde dominio.
+- FKs de empresa, trabajador, relacion laboral, centro y usuario fuente usan restricciones que preservan historial.
+- `device_id` queda nullable y sin FK hasta que exista el modulo `devices`.
+- La idempotencia se valida en `CreateTimeEventAction` para no depender solo de indices unique con valores NULL.
+- `time_events` no calcula jornada, no valida secuencia entrada/salida y no genera alertas ni incidencias en Sprint 2D.
 ## 10.3 `kiosk_sessions`
 
 Sesiones de kiosco cuando se necesite trazabilidad adicional.
