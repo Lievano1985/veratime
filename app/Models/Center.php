@@ -44,4 +44,9 @@ class Center extends Model
     {
         return $this->hasMany(MandatoryRestDay::class);
     }
+
+    public function timeEvents(): HasMany
+    {
+        return $this->hasMany(TimeEvent::class);
+    }
 }
