@@ -557,6 +557,40 @@ Si una asignación futura cambia datos históricos, debe reportarse como error c
 - Conformidad digital.
 
 ---
+## Sprint 2D - Modelo interno time_events
+
+**Estado:** En revision o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
+
+### Funcionalidad esperada al cerrar el sprint
+
+- Tabla interna `time_events`.
+- Modelo de eventos fuente con empresa, trabajador, fecha/hora UTC, fecha/hora local, zona horaria, fuente, estado e idempotencia.
+- Creacion solo desde dominio interno mediante Action.
+- Sin pantalla ni registro operativo para usuarios finales.
+
+### Prueba manual
+
+Sprint 2D no tiene prueba manual operativa todavia porque no agrega pantalla de registro de jornada.
+
+QA manual solo debe verificar que no aparezcan rutas, botones o pantallas nuevas para checar entrada/salida.
+
+### No deberia existir todavia
+
+- Botones de entrada/salida.
+- Pantalla de checado.
+- Kiosco operativo.
+- Captura manual justificada.
+- Validacion de NIP para checar.
+- Modelo `work_days`.
+- Modelo `work_day_calculations`.
+- Motor legal.
+- Calculo de horas o jornadas.
+- Alertas.
+- Incidencias.
+- Reportes.
+- Conformidad digital.
+
+---
 ## Pendientes globales que no deben marcarse como listos
 
 | Pendiente | Nota |
@@ -565,7 +599,8 @@ Si una asignación futura cambia datos históricos, debe reportarse como error c
 | `BL-0306` Importación CSV de trabajadores | No debe aparecer como lista todavía. |
 | `BL-0307` Detalle completo de trabajador | Faltan jornadas, alertas, incidencias y reportes. |
 | `BL-0405` Descansos obligatorios | Implementado en Sprint 2C; candidato a cierre si las pruebas manuales y automatizadas pasan. |
-| `BL-0501` a `BL-0505` Registro electrónico | Pendiente; no debe haber eventos, kiosco operativo ni captura manual justificada. |
+| `BL-0501` Modelo `time_events` | Implementado en Sprint 2D como modelo interno; sin UI operativa. |
+| `BL-0502` a `BL-0505` Registro electronico | Pendiente; no debe haber registro web, kiosco operativo ni captura manual justificada. |
 | API y motor legal | Pendientes; no debe existir API de negocio completa ni cálculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
 
@@ -619,3 +654,5 @@ Usar esta tabla para marcar validación manual. En observación anotar pantalla,
 | Sprint 2C | No se puede crear descanso global desde UI de empresa |  |  |  |  |
 | Sprint 2C | Usuario de Empresa A no ve descansos de Empresa B |  |  |  |  |
 | Sprint 2C | Inactivar descanso no lo borra |  |  |  |  |
+| Sprint 2D | No aparecen botones ni pantalla de checado |  |  |  |  |
+| Sprint 2D | No existe kiosco operativo |  |  |  |  |

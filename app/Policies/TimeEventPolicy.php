@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Company;
+use App\Models\TimeEvent;
+use App\Models\User;
+
+class TimeEventPolicy
+{
+    public function viewAny(User $user, Company $company): bool
+    {
+        return $this->canAccessTimeEvents($user, $company);
+    }
+
+    public function view(User $user, TimeEvent $timeEvent): bool
+    {
+        return $this->canAccessTimeEvents($user, $timeEvent->company);
+    }
+
+    public function create(User $user, Company $company): bool
+    {
+        return $this->canAccessTimeEvents($user, $company);
+    }
+
+    private function canAccessTimeEvents(User $user, Company $company): bool
+    {
+        return $company->status === 'active'
+            && $user->belongsToCompany($company)
+            && in_array($user->roleKeyForCompany($company), ['owner', 'admin', 'rh'], true);
+    }
+}

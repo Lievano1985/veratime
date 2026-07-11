@@ -109,4 +109,9 @@ class Company extends Model
             'metadata' => [],
         ];
     }
+
+    public function timeEvents(): HasMany
+    {
+        return $this->hasMany(TimeEvent::class);
+    }
 }

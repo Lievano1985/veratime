@@ -70,4 +70,9 @@ class EmploymentRelationship extends Model
     {
         return $this->hasMany(ScheduleAssignment::class);
     }
+
+    public function timeEvents(): HasMany
+    {
+        return $this->hasMany(TimeEvent::class);
+    }
 }

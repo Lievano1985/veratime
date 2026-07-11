@@ -420,8 +420,10 @@ Sprint 2B quedo implementado y candidato a cierre para:
 Sprint 2C quedo implementado y candidato a cierre para:
 - BL-0405 Descansos obligatorios
 
-No se marcaron como implementadas:
+Sprint 2D quedo implementado y candidato a cierre para:
 - BL-0501 Modelo time_events
+
+No se marcaron como implementadas:
 - BL-0502 Registrar entrada/salida web
 - BL-0503 Registrar pausas reales
 - BL-0504 Modo kiosco operativo
@@ -429,7 +431,8 @@ No se marcaron como implementadas:
 
 Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDelete, reemplazo por vigencia e inactivacion sin borrado.
 Sprint 2C agrega mandatory_rest_days por fecha y alcance global, empresa o centro, con inactivacion no destructiva y sin calculos de jornada.
-No se implementaron registro de jornada, time_events, motor legal ni calculos.
+Sprint 2D agrega time_events como modelo interno de eventos fuente, sin UI operativa, sin registro web, sin kiosco y sin calculos de jornada.
+No se implementaron registro de jornada operativo, motor legal ni calculos.
 ```
 
 ## Sprint 3 — API y motor legal base
