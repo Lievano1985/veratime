@@ -672,7 +672,7 @@ Sprint 2B agrega la pantalla simple /schedule-assignments para:
 
 Quedan pendientes para sprints posteriores:
 - descansos obligatorios
-- registro de jornada, time_events, calculos, alertas y reportes
+- registro operativo de jornada, calculos, alertas y reportes
 ```
 
 ## 10.4 Calendario de descansos obligatorios

@@ -574,6 +574,17 @@ Sprint 2D no tiene prueba manual operativa todavia porque no agrega pantalla de 
 
 QA manual solo debe verificar que no aparezcan rutas, botones o pantallas nuevas para checar entrada/salida.
 
+Validacion tecnica automatizada cubierta:
+
+- Migracion `time_events`.
+- Modelo y relaciones con empresa, trabajador, relacion laboral, centro y usuario fuente.
+- Multi-tenant y bloqueo de empresa inactiva.
+- Conversion local a UTC y UTC a local.
+- Evento nocturno que cruza medianoche sin perder fecha local operativa.
+- Idempotencia por empresa con `idempotency_key` y `source` + `external_id`.
+- `occurred_local_time` en formato `H:i:s`.
+- Confirmacion de que no se crean `work_days`, `work_day_calculations`, `alerts`, `incidents` ni `reports`.
+
 ### No deberia existir todavia
 
 - Botones de entrada/salida.
@@ -601,6 +612,7 @@ QA manual solo debe verificar que no aparezcan rutas, botones o pantallas nuevas
 | `BL-0405` Descansos obligatorios | Implementado en Sprint 2C; candidato a cierre si las pruebas manuales y automatizadas pasan. |
 | `BL-0501` Modelo `time_events` | Implementado en Sprint 2D como modelo interno; sin UI operativa. |
 | `BL-0502` a `BL-0505` Registro electronico | Pendiente; no debe haber registro web, kiosco operativo ni captura manual justificada. |
+| `BL-0506` y `BL-0507` Flujos posteriores de eventos | Pendientes; no debe haber anulacion logica operativa ni eventos fuera de orden/tardios como flujo. |
 | API y motor legal | Pendientes; no debe existir API de negocio completa ni cálculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
 

@@ -770,7 +770,7 @@ Eventos fuente de jornada. Sprint 2D implementa el modelo interno y no crea toda
 | `event_type` | string | `clock_in`, `clock_out`, `break_start`, `break_end`, `manual_entry`, `logical_void` |
 | `occurred_at_utc` | dateTime | Fecha/hora normalizada en UTC |
 | `occurred_local_date` | date | Fecha local operativa |
-| `occurred_local_time` | time | Hora local operativa |
+| `occurred_local_time` | time | Hora local operativa conservada como `H:i:s` |
 | `timezone` | string | Zona horaria usada para normalizar |
 | `received_at` | dateTime | Fecha/hora de recepcion |
 | `source` | string | `web`, `pwa`, `kiosk`, `api`, `csv`, `admin_manual`, `job`, `integration` |
@@ -796,10 +796,14 @@ unique(company_id, idempotency_key) // MySQL/MariaDB permite multiples NULL
 
 Reglas:
 
+- `time_events` es fuente primaria no destructiva de los eventos de jornada.
 - No eliminacion fisica ordinaria desde dominio.
 - FKs de empresa, trabajador, relacion laboral, centro y usuario fuente usan restricciones que preservan historial.
 - `device_id` queda nullable y sin FK hasta que exista el modulo `devices`.
 - La idempotencia se valida en `CreateTimeEventAction` para no depender solo de indices unique con valores NULL.
+- `occurred_local_time` se expone en el modelo como hora local operativa en formato `H:i:s`.
+- Estados `voided`, `replaced` e `ignored` existen como valores posibles, pero sus flujos deben implementarse en Actions especificas cuando llegue `BL-0506`.
+- Cuando lleguen API/CSV, deben reutilizar `CreateTimeEventAction` sin duplicar normalizacion de timezone ni reglas de idempotencia.
 - `time_events` no calcula jornada, no valida secuencia entrada/salida y no genera alertas ni incidencias en Sprint 2D.
 ## 10.3 `kiosk_sessions`
 

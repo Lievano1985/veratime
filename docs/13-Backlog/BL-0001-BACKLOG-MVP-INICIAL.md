@@ -428,10 +428,13 @@ No se marcaron como implementadas:
 - BL-0503 Registrar pausas reales
 - BL-0504 Modo kiosco operativo
 - BL-0505 Captura manual justificada
+- BL-0506 Anulacion logica
+- BL-0507 Eventos fuera de orden/tardios
 
 Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDelete, reemplazo por vigencia e inactivacion sin borrado.
 Sprint 2C agrega mandatory_rest_days por fecha y alcance global, empresa o centro, con inactivacion no destructiva y sin calculos de jornada.
 Sprint 2D agrega time_events como modelo interno de eventos fuente, sin UI operativa, sin registro web, sin kiosco y sin calculos de jornada.
+Quedan pendientes los flujos operativos BL-0502 a BL-0507, incluyendo anulacion logica y eventos fuera de orden/tardios.
 No se implementaron registro de jornada operativo, motor legal ni calculos.
 ```
 

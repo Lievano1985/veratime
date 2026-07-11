@@ -42,6 +42,7 @@ Avance funcional inicial:
 - Asignaciones de horario: trabajador, horario, vigencia, reemplazo no destructivo e inactivacion.
 - Descansos obligatorios: catalogo por fecha con alcance global, empresa o centro, sin calculos de jornada.
 - Eventos fuente de jornada: modelo interno `time_events`, sin pantalla ni registro operativo todavia.
+- No existen todavia `/time-clock`, kiosco operativo, captura manual, API de negocio ni registro de jornada desde UI.
 - No hay registro de jornada desde UI, motor legal ni calculos.
 
 Rutas web disponibles para usuario autenticado con empresa activa:
