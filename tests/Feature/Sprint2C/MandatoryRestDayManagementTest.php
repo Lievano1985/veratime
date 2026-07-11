@@ -527,9 +527,8 @@ it('blocks hard deleting company or center with mandatory rest day history', fun
     $this->assertDatabaseHas('mandatory_rest_days', ['id' => $centerRestDay->id]);
 });
 
-it('sprint 2c does not create jornada event or calculation tables', function (): void {
+it('sprint 2c does not create jornada calculation or operational tables', function (): void {
     expect(Schema::hasTable('mandatory_rest_days'))->toBeTrue()
-        ->and(Schema::hasTable('time_events'))->toBeFalse()
         ->and(Schema::hasTable('work_days'))->toBeFalse()
         ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
         ->and(Schema::hasTable('alerts'))->toBeFalse()

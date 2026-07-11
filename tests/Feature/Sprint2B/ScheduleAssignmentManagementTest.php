@@ -455,9 +455,8 @@ it('allows adjacent assignment after effective_to and rejects same day overlap',
         'effective_from' => '2026-08-14',
     ]))->toThrow(InvalidArgumentException::class);
 });
-it('sprint 2b does not create jornada event or calculation tables', function (): void {
+it('sprint 2b does not create jornada calculation or operational tables', function (): void {
     expect(Schema::hasTable('schedule_assignments'))->toBeTrue()
-        ->and(Schema::hasTable('time_events'))->toBeFalse()
         ->and(Schema::hasTable('work_days'))->toBeFalse()
         ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
