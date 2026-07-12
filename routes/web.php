@@ -7,6 +7,8 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified', 'current.company'])
     ->name('dashboard');
@@ -19,6 +21,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
     Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
     Volt::route('time-clock', 'time-clock.index')->name('time-clock.index');
+    Volt::route('time-events/manual', 'time-events.manual')->name('time-events.manual');
 
     Route::redirect('settings', 'settings/profile');
 

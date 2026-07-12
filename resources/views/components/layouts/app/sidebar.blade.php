@@ -25,6 +25,8 @@
                     @php($activeCompanyForTimeClock = app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get())
                     @if ($activeCompanyForTimeClock && auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompanyForTimeClock]))
                         <flux:navlist.item icon="clock" :href="route('time-clock.index')" :current="request()->routeIs('time-clock.*')" wire:navigate>Registro de jornada</flux:navlist.item>
+                        <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
+                        <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*')" wire:navigate>Captura manual</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
             </flux:navlist>
