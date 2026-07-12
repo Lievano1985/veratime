@@ -672,7 +672,7 @@ Sprint 2B agrega la pantalla simple /schedule-assignments para:
 
 Quedan pendientes para sprints posteriores:
 - descansos obligatorios
-- registro operativo de jornada, calculos, alertas y reportes
+- registro avanzado de jornada, kiosco operativo, captura manual, calculos, alertas y reportes
 ```
 
 ## 10.4 Calendario de descansos obligatorios
@@ -705,6 +705,23 @@ Esta pantalla administra configuracion. No registra jornada, no calcula horas y 
 ## 11.1 Panel de registros
 
 **Prioridad:** P0
+
+Nota de implementacion Sprint 2E:
+
+```text
+La primera pantalla operativa de registro web esta en /time-clock y cubre:
+- selector administrativo de trabajador activo de la empresa activa
+- registrar entrada
+- registrar salida
+- iniciar pausa
+- terminar pausa
+- estado simple del dia: sin entrada, trabajando, en pausa o jornada cerrada
+- listado minimo de eventos validos del dia
+
+No implementa portal trabajador dedicado porque todavia no existe vinculo seguro usuario-trabajador.
+El enlace del sidebar se muestra solo a roles autorizados por TimeEventPolicy. El registro usa la hora actual del sistema; la pantalla no permite capturar fecha u hora manualmente.
+No implementa kiosco, captura manual, edicion de hora, fechas pasadas/futuras, calculos de jornada, alertas, incidencias, reportes ni API de negocio.
+```
 
 Incluye:
 
