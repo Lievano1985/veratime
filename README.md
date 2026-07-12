@@ -27,7 +27,7 @@ Avance funcional inicial:
 - Trabajadores: listado, alta/edicion, baja no destructiva y relacion laboral basica.
 - Personas: condiciones laborales con vigencia y credenciales kiosco administrativas, sin kiosco operativo todavia.
 
-Rutas web disponibles para usuario autenticado con empresa activa:
+Rutas web relevantes:
 
 - `/companies`
 - `/centers`
@@ -41,17 +41,22 @@ Avance funcional inicial:
 - Horarios con cruce de medianoche: `22:00` a `06:00` requiere `crosses_midnight`.
 - Asignaciones de horario: trabajador, horario, vigencia, reemplazo no destructivo e inactivacion.
 - Descansos obligatorios: catalogo por fecha con alcance global, empresa o centro, sin calculos de jornada.
-- Eventos fuente de jornada: `time_events` y registro web basico de entrada, salida e inicio/fin de pausa en `/time-clock`.
-- No existen todavia kiosco operativo, captura manual, API de negocio ni registro de jornada avanzado.
-- `/time-clock` solo crea eventos web basicos; no hay motor legal, calculos, alertas, incidencias ni reportes.
-- `/time-clock` es un flujo administrativo con selector de trabajador; usa la hora actual del sistema y no permite editar fecha u hora.
+- Eventos fuente de jornada: `time_events`, registro web basico en `/time-clock`, kiosco basico en `/kiosk` y captura manual justificada en `/time-events/manual`.
+- `/time-clock`
+- `/kiosk` (publica para checado con codigo/NIP) crea eventos web basicos de entrada, salida e inicio/fin de pausa; usa la hora actual del sistema y no permite editar fecha u hora.
+- `/kiosk` permite registrar entrada, salida e inicio/fin de pausa con codigo/NIP, token temporal, fuente `kiosk` y sin guardar ni mostrar NIP.
+- `/time-events/manual` permite a roles autorizados registrar eventos con motivo, fecha/hora explicita, fuente `admin_manual` y estado `pending_review`.
+- Estos flujos solo crean `time_events`; no hay motor legal, calculos, `work_days`, alertas, incidencias, reportes, API de negocio ni CSV.
 
-Rutas web disponibles para usuario autenticado con empresa activa:
+Rutas web relevantes:
 
 - `/schedules`
 - `/schedule-assignments`
 - `/mandatory-rest-days`
 - `/time-clock`
+- `/kiosk` (publica para checado con codigo/NIP)
+- `/time-events/manual`
+- `/kiosk` (publica para checado con codigo/NIP)
 
 ## Comandos utiles
 

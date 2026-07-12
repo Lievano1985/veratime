@@ -678,6 +678,87 @@ S3 documentados para seguimiento:
 - Mantener prueba manual de roles: owner/admin/rh ven y usan `/time-clock`; roles no autorizados no ven el enlace ni acceden.
 - `/time-clock` registra eventos reales en `time_events`, pero todavia no calcula jornadas, no genera alertas, no crea incidencias y no aplica motor legal.
 ---
+
+## Sprint 2F - Kiosco basico y captura manual justificada
+
+**Estado:** En cierre o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
+
+### Funcionalidad esperada al cerrar el sprint
+
+- Kiosco basico en `/kiosk`.
+- Identificacion por codigo/NIP usando `worker_credentials`.
+- NIP validado con `Hash::check`.
+- NIP no visible y `pin_hash` no expuesto.
+- Token temporal de kiosco con expiracion.
+- Registro de entrada, salida, inicio de pausa y fin de pausa desde kiosco.
+- Eventos creados en `time_events` con fuente `kiosk`.
+- Captura manual justificada en `/time-events/manual`.
+- Motivo obligatorio.
+- Eventos creados con fuente `admin_manual` y usuario capturista.
+- Conversion local a UTC y conservacion de fecha, hora local, timezone y `received_at`.
+
+### Usuario o rol para probar
+
+- Administrador de empresa.
+- Recursos humanos, si tiene permisos.
+- Rol no autorizado.
+- Trabajador con credencial de kiosco activa.
+- Trabajador con credencial bloqueada o en reset, si existe dato de prueba.
+
+### Rutas o pantallas
+
+- `/kiosk`
+- `/time-events/manual`
+
+### Pruebas manuales
+
+| Prueba | Pasos | Resultado esperado |
+|---|---|---|
+| Abrir kiosco | Entrar a `/kiosk`. | La pantalla carga sin requerir sesion de administrador. |
+| Codigo/NIP correcto | Capturar codigo y NIP validos. | El trabajador se identifica y ve acciones disponibles. |
+| NIP incorrecto | Capturar codigo valido y NIP incorrecto. | El sistema muestra mensaje neutral y no revela si el codigo existe. |
+| NIP no visible | Revisar pantalla despues de identificar y registrar. | El NIP no queda visible. |
+| Registrar entrada | Identificarse y registrar entrada. | Se crea evento `clock_in` con fuente `kiosk`. |
+| Iniciar pausa | Despues de entrada, iniciar pausa. | Se crea evento `break_start`. |
+| Terminar pausa | Despues de iniciar pausa, terminar pausa. | Se crea evento `break_end`. |
+| Registrar salida | Despues de entrada o pausa terminada, registrar salida. | Se crea evento `clock_out`. |
+| Evitar duplicados simples | Intentar doble entrada o doble pausa. | El sistema bloquea la accion no permitida por estado actual. |
+| Token temporal | Identificarse y dejar pasar la ventana de expiracion. | El sistema pide volver a identificarse antes de registrar. |
+| Abrir captura manual | Entrar a `/time-events/manual` con rol autorizado. | La pantalla carga y muestra trabajadores de la empresa activa. |
+| Rol no autorizado | Entrar a `/time-events/manual` con rol sin permiso. | El acceso queda bloqueado. |
+| Crear captura manual | Seleccionar trabajador, tipo de evento, fecha, hora y motivo. | Se guarda evento con fuente `admin_manual` y motivo. |
+| Motivo obligatorio | Intentar guardar sin motivo. | El sistema rechaza la captura. |
+| Verificar evento creado | Revisar ultimas capturas manuales. | El evento aparece con trabajador, tipo, hora local y estado. |
+
+### No deberia existir todavia
+
+- Anulacion logica operativa.
+- Eventos fuera de orden o tardios como flujo avanzado.
+- Modelo `work_days`.
+- Modelo `work_day_calculations`.
+- Motor legal.
+- Calculo de horas o jornadas.
+- Alertas.
+- Incidencias.
+- Reportes.
+- Conformidad digital.
+- API de negocio.
+- CSV.
+
+### Validacion automatizada registrada
+
+- `php artisan migrate:fresh --seed`: OK.
+- `php artisan test tests\Feature\Sprint2F`: OK, 28 passed / 136 assertions.
+- `php artisan test`: OK, 259 passed / 783 assertions.
+- `npm.cmd run build`: OK, con warning no bloqueante `Generated an empty chunk: "app"`.
+
+### Pendientes S3 no bloqueantes
+
+- Agregar prueba futura para codigo/NIP duplicado entre empresas.
+- Agregar prueba futura para credencial cuyo `worker_id` no corresponda a la misma empresa.
+- Revisar warning no bloqueante de Vite: `Generated an empty chunk: "app"`.
+- Endurecer en futura revision la estrategia de timezone de captura manual si se expone fuera de la UI actual.
+---
 ## Pendientes globales que no deben marcarse como listos
 
 | Pendiente | Nota |
@@ -688,7 +769,7 @@ S3 documentados para seguimiento:
 | `BL-0405` Descansos obligatorios | Implementado en Sprint 2C; candidato a cierre si las pruebas manuales y automatizadas pasan. |
 | `BL-0501` Modelo `time_events` | Implementado en Sprint 2D como modelo interno; sin UI operativa. |
 | `BL-0502` y `BL-0503` Registro web basico | Implementados en Sprint 2E como flujo administrativo `/time-clock`, sin calculos. |
-| `BL-0504` y `BL-0505` Kiosco y captura manual | Pendientes; no debe haber kiosco operativo ni captura manual justificada. |
+| `BL-0504` y `BL-0505` Kiosco y captura manual | Implementados en Sprint 2F como kiosco basico y captura manual justificada, sin calculos. |
 | `BL-0506` y `BL-0507` Flujos posteriores de eventos | Pendientes; no debe haber anulacion logica operativa ni eventos fuera de orden/tardios como flujo. |
 | API y motor legal | Pendientes; no debe existir API de negocio completa ni cálculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
@@ -749,4 +830,7 @@ Usar esta tabla para marcar validación manual. En observación anotar pantalla,
 | Sprint 2E | Rol no autorizado no ve enlace ni accede a `/time-clock` |  |  |  |  |
 | Sprint 2E | No se puede editar fecha u hora en registro web |  |  |  |  |
 | Sprint 2E | No existe kiosco operativo ni captura manual |  |  |  |  |
+| Sprint 2F | `/kiosk` registra eventos con codigo/NIP |  |  |  |  |
+| Sprint 2F | `/time-events/manual` registra captura con motivo |  |  |  |  |
+| Sprint 2F | No existe anulacion logica ni eventos tardios avanzados |  |  |  |  |
 | Sprint 2D | No existe kiosco operativo |  |  |  |  |
