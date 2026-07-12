@@ -18,6 +18,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('schedules', 'schedules.index')->name('schedules.index');
     Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
     Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
+    Volt::route('time-clock', 'time-clock.index')->name('time-clock.index');
 
     Route::redirect('settings', 'settings/profile');
 

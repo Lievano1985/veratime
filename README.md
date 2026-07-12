@@ -41,15 +41,17 @@ Avance funcional inicial:
 - Horarios con cruce de medianoche: `22:00` a `06:00` requiere `crosses_midnight`.
 - Asignaciones de horario: trabajador, horario, vigencia, reemplazo no destructivo e inactivacion.
 - Descansos obligatorios: catalogo por fecha con alcance global, empresa o centro, sin calculos de jornada.
-- Eventos fuente de jornada: modelo interno `time_events`, sin pantalla ni registro operativo todavia.
-- No existen todavia `/time-clock`, kiosco operativo, captura manual, API de negocio ni registro de jornada desde UI.
-- No hay registro de jornada desde UI, motor legal ni calculos.
+- Eventos fuente de jornada: `time_events` y registro web basico de entrada, salida e inicio/fin de pausa en `/time-clock`.
+- No existen todavia kiosco operativo, captura manual, API de negocio ni registro de jornada avanzado.
+- `/time-clock` solo crea eventos web basicos; no hay motor legal, calculos, alertas, incidencias ni reportes.
+- `/time-clock` es un flujo administrativo con selector de trabajador; usa la hora actual del sistema y no permite editar fecha u hora.
 
 Rutas web disponibles para usuario autenticado con empresa activa:
 
 - `/schedules`
 - `/schedule-assignments`
 - `/mandatory-rest-days`
+- `/time-clock`
 
 ## Comandos utiles
 

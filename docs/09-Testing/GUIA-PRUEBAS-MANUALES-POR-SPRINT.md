@@ -602,6 +602,82 @@ Validacion tecnica automatizada cubierta:
 - Conformidad digital.
 
 ---
+## Sprint 2E - Registro web basico de jornada y pausas
+
+**Estado:** En revision o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
+
+### Funcionalidad esperada al cerrar el sprint
+
+- Pantalla `/time-clock`.
+- Selector administrativo de trabajador activo de la empresa activa.
+- Registro de entrada.
+- Registro de salida.
+- Inicio de pausa.
+- Fin de pausa.
+- Estado simple del dia: sin entrada, trabajando, en pausa o jornada cerrada.
+- Listado minimo de eventos validos del dia.
+- Eventos creados con fuente `web` y estado `valid`.
+
+### Usuario o rol para probar
+
+- Administrador de empresa.
+- Recursos humanos, si tiene permisos.
+- Usuario de otra empresa.
+- Usuario sin empresa activa.
+- Rol no autorizado.
+
+### Ruta o pantalla
+
+- `/time-clock`
+
+### Pruebas manuales
+
+| Prueba | Pasos | Resultado esperado |
+|---|---|---|
+| Acceso protegido | Entrar a `/time-clock` sin iniciar sesion. | El sistema redirige a login. |
+| Rol autorizado | Verificar sidebar con owner/admin/rh. | El enlace Registro de jornada aparece y permite entrar a `/time-clock`. |
+| Rol no autorizado | Verificar sidebar y acceso directo con rol sin permiso. | El enlace no aparece y el acceso directo queda bloqueado. |
+| Empresa activa | Entrar con usuario sin empresa activa o empresa inactiva. | El sistema bloquea el acceso operativo. |
+| Seleccionar trabajador | Entrar con rol autorizado y seleccionar trabajador activo. | Solo aparecen trabajadores de la empresa activa. |
+| Registrar entrada | Presionar Registrar entrada. | Se crea evento `clock_in`, fuente `web`, estado `valid`. |
+| Evitar doble entrada | Intentar registrar entrada dos veces seguidas. | El sistema no permite la segunda entrada abierta. |
+| Iniciar pausa | Despues de entrada, presionar Iniciar pausa. | Se crea evento `break_start`. |
+| Evitar doble pausa | Intentar iniciar pausa dos veces seguidas. | El sistema bloquea la segunda pausa abierta. |
+| Terminar pausa | Despues de iniciar pausa, presionar Terminar pausa. | Se crea evento `break_end`. |
+| Registrar salida | Despues de entrada, o despues de terminar pausa, presionar Registrar salida. | Se crea evento `clock_out` y la jornada queda cerrada a nivel operativo simple. |
+| Multiempresa | Intentar ver o registrar trabajador de otra empresa. | El sistema bloquea el acceso horizontal. |
+| Eventos del dia | Completar entrada, pausa, fin de pausa y salida. | La tabla muestra los eventos del dia con tipo, hora local, fuente `web` y estado `valid`. |
+| Hora no editable | Revisar formulario antes de registrar evento. | No existe campo para editar fecha u hora; el sistema usa la hora actual. |
+| Captura manual pendiente | Buscar opcion para registrar evento manual con motivo. | No existe captura manual justificada todavia. |
+
+### No deberia existir todavia
+
+- Kiosco operativo.
+- Uso de codigo/NIP para checar.
+- Captura manual justificada.
+- Edicion de fecha u hora.
+- Anulacion logica operativa.
+- Eventos fuera de orden o tardios como flujo.
+- Modelo `work_days`.
+- Modelo `work_day_calculations`.
+- Motor legal.
+- Calculo de horas o jornadas.
+- Alertas.
+- Incidencias.
+- Reportes.
+- Conformidad digital.
+- API de negocio.
+
+### Observaciones
+
+La pantalla es administrativa porque todavia no existe vinculo seguro usuario-trabajador. El portal trabajador dedicado queda pendiente.
+
+S3 documentados para seguimiento:
+
+- `ResolveCurrentTimeRecordStateAction` usa consulta tolerante con `whereDate(...)` y `LIKE`; funciona, pero conviene normalizarla en revision futura para mejor uso de indices.
+- Mantener prueba manual de roles: owner/admin/rh ven y usan `/time-clock`; roles no autorizados no ven el enlace ni acceden.
+- `/time-clock` registra eventos reales en `time_events`, pero todavia no calcula jornadas, no genera alertas, no crea incidencias y no aplica motor legal.
+---
 ## Pendientes globales que no deben marcarse como listos
 
 | Pendiente | Nota |
@@ -611,7 +687,8 @@ Validacion tecnica automatizada cubierta:
 | `BL-0307` Detalle completo de trabajador | Faltan jornadas, alertas, incidencias y reportes. |
 | `BL-0405` Descansos obligatorios | Implementado en Sprint 2C; candidato a cierre si las pruebas manuales y automatizadas pasan. |
 | `BL-0501` Modelo `time_events` | Implementado en Sprint 2D como modelo interno; sin UI operativa. |
-| `BL-0502` a `BL-0505` Registro electronico | Pendiente; no debe haber registro web, kiosco operativo ni captura manual justificada. |
+| `BL-0502` y `BL-0503` Registro web basico | Implementados en Sprint 2E como flujo administrativo `/time-clock`, sin calculos. |
+| `BL-0504` y `BL-0505` Kiosco y captura manual | Pendientes; no debe haber kiosco operativo ni captura manual justificada. |
 | `BL-0506` y `BL-0507` Flujos posteriores de eventos | Pendientes; no debe haber anulacion logica operativa ni eventos fuera de orden/tardios como flujo. |
 | API y motor legal | Pendientes; no debe existir API de negocio completa ni cálculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
@@ -667,4 +744,9 @@ Usar esta tabla para marcar validación manual. En observación anotar pantalla,
 | Sprint 2C | Usuario de Empresa A no ve descansos de Empresa B |  |  |  |  |
 | Sprint 2C | Inactivar descanso no lo borra |  |  |  |  |
 | Sprint 2D | No aparecen botones ni pantalla de checado |  |  |  |  |
+| Sprint 2E | `/time-clock` registra entrada y salida web |  |  |  |  |
+| Sprint 2E | `/time-clock` registra inicio y fin de pausa |  |  |  |  |
+| Sprint 2E | Rol no autorizado no ve enlace ni accede a `/time-clock` |  |  |  |  |
+| Sprint 2E | No se puede editar fecha u hora en registro web |  |  |  |  |
+| Sprint 2E | No existe kiosco operativo ni captura manual |  |  |  |  |
 | Sprint 2D | No existe kiosco operativo |  |  |  |  |
