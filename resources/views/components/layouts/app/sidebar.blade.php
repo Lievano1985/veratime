@@ -22,6 +22,10 @@
                     <flux:navlist.item icon="calendar-days" :href="route('schedules.index')" :current="request()->routeIs('schedules.*')" wire:navigate>Horarios</flux:navlist.item>
                     <flux:navlist.item icon="clock" :href="route('schedule-assignments.index')" :current="request()->routeIs('schedule-assignments.*')" wire:navigate>Asignaciones</flux:navlist.item>
                     <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
+                    @php($activeCompanyForTimeClock = app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get())
+                    @if ($activeCompanyForTimeClock && auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompanyForTimeClock]))
+                        <flux:navlist.item icon="clock" :href="route('time-clock.index')" :current="request()->routeIs('time-clock.*')" wire:navigate>Registro de jornada</flux:navlist.item>
+                    @endif
                 </flux:navlist.group>
             </flux:navlist>
 
