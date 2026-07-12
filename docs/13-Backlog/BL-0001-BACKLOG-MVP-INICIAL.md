@@ -427,9 +427,13 @@ Sprint 2E quedo implementado y candidato a cierre para:
 - BL-0502 Registrar entrada/salida web
 - BL-0503 Registrar pausas reales
 
-No se marcaron como implementadas:
+Sprint 2F quedo implementado y candidato a cierre para:
 - BL-0504 Modo kiosco operativo
 - BL-0505 Captura manual justificada
+
+Sprint 2F validado con arquitectura aprobada con observaciones corregidas y QA aprobado con S3 no bloqueantes.
+
+No se marcaron como implementadas:
 - BL-0506 Anulacion logica
 - BL-0507 Eventos fuera de orden/tardios
 
@@ -437,8 +441,8 @@ Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDe
 Sprint 2C agrega mandatory_rest_days por fecha y alcance global, empresa o centro, con inactivacion no destructiva y sin calculos de jornada.
 Sprint 2D agrega time_events como modelo interno de eventos fuente.
 Sprint 2E agrega registro web basico en /time-clock para entrada, salida e inicio/fin de pausa, usando time_events y sin calculos de jornada.
-Quedan pendientes kiosco operativo, captura manual justificada, anulacion logica y eventos fuera de orden/tardios.
-EPIC-05 no queda completa todavia; solo BL-0501, BL-0502 y BL-0503 estan candidatas a cierre.
+Quedan pendientes anulacion logica y eventos fuera de orden/tardios.
+EPIC-05 no queda completa todavia; BL-0501 a BL-0505 estan candidatas a cierre, y BL-0506/BL-0507 siguen pendientes.
 No se implementaron motor legal ni calculos.
 ```
 

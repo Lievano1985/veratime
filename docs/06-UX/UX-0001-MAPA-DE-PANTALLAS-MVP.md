@@ -719,8 +719,22 @@ La primera pantalla operativa de registro web esta en /time-clock y cubre:
 - listado minimo de eventos validos del dia
 
 No implementa portal trabajador dedicado porque todavia no existe vinculo seguro usuario-trabajador.
-El enlace del sidebar se muestra solo a roles autorizados por TimeEventPolicy. El registro usa la hora actual del sistema; la pantalla no permite capturar fecha u hora manualmente.
-No implementa kiosco, captura manual, edicion de hora, fechas pasadas/futuras, calculos de jornada, alertas, incidencias, reportes ni API de negocio.
+El enlace del sidebar se muestra solo a roles autorizados por TimeEventPolicy.
+El registro usa la hora actual del sistema; la pantalla no permite capturar fecha u hora manualmente.
+No implementa calculos de jornada, alertas, incidencias, reportes ni API de negocio.
+```
+
+Nota de implementacion Sprint 2F:
+
+```text
+/kiosk implementa kiosco basico con codigo/NIP, acciones segun estado simple y confirmacion.
+/time-events/manual implementa captura manual justificada administrativa con trabajador, tipo, fecha, hora y motivo obligatorio.
+
+Kiosco valida worker_credentials, usa Hash::check, no conserva NIP, no expone pin_hash y usa token temporal con expiracion.
+Kiosco no permite fecha/hora explicita y crea time_events con source kiosk.
+Captura manual crea time_events con source admin_manual, motivo obligatorio y usuario capturista.
+Captura manual conserva occurred_local_date, occurred_local_time H:i:s, timezone y received_at.
+No implementa anulacion logica, eventos tardios/fuera de orden como flujo avanzado, calculos, alertas, incidencias, reportes ni API de negocio.
 ```
 
 Incluye:
@@ -748,8 +762,8 @@ Acciones:
 
 - Ver evento.
 - Captura manual justificada.
-- Solicitar corrección.
-- Anulación lógica con permiso.
+- Solicitar correccion, pendiente de flujo posterior.
+- Anulacion logica con permiso, pendiente para BL-0506.
 
 ---
 

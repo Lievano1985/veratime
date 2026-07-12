@@ -757,7 +757,7 @@ index(company_id, center_id)
 
 ## 10.2 `time_events`
 
-Eventos fuente de jornada. Sprint 2D implementa el modelo interno. Sprint 2E agrega registro web basico para entrada, salida e inicio/fin de pausa usando `time_events`, sin kiosco operativo, captura manual, calculos, alertas, incidencias ni reportes.
+Eventos fuente de jornada. Sprint 2D implementa el modelo interno. Sprint 2E agrega registro web basico para entrada, salida e inicio/fin de pausa usando `time_events`. Sprint 2F agrega kiosco basico y captura manual justificada. No hay calculos, `work_days`, alertas, incidencias ni reportes.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -806,6 +806,9 @@ Reglas:
 - Cuando lleguen API/CSV, deben reutilizar `CreateTimeEventAction` sin duplicar normalizacion de timezone ni reglas de idempotencia.
 - Sprint 2E valida una secuencia operativa minima para registro web: entrada, salida, inicio de pausa y fin de pausa. No calcula jornada, no crea `work_days`, no genera alertas ni incidencias.
 - En Sprint 2E, los eventos web se crean con source `web`, hora actual del sistema segun zona horaria aplicable y sin aceptar fecha u hora explicita desde la interfaz.
+- Sprint 2F agrega `source = kiosk` para eventos registrados con codigo/NIP y `source = admin_manual` para captura manual justificada.
+- Kiosco no acepta fecha/hora explicita; usa hora actual del sistema y no guarda NIP en metadata.
+- Captura manual si acepta fecha/hora explicita y motivo obligatorio; queda como `pending_review` por regla de `CreateTimeEventAction` para `admin_manual`.
 - El registro web debe usar `RegisterWebTimeEventAction`, que orquesta `CreateTimeEventAction` para conservar normalizacion de timezone, fuente `web`, estado `valid`, `received_at` y metadata minima no sensible.
 ## 10.3 `kiosk_sessions`
 
