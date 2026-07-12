@@ -679,6 +679,32 @@ S3 documentados para seguimiento:
 - `/time-clock` registra eventos reales en `time_events`, pero todavia no calcula jornadas, no genera alertas, no crea incidencias y no aplica motor legal.
 ---
 
+---
+
+## Preparacion demo local Sprint 2G
+
+**Estado:** En progreso.
+
+Para cargar datos ficticios locales hasta Sprint 2, ejecutar:
+
+```bash
+php artisan db:seed --class=VeraTimeDemoSeeder
+```
+
+Datos disponibles para pruebas manuales:
+
+- Empresa: `Vera Time Demo Completo`.
+- Usuarios: `owner.demo@veratime.local`, `admin.demo@veratime.local`, `rh.demo@veratime.local`.
+- Password demo local: `VeraDemo123!`.
+- NIP demo local de kiosco: `1234`.
+- Centros demo: Matriz Demo y Planta Demo Norte.
+- Trabajadores demo: Ana Demo Lopez, Bruno Demo Perez y Carla Demo Ruiz.
+- Horarios demo: diurno y nocturno con cruce de medianoche.
+- Eventos demo: web, kiosk y admin_manual.
+
+Usar estos datos solo en entorno local/demo. No representan datos reales ni deben usarse en produccion.
+
+El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, motor legal, calculos, alertas, incidencias, reportes, conformidad, API ni CSV.
 ## Sprint 2F - Kiosco basico y captura manual justificada
 
 **Estado:** En cierre o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
