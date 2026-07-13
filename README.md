@@ -58,6 +58,24 @@ Rutas web relevantes:
 - `/time-events/manual`
 - `/kiosk` (publica para checado con codigo/NIP)
 
+
+## Seeder demo local
+
+Para cargar datos demo locales hasta Sprint 2:
+
+```bash
+php artisan db:seed --class=VeraTimeDemoSeeder
+```
+
+Datos demo principales:
+
+- Empresa: `Vera Time Demo Completo`.
+- Usuarios: `owner.demo@veratime.local`, `admin.demo@veratime.local`, `rh.demo@veratime.local`.
+- Password demo local: `VeraDemo123!`.
+- NIP demo local para kiosco: `1234`.
+
+El seeder es idempotente y solo crea datos ficticios/locales. No crea motor legal, calculos, `work_days`, alertas, incidencias, reportes, API ni CSV.
+
 ## Comandos utiles
 
 ```bash
