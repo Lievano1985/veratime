@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Center;
 use App\Models\Company;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -13,20 +12,24 @@ return new class extends Migration
         Schema::create('mandatory_rest_days', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Company::class)->nullable()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(Center::class)->nullable()->constrained()->restrictOnDelete();
             $table->string('name');
             $table->date('date');
+            $table->string('type');
             $table->string('scope');
-            $table->string('source')->nullable();
+            $table->string('state_code', 10)->nullable();
+            $table->text('source_reference')->nullable();
+            $table->string('capture_source')->default('manual');
             $table->string('status')->default('active');
             $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index('date');
+            $table->index(['type', 'date']);
             $table->index(['scope', 'date']);
+            $table->index(['scope', 'state_code', 'date']);
             $table->index(['company_id', 'date']);
-            $table->index(['company_id', 'center_id', 'date'], 'mrd_company_center_date_idx');
-            $table->index(['scope', 'company_id', 'center_id', 'date'], 'mrd_scope_company_center_date_idx');
+            $table->index(['capture_source', 'date']);
+            $table->index(['type', 'scope', 'company_id', 'state_code', 'date'], 'mrd_type_scope_identity_idx');
         });
     }
 

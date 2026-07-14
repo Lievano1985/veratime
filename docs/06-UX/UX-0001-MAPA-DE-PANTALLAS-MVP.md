@@ -689,14 +689,24 @@ Incluye:
 
 - Fecha.
 - Nombre.
-- Alcance global, empresa o centro.
+- Tipo: legal obligatorio, electoral o interno de empresa.
+- Alcance: nacional, estatal o empresa.
+- Codigo de estado normalizado cuando el alcance sea estatal.
 - Estado activo o inactivo.
-- Fuente opcional.
-- Filtros por fecha, alcance, estado y centro.
+- Fundamento o referencia opcional.
+- Filtros por fecha, tipo, alcance, estado y codigo de estado.
 
 Nota:
 
 Esta pantalla administra configuracion. No registra jornada, no calcula horas y no genera alertas.
+
+El formulario muestra el campo "Fundamento o referencia" con ayuda: "Ejemplo: LFT articulo 74, acuerdo electoral o politica interna". La tabla muestra esa referencia o "Sin referencia". El origen tecnico `capture_source` no se muestra en la tabla principal.
+
+Reglas de acceso:
+
+- Solo `super_admin` administra registros nacionales, estatales o electorales globales.
+- Usuarios de empresa solo administran descansos internos de su empresa.
+- El alcance por centro ya no existe en `mandatory_rest_days`; el estado aplicable se obtiene de `centers.address.state_code` normalizado al resolver por fecha.
 
 ---
 

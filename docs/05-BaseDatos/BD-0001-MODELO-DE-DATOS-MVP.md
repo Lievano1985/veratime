@@ -698,12 +698,14 @@ Descansos obligatorios aplicables por fecha. Sprint 2C implementa este catalogo 
 | Campo | Tipo | Notas |
 |---|---|---|
 | `id` | bigint pk | Identificador Laravel |
-| `company_id` | bigint nullable fk | Null si el descanso es global |
-| `center_id` | bigint nullable fk | Solo aplica para alcance `center` |
+| `company_id` | bigint nullable fk | Obligatorio solo para `scope = company` |
 | `name` | string | Nombre del descanso |
 | `date` | date | Fecha del descanso |
-| `scope` | string | `global`, `company`, `center` |
-| `source` | string nullable | Fuente o captura manual |
+| `type` | string | `legal_mandatory`, `electoral`, `company_internal` |
+| `scope` | string | `national`, `state`, `company` |
+| `state_code` | string nullable | Obligatorio solo para `scope = state`; formato tecnico normalizado, por ejemplo `MX-NLE` |
+| `source_reference` | text nullable | Fundamento o referencia visible: LFT, acuerdo electoral o politica interna |
+| `capture_source` | string | Origen tecnico de captura: `manual`, `seeder`, `import`, `system`; default `manual` |
 | `status` | string | `active`, `inactive` |
 | `metadata` | JSON nullable | Datos auxiliares compatibles con MySQL/MariaDB |
 | `created_at` | timestamp |  |
@@ -713,19 +715,32 @@ Indices:
 
 ```text
 index(date)
+index(type, date)
 index(scope, date)
+index(scope, state_code, date)
 index(company_id, date)
-index(company_id, center_id, date)
-index(scope, company_id, center_id, date)
+index(capture_source, date)
+index(type, scope, company_id, state_code, date)
 ```
 
 Reglas de persistencia:
 
 ```text
-company_id y center_id usan restrictOnDelete para evitar borrado destructivo de historial.
+mandatory_rest_days no usa center_id.
+company_id usa restrictOnDelete cuando aplica para evitar borrado destructivo de historial.
 La inactivacion conserva el registro con status inactive.
-La unicidad por alcance, fecha y nombre se valida en Actions para evitar depender de indices unique con columnas nullable en MySQL/MariaDB.
+La unicidad por type, scope, fecha, nombre e identidad de alcance se valida en Actions para evitar depender de indices unique con columnas nullable en MySQL/MariaDB.
 No se define un indice unique nullable como garantia principal porque MySQL/MariaDB permite multiples NULL y podria no bloquear duplicados por alcance.
+legal_mandatory y electoral solo admiten scope national o state.
+company_internal solo admite scope company.
+scope national exige company_id null y state_code null.
+scope state exige company_id null y state_code normalizado.
+scope company exige company_id y state_code null.
+Los registros national, state y electoral globales solo son administrables por super_admin.
+Los usuarios de empresa solo administran company_internal de su empresa.
+ResolveMandatoryRestDaysForDateAction obtiene state_code desde centers.address.state_code normalizado; no usa nombres estatales libres.
+source_reference es referencia visible y no debe usarse como origen tecnico.
+capture_source conserva el origen tecnico de captura y no se muestra en la tabla principal.
 ```
 
 ---

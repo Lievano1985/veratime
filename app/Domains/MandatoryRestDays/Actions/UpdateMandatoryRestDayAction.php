@@ -2,7 +2,6 @@
 
 namespace App\Domains\MandatoryRestDays\Actions;
 
-use App\Models\Center;
 use App\Models\Company;
 use App\Models\MandatoryRestDay;
 use Carbon\CarbonImmutable;
@@ -12,100 +11,157 @@ use InvalidArgumentException;
 
 class UpdateMandatoryRestDayAction
 {
-    public function handle(Company $company, MandatoryRestDay $restDay, ?Center $center, array $data): MandatoryRestDay
+    public function handle(Company $company, MandatoryRestDay $restDay, array $data): MandatoryRestDay
     {
-        $this->assertOwnedByCompany($company, $restDay);
+        $this->assertEditableFromCompanyContext($company, $restDay);
 
+        $type = $data['type'] ?? $restDay->type;
         $scope = $data['scope'] ?? $restDay->scope;
         $status = $data['status'] ?? $restDay->status;
+        $captureSource = $data['capture_source'] ?? $restDay->capture_source ?? 'manual';
+        $stateCode = $this->normalizeStateCode($data['state_code'] ?? $restDay->state_code);
 
-        $this->assertValidPayload($company, $center, $scope, $status, $data);
+        $targetCompany = $scope === 'company' ? $company : null;
+
+        $this->assertValidPayload($targetCompany, $type, $scope, $stateCode, $status, $captureSource, $data);
 
         $date = CarbonImmutable::parse($data['date'])->toDateString();
 
-        return DB::transaction(function () use ($company, $restDay, $center, $data, $scope, $status, $date): MandatoryRestDay {
-            $this->assertUniqueMandatoryRestDay($scope, $company, $center, $date, $data['name'], $restDay->id);
+        return DB::transaction(function () use ($targetCompany, $restDay, $data, $type, $scope, $stateCode, $status, $captureSource, $date): MandatoryRestDay {
+            $this->assertUniqueMandatoryRestDay($type, $scope, $targetCompany, $stateCode, $date, $data['name'], $restDay->id);
 
             $restDay->forceFill([
                 'name' => $data['name'],
                 'date' => $date,
+                'type' => $type,
                 'scope' => $scope,
-                'source' => $data['source'] ?? $restDay->source,
+                'state_code' => $scope === 'state' ? $stateCode : null,
+                'source_reference' => $data['source_reference'] ?? $restDay->source_reference,
+                'capture_source' => $captureSource,
                 'status' => $status,
                 'metadata' => $data['metadata'] ?? $restDay->metadata ?? [],
             ]);
 
-            $restDay->center()->associate($scope === 'center' ? $center : null);
+            $restDay->company()->associate($scope === 'company' ? $targetCompany : null);
             $restDay->save();
 
             return $restDay->refresh();
         });
     }
 
-    private function assertOwnedByCompany(Company $company, MandatoryRestDay $restDay): void
+    private function assertEditableFromCompanyContext(Company $company, MandatoryRestDay $restDay): void
     {
-        if ($restDay->company_id !== $company->id) {
-            throw new InvalidArgumentException('Mandatory rest day must belong to the active company.');
+        if ($restDay->company_id !== null && $restDay->company_id !== $company->id) {
+            throw new InvalidArgumentException('El descanso obligatorio debe pertenecer a la empresa activa.');
         }
     }
 
-    private function assertValidPayload(Company $company, ?Center $center, ?string $scope, string $status, array $data): void
+    private function assertValidPayload(?Company $company, string $type, ?string $scope, ?string $stateCode, string $status, string $captureSource, array $data): void
     {
         if (blank($data['name'] ?? null)) {
-            throw new InvalidArgumentException('Mandatory rest day name is required.');
+            throw new InvalidArgumentException('El nombre del descanso obligatorio es requerido.');
         }
 
         if (blank($data['date'] ?? null)) {
-            throw new InvalidArgumentException('Mandatory rest day date is required.');
+            throw new InvalidArgumentException('La fecha del descanso obligatorio es requerida.');
         }
 
-        if (! in_array($scope, ['company', 'center'], true)) {
-            throw new InvalidArgumentException('Only company and center mandatory rest days can be updated from company context.');
+        if (! in_array($type, MandatoryRestDay::TYPES, true)) {
+            throw new InvalidArgumentException('El tipo del descanso obligatorio no es valido.');
         }
 
-        if (! in_array($status, ['active', 'inactive'], true)) {
-            throw new InvalidArgumentException('Mandatory rest day status is invalid.');
+        if (! in_array($scope, MandatoryRestDay::SCOPES, true)) {
+            throw new InvalidArgumentException('El alcance del descanso obligatorio no es valido.');
         }
 
-        if ($scope === 'company' && $center) {
-            throw new InvalidArgumentException('Company mandatory rest days cannot belong to a center.');
+        if (! in_array($status, MandatoryRestDay::STATUSES, true)) {
+            throw new InvalidArgumentException('El estado del descanso obligatorio no es valido.');
         }
 
-        if ($scope === 'center') {
-            if (! $center) {
-                throw new InvalidArgumentException('Center mandatory rest days require a center.');
+        if (! in_array($captureSource, MandatoryRestDay::CAPTURE_SOURCES, true)) {
+            throw new InvalidArgumentException('El origen de captura del descanso obligatorio no es valido.');
+        }
+
+        if ($type === 'company_internal' && $scope !== 'company') {
+            throw new InvalidArgumentException('Los descansos internos de empresa solo pueden tener alcance de empresa.');
+        }
+
+        if (in_array($type, ['legal_mandatory', 'electoral'], true) && ! in_array($scope, ['national', 'state'], true)) {
+            throw new InvalidArgumentException('Los descansos legales o electorales solo pueden tener alcance nacional o estatal.');
+        }
+
+        if ($scope === 'national') {
+            if ($company || filled($stateCode)) {
+                throw new InvalidArgumentException('El alcance nacional no debe tener empresa ni codigo de estado.');
             }
-
-            if ($center->company_id !== $company->id) {
-                throw new InvalidArgumentException('Center must belong to the active company.');
-            }
-        }
-    }
-
-    private function assertUniqueMandatoryRestDay(string $scope, Company $company, ?Center $center, string $date, string $name, int $ignoreId): void
-    {
-        $exists = MandatoryRestDay::query()
-            ->whereKeyNot($ignoreId)
-            ->where('scope', $scope)
-            ->whereDate('date', $date)
-            ->where('name', $name)
-            ->tap(fn (Builder $query) => $this->applyScopeIdentity($query, $scope, $company, $center))
-            ->lockForUpdate()
-            ->exists();
-
-        if ($exists) {
-            throw new InvalidArgumentException('Mandatory rest day already exists for the same scope, date and name.');
-        }
-    }
-
-    private function applyScopeIdentity(Builder $query, string $scope, Company $company, ?Center $center): void
-    {
-        if ($scope === 'company') {
-            $query->where('company_id', $company->id)->whereNull('center_id');
 
             return;
         }
 
-        $query->where('company_id', $company->id)->where('center_id', $center->id);
+        if ($scope === 'state') {
+            if ($company) {
+                throw new InvalidArgumentException('El alcance estatal no debe pertenecer a una empresa.');
+            }
+
+            if (! $this->isValidStateCode($stateCode)) {
+                throw new InvalidArgumentException('El codigo de estado es obligatorio y debe tener formato normalizado.');
+            }
+
+            return;
+        }
+
+        if ($scope === 'company' && ! $company) {
+            throw new InvalidArgumentException('Los descansos obligatorios de empresa requieren una empresa activa.');
+        }
+
+        if ($scope === 'company' && filled($stateCode)) {
+            throw new InvalidArgumentException('El alcance de empresa no debe tener codigo de estado.');
+        }
+    }
+
+    private function assertUniqueMandatoryRestDay(string $type, string $scope, ?Company $company, ?string $stateCode, string $date, string $name, int $ignoreId): void
+    {
+        $exists = MandatoryRestDay::query()
+            ->whereKeyNot($ignoreId)
+            ->where('type', $type)
+            ->where('scope', $scope)
+            ->whereDate('date', $date)
+            ->where('name', $name)
+            ->tap(fn (Builder $query) => $this->applyScopeIdentity($query, $scope, $company, $stateCode))
+            ->lockForUpdate()
+            ->exists();
+
+        if ($exists) {
+            throw new InvalidArgumentException('Ya existe un descanso obligatorio con el mismo alcance, fecha y nombre.');
+        }
+    }
+
+    private function applyScopeIdentity(Builder $query, string $scope, ?Company $company, ?string $stateCode): void
+    {
+        if ($scope === 'national') {
+            $query->whereNull('company_id');
+
+            return;
+        }
+
+        if ($scope === 'state') {
+            $query->whereNull('company_id')->where('state_code', $stateCode);
+
+            return;
+        }
+
+        $query->where('company_id', $company->id);
+    }
+
+    private function normalizeStateCode(?string $stateCode): ?string
+    {
+        $stateCode = trim((string) $stateCode);
+
+        return $stateCode === '' ? null : strtoupper($stateCode);
+    }
+
+    private function isValidStateCode(?string $stateCode): bool
+    {
+        return is_string($stateCode) && preg_match('/^[A-Z]{2}-[A-Z0-9]{2,5}$/', $stateCode) === 1;
     }
 }
