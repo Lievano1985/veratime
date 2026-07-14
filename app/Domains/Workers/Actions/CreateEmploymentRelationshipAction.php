@@ -13,7 +13,7 @@ class CreateEmploymentRelationshipAction
     public function handle(Company $company, Worker $worker, Center $center, array $data): EmploymentRelationship
     {
         if ($worker->company_id !== $company->id || $center->company_id !== $company->id) {
-            throw new InvalidArgumentException('Worker and center must belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora y el centro deben pertenecer a la empresa activa.');
         }
 
         return $company->employmentRelationships()->create([

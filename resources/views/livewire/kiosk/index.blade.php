@@ -166,7 +166,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center gap-6 p-6">
+<div class="mx-auto flex w-full max-w-3xl flex-col justify-center gap-6 p-6">
     <div class="text-center">
         <flux:heading size="xl">Kiosco</flux:heading>
         <flux:subheading>Registra entrada, salida y pausas con codigo y NIP.</flux:subheading>

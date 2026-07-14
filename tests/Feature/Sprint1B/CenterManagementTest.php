@@ -348,20 +348,70 @@ it('center form blocks invalid status', function (): void {
         ->assertHasErrors(['form.status']);
 });
 
-it('center form blocks invalid address json', function (): void {
+it('center form stores structured optional address as json', function (): void {
     $company = Company::factory()->create();
     $user = centerUserWithCompany($company);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('centers.index')
-        ->set('form.code', 'JSON-01')
-        ->set('form.name', 'Centro JSON')
+        ->set('form.code', 'ADDR-01')
+        ->set('form.name', 'Centro Direccion')
         ->set('form.timezone', 'America/Mexico_City')
         ->set('form.status', 'active')
-        ->set('form.address', '{invalid-json')
+        ->set('form.address.street', 'Av. Constitucion')
+        ->set('form.address.exterior_number', '100')
+        ->set('form.address.interior_number', '2B')
+        ->set('form.address.neighborhood', 'Centro')
+        ->set('form.address.postal_code', '64000')
+        ->set('form.address.municipality', 'Monterrey')
+        ->set('form.address.city', 'Monterrey')
+        ->set('form.address.state', 'Nuevo Leon')
+        ->set('form.address.country', 'Mexico')
         ->call('save')
-        ->assertHasErrors(['form.address']);
+        ->assertHasNoErrors();
+
+    $center = Center::query()->where('company_id', $company->id)->where('code', 'ADDR-01')->firstOrFail();
+
+    expect($center->address)->toMatchArray([
+        'street' => 'Av. Constitucion',
+        'exterior_number' => '100',
+        'interior_number' => '2B',
+        'neighborhood' => 'Centro',
+        'postal_code' => '64000',
+        'municipality' => 'Monterrey',
+        'city' => 'Monterrey',
+        'state' => 'Nuevo Leon',
+        'country' => 'Mexico',
+    ]);
+});
+
+it('center form loads existing address json into address fields', function (): void {
+    $company = Company::factory()->create();
+    $user = centerUserWithCompany($company);
+    $center = Center::factory()->create([
+        'company_id' => $company->id,
+        'address' => [
+            'street' => 'Calle Hidalgo',
+            'exterior_number' => '55',
+            'postal_code' => '44100',
+            'city' => 'Guadalajara',
+            'state' => 'Jalisco',
+            'country' => 'Mexico',
+        ],
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('centers.index')
+        ->call('loadEditForm', $center->id)
+        ->assertSet('form.address.street', 'Calle Hidalgo')
+        ->assertSet('form.address.exterior_number', '55')
+        ->assertSet('form.address.interior_number', '')
+        ->assertSet('form.address.postal_code', '44100')
+        ->assertSet('form.address.city', 'Guadalajara')
+        ->assertSet('form.address.state', 'Jalisco')
+        ->assertSet('form.address.country', 'Mexico');
 });
 
 it('centers migration is mysql mariadb compatible', function (): void {

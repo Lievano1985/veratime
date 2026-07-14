@@ -11,7 +11,7 @@ class InactivateScheduleAction
     public function handle(Company $company, Schedule $schedule): Schedule
     {
         if ($schedule->company_id !== $company->id) {
-            throw new InvalidArgumentException('Schedule must belong to the active company.');
+            throw new InvalidArgumentException('El horario debe pertenecer a la empresa activa.');
         }
 
         $schedule->forceFill(['status' => 'inactive'])->save();

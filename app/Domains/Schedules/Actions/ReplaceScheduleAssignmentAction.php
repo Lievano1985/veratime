@@ -25,7 +25,7 @@ class ReplaceScheduleAssignmentAction
         array $data
     ): ScheduleAssignment {
         if (blank($data['effective_from'] ?? null)) {
-            throw new InvalidArgumentException('Assignment effective_from is required.');
+            throw new InvalidArgumentException('La fecha de inicio de la asignacion es requerida.');
         }
 
         $effectiveFrom = CarbonImmutable::parse($data['effective_from'])->startOfDay();
@@ -41,7 +41,7 @@ class ReplaceScheduleAssignmentAction
 
             foreach ($activeAssignments as $assignment) {
                 if ($assignment->effective_from->gte($effectiveFrom)) {
-                    throw new InvalidArgumentException('New assignment must start after the current active assignment.');
+                    throw new InvalidArgumentException('La nueva asignacion debe iniciar despues de la asignacion activa actual.');
                 }
 
                 if ($assignment->effective_to && $assignment->effective_to->lt($effectiveFrom)) {

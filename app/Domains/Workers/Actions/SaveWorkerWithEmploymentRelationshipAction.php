@@ -22,7 +22,7 @@ class SaveWorkerWithEmploymentRelationshipAction
     public function handle(Company $company, ?Worker $worker, Center $center, array $data): Worker
     {
         if ($center->company_id !== $company->id || ($worker && $worker->company_id !== $company->id)) {
-            throw new InvalidArgumentException('Worker and center must belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora y el centro deben pertenecer a la empresa activa.');
         }
 
         return DB::transaction(function () use ($company, $worker, $center, $data): Worker {
@@ -68,7 +68,7 @@ class SaveWorkerWithEmploymentRelationshipAction
         $currentStart = CarbonImmutable::parse($relationship->started_at)->startOfDay();
 
         if ($newStart->lessThanOrEqualTo($currentStart)) {
-            throw new InvalidArgumentException('New employment relationship start date must be after the active relationship start date.');
+            throw new InvalidArgumentException('La nueva relacion laboral debe iniciar despues de la relacion activa.');
         }
 
         // Sprint 1C has no separate effective-date field, so the new started_at closes the previous relation the day before.

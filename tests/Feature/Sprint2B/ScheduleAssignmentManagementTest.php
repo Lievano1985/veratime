@@ -1,9 +1,11 @@
 <?php
 
+use App\Domains\Schedules\Actions\AssignScheduleToWorkersAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\InactivateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\ReplaceScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\ResolveScheduleForWorkerDateAction;
+use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\Role;
@@ -80,7 +82,299 @@ it('user sees only assignments from active company', function (): void {
         ->assertSee('Trabajador visible')
         ->assertDontSee('Trabajador ajeno');
 });
+it('worker multi select searches active company workers by name or employee code with limited initial results', function (): void {
+    $company = Company::factory()->create();
+    $otherCompany = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
 
+    foreach (range(1, 9) as $number) {
+        Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => sprintf('EMP-%02d', $number),
+            'full_name' => sprintf('Activo %02d', $number),
+            'status' => 'active',
+        ]);
+    }
+
+    Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'EMP-INACTIVO',
+        'full_name' => 'Activo inactivo oculto',
+        'status' => 'inactive',
+    ]);
+    Worker::factory()->create([
+        'company_id' => $otherCompany->id,
+        'employee_code' => 'EMP-AJENO',
+        'full_name' => 'Activo ajeno oculto',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.multi-select')
+        ->set('open', true)
+        ->assertSee('EMP-01 - Activo 01')
+        ->assertSee('EMP-08 - Activo 08')
+        ->assertDontSee('EMP-09 - Activo 09')
+        ->assertDontSee('EMP-INACTIVO')
+        ->assertDontSee('EMP-AJENO')
+        ->set('search', 'EMP-09')
+        ->assertSee('EMP-09 - Activo 09')
+        ->assertDontSee('EMP-01 - Activo 01')
+        ->set('search', 'Activo 03')
+        ->assertSee('EMP-03 - Activo 03')
+        ->assertDontSee('EMP-AJENO');
+});
+
+it('worker multi select filters active workers by active relationship center', function (): void {
+    $company = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
+    $north = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Norte']);
+    $south = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Sur']);
+    $northWorker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'NORTE-01',
+        'full_name' => 'Persona Norte',
+        'status' => 'active',
+    ]);
+    $southWorker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'SUR-01',
+        'full_name' => 'Persona Sur',
+        'status' => 'active',
+    ]);
+
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $northWorker->id,
+        'center_id' => $north->id,
+        'position_name' => 'Operador norte',
+        'status' => 'active',
+    ]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $southWorker->id,
+        'center_id' => $south->id,
+        'position_name' => 'Operador sur',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.multi-select')
+        ->set('open', true)
+        ->set('centerId', (string) $north->id)
+        ->assertSee('NORTE-01 - Persona Norte')
+        ->assertSee('Centro Norte')
+        ->assertSee('Operador norte')
+        ->assertDontSee('SUR-01 - Persona Sur')
+        ->set('centerId', (string) $south->id)
+        ->assertSee('SUR-01 - Persona Sur')
+        ->assertSee('Centro Sur')
+        ->assertDontSee('NORTE-01 - Persona Norte');
+});
+
+it('worker multi select toggles selected workers and shows selected tags', function (): void {
+    $company = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
+    $worker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'SEL-01',
+        'full_name' => 'Persona Seleccionada',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.multi-select')
+        ->set('search', 'SEL-01')
+        ->call('toggleWorker', $worker->id)
+        ->assertSet('selectedWorkerIds', [$worker->id])
+        ->assertSee('SEL-01 - Persona Seleccionada')
+        ->call('removeWorker', $worker->id)
+        ->assertSet('selectedWorkerIds', []);
+});
+
+it('schedule assignment history starts with active status filter and clear returns to active', function (): void {
+    [$company, $user, $worker, $schedule] = scheduleAssignmentFixture();
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'schedule_id' => $schedule->id,
+        'status' => 'active',
+    ]);
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'schedule_id' => $schedule->id,
+        'status' => 'inactive',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('schedule-assignments.index')
+        ->assertSet('filters.status', 'active')
+        ->assertSee('Active')
+        ->assertDontSee('Inactive')
+        ->set('filters.status', 'all')
+        ->assertSee('Inactive')
+        ->call('clearFilters')
+        ->assertSet('filters.status', 'active')
+        ->assertSet('selectedWorkerId', null)
+        ->assertSet('workerFilterSearch', '')
+        ->assertDontSee('Inactive');
+});
+
+it('schedule assignment history combines employee code worker center and status filters', function (): void {
+    $company = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
+    $north = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Norte']);
+    $south = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Sur']);
+    $schedule = Schedule::factory()->create(['company_id' => $company->id, 'name' => 'Horario base']);
+    $targetWorker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'ABC-123',
+        'full_name' => 'Maria Filtro',
+    ]);
+    $otherWorker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'ABC-999',
+        'full_name' => 'Juan Fuera',
+    ]);
+    $targetRelationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $targetWorker->id,
+        'center_id' => $north->id,
+        'position_name' => 'Operadora',
+    ]);
+    $otherRelationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $otherWorker->id,
+        'center_id' => $south->id,
+        'position_name' => 'Supervisor',
+    ]);
+
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $targetWorker->id,
+        'schedule_id' => $schedule->id,
+        'employment_relationship_id' => $targetRelationship->id,
+        'status' => 'active',
+    ]);
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $otherWorker->id,
+        'schedule_id' => $schedule->id,
+        'employment_relationship_id' => $otherRelationship->id,
+        'status' => 'active',
+    ]);
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $targetWorker->id,
+        'schedule_id' => $schedule->id,
+        'employment_relationship_id' => $targetRelationship->id,
+        'status' => 'replaced',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('schedule-assignments.index')
+        ->set('filters.employee_code', 'ABC')
+        ->set('workerFilterSearch', 'Maria')
+        ->assertSee('ABC-123 - Maria Filtro')
+        ->call('selectWorkerFilter', $targetWorker->id)
+        ->assertSet('selectedWorkerId', $targetWorker->id)
+        ->set('filters.center_id', (string) $north->id)
+        ->set('filters.status', 'active')
+        ->assertSee('Maria Filtro')
+        ->assertSee('ABC-123')
+        ->assertSee('Centro Norte')
+        ->assertDontSee('Juan Fuera')
+        ->assertDontSee('Replaced')
+        ->set('filters.status', 'replaced')
+        ->assertSee('Maria Filtro')
+        ->assertSee('Replaced')
+        ->assertDontSee('Juan Fuera');
+});
+
+it('schedule assignment history filters by historical relationship center instead of current worker center', function (): void {
+    $company = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
+    $historicalCenter = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Historico']);
+    $currentCenter = Center::factory()->create(['company_id' => $company->id, 'name' => 'Centro Actual']);
+    $worker = Worker::factory()->create(['company_id' => $company->id, 'employee_code' => 'HIST-01', 'full_name' => 'Persona Historica']);
+    $schedule = Schedule::factory()->create(['company_id' => $company->id]);
+    $historicalRelationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $historicalCenter->id,
+        'status' => 'inactive',
+        'ended_at' => '2026-07-31',
+    ]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $currentCenter->id,
+        'status' => 'active',
+        'started_at' => '2026-08-01',
+    ]);
+    ScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'schedule_id' => $schedule->id,
+        'employment_relationship_id' => $historicalRelationship->id,
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('schedule-assignments.index')
+        ->set('filters.center_id', (string) $historicalCenter->id)
+        ->assertSee('Persona Historica')
+        ->assertSee('Centro Historico')
+        ->set('filters.center_id', (string) $currentCenter->id)
+        ->assertSee('No hay asignaciones que coincidan con los filtros.')
+        ->assertDontSee('Persona Historica');
+});
+
+it('schedule assignment history filters respect active company and reset pagination on changes', function (): void {
+    $company = Company::factory()->create();
+    $otherCompany = Company::factory()->create();
+    $user = scheduleAssignmentUserWithCompany($company);
+    $schedule = Schedule::factory()->create(['company_id' => $company->id]);
+    $foreignSchedule = Schedule::factory()->create(['company_id' => $otherCompany->id]);
+
+    foreach (range(1, 12) as $number) {
+        $worker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => sprintf('OWN-%02d', $number),
+            'full_name' => sprintf('Propio %02d', $number),
+        ]);
+        ScheduleAssignment::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $worker->id,
+            'schedule_id' => $schedule->id,
+            'status' => 'active',
+        ]);
+    }
+
+    $foreignWorker = Worker::factory()->create(['company_id' => $otherCompany->id, 'employee_code' => 'FOREIGN-01', 'full_name' => 'Ajeno']);
+    ScheduleAssignment::factory()->create([
+        'company_id' => $otherCompany->id,
+        'worker_id' => $foreignWorker->id,
+        'schedule_id' => $foreignSchedule->id,
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('schedule-assignments.index')
+        ->call('gotoPage', 2)
+        ->assertSee('OWN-01')
+        ->set('filters.employee_code', 'OWN-12')
+        ->assertSee('OWN-12')
+        ->assertDontSee('FOREIGN-01');
+});
 it('allows crossing midnight when flag is enabled', function (): void {
     $company = Company::factory()->create();
     $user = scheduleAssignmentUserWithCompany($company);
@@ -176,9 +470,8 @@ it('creates schedule assignment for a worker', function (): void {
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('schedule-assignments.index')
-        ->set('form.worker_id', $worker->id)
+        ->set('form.worker_ids', [$worker->id])
         ->set('form.schedule_id', $schedule->id)
-        ->set('form.employment_relationship_id', $relationship->id)
         ->set('form.effective_from', '2026-08-01')
         ->call('save')
         ->assertHasNoErrors();
@@ -193,6 +486,79 @@ it('creates schedule assignment for a worker', function (): void {
     ]);
 });
 
+it('creates independent schedule assignments for multiple workers from ui', function (): void {
+    [$company, $user, $worker, $schedule, $relationship] = scheduleAssignmentFixture();
+    $secondWorker = Worker::factory()->create(['company_id' => $company->id, 'full_name' => 'Segundo trabajador']);
+    $secondRelationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $secondWorker->id,
+        'started_at' => '2026-01-01',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('schedule-assignments.index')
+        ->set('form.worker_ids', [$worker->id, $secondWorker->id])
+        ->set('form.schedule_id', $schedule->id)
+        ->set('form.effective_from', '2026-08-01')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    foreach ([[$worker, $relationship], [$secondWorker, $secondRelationship]] as [$assignedWorker, $assignedRelationship]) {
+        $this->assertDatabaseHas('schedule_assignments', [
+            'company_id' => $company->id,
+            'worker_id' => $assignedWorker->id,
+            'schedule_id' => $schedule->id,
+            'employment_relationship_id' => $assignedRelationship->id,
+            'effective_from' => '2026-08-01 00:00:00',
+            'status' => 'active',
+        ]);
+    }
+});
+
+it('bulk assignment replaces previous active assignments without deleting history', function (): void {
+    [$company, , $worker, $oldSchedule] = scheduleAssignmentFixture();
+    $secondWorker = Worker::factory()->create(['company_id' => $company->id]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $secondWorker->id,
+        'started_at' => '2026-01-01',
+        'status' => 'active',
+    ]);
+    $newSchedule = Schedule::factory()->create(['company_id' => $company->id]);
+
+    $oldFirst = app(CreateScheduleAssignmentAction::class)->handle($company, $worker, $oldSchedule, null, [
+        'effective_from' => '2026-08-01',
+    ]);
+    $oldSecond = app(CreateScheduleAssignmentAction::class)->handle($company, $secondWorker, $oldSchedule, null, [
+        'effective_from' => '2026-08-01',
+    ]);
+
+    $assignments = app(AssignScheduleToWorkersAction::class)->handle($company, $newSchedule, [$worker->id, $secondWorker->id], [
+        'effective_from' => '2026-08-15',
+        'source' => 'web',
+    ]);
+
+    expect($assignments)->toHaveCount(2);
+
+    foreach ([$oldFirst, $oldSecond] as $oldAssignment) {
+        $oldAssignment->refresh();
+
+        expect($oldAssignment->status)->toBe('replaced')
+            ->and($oldAssignment->effective_to->toDateString())->toBe('2026-08-14');
+    }
+
+    foreach ([$worker, $secondWorker] as $assignedWorker) {
+        $this->assertDatabaseHas('schedule_assignments', [
+            'company_id' => $company->id,
+            'worker_id' => $assignedWorker->id,
+            'schedule_id' => $newSchedule->id,
+            'effective_from' => '2026-08-15 00:00:00',
+            'status' => 'active',
+        ]);
+    }
+});
 it('does not accept manipulated company id when creating assignment', function (): void {
     [$company, $user, $worker, $schedule] = scheduleAssignmentFixture();
     $otherCompany = Company::factory()->create();
@@ -200,7 +566,7 @@ it('does not accept manipulated company id when creating assignment', function (
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('schedule-assignments.index')
-        ->set('form.worker_id', $worker->id)
+        ->set('form.worker_ids', [$worker->id])
         ->set('form.schedule_id', $schedule->id)
         ->set('form.company_id', $otherCompany->id)
         ->set('form.effective_from', '2026-08-01')
@@ -224,7 +590,7 @@ it('cannot assign schedule from another company', function (): void {
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('schedule-assignments.index')
-        ->set('form.worker_id', $worker->id)
+        ->set('form.worker_ids', [$worker->id])
         ->set('form.schedule_id', $foreignSchedule->id)
         ->set('form.effective_from', '2026-08-01')
         ->call('save')
@@ -238,11 +604,11 @@ it('cannot assign worker from another company', function (): void {
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('schedule-assignments.index')
-        ->set('form.worker_id', $foreignWorker->id)
+        ->set('form.worker_ids', [$foreignWorker->id])
         ->set('form.schedule_id', $schedule->id)
         ->set('form.effective_from', '2026-08-01')
         ->call('save')
-        ->assertHasErrors(['form.worker_id']);
+        ->assertHasErrors(['form.worker_ids.0']);
 });
 
 it('employment relationship must belong to same worker and company', function (): void {

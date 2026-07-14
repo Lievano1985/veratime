@@ -464,19 +464,13 @@ new class extends Component {
         </div>
     </section>
 
-    @if ($showFormPanel)
-        <div class="fixed inset-0 z-40 bg-black/30" wire:click="closeFormPanel"></div>
-
-        <aside class="fixed inset-y-0 right-0 z-50 flex w-full max-w-3xl flex-col overflow-y-auto border-l border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
-            <div class="flex items-start justify-between border-b border-zinc-200 p-6 dark:border-zinc-700">
-                <div>
-                    <flux:heading>{{ $editingScheduleId ? 'Editar horario' : 'Nuevo horario' }}</flux:heading>
-                    <flux:subheading>Guarda el horario para administrar sus dias y pausas.</flux:subheading>
-                </div>
-                <flux:button type="button" variant="ghost" wire:click="closeFormPanel">Cerrar</flux:button>
-            </div>
-
-            <div class="space-y-8 p-6">
+    <x-side-panel
+        wire:model="showFormPanel"
+        :title="$editingScheduleId ? 'Editar horario' : 'Nuevo horario'"
+        subheading="Guarda el horario para administrar sus dias y pausas."
+        max-width="max-w-3xl"
+    >
+        <div class="space-y-8 p-6">
                 <form wire:submit="save" class="space-y-5">
                     <div class="grid gap-4 sm:grid-cols-2">
                         <flux:input label="Codigo" wire:model="form.code" />
@@ -598,7 +592,6 @@ new class extends Component {
                         @endif
                     </section>
                 @endif
-            </div>
-        </aside>
-    @endif
+        </div>
+    </x-side-panel>
 </section>

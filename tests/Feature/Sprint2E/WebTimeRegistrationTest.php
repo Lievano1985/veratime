@@ -62,7 +62,7 @@ it('sidebar shows time clock only to authorized roles', function (): void {
     $this->actingAs($authorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('Registro de jornada');
+        ->assertSee('Registro asistido');
 
     $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))

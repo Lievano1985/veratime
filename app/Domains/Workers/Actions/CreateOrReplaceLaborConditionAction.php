@@ -23,7 +23,7 @@ class CreateOrReplaceLaborConditionAction
                 : null;
 
             if ($effectiveTo && $effectiveTo->lessThan($effectiveFrom)) {
-                throw new InvalidArgumentException('Labor condition effective_to must be equal to or after effective_from.');
+                throw new InvalidArgumentException('La fecha final de la condicion laboral debe ser igual o posterior a la fecha inicial.');
             }
 
             if (($data['status'] ?? 'active') === 'active') {
@@ -50,7 +50,7 @@ class CreateOrReplaceLaborConditionAction
         if ($worker->company_id !== $company->id
             || $relationship->company_id !== $company->id
             || $relationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Labor condition must belong to the active company worker relationship.');
+            throw new InvalidArgumentException('La condicion laboral debe pertenecer a la relacion laboral de la empresa activa.');
         }
     }
 
@@ -76,7 +76,7 @@ class CreateOrReplaceLaborConditionAction
             $conditionStart = CarbonImmutable::parse($condition->effective_from)->startOfDay();
 
             if ($conditionStart->greaterThanOrEqualTo($effectiveFrom)) {
-                throw new InvalidArgumentException('New labor condition must start after the active labor condition.');
+                throw new InvalidArgumentException('La nueva condicion laboral debe iniciar despues de la condicion activa.');
             }
 
             $condition->forceFill([

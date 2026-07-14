@@ -13,13 +13,13 @@ class CreateOrUpdateWorkerCredentialAction
     public function handle(Company $company, Worker $worker, array $data): WorkerCredential
     {
         if ($worker->company_id !== $company->id) {
-            throw new InvalidArgumentException('Worker credential must belong to the active company.');
+            throw new InvalidArgumentException('La credencial de la persona trabajadora debe pertenecer a la empresa activa.');
         }
 
         $credential = $worker->credential()->first();
 
         if (! $credential && empty($data['temporal_pin'])) {
-            throw new InvalidArgumentException('A temporal PIN is required to create the worker credential.');
+            throw new InvalidArgumentException('Se requiere un NIP temporal para crear la credencial.');
         }
 
         $credential = $company->workerCredentials()->updateOrCreate(

@@ -26,7 +26,7 @@
     ></button>
 
     <aside
-        class="absolute right-0 top-0 flex h-full w-full {{ $maxWidth }} flex-col border-l border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+        class="absolute right-0 top-0 flex h-full w-full {{ $maxWidth }} flex-col overflow-y-auto border-l border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
         x-show="open"
         x-transition:enter="transform transition ease-out duration-300"
         x-transition:enter-start="translate-x-full"

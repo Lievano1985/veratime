@@ -11,7 +11,7 @@ class UpdateEmploymentRelationshipAction
     public function handle(EmploymentRelationship $relationship, Center $center, array $data): EmploymentRelationship
     {
         if ($center->company_id !== $relationship->company_id) {
-            throw new InvalidArgumentException('Center must belong to the relationship company.');
+            throw new InvalidArgumentException('El centro debe pertenecer a la empresa de la relacion laboral.');
         }
 
         $positionName = $data['position_name'] ?? $relationship->position_name;
@@ -20,7 +20,7 @@ class UpdateEmploymentRelationshipAction
         if ((int) $relationship->center_id !== (int) $center->id
             || (string) ($relationship->position_name ?? '') !== (string) ($positionName ?? '')
             || $relationship->started_at?->toDateString() !== $startedAt) {
-            throw new InvalidArgumentException('Historical employment relationship fields cannot be overwritten.');
+            throw new InvalidArgumentException('Los campos historicos de la relacion laboral no se pueden sobrescribir.');
         }
 
         $relationship->fill([

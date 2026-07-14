@@ -14,7 +14,7 @@ class SaveScheduleDaysAction
     public function handle(Company $company, Schedule $schedule, array $days): Collection
     {
         if ($schedule->company_id !== $company->id) {
-            throw new InvalidArgumentException('Schedule must belong to the active company.');
+            throw new InvalidArgumentException('El horario debe pertenecer a la empresa activa.');
         }
 
         $seenDays = [];
@@ -23,14 +23,14 @@ class SaveScheduleDaysAction
             $dayOfWeek = (int) ($day['day_of_week'] ?? -1);
 
             if ($dayOfWeek < 0 || $dayOfWeek > 6 || in_array($dayOfWeek, $seenDays, true)) {
-                throw new InvalidArgumentException('Schedule day must be unique and between 0 and 6.');
+                throw new InvalidArgumentException('El dia del horario debe ser unico y estar entre 0 y 6.');
             }
 
             $seenDays[] = $dayOfWeek;
 
             if ((bool) ($day['is_working_day'] ?? false)
                 && (blank($day['start_time'] ?? null) || blank($day['end_time'] ?? null))) {
-                throw new InvalidArgumentException('Working schedule days require start and end time.');
+                throw new InvalidArgumentException('Los dias laborales del horario requieren hora de inicio y fin.');
             }
 
             if ((bool) ($day['is_working_day'] ?? false)
@@ -38,7 +38,7 @@ class SaveScheduleDaysAction
                 && filled($day['end_time'] ?? null)
                 && ($day['end_time'] <= $day['start_time'])
                 && ! (bool) ($day['crosses_midnight'] ?? false)) {
-                throw new InvalidArgumentException('Schedule days ending before start time must cross midnight.');
+                throw new InvalidArgumentException('Los dias de horario que terminan antes de iniciar deben cruzar medianoche.');
             }
         }
 

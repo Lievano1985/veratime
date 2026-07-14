@@ -8,7 +8,6 @@ use App\Models\Center;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -42,7 +41,7 @@ new class extends Component {
             'name' => $center->name,
             'timezone' => $center->timezone,
             'status' => $center->status,
-            'address' => $center->address ? json_encode($center->address, JSON_PRETTY_PRINT) : '',
+            'address' => $this->addressFormFromValue($center->address),
         ];
         $this->showFormPanel = true;
     }
@@ -74,7 +73,15 @@ new class extends Component {
             'form.name' => ['required', 'string', 'max:255'],
             'form.timezone' => ['required', 'string', 'max:100'],
             'form.status' => ['required', Rule::in(['active', 'inactive'])],
-            'form.address' => ['nullable', 'json'],
+            'form.address.street' => ['nullable', 'string', 'max:255'],
+            'form.address.exterior_number' => ['nullable', 'string', 'max:50'],
+            'form.address.interior_number' => ['nullable', 'string', 'max:50'],
+            'form.address.neighborhood' => ['nullable', 'string', 'max:255'],
+            'form.address.postal_code' => ['nullable', 'string', 'max:20'],
+            'form.address.municipality' => ['nullable', 'string', 'max:255'],
+            'form.address.city' => ['nullable', 'string', 'max:255'],
+            'form.address.state' => ['nullable', 'string', 'max:255'],
+            'form.address.country' => ['nullable', 'string', 'max:255'],
         ])['form'];
 
         $data = [
@@ -82,7 +89,7 @@ new class extends Component {
             'name' => $validated['name'],
             'timezone' => $validated['timezone'],
             'status' => $validated['status'],
-            'address' => $this->decodeOptionalJson($validated['address'] ?? null),
+            'address' => $this->cleanAddress($validated['address'] ?? []),
         ];
 
         $center
@@ -156,21 +163,34 @@ new class extends Component {
         return $company;
     }
 
-    private function decodeOptionalJson(?string $value): ?array
+    private function addressFormFromValue(?array $address): array
     {
-        if (! $value) {
-            return null;
-        }
+        return array_merge($this->emptyAddress(), array_intersect_key($address ?? [], $this->emptyAddress()));
+    }
 
-        $decoded = json_decode($value, true);
+    private function cleanAddress(array $address): ?array
+    {
+        $clean = collect($this->emptyAddress())
+            ->mapWithKeys(fn ($default, $key) => [$key => trim((string) ($address[$key] ?? ''))])
+            ->filter(fn (string $value) => $value !== '')
+            ->all();
 
-        if (! is_array($decoded)) {
-            throw ValidationException::withMessages([
-                'form.address' => 'La direccion debe ser un objeto JSON valido.',
-            ]);
-        }
+        return $clean === [] ? null : $clean;
+    }
 
-        return $decoded;
+    private function emptyAddress(): array
+    {
+        return [
+            'street' => '',
+            'exterior_number' => '',
+            'interior_number' => '',
+            'neighborhood' => '',
+            'postal_code' => '',
+            'municipality' => '',
+            'city' => '',
+            'state' => '',
+            'country' => '',
+        ];
     }
 
     private function emptyForm(?string $timezone = null): array
@@ -180,7 +200,7 @@ new class extends Component {
             'name' => '',
             'timezone' => $timezone ?: 'America/Mexico_City',
             'status' => 'active',
-            'address' => '',
+            'address' => $this->emptyAddress(),
         ];
     }
 }; ?>
@@ -283,17 +303,33 @@ new class extends Component {
                         @enderror
                     </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Direccion JSON opcional</label>
-                        <textarea
-                            wire:model="form.address"
-                            rows="5"
-                            class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                        ></textarea>
-                        @error('form.address')
-                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <section class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+                        <div>
+                            <flux:heading>Dirección</flux:heading>
+                            <flux:subheading>Campos opcionales del centro de trabajo.</flux:subheading>
+                        </div>
+
+                        <flux:input wire:model="form.address.street" label="Calle" />
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input wire:model="form.address.exterior_number" label="Número exterior" />
+                            <flux:input wire:model="form.address.interior_number" label="Número interior" />
+                        </div>
+
+                        <flux:input wire:model="form.address.neighborhood" label="Colonia" />
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input wire:model="form.address.postal_code" label="Código postal" />
+                            <flux:input wire:model="form.address.municipality" label="Municipio" />
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input wire:model="form.address.city" label="Ciudad" />
+                            <flux:input wire:model="form.address.state" label="Estado" />
+                        </div>
+
+                        <flux:input wire:model="form.address.country" label="País" />
+                    </section>
                 </div>
 
                 <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
