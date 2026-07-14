@@ -1,4 +1,4 @@
-﻿---
+---
 id: ARQ-0001
 title: Arquitectura del MVP
 project: Vera Time
@@ -1070,7 +1070,7 @@ Prioridades de resolucion:
 - Cierre efectivo: relacion laboral, unidad organizacional, centro, empresa.
 - Programacion operativa: `daily_schedule_assignments` publicado; si no existe, el sistema debe devolver ausencia controlada, no calcular desde perfil en tiempo real.
 
-La implementacion futura debe corregir la contradiccion `hr`/`rh`; la clave oficial sera `rh`.
+Bloque A corrigio la contradiccion `hr`/`rh`; la clave oficial y operativa es `rh`.
 
 ---
 

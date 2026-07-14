@@ -946,3 +946,25 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 - Nombres tecnicos internos: clases, metodos, variables, rutas, tablas, columnas, enums y valores internos.
 - Claves de traduccion usadas por Laravel, por ejemplo `__('Password')`, siempre que se resuelvan en pantalla mediante `lang/es.json`.
 - Nombres de librerias, assets o conceptos tecnicos no visibles para usuario final.
+
+---
+
+## Bloque A - roles y autorizacion base
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Validaciones manuales sugeridas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Rol RH canonico | Revisar usuarios/seeders demo con rol `rh`. | Recursos Humanos opera con clave `rh`; no existe rol inicial `hr`. |
+| Alias no permitido | Crear o simular un usuario con rol `hr`. | No obtiene permisos empresariales ni aparece como rol de sistema. |
+| Owner y admin | Entrar como owner/admin y abrir pantallas empresariales actuales. | Conservan acceso esperado. |
+| RH | Entrar como `rh` y abrir pantallas empresariales actuales. | Conserva acceso empresarial completo del MVP actual. |
+| Supervisor | Entrar como supervisor sin alcance explicito. | No obtiene acceso global a empresa, centros, trabajadores, horarios ni eventos administrativos. |
+| Multi-tenant | Intentar operar empresa ajena, membresia inactiva o empresa inactiva. | El sistema bloquea la accion. |
+
+### Pendiente para Bloque B
+
+- Implementar alcances explicitos por centro completo o unidad organizacional para supervisores/responsables.
+- No otorgar acceso automatico por poseer el rol `supervisor`.

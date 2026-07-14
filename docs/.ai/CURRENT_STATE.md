@@ -145,11 +145,11 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
   - `docs/12-Decisiones/ADR-0002-PROGRAMACION-DIARIA-Y-ALCANCE-ORGANIZACIONAL.md`.
   - `docs/12-Decisiones/ADR-0003-PERFILES-MULTIPLES-DE-CIERRE.md`.
 - Mexico es el unico pais operativo del MVP; el modelo conserva `country_code` y `jurisdiction_code`.
-- La clave oficial de Recursos Humanos sera `rh`; referencias `hr` deberan corregirse posteriormente.
+- La clave oficial de Recursos Humanos es `rh`; el uso operativo de `hr` fue retirado en Bloque A.
 - La asignacion diaria publicada sera la unica fuente de verdad operativa.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - Los perfiles de horario solo generaran borradores.
-- Supervisor/responsable requiere alcance explicito por centro completo o unidad; el rol no otorga alcance automatico.
+- Supervisor/responsable requiere alcance explicito por centro completo o unidad; el rol no otorga alcance automatico. Bloque A mantiene al supervisor sin permisos globales hasta implementar Bloque B.
 - La jerarquia visible MVP sera `department` -> `area` -> `team`, conservando `parent_id`.
 - Cada `schedule_batch` pertenece a empresa, centro y rango; una operacion de empresa completa crea un batch por centro.
 - La publicacion usa version consecutiva por centro/periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`; una correccion crea nueva version y la anterior queda `superseded`.
@@ -174,3 +174,14 @@ No incluye:
 - Nuevas funcionalidades.
 - Cambios de base de datos.
 - Redisenos fuera del refinamiento visual actual.
+
+## Bloque A - roles y autorizacion base
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Rol canonico de Recursos Humanos: `rh`.
+- `hr` no se mantiene como alias operativo.
+- Las claves de rol se centralizan en `App\Support\RoleKey`.
+- `owner`, `admin` y `rh` conservan acceso empresarial completo en el MVP actual.
+- `supervisor` no obtiene permisos globales; su alcance explicito queda pendiente para Bloque B.
+- No se implementaron unidades organizacionales, alcances operativos ni programacion diaria en este bloque.

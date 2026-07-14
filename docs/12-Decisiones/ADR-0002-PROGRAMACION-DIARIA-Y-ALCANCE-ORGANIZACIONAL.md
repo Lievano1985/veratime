@@ -32,7 +32,7 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - Existira un unico resolutor operativo: `ResolveDailyScheduleForWorkerAction`.
 - Mexico es el unico pais operativo del MVP, pero se conserva modelo compatible con `country_code` y `jurisdiction_code`.
-- La clave oficial de Recursos Humanos sera `rh`; las referencias `hr` existentes deberan corregirse en una fase posterior.
+- La clave oficial de Recursos Humanos es `rh`; el uso operativo de `hr` fue retirado en Bloque A.
 
 ## Modelo Organizacional
 
