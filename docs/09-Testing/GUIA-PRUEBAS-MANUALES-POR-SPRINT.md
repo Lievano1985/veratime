@@ -964,34 +964,38 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 | Supervisor | Entrar como supervisor sin alcance explicito. | No obtiene acceso global a empresa, centros, trabajadores, horarios ni eventos administrativos. |
 | Multi-tenant | Intentar operar empresa ajena, membresia inactiva o empresa inactiva. | El sistema bloquea la accion. |
 
-### Pendiente para Bloque B
+### Cubierto por Bloque B2
 
-- Implementar alcances explicitos por centro completo o unidad organizacional para supervisores/responsables.
-- No otorgar acceso automatico por poseer el rol `supervisor`.
+- Alcances explicitos por centro completo o unidad organizacional para supervisores/responsables.
+- El rol `supervisor` no otorga acceso automatico sin scope vigente.
 ---
 
 ## Bloque B1 - modelo organizacional y alcances
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
 
-### Validaciones manuales futuras cuando exista UI B2
+### Validaciones manuales B2
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Empresa sin unidades | Operar trabajadores solo con centro. | La operacion sigue funcionando sin obligar unidades. |
+| Areas y departamentos | Abrir `/organization/units`. | Se listan unidades por centro con filtros y jerarquia visible. |
 | Jerarquia | Crear departamento, area y equipo. | La jerarquia visible queda limitada a tres niveles. |
-| Unidad inactiva | Intentar asignar trabajador o alcance a unidad inactiva. | El sistema bloquea la asignacion. |
-| Unidad con hijos | Intentar inactivar unidad con hijos activos. | El sistema bloquea la inactivacion. |
-| Unidad con asignacion vigente | Intentar inactivar unidad con trabajador vigente. | El sistema bloquea la inactivacion. |
-| Supervisor sin alcance | Entrar con supervisor sin scope. | No obtiene acceso global. |
-| Supervisor por centro | Asignar alcance por centro. | Puede gestionar trabajadores aplicables de ese centro. |
-| Supervisor por unidad | Asignar alcance a departamento o area. | Incluye descendientes segun jerarquia. |
-| Apoyo temporal | Asignar apoyo temporal a unidad bajo supervisor. | El acceso aplica solo durante la vigencia. |
-| Aislamiento tenant | Intentar usar unidad, centro o trabajador de otra empresa. | El sistema bloquea el acceso horizontal. |
+| Supervisor en unidades | Entrar como supervisor y abrir unidades. | Puede consultar, pero no ve botones administrativos. |
+| Unidad con hijos | Intentar inactivar unidad con hijos activos. | El sistema bloquea la inactivacion y muestra motivo. |
+| Unidad con asignacion vigente | Intentar inactivar unidad con trabajador vigente. | El sistema bloquea la inactivacion y muestra motivo. |
+| Unidad principal | Abrir `/organization/assignments` y asignar unidad principal. | Se crea asignacion vigente sin borrar historial. |
+| Reemplazo principal | Reemplazar unidad principal con fecha efectiva. | La anterior queda reemplazada y la nueva vigente. |
+| Apoyo temporal | Crear apoyo temporal en otro centro de la misma empresa. | Se guarda como apoyo temporal con vigencia. |
+| Finalizar apoyo | Finalizar apoyo con fecha y motivo. | Queda finalizado sin eliminar registro. |
+| Responsables | Abrir `/organization/scopes` y asignar supervisor a centro. | El supervisor recibe alcance por centro. |
+| Alcance por unidad | Asignar supervisor a departamento o area. | Incluye descendientes segun jerarquia. |
+| No supervisor | Intentar asignar scope a owner/admin/rh. | El sistema bloquea porque no requieren scope. |
+| Mi alcance | Entrar como supervisor en `/organization/my-scope`. | Ve centros, unidades y trabajadores autorizados. |
+| Supervisor sin alcance | Entrar como supervisor sin scope. | Se muestra "Sin alcance operativo". |
+| Aislamiento tenant | Intentar usar unidad, centro, trabajador o usuario de otra empresa. | El sistema bloquea el acceso horizontal. |
 
 ### No incluido todavia
 
-- Pantallas Livewire/Volt para unidades o responsables.
 - Plantillas de turno.
 - Perfiles de horario.
 - Programacion diaria publicada.

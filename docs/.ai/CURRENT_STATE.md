@@ -149,13 +149,14 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - La asignacion diaria publicada sera la unica fuente de verdad operativa.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - Los perfiles de horario solo generaran borradores.
-- Supervisor/responsable requiere alcance explicito por centro completo o unidad; el rol no otorga alcance automatico. Bloque A mantiene al supervisor sin permisos globales hasta implementar Bloque B.
+- Supervisor/responsable requiere alcance explicito por centro completo o unidad; el rol no otorga alcance automatico.
 - La jerarquia visible MVP sera `department` -> `area` -> `team`, conservando `parent_id`.
 - Cada `schedule_batch` pertenece a empresa, centro y rango; una operacion de empresa completa crea un batch por centro.
 - La publicacion usa version consecutiva por centro/periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`; una correccion crea nueva version y la anterior queda `superseded`.
 - Los cierres multiples tendran prioridad: relacion laboral, unidad, centro, empresa.
-- Bloque B1 implementa modelo organizacional base, asignaciones de trabajadores a unidades y alcances operativos por centro/unidad, sin pantallas.
-- No se ha implementado todavia B2, pantallas de areas/responsables, WFM nuevo completo, importacion CSV/XLSX, cierre multiple ni vistas nuevas.
+- Bloque B1 implementa modelo organizacional base, asignaciones de trabajadores a unidades y alcances operativos por centro/unidad.
+- Bloque B2 implementa pantallas Livewire/Volt para areas/departamentos, asignaciones organizacionales, responsables/supervisores y consulta "Mi alcance".
+- No se ha implementado todavia WFM nuevo completo, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -184,7 +185,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `hr` no se mantiene como alias operativo.
 - Las claves de rol se centralizan en `App\Support\RoleKey`.
 - `owner`, `admin` y `rh` conservan acceso empresarial completo en el MVP actual.
-- `supervisor` no obtiene permisos globales; su alcance explicito queda pendiente para Bloque B.
+- `supervisor` no obtiene permisos globales; su alcance explicito se administra desde Bloque B2.
 - No se implementaron unidades organizacionales, alcances operativos ni programacion diaria en este bloque.
 ## Bloque B1 - modelo organizacional y alcances
 
@@ -196,5 +197,19 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Trabajadores pueden tener una unidad principal vigente y apoyos temporales.
 - Supervisores solo tienen alcance mediante registros explicitos por centro o unidad.
 - `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito.
-- No se implementaron pantallas Livewire/Volt, importacion, programacion diaria, perfiles de horario ni cierres.
-- B2 queda pendiente para UI y administracion visual de unidades/responsables.
+- Las escrituras sobre `organizational_units`, `employment_unit_assignments` y `operational_scope_assignments` deben pasar por Actions de dominio.
+- B2 agrega la UI operativa; importacion, programacion diaria, perfiles de horario y cierres siguen pendientes.
+
+## Bloque B2 - UI organizacional y alcances
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Pantallas:
+  - `/organization/units`
+  - `/organization/assignments`
+  - `/organization/scopes`
+  - `/organization/my-scope`
+- `owner`, `admin` y `rh` administran unidades, asignaciones y alcances.
+- `supervisor` puede consultar unidades y ver su propio alcance, pero no administra estructura ni scopes.
+- Las pantallas reutilizan Actions B1 para crear, reemplazar, finalizar e inactivar.
+- No se implementaron plantillas de turno, perfiles de horario, programacion diaria, incidencias, alertas, reportes, API WFM ni CSV.

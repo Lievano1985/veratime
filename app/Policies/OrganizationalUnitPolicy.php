@@ -11,7 +11,9 @@ class OrganizationalUnitPolicy
 {
     public function viewAny(User $user, Company $company): bool
     {
-        return $this->canManageCompanyUnits($user, $company);
+        return $company->status === 'active'
+            && $user->belongsToCompany($company)
+            && in_array($user->roleKeyForCompany($company), [...RoleKey::companyManagers(), RoleKey::SUPERVISOR], true);
     }
 
     public function create(User $user, Company $company): bool

@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 class EndOperationalScopeAction
 {
-    public function handle(Company $company, OperationalScopeAssignment $scope, string $effectiveTo): OperationalScopeAssignment
+    public function handle(Company $company, OperationalScopeAssignment $scope, string $effectiveTo, ?string $reason = null): OperationalScopeAssignment
     {
         if ($scope->company_id !== $company->id) {
             throw new InvalidArgumentException('El alcance operativo debe pertenecer a la empresa activa.');
@@ -23,6 +23,7 @@ class EndOperationalScopeAction
         $scope->forceFill([
             'effective_to' => $to->toDateString(),
             'status' => 'inactive',
+            'reason' => $reason ?: $scope->reason,
         ])->save();
 
         return $scope->refresh();

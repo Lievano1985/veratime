@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 class EndTemporarySupportAction
 {
-    public function handle(Company $company, EmploymentUnitAssignment $assignment, string $effectiveTo): EmploymentUnitAssignment
+    public function handle(Company $company, EmploymentUnitAssignment $assignment, string $effectiveTo, ?string $reason = null): EmploymentUnitAssignment
     {
         if ($assignment->company_id !== $company->id || $assignment->assignment_type !== 'temporary_support') {
             throw new InvalidArgumentException('El apoyo temporal debe pertenecer a la empresa activa.');
@@ -23,6 +23,7 @@ class EndTemporarySupportAction
         $assignment->forceFill([
             'effective_to' => $to->toDateString(),
             'status' => 'inactive',
+            'reason' => $reason ?: $assignment->reason,
         ])->save();
 
         return $assignment->refresh();

@@ -20,6 +20,10 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('schedules', 'schedules.index')->name('schedules.index');
     Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
     Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
+    Volt::route('organization/units', 'organization.units')->name('organization.units');
+    Volt::route('organization/assignments', 'organization.assignments')->name('organization.assignments');
+    Volt::route('organization/scopes', 'organization.scopes')->name('organization.scopes');
+    Volt::route('organization/my-scope', 'organization.my-scope')->name('organization.my-scope');
     Volt::route('time-clock', 'time-clock.index')->name('time-clock.index');
     Volt::route('time-events/manual', 'time-events.manual')->name('time-events.manual');
 
