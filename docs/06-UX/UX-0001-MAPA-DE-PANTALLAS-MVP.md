@@ -584,6 +584,46 @@ Quedan pendientes para sprints posteriores:
 
 # 10. Horarios y turnos
 
+Nota de diseno WFM definitivo:
+
+La navegacion futura de horarios debe cambiar de "horarios base asignados" a "programacion diaria publicada".
+
+Pantallas objetivo:
+
+- Catalogo de turnos.
+- Perfiles de horario.
+- Asignaciones de perfiles.
+- Programacion semanal o por periodo.
+- Importacion CSV/XLSX.
+- Revision de borrador.
+- Publicacion.
+- Historial de versiones.
+
+La publicacion debe mostrar version consecutiva por centro y periodo. Una correccion crea nueva version y deja la anterior como `superseded`.
+
+Cada pantalla debe mostrar cuando aplique:
+
+```text
+Perfil efectivo: [nombre]
+Origen: Empresa / Centro / Area / Relacion laboral
+```
+
+Las pantallas actuales `/schedules` y `/schedule-assignments` se consideran legacy hasta que se implemente el nuevo WFM.
+
+## 10.0 Estructura organizacional
+
+Pantallas objetivo:
+
+- Centros de trabajo.
+- Departamentos, areas y equipos por centro con jerarquia visible MVP `department` -> `area` -> `team`.
+- Responsables por centro completo o por una o varias unidades.
+- Asignacion organizacional del trabajador.
+- Historial de asignaciones organizacionales.
+
+Empresas sin unidades deben poder operar solamente con centros.
+
+Supervisor/responsable debe recibir alcance explicito. El rol por si solo no muestra trabajadores ni permite operar.
+
 ## 10.1 Listado de horarios
 
 **Prioridad:** P0
@@ -1111,6 +1151,26 @@ Esta acción no eliminará el historial. Se generará una nueva versión.
 ---
 
 # 16. Cierres de periodo
+
+## 16.0 Perfiles de cierre
+
+Pantallas objetivo:
+
+- Perfiles de cierre.
+- Perfil predeterminado de empresa.
+- Excepciones por centro.
+- Excepciones por unidad organizacional.
+- Excepciones por relacion laboral.
+- Periodos generados.
+- Miembros congelados.
+- Origen del perfil efectivo.
+
+La interfaz debe mostrar:
+
+```text
+Perfil efectivo: [nombre]
+Origen: Empresa / Centro / Area / Relacion laboral
+```
 
 ## 16.1 Listado de periodos
 

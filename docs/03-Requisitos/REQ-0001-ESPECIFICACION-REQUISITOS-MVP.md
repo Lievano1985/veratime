@@ -861,6 +861,43 @@ Los registros nacionales, subnacionales o electorales globales solo podrán admi
 
 ---
 
+### RF-HOR-006 — Programacion diaria publicada
+
+La programacion diaria publicada sera la unica fuente de verdad operativa para registro, calculo, alertas, cierres y reportes.
+
+Los perfiles de horario no tendran efecto operativo directo. Solo generaran borradores de programacion diaria que deberan revisarse y publicarse.
+
+Cada dia publicado debera conservar snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256.
+
+La publicacion sera inmutable. Una correccion generara una nueva version y la version anterior quedara `superseded`.
+
+`daily_schedule_assignments` publicados y `daily_schedule_segments` seran la unica fuente operativa.
+
+**Prioridad:** P0
+
+### RF-HOR-007 — Perfiles WFM
+
+Vera Time debera soportar perfiles de horario:
+
+- `fixed`: reglas semanales.
+- `variable`: captura manual, CSV/XLSX o API.
+- `rotating`: patrones y ciclos.
+- `flexible`: minutos requeridos y ventanas.
+
+El perfil `flexible` no debera mezclarse con una plantilla de turno rigida.
+
+**Prioridad:** P0
+
+### RF-HOR-008 — Estructura organizacional
+
+La empresa podra operar solo con centros o agregar unidades organizacionales opcionales por centro con jerarquia visible inicial `department` -> `area` -> `team`.
+
+Un trabajador podra tener una unidad principal vigente y apoyos temporales opcionales.
+
+Los responsables y supervisores solo podran operar trabajadores dentro de sus centros completos o unidades asignadas. Nunca obtendran alcance automatico solo por poseer el rol.
+
+**Prioridad:** P0
+
 ## 6.5 Registro electrónico
 
 ### RF-REG-001 — Registro de entrada
@@ -1258,6 +1295,31 @@ La persona podrá consultar políticas y mecanismos de registro vigentes que le 
 ---
 
 ## 6.10 Cierre y conformidad digital
+
+### RF-CIE-000 — Perfiles multiples de cierre
+
+Toda empresa debera tener un perfil de cierre predeterminado. Podran existir excepciones por centro, unidad organizacional o relacion laboral.
+
+La prioridad del perfil efectivo sera:
+
+1. Relacion laboral.
+2. Unidad organizacional.
+3. Centro.
+4. Empresa.
+
+Frecuencias soportadas:
+
+- `weekly`
+- `fourteen_day`
+- `semimonthly`
+- `monthly`
+- `custom`
+
+Quincenal y catorcenal son frecuencias distintas.
+
+Los cierres publicados deberan congelar trabajadores, configuracion, versiones y origen del perfil efectivo.
+
+**Prioridad:** P0
 
 ### RF-CON-001 — Periodos de cierre
 
@@ -2028,4 +2090,3 @@ Ahí se definirán:
 - Seguridad.
 - Integraciones.
 - Despliegue.
-

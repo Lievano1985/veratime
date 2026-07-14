@@ -166,6 +166,10 @@ Una historia se considera terminada cuando:
 
 ## EPIC-04 — Horarios, turnos y vigencias
 
+Nota de consolidacion WFM:
+
+EPIC-04 debe evolucionar hacia programacion diaria publicada como fuente de verdad. Las historias actuales BL-0401 a BL-0406 quedan como base legacy ya implementada para Sprint 2, pero el desarrollo futuro debe dividirse en los bloques WFM definidos al final de este documento.
+
 | ID | Historia | Prioridad | Criterio de aceptación |
 |---|---|---:|---|
 | BL-0401 | CRUD de horarios | P0 | Horario con días, entrada, salida y tipo legal |
@@ -259,6 +263,10 @@ Una historia se considera terminada cuando:
 ---
 
 ## EPIC-10 — Cierre y conformidad digital
+
+Nota de consolidacion:
+
+El cierre deja de ser una configuracion unica por empresa. Se agregaran perfiles multiples con prioridad: relacion laboral, unidad organizacional, centro, empresa.
 
 | ID | Historia | Prioridad | Criterio de aceptación |
 |---|---|---:|---|
@@ -579,6 +587,36 @@ Restricciones:
 ```
 
 ---
+
+# 9.1 Backlog propuesto WFM y cierres
+
+| Bloque | Objetivo | Dependencias | Archivos esperados | Pruebas | Criterio de salida | Riesgo | Orden |
+|---|---|---|---|---|---|---|---|
+| A. Normalizacion de roles y permisos | Unificar `rh` y definir permisos base | Sprint 0/1 | `RoleSeeder`, policies, tests de roles | Pest policies | `rh` es clave unica y `hr` queda corregido | Romper usuarios demo | 1 |
+| B. Unidades organizacionales y responsables | Crear departamentos/areas/equipos y alcances explicitos por centro completo o unidad | Centros/trabajadores | migraciones docs futuras, modelos, Actions, vistas | multi-tenant y alcance supervisor | Supervisor solo ve alcance asignado; el rol no otorga acceso automatico | Acceso horizontal | 2 |
+| C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | `shift_templates`, segmentos, UI | CRUD, cruces medianoche | Turno no calcula jornada | Mezclar flexible con turno rigido | 3 |
+| D. Perfiles fixed y variable | Crear perfiles y generacion draft | C | `schedule_profiles`, weekly rules, assignments | generacion draft | Fixed genera dias, variable captura draft | Publicacion prematura | 4 |
+| E. Perfiles rotating y flexible | Agregar ciclos y ventanas/minutos | D | rotation patterns, flexible rules | patron y ventanas | Rotating/flexible generan draft correcto | Complejidad UX | 5 |
+| F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | Version consecutiva por centro/periodo, snapshot canonico, hash SHA-256 y `ResolveDailyScheduleForWorkerAction` listo | Versionado incorrecto | 6 |
+| G. Importacion CSV/XLSX | Importar variable a draft | F | import batches/rows, parser, validadores | errores por fila | Importacion nunca publica directo | Calidad de archivos | 7 |
+| H. Perfiles multiples de cierre | Crear perfiles y excepciones | B/F | closing profiles/assignments | prioridad de resolucion | Empresa tiene default | Confusion de herencia | 8 |
+| I. Generacion de periodos de cierre | Generar periodos y miembros congelados | H | closing periods/members | congelacion/versiones | Periodo congela miembros | Cambios historicos | 9 |
+| J. Eliminacion del modelo legacy | Retirar schedules legacy | F estable | borrar/convertir legacy | regresion Sprint 2 | No queda dependencia activa | Migracion incompleta | 10 |
+
+## 9.2 Modelo legacy
+
+| Elemento | Clasificacion | Tratamiento |
+|---|---|---|
+| `schedules` | Reemplazar | Migrar a `shift_templates` y `schedule_profiles`. |
+| `schedule_days` | Reemplazar | Migrar a `schedule_profile_weekly_rules`. |
+| `schedule_breaks` | Transformar | Migrar a `shift_template_segments`. |
+| `schedule_assignments` | Reemplazar | Migrar a `schedule_profile_assignments` y dias publicados. |
+| `labor_conditions.schedule_id` | Transformar | No debe ser fuente operativa; conservar solo referencia historica si aplica. |
+| `ResolveScheduleForWorkerDateAction` | Reemplazar | Usar `ResolveDailyScheduleForWorkerAction`. |
+| Vistas `/schedules` y `/schedule-assignments` | Transformar | Sustituir por turnos, perfiles, batches y publicacion. |
+| Factories Sprint 2A/2B | Transformar | Crear factories nuevas WFM. |
+| Seeders demo | Transformar | Generar turnos, perfiles, batches y dias publicados demo. |
+| Pruebas Sprint 2A/2B | Transformar | Mantener cobertura conceptual, reescribir contra modelo WFM. |
 
 # 10. Riesgos del backlog
 

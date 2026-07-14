@@ -1025,6 +1025,65 @@ Las reglas legales críticas tendrán pruebas automatizadas.
 
 ---
 
+## 26.1 Decision WFM: programacion diaria publicada
+
+Vera Time adoptara un modelo WFM donde `daily_schedule_assignments` es la unica fuente de verdad operativa.
+
+Reglas arquitectonicas:
+
+- Livewire/Volt solo captura intencion y muestra estado.
+- API, CSV/XLSX, jobs y vistas reutilizan Actions/Services.
+- Los perfiles de horario generan borradores, no resultados operativos.
+- `PublishScheduleBatchAction` congela snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256.
+- `ResolveDailyScheduleForWorkerAction` sera el unico punto para resolver programacion efectiva por trabajador y fecha.
+- La publicacion es inmutable. Una correccion genera nueva version y deja la anterior `superseded`.
+- `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
+- La seguridad por alcance se resuelve antes de consultar o mutar trabajadores.
+
+Resolutores obligatorios:
+
+- `ResolveUserOperationalScopeAction`
+- `EnsureUserCanManageWorkerAction`
+- `ResolveScheduleProfileForRelationshipAction`
+- `GenerateDailySchedulesFromProfileAction`
+- `PublishScheduleBatchAction`
+- `ResolveDailyScheduleForWorkerAction`
+- `ResolveClosingProfileForRelationshipAction`
+- `GenerateClosingPeriodsAction`
+
+Responsabilidades:
+
+| Action | Responsabilidad |
+|---|---|
+| `ResolveUserOperationalScopeAction` | Determina si el usuario tiene alcance completo de empresa o alcance limitado por centro/unidad. |
+| `EnsureUserCanManageWorkerAction` | Bloquea operaciones sobre trabajadores fuera del alcance del usuario. |
+| `ResolveScheduleProfileForRelationshipAction` | Resuelve el perfil aplicable para una relacion laboral segun asignaciones vigentes. |
+| `GenerateDailySchedulesFromProfileAction` | Convierte perfiles `fixed`, `variable`, `rotating` o `flexible` en dias borrador. |
+| `PublishScheduleBatchAction` | Publica un batch por centro, genera snapshot JSON canonico, version consecutiva por centro/periodo, `published_by`, `published_at` y hash SHA-256. |
+| `ResolveDailyScheduleForWorkerAction` | Devuelve la programacion publicada efectiva para trabajador y fecha. |
+| `ResolveClosingProfileForRelationshipAction` | Resuelve cierre efectivo con prioridad relacion laboral, unidad, centro, empresa. |
+| `GenerateClosingPeriodsAction` | Genera periodos y miembros congelados desde perfiles de cierre. |
+
+Prioridades de resolucion:
+
+- Alcance operativo: empresa completa para `owner`, `admin_empresa` y `rh`; alcance explicito por centro completo o unidad para supervisor/responsable. El rol por si solo no otorga alcance.
+- Cierre efectivo: relacion laboral, unidad organizacional, centro, empresa.
+- Programacion operativa: `daily_schedule_assignments` publicado; si no existe, el sistema debe devolver ausencia controlada, no calcular desde perfil en tiempo real.
+
+La implementacion futura debe corregir la contradiccion `hr`/`rh`; la clave oficial sera `rh`.
+
+---
+
+## 26.2 Decision de cierres multiples
+
+El cierre no se resolvera por una unica configuracion plana de empresa.
+
+Toda empresa tendra un perfil predeterminado obligatorio y excepciones por centro, unidad organizacional o relacion laboral. La prioridad sera: relacion laboral, unidad, centro, empresa.
+
+Los periodos publicados congelan miembros y configuracion para evitar cambios destructivos en reportes y conformidad.
+
+---
+
 ## 27. Riesgos técnicos
 
 | Riesgo | Mitigación |
@@ -1093,5 +1152,3 @@ Ese documento definirá:
 - Laravel Sanctum: https://laravel.com/docs/sanctum
 - Livewire Documentation: https://livewire.laravel.com/docs
 - Pest Documentation: https://pestphp.com/docs
-
-
