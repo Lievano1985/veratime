@@ -12,11 +12,22 @@ class MandatoryRestDay extends Model
     /** @use HasFactory<MandatoryRestDayFactory> */
     use HasFactory;
 
+    public const TYPES = ['legal_mandatory', 'electoral', 'company_internal'];
+
+    public const SCOPES = ['national', 'state', 'company'];
+
+    public const STATUSES = ['active', 'inactive'];
+
+    public const CAPTURE_SOURCES = ['manual', 'seeder', 'import', 'system'];
+
     protected $fillable = [
         'name',
         'date',
+        'type',
         'scope',
-        'source',
+        'state_code',
+        'source_reference',
+        'capture_source',
         'status',
         'metadata',
     ];
@@ -32,10 +43,5 @@ class MandatoryRestDay extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
-    }
-
-    public function center(): BelongsTo
-    {
-        return $this->belongsTo(Center::class);
     }
 }

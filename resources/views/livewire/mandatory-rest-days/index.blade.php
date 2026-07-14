@@ -4,7 +4,6 @@ use App\Domains\MandatoryRestDays\Actions\CreateMandatoryRestDayAction;
 use App\Domains\MandatoryRestDays\Actions\InactivateMandatoryRestDayAction;
 use App\Domains\MandatoryRestDays\Actions\UpdateMandatoryRestDayAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
-use App\Models\Center;
 use App\Models\MandatoryRestDay;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
@@ -14,6 +13,7 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     public array $form = [];
+    public bool $showFormPanel = false;
     public array $filters = [];
     public ?int $editingRestDayId = null;
 
@@ -22,10 +22,22 @@ new class extends Component {
         $this->form = $this->emptyForm();
         $this->filters = [
             'date' => '',
+            'type' => '',
             'scope' => '',
             'status' => '',
-            'center_id' => '',
+            'state_code' => '',
         ];
+    }
+
+    public function openCreatePanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [MandatoryRestDay::class, $company]);
+
+        $this->editingRestDayId = null;
+        $this->form = $this->emptyForm();
+        $this->showFormPanel = true;
     }
 
     public function save(CurrentCompany $currentCompany, CreateMandatoryRestDayAction $createAction, UpdateMandatoryRestDayAction $updateAction): void
@@ -35,30 +47,34 @@ new class extends Component {
         Gate::authorize('create', [MandatoryRestDay::class, $company]);
 
         $validated = $this->validate($this->rules($company->id))['form'];
-        $center = $this->centerFromForm($company->id, $validated);
+        $this->assertAllowedPayloadForUser($company, $validated);
+        $targetCompany = $validated['scope'] === 'company' ? $company : null;
 
         try {
             if ($this->editingRestDayId) {
-                $restDay = MandatoryRestDay::query()
-                    ->where('company_id', $company->id)
-                    ->findOrFail($this->editingRestDayId);
+                $restDay = $this->editableRestDay($company, $this->editingRestDayId);
 
                 Gate::authorize('update', $restDay);
 
-                $updateAction->handle($company, $restDay, $center, [
+                $updateAction->handle($company, $restDay, [
                     'name' => $validated['name'],
                     'date' => $validated['date'],
+                    'type' => $validated['type'],
                     'scope' => $validated['scope'],
-                    'source' => $validated['source'] ?? 'manual',
+                    'state_code' => $validated['state_code'] ?? null,
+                    'source_reference' => $validated['source_reference'] ?? null,
                     'status' => $validated['status'],
                     'metadata' => [],
                 ]);
             } else {
-                $createAction->handle($company, $center, [
+                $createAction->handle($targetCompany, [
                     'name' => $validated['name'],
                     'date' => $validated['date'],
+                    'type' => $validated['type'],
                     'scope' => $validated['scope'],
-                    'source' => $validated['source'] ?? 'manual',
+                    'state_code' => $validated['state_code'] ?? null,
+                    'source_reference' => $validated['source_reference'] ?? null,
+                    'capture_source' => 'manual',
                     'status' => $validated['status'],
                     'metadata' => [],
                 ]);
@@ -77,19 +93,19 @@ new class extends Component {
     public function edit(int $restDayId, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $restDay = MandatoryRestDay::query()
-            ->where('company_id', $company->id)
-            ->findOrFail($restDayId);
+        $restDay = $this->editableRestDay($company, $restDayId);
 
         Gate::authorize('update', $restDay);
 
         $this->editingRestDayId = $restDay->id;
+        $this->showFormPanel = true;
         $this->form = [
             'name' => $restDay->name,
             'date' => $restDay->date?->toDateString(),
+            'type' => $restDay->type,
             'scope' => $restDay->scope,
-            'center_id' => $restDay->center_id ? (string) $restDay->center_id : '',
-            'source' => $restDay->source ?? 'manual',
+            'state_code' => $restDay->state_code ?? '',
+            'source_reference' => $restDay->source_reference ?? '',
             'status' => $restDay->status,
         ];
     }
@@ -97,9 +113,7 @@ new class extends Component {
     public function inactivate(int $restDayId, CurrentCompany $currentCompany, InactivateMandatoryRestDayAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $restDay = MandatoryRestDay::query()
-            ->where('company_id', $company->id)
-            ->findOrFail($restDayId);
+        $restDay = $this->editableRestDay($company, $restDayId);
 
         Gate::authorize('inactivate', $restDay);
 
@@ -116,6 +130,8 @@ new class extends Component {
     {
         $this->editingRestDayId = null;
         $this->form = $this->emptyForm();
+        $this->showFormPanel = false;
+        $this->resetValidation('form');
     }
 
     public function with(CurrentCompany $currentCompany): array
@@ -125,28 +141,25 @@ new class extends Component {
         Gate::authorize('viewAny', [MandatoryRestDay::class, $company]);
 
         $restDays = MandatoryRestDay::query()
-            ->with(['company', 'center'])
+            ->with(['company'])
             ->where(function ($query) use ($company): void {
-                $query->where('scope', 'global')
+                $query->whereIn('scope', ['national', 'state'])
                     ->whereNull('company_id')
-                    ->whereNull('center_id')
                     ->orWhere('company_id', $company->id);
             })
             ->when(filled($this->filters['date'] ?? null), fn ($query) => $query->whereDate('date', $this->filters['date']))
+            ->when(filled($this->filters['type'] ?? null), fn ($query) => $query->where('type', $this->filters['type']))
             ->when(filled($this->filters['scope'] ?? null), fn ($query) => $query->where('scope', $this->filters['scope']))
+            ->when(filled($this->filters['state_code'] ?? null), fn ($query) => $query->where('state_code', strtoupper(trim((string) $this->filters['state_code']))))
             ->when(filled($this->filters['status'] ?? null), fn ($query) => $query->where('status', $this->filters['status']))
-            ->when(filled($this->filters['center_id'] ?? null), fn ($query) => $query->where('center_id', $this->filters['center_id']))
             ->orderByDesc('date')
+            ->orderBy('type')
             ->orderBy('scope')
             ->orderBy('name')
             ->get();
 
         return [
             'restDays' => $restDays,
-            'centers' => $company->centers()
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->get(),
         ];
     }
 
@@ -155,28 +168,19 @@ new class extends Component {
         return [
             'form.name' => ['required', 'string', 'max:255'],
             'form.date' => ['required', 'date'],
-            'form.scope' => ['required', Rule::in(['company', 'center'])],
-            'form.center_id' => [
+            'form.type' => ['required', Rule::in(MandatoryRestDay::TYPES)],
+            'form.scope' => ['required', Rule::in(MandatoryRestDay::SCOPES)],
+            'form.state_code' => [
                 'nullable',
-                'integer',
-                Rule::requiredIf(fn () => ($this->form['scope'] ?? null) === 'center'),
-                Rule::prohibitedIf(fn () => ($this->form['scope'] ?? null) === 'company'),
-                Rule::exists('centers', 'id')->where('company_id', $companyId),
+                'string',
+                'max:10',
+                'regex:/^[A-Za-z]{2}-[A-Za-z0-9]{2,5}$/',
+                Rule::requiredIf(fn () => ($this->form['scope'] ?? null) === 'state'),
+                Rule::prohibitedIf(fn () => ($this->form['scope'] ?? null) !== 'state'),
             ],
-            'form.source' => ['nullable', 'string', 'max:100'],
-            'form.status' => ['required', Rule::in(['active', 'inactive'])],
+            'form.source_reference' => ['nullable', 'string', 'max:500'],
+            'form.status' => ['required', Rule::in(MandatoryRestDay::STATUSES)],
         ];
-    }
-
-    private function centerFromForm(int $companyId, array $validated): ?Center
-    {
-        if (($validated['scope'] ?? null) !== 'center') {
-            return null;
-        }
-
-        return Center::query()
-            ->where('company_id', $companyId)
-            ->findOrFail((int) $validated['center_id']);
     }
 
     private function currentCompanyOrFail(CurrentCompany $currentCompany)
@@ -188,14 +192,52 @@ new class extends Component {
         return $company;
     }
 
+    private function editableRestDay($company, int $restDayId): MandatoryRestDay
+    {
+        return MandatoryRestDay::query()
+            ->where(function ($query) use ($company): void {
+                $query->where('company_id', $company->id)
+                    ->orWhere(function ($query): void {
+                        $query->whereNull('company_id')
+                            ->whereIn('scope', ['national', 'state']);
+                    });
+            })
+            ->findOrFail($restDayId);
+    }
+
+    private function assertAllowedPayloadForUser($company, array $validated): void
+    {
+        $isCompanyInternal = $validated['type'] === 'company_internal' && $validated['scope'] === 'company';
+        $isGlobalCatalog = in_array($validated['scope'], ['national', 'state'], true)
+            || $validated['type'] === 'electoral';
+
+        if ($isCompanyInternal) {
+            return;
+        }
+
+        if ($isGlobalCatalog && $this->isSuperAdmin($company)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'form.type' => 'Solo super_admin puede administrar descansos nacionales, estatales o electorales.',
+        ]);
+    }
+
+    private function isSuperAdmin($company): bool
+    {
+        return auth()->user()?->roleKeyForCompany($company) === 'super_admin';
+    }
+
     private function emptyForm(): array
     {
         return [
             'name' => '',
             'date' => now()->toDateString(),
+            'type' => 'company_internal',
             'scope' => 'company',
-            'center_id' => '',
-            'source' => 'manual',
+            'state_code' => '',
+            'source_reference' => '',
             'status' => 'active',
         ];
     }
@@ -205,8 +247,12 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <flux:heading size="xl">Descansos obligatorios</flux:heading>
-            <flux:subheading>Administra fechas de descanso por empresa o centro sin calcular jornadas.</flux:subheading>
+            <flux:subheading>Administra fechas de descanso por tipo y alcance sin calcular jornadas.</flux:subheading>
         </div>
+
+        <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+            Crear descanso
+        </flux:button>
     </div>
 
     @if (session('status'))
@@ -215,62 +261,83 @@ new class extends Component {
         </div>
     @endif
 
-    <section class="space-y-4">
-        <flux:heading>{{ $editingRestDayId ? 'Editar descanso' : 'Crear descanso' }}</flux:heading>
+    <x-side-panel
+        wire:model="showFormPanel"
+        :title="$editingRestDayId ? 'Editar descanso' : 'Crear descanso'"
+        subheading="La fecha se aplica solo al alcance seleccionado."
+        labelledby="mandatory-rest-day-form-title"
+        max-width="max-w-xl"
+    >
+        <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
+            <div class="flex-1 space-y-4 p-6">
+                <flux:input label="Nombre" wire:model="form.name" />
+                <flux:input type="date" label="Fecha" wire:model="form.date" />
 
-        <form wire:submit="save" class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr_1fr_0.8fr_0.8fr_auto] lg:items-end">
-            <flux:input label="Nombre" wire:model="form.name" />
-            <flux:input type="date" label="Fecha" wire:model="form.date" />
+                <flux:select label="Tipo" wire:model="form.type">
+                    <flux:select.option value="legal_mandatory">Legal obligatorio</flux:select.option>
+                    <flux:select.option value="electoral">Electoral</flux:select.option>
+                    <flux:select.option value="company_internal">Interno de empresa</flux:select.option>
+                </flux:select>
 
-            <flux:select label="Alcance" wire:model.live="form.scope">
-                <flux:select.option value="company">Empresa</flux:select.option>
-                <flux:select.option value="center">Centro</flux:select.option>
-            </flux:select>
+                <flux:select label="Alcance" wire:model.live="form.scope">
+                    <flux:select.option value="national">Nacional</flux:select.option>
+                    <flux:select.option value="state">Estatal</flux:select.option>
+                    <flux:select.option value="company">Empresa</flux:select.option>
+                </flux:select>
 
-            <flux:select label="Centro" wire:model="form.center_id" :disabled="$form['scope'] !== 'center'">
-                <flux:select.option value="">Sin centro</flux:select.option>
-                @foreach ($centers as $center)
-                    <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+                <flux:input
+                    label="Código de estado"
+                    placeholder="Ej. MX-JAL"
+                    wire:model="form.state_code"
+                    :disabled="$form['scope'] !== 'state'"
+                />
 
-            <flux:input label="Fuente" wire:model="form.source" />
+                <div class="space-y-1">
+                    <flux:textarea label="Fundamento o referencia" wire:model="form.source_reference" rows="3" />
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                        Ejemplo: LFT artículo 74, acuerdo electoral o política interna
+                    </p>
+                </div>
 
-            <flux:select label="Estado" wire:model="form.status">
-                <flux:select.option value="active">Activo</flux:select.option>
-                <flux:select.option value="inactive">Inactivo</flux:select.option>
-            </flux:select>
+                <flux:select label="Estado" wire:model="form.status">
+                    <flux:select.option value="active">Activo</flux:select.option>
+                    <flux:select.option value="inactive">Inactivo</flux:select.option>
+                </flux:select>
+            </div>
 
-            <div class="flex gap-2">
-                <flux:button type="submit" variant="primary">Guardar</flux:button>
-                @if ($editingRestDayId)
-                    <flux:button type="button" variant="ghost" wire:click="resetForm">Cancelar</flux:button>
-                @endif
+            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
+                <flux:button type="button" variant="ghost" wire:click="resetForm">
+                    Cancelar
+                </flux:button>
+                <flux:button type="submit" variant="primary">
+                    Guardar descanso
+                </flux:button>
             </div>
         </form>
-    </section>
+    </x-side-panel>
 
     <section class="space-y-4">
         <flux:heading>Filtros</flux:heading>
 
-        <div class="grid gap-4 lg:grid-cols-4">
+        <div class="grid gap-4 lg:grid-cols-5">
             <flux:input type="date" label="Fecha" wire:model.live="filters.date" />
+            <flux:select label="Tipo" wire:model.live="filters.type">
+                <flux:select.option value="">Todos</flux:select.option>
+                <flux:select.option value="legal_mandatory">Legal obligatorio</flux:select.option>
+                <flux:select.option value="electoral">Electoral</flux:select.option>
+                <flux:select.option value="company_internal">Interno de empresa</flux:select.option>
+            </flux:select>
             <flux:select label="Alcance" wire:model.live="filters.scope">
                 <flux:select.option value="">Todos</flux:select.option>
-                <flux:select.option value="global">Global</flux:select.option>
+                <flux:select.option value="national">Nacional</flux:select.option>
+                <flux:select.option value="state">Estatal</flux:select.option>
                 <flux:select.option value="company">Empresa</flux:select.option>
-                <flux:select.option value="center">Centro</flux:select.option>
             </flux:select>
+            <flux:input label="Código de estado" placeholder="MX-JAL" wire:model.live="filters.state_code" />
             <flux:select label="Estado" wire:model.live="filters.status">
                 <flux:select.option value="">Todos</flux:select.option>
                 <flux:select.option value="active">Activo</flux:select.option>
                 <flux:select.option value="inactive">Inactivo</flux:select.option>
-            </flux:select>
-            <flux:select label="Centro" wire:model.live="filters.center_id">
-                <flux:select.option value="">Todos</flux:select.option>
-                @foreach ($centers as $center)
-                    <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                @endforeach
             </flux:select>
         </div>
     </section>
@@ -284,8 +351,10 @@ new class extends Component {
                     <tr>
                         <th class="px-4 py-3">Fecha</th>
                         <th class="px-4 py-3">Nombre</th>
+                        <th class="px-4 py-3">Tipo</th>
                         <th class="px-4 py-3">Alcance</th>
-                        <th class="px-4 py-3">Centro</th>
+                        <th class="px-4 py-3">Estado/Empresa</th>
+                        <th class="px-4 py-3">Fundamento o referencia</th>
                         <th class="px-4 py-3">Estado</th>
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
@@ -295,11 +364,15 @@ new class extends Component {
                         <tr>
                             <td class="px-4 py-3">{{ $restDay->date?->toDateString() }}</td>
                             <td class="px-4 py-3">{{ $restDay->name }}</td>
-                            <td class="px-4 py-3">{{ ucfirst($restDay->scope) }}</td>
-                            <td class="px-4 py-3">{{ $restDay->center?->name ?? 'Sin centro' }}</td>
+                            <td class="px-4 py-3">{{ str($restDay->type)->replace('_', ' ')->title() }}</td>
+                            <td class="px-4 py-3">{{ str($restDay->scope)->replace('_', ' ')->title() }}</td>
+                            <td class="px-4 py-3">
+                                {{ $restDay->scope === 'state' ? $restDay->state_code : ($restDay->company?->name ?? 'Sin empresa') }}
+                            </td>
+                            <td class="px-4 py-3">{{ $restDay->source_reference ?: 'Sin referencia' }}</td>
                             <td class="px-4 py-3">{{ ucfirst($restDay->status) }}</td>
                             <td class="px-4 py-3 text-right">
-                                @if ($restDay->company_id)
+                                @if (Gate::allows('update', $restDay))
                                     <div class="flex justify-end gap-2">
                                         <flux:button type="button" size="sm" variant="ghost" wire:click="edit({{ $restDay->id }})">Editar</flux:button>
                                         @if ($restDay->status === 'active')
@@ -307,13 +380,13 @@ new class extends Component {
                                         @endif
                                     </div>
                                 @else
-                                    <span class="text-xs text-zinc-500">Global</span>
+                                    <span class="text-xs text-zinc-500">Sin permisos</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="8" class="px-4 py-8 text-center text-zinc-500">
                                 No hay descansos registrados.
                             </td>
                         </tr>

@@ -15,22 +15,40 @@ class MandatoryRestDayFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'center_id' => null,
             'name' => 'Descanso obligatorio',
             'date' => now()->toDateString(),
+            'type' => 'company_internal',
             'scope' => 'company',
-            'source' => 'manual',
+            'state_code' => null,
+            'source_reference' => 'Referencia demo opcional',
+            'capture_source' => 'manual',
             'status' => 'active',
             'metadata' => [],
         ];
     }
 
-    public function global(): static
+    public function national(): static
     {
         return $this->state(fn (): array => [
             'company_id' => null,
-            'center_id' => null,
-            'scope' => 'global',
+            'type' => 'legal_mandatory',
+            'scope' => 'national',
+            'state_code' => null,
+        ]);
+    }
+
+    public function global(): static
+    {
+        return $this->national();
+    }
+
+    public function stateScoped(string $stateCode = 'MX-JAL'): static
+    {
+        return $this->state(fn (): array => [
+            'company_id' => null,
+            'type' => 'electoral',
+            'scope' => 'state',
+            'state_code' => $stateCode,
         ]);
     }
 

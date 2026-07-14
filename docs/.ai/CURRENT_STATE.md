@@ -81,6 +81,19 @@ EPIC-05:
 - /kiosk.
 - Captura manual justificada.
 
+Nota de descansos obligatorios:
+
+- `mandatory_rest_days` no usa `center_id`.
+- `type`: `legal_mandatory`, `electoral`, `company_internal`.
+- `scope`: `national`, `state`, `company`.
+- `legal_mandatory` y `electoral` solo aplican a `national` o `state`.
+- `company_internal` solo aplica a `company`.
+- `state_code` se toma normalizado desde `centers.address.state_code` al resolver por fecha; no se usan nombres estatales libres.
+- `source_reference` guarda el fundamento o referencia visible.
+- `capture_source` guarda el origen tecnico de captura: `manual`, `seeder`, `import`, `system`.
+- Solo `super_admin` administra catalogos nacionales, estatales o electorales globales.
+- Usuarios de empresa solo administran descansos internos de su empresa.
+
 ## No implementado
 
 - Anulacion logica.
@@ -120,3 +133,23 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Ejecucion manual: `php artisan db:seed --class=VeraTimeDemoSeeder`.
 - Datos ficticios/locales: empresa demo, usuarios demo, centros, trabajadores, relaciones laborales, condiciones, credenciales kiosco, horarios, pausas, asignaciones, descansos obligatorios y eventos `time_events` demo.
 - No crea `work_days`, `work_day_calculations`, alertas, incidencias, reportes, API ni CSV.
+## UX-01 refinamiento general Sprint 2
+
+Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
+
+Objetivo en curso: refinamiento visual y localizacion al espanol de Mexico de las pantallas visibles actuales.
+
+Incluye:
+
+- Logo Vera Time en login y kiosco.
+- Favicon de Vera Time.
+- Textos visibles del starter kit traducidos al espanol.
+- `APP_LOCALE=es` y `APP_FAKER_LOCALE=es_MX` en `.env.example`.
+- Archivos base de idioma en `lang/es*`.
+
+No incluye:
+
+- Selector de idioma.
+- Nuevas funcionalidades.
+- Cambios de base de datos.
+- Redisenos fuera del refinamiento visual actual.

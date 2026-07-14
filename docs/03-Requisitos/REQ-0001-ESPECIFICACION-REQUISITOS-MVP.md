@@ -836,6 +836,25 @@ Un cambio de horario no modificará jornadas anteriores.
 
 Se podrá configurar el día de descanso semanal y descansos obligatorios aplicables.
 
+Los descansos obligatorios se separan en dos conceptos:
+
+- `type`: `legal_mandatory`, `electoral` o `company_internal`.
+- `scope`: `national`, `state` o `company`.
+
+Combinaciones permitidas:
+
+- `legal_mandatory`: `national` o `state`.
+- `electoral`: `national` o `state`.
+- `company_internal`: únicamente `company`.
+
+Normalización requerida:
+
+- `national`: sin `company_id` y sin `state_code`.
+- `state`: sin `company_id` y con `state_code` normalizado.
+- `company`: con `company_id` y sin `state_code`.
+
+Los registros nacionales, estatales o electorales globales solo podrán administrarse por `super_admin`. Los usuarios de empresa solo podrán administrar descansos `company_internal` de su empresa.
+
 **Prioridad:** P0
 
 ---
@@ -2007,5 +2026,4 @@ Ahí se definirán:
 - Seguridad.
 - Integraciones.
 - Despliegue.
-
 

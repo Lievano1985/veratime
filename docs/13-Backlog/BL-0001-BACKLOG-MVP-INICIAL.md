@@ -172,7 +172,7 @@ Una historia se considera terminada cuando:
 | BL-0402 | Pausas programadas | P0 | Pausa computable/no computable |
 | BL-0403 | Horarios que cruzan medianoche | P0 | Turno nocturno 22:00-06:00 funciona |
 | BL-0404 | Asignación de horario | P0 | Asignación con fecha efectiva |
-| BL-0405 | Descansos obligatorios | P0 | Catálogo por fecha y alcance |
+| BL-0405 | Descansos obligatorios | P0 | Catalogo por fecha, tipo y alcance |
 | BL-0406 | Validar vigencias | P0 | Cambios futuros no alteran jornadas pasadas |
 
 ---
@@ -438,7 +438,7 @@ No se marcaron como implementadas:
 - BL-0507 Eventos fuera de orden/tardios
 
 Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDelete, reemplazo por vigencia e inactivacion sin borrado.
-Sprint 2C agrega mandatory_rest_days por fecha y alcance global, empresa o centro, con inactivacion no destructiva y sin calculos de jornada.
+Sprint 2C agrega mandatory_rest_days por fecha con type/scope separados: legal_mandatory o electoral para alcance national/state, y company_internal solo para alcance company. No usa center_id, separa source_reference visible de capture_source tecnico, conserva inactivacion no destructiva y no agrega calculos de jornada.
 Sprint 2D agrega time_events como modelo interno de eventos fuente.
 Sprint 2E agrega registro web basico en /time-clock para entrada, salida e inicio/fin de pausa, usando time_events y sin calculos de jornada.
 Quedan pendientes anulacion logica y eventos fuera de orden/tardios.

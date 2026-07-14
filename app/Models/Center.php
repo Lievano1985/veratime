@@ -40,11 +40,6 @@ class Center extends Model
         return $this->hasMany(EmploymentRelationship::class);
     }
 
-    public function mandatoryRestDays(): HasMany
-    {
-        return $this->hasMany(MandatoryRestDay::class);
-    }
-
     public function timeEvents(): HasMany
     {
         return $this->hasMany(TimeEvent::class);

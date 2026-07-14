@@ -38,7 +38,7 @@ class VeraTimeDemoSeeder extends Seeder
         $schedules = $this->schedules($company);
         $workers = $this->workers($company, $centers, $schedules);
 
-        $this->mandatoryRestDays($company, $centers['planta']);
+        $this->mandatoryRestDays($company);
         $this->timeEvents($company, $users['rh'], $workers);
     }
 
@@ -136,7 +136,11 @@ class VeraTimeDemoSeeder extends Seeder
                 'name' => $name,
                 'timezone' => $timezone,
                 'status' => 'active',
-                'address' => ['demo' => true, 'city' => str_contains($timezone, 'Monterrey') ? 'Monterrey' : 'Ciudad de Mexico'],
+                'address' => [
+                    'demo' => true,
+                    'city' => str_contains($timezone, 'Monterrey') ? 'Monterrey' : 'Ciudad de Mexico',
+                    'state_code' => str_contains($timezone, 'Monterrey') ? 'MX-NLE' : 'MX-CMX',
+                ],
                 'metadata' => ['demo' => true],
             ],
         );
@@ -312,31 +316,35 @@ class VeraTimeDemoSeeder extends Seeder
         $condition->company()->associate($company);
         $condition->save();
     }
-    private function mandatoryRestDays(Company $company, Center $center): void
+    private function mandatoryRestDays(Company $company): void
     {
-        $this->mandatoryRestDay($company, null, 'Demo descanso empresa', '2026-09-16', 'company');
-        $this->mandatoryRestDay($company, $center, 'Demo descanso centro', '2026-11-16', 'center');
+        $this->mandatoryRestDay($company, 'Demo descanso empresa', '2026-09-16', 'company_internal', 'company', null, 'Referencia demo interna');
+        $this->mandatoryRestDay(null, 'Demo descanso estatal Nuevo Leon', '2026-11-16', 'electoral', 'state', 'MX-NLE', 'Referencia demo electoral');
     }
 
-    private function mandatoryRestDay(Company $company, ?Center $center, string $name, string $date, string $scope): void
+    private function mandatoryRestDay(?Company $company, string $name, string $date, string $type, string $scope, ?string $stateCode = null, ?string $sourceReference = null): void
     {
         $exists = MandatoryRestDay::query()
+            ->where('type', $type)
             ->where('scope', $scope)
             ->whereDate('date', $date)
             ->where('name', $name)
-            ->where('company_id', $company->id)
-            ->when($center, fn ($query) => $query->where('center_id', $center->id), fn ($query) => $query->whereNull('center_id'))
+            ->when($company, fn ($query) => $query->where('company_id', $company->id), fn ($query) => $query->whereNull('company_id'))
+            ->when($stateCode, fn ($query) => $query->where('state_code', $stateCode), fn ($query) => $query->whereNull('state_code'))
             ->exists();
 
         if ($exists) {
             return;
         }
 
-        app(CreateMandatoryRestDayAction::class)->handle($company, $center, [
+        app(CreateMandatoryRestDayAction::class)->handle($company, [
             'name' => $name,
             'date' => $date,
+            'type' => $type,
             'scope' => $scope,
-            'source' => 'demo_seed',
+            'state_code' => $stateCode,
+            'source_reference' => $sourceReference,
+            'capture_source' => 'seeder',
             'metadata' => ['demo' => true],
         ]);
     }
