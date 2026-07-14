@@ -137,6 +137,20 @@ La programacion publicada conserva snapshot JSON canonico. Cualquier cambio post
 - Un supervisor no puede administrar trabajadores fuera de sus alcances.
 - Si se usa `scope_type`/`scope_id`, una Action debe validar pertenencia al tenant y tipo permitido antes de persistir. Para el MVP se recomienda preferir columnas explicitas nullable cuando existan pocos alcances.
 
+## Regla de Escritura del Modelo Organizacional
+
+Toda escritura sobre `organizational_units`, `employment_unit_assignments` y `operational_scope_assignments` debe ejecutarse mediante las Actions de dominio del Bloque B1.
+
+No se permite usar `Model::create()`, `update()`, `delete()` ni `save()` directamente desde componentes Livewire, controladores, endpoints, comandos o jobs para estas tablas.
+
+Excepciones controladas:
+
+- factories;
+- seeders;
+- preparacion explicita de pruebas.
+
+Las pantallas del Bloque B2 solo capturan intencion, validan permisos de entrada y delegan la persistencia a las Actions existentes.
+
 ## Importacion
 
 CSV/XLSX/API preparados para programacion variable:

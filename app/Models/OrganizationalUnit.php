@@ -2,30 +2,30 @@
 
 namespace App\Models;
 
-use Database\Factories\CenterFactory;
+use Database\Factories\OrganizationalUnitFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Center extends Model
+class OrganizationalUnit extends Model
 {
-    /** @use HasFactory<CenterFactory> */
+    /** @use HasFactory<OrganizationalUnitFactory> */
     use HasFactory;
 
     protected $fillable = [
+        'center_id',
+        'parent_id',
         'code',
         'name',
-        'timezone',
+        'type',
         'status',
-        'address',
         'metadata',
     ];
 
     protected function casts(): array
     {
         return [
-            'address' => 'array',
             'metadata' => 'array',
         ];
     }
@@ -35,18 +35,24 @@ class Center extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function employmentRelationships(): HasMany
+    public function center(): BelongsTo
     {
-        return $this->hasMany(EmploymentRelationship::class);
+        return $this->belongsTo(Center::class);
     }
 
-    public function timeEvents(): HasMany
+    public function parent(): BelongsTo
     {
-        return $this->hasMany(TimeEvent::class);
+        return $this->belongsTo(self::class, 'parent_id');
     }
-    public function organizationalUnits(): HasMany
+
+    public function children(): HasMany
     {
-        return $this->hasMany(OrganizationalUnit::class);
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function employmentUnitAssignments(): HasMany
+    {
+        return $this->hasMany(EmploymentUnitAssignment::class);
     }
 
     public function operationalScopeAssignments(): HasMany

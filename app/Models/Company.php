@@ -114,4 +114,18 @@ class Company extends Model
     {
         return $this->hasMany(TimeEvent::class);
     }
+    public function organizationalUnits(): HasMany
+    {
+        return $this->hasMany(OrganizationalUnit::class);
+    }
+
+    public function employmentUnitAssignments(): HasMany
+    {
+        return $this->hasMany(EmploymentUnitAssignment::class);
+    }
+
+    public function operationalScopeAssignments(): HasMany
+    {
+        return $this->hasMany(OperationalScopeAssignment::class);
+    }
 }

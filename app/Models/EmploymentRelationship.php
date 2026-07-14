@@ -75,4 +75,8 @@ class EmploymentRelationship extends Model
     {
         return $this->hasMany(TimeEvent::class);
     }
+    public function employmentUnitAssignments(): HasMany
+    {
+        return $this->hasMany(EmploymentUnitAssignment::class);
+    }
 }
