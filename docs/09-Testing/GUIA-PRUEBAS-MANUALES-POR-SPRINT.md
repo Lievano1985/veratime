@@ -514,9 +514,10 @@ Si una asignaciÃ³n futura cambia datos histÃ³ricos, debe reportarse como err
 - Catalogo de descansos obligatorios.
 - Separacion entre tipo y alcance.
 - Tipos permitidos: `legal_mandatory`, `electoral`, `company_internal`.
-- Alcances permitidos: `national`, `state`, `company`.
+- Alcances permitidos: `national`, `subnational`, `company`.
+- Pais operativo fijo en Mexico (`MX`) durante el MVP.
 - Alta y edicion de descansos internos de empresa.
-- Administracion global de descansos nacionales, estatales o electorales solo por `super_admin`.
+- Administracion global de descansos nacionales, subnacionales o electorales solo por `super_admin`.
 - Visualizacion controlada de descansos globales sin permitir modificarlos desde usuarios de empresa.
 - Inactivacion no destructiva.
 - Resolucion por fecha desde dominio.
@@ -537,13 +538,13 @@ Si una asignaciÃ³n futura cambia datos histÃ³ricos, debe reportarse como err
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Crear descanso interno de empresa | Crear descanso con tipo `company_internal`, alcance `company`, fecha, nombre y fundamento o referencia opcional. | Se guarda en la empresa activa, con `state_code` vacio y `capture_source` tecnico manual. |
+| Crear descanso interno de empresa | Crear descanso con tipo `company_internal`, alcance `company`, fecha, nombre y fundamento o referencia opcional. | Se guarda en la empresa activa, con `jurisdiction_code` vacio y `capture_source` tecnico manual. |
 | Rechazar tipo interno con alcance nacional | Intentar crear `company_internal` con alcance `national`. | El sistema rechaza la combinacion. |
-| Rechazar tipo interno con alcance estatal | Intentar crear `company_internal` con alcance `state`. | El sistema rechaza la combinacion. |
-| Crear descanso legal nacional como super_admin | Crear `legal_mandatory` con alcance `national`. | Se guarda sin `company_id` y sin `state_code`. |
-| Crear descanso electoral estatal como super_admin | Crear `electoral` con alcance `state` y codigo `MX-NLE`. | Se guarda sin `company_id` y con `state_code` normalizado. |
-| Rechazar estado libre | Intentar capturar nombre libre de estado en vez de codigo normalizado. | El sistema rechaza el valor. |
-| Usuario de empresa no administra globales | Intentar crear o editar `national`, `state` o `electoral` global. | El sistema bloquea la operacion. |
+| Rechazar tipo interno con alcance subnacional | Intentar crear `company_internal` con alcance `subnational`. | El sistema rechaza la combinacion. |
+| Crear descanso legal nacional como super_admin | Crear `legal_mandatory` con alcance `national`. | Se guarda con `country_code = MX`, sin `company_id` y sin `jurisdiction_code`. |
+| Crear descanso electoral subnacional como super_admin | Crear `electoral` con alcance `subnational` y codigo `MX-NLE`. | Se guarda sin `company_id` y con `jurisdiction_code` normalizado. |
+| Rechazar region libre | Intentar capturar nombre libre de estado o region en vez de codigo normalizado. | El sistema rechaza el valor. |
+| Usuario de empresa no administra globales | Intentar crear o editar `national`, `subnational` o `electoral` global. | El sistema bloquea la operacion. |
 | Editar descanso permitido | Modificar nombre, fecha o fundamento/referencia de un descanso interno de la empresa. | Se actualiza sin cambiar a otra empresa ni borrar historial. |
 | Referencia visible | Dejar el fundamento vacio y revisar la tabla. | La tabla muestra "Sin referencia" y no muestra `capture_source`. |
 | Duplicado mismo type/scope/fecha/nombre | Intentar crear otro descanso con la misma identidad de alcance, fecha y nombre. | El sistema rechaza el duplicado. |
@@ -566,9 +567,11 @@ Si una asignaciÃ³n futura cambia datos histÃ³ricos, debe reportarse como err
 
 ### Observaciones
 
-`mandatory_rest_days` ya no usa `center_id`. Para resolver descansos estatales por fecha, el dominio obtiene `state_code` desde `centers.address.state_code` normalizado. No se deben usar nombres estatales libres.
+`mandatory_rest_days` ya no usa `center_id`. Para resolver descansos subnacionales por fecha, el dominio obtiene `country_code` y `jurisdiction_code` desde `centers.address`. No se deben usar nombres libres de estados o regiones.
 
 El campo visible es "Fundamento o referencia". `capture_source` es tecnico y no debe mostrarse en la tabla principal.
+
+Durante el MVP no hay selector internacional de pais, calendarios extranjeros ni reglas laborales fuera de Mexico.
 
 ---
 ## Sprint 2D - Modelo interno time_events
@@ -857,11 +860,11 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 | Sprint 2B | No se permiten solapamientos |  |  |  |  |
 | Sprint 2B | Se puede inactivar asignacion sin borrar |  |  |  |  |
 | Sprint 2C | Se puede crear descanso interno de empresa |  |  |  |  |
-| Sprint 2C | Super admin puede crear descanso legal/electoral nacional o estatal |  |  |  |  |
-| Sprint 2C | Usuario de empresa no puede administrar globales nacionales, estatales o electorales |  |  |  |  |
+| Sprint 2C | Super admin puede crear descanso legal/electoral nacional o subnacional |  |  |  |  |
+| Sprint 2C | Usuario de empresa no puede administrar globales nacionales, subnacionales o electorales |  |  |  |  |
 | Sprint 2C | Se puede editar descanso obligatorio permitido |  |  |  |  |
 | Sprint 2C | Duplicado por mismo type/scope, fecha y nombre se rechaza |  |  |  |  |
-| Sprint 2C | `state_code` requiere formato normalizado para alcance estatal |  |  |  |  |
+| Sprint 2C | `jurisdiction_code` requiere formato normalizado para alcance subnacional |  |  |  |  |
 | Sprint 2C | No existe alcance por centro en descansos obligatorios |  |  |  |  |
 | Sprint 2C | Usuario de Empresa A no ve descansos de Empresa B |  |  |  |  |
 | Sprint 2C | Inactivar descanso no lo borra |  |  |  |  |

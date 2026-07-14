@@ -25,7 +25,7 @@ new class extends Component {
             'type' => '',
             'scope' => '',
             'status' => '',
-            'state_code' => '',
+            'jurisdiction_code' => '',
         ];
     }
 
@@ -61,7 +61,8 @@ new class extends Component {
                     'date' => $validated['date'],
                     'type' => $validated['type'],
                     'scope' => $validated['scope'],
-                    'state_code' => $validated['state_code'] ?? null,
+                    'country_code' => 'MX',
+                    'jurisdiction_code' => $validated['jurisdiction_code'] ?? null,
                     'source_reference' => $validated['source_reference'] ?? null,
                     'status' => $validated['status'],
                     'metadata' => [],
@@ -72,7 +73,8 @@ new class extends Component {
                     'date' => $validated['date'],
                     'type' => $validated['type'],
                     'scope' => $validated['scope'],
-                    'state_code' => $validated['state_code'] ?? null,
+                    'country_code' => 'MX',
+                    'jurisdiction_code' => $validated['jurisdiction_code'] ?? null,
                     'source_reference' => $validated['source_reference'] ?? null,
                     'capture_source' => 'manual',
                     'status' => $validated['status'],
@@ -104,7 +106,7 @@ new class extends Component {
             'date' => $restDay->date?->toDateString(),
             'type' => $restDay->type,
             'scope' => $restDay->scope,
-            'state_code' => $restDay->state_code ?? '',
+            'jurisdiction_code' => $restDay->jurisdiction_code ?? '',
             'source_reference' => $restDay->source_reference ?? '',
             'status' => $restDay->status,
         ];
@@ -143,14 +145,15 @@ new class extends Component {
         $restDays = MandatoryRestDay::query()
             ->with(['company'])
             ->where(function ($query) use ($company): void {
-                $query->whereIn('scope', ['national', 'state'])
+                $query->whereIn('scope', ['national', 'subnational'])
                     ->whereNull('company_id')
                     ->orWhere('company_id', $company->id);
             })
             ->when(filled($this->filters['date'] ?? null), fn ($query) => $query->whereDate('date', $this->filters['date']))
             ->when(filled($this->filters['type'] ?? null), fn ($query) => $query->where('type', $this->filters['type']))
             ->when(filled($this->filters['scope'] ?? null), fn ($query) => $query->where('scope', $this->filters['scope']))
-            ->when(filled($this->filters['state_code'] ?? null), fn ($query) => $query->where('state_code', strtoupper(trim((string) $this->filters['state_code']))))
+            ->where('country_code', 'MX')
+            ->when(filled($this->filters['jurisdiction_code'] ?? null), fn ($query) => $query->where('jurisdiction_code', strtoupper(trim((string) $this->filters['jurisdiction_code']))))
             ->when(filled($this->filters['status'] ?? null), fn ($query) => $query->where('status', $this->filters['status']))
             ->orderByDesc('date')
             ->orderBy('type')
@@ -170,13 +173,13 @@ new class extends Component {
             'form.date' => ['required', 'date'],
             'form.type' => ['required', Rule::in(MandatoryRestDay::TYPES)],
             'form.scope' => ['required', Rule::in(MandatoryRestDay::SCOPES)],
-            'form.state_code' => [
+            'form.jurisdiction_code' => [
                 'nullable',
                 'string',
-                'max:10',
-                'regex:/^[A-Za-z]{2}-[A-Za-z0-9]{2,5}$/',
-                Rule::requiredIf(fn () => ($this->form['scope'] ?? null) === 'state'),
-                Rule::prohibitedIf(fn () => ($this->form['scope'] ?? null) !== 'state'),
+                'max:16',
+                'regex:/^[A-Za-z]{2}-[A-Za-z0-9]{2,8}$/',
+                Rule::requiredIf(fn () => ($this->form['scope'] ?? null) === 'subnational'),
+                Rule::prohibitedIf(fn () => ($this->form['scope'] ?? null) !== 'subnational'),
             ],
             'form.source_reference' => ['nullable', 'string', 'max:500'],
             'form.status' => ['required', Rule::in(MandatoryRestDay::STATUSES)],
@@ -199,7 +202,7 @@ new class extends Component {
                 $query->where('company_id', $company->id)
                     ->orWhere(function ($query): void {
                         $query->whereNull('company_id')
-                            ->whereIn('scope', ['national', 'state']);
+                            ->whereIn('scope', ['national', 'subnational']);
                     });
             })
             ->findOrFail($restDayId);
@@ -208,7 +211,7 @@ new class extends Component {
     private function assertAllowedPayloadForUser($company, array $validated): void
     {
         $isCompanyInternal = $validated['type'] === 'company_internal' && $validated['scope'] === 'company';
-        $isGlobalCatalog = in_array($validated['scope'], ['national', 'state'], true)
+        $isGlobalCatalog = in_array($validated['scope'], ['national', 'subnational'], true)
             || $validated['type'] === 'electoral';
 
         if ($isCompanyInternal) {
@@ -236,7 +239,7 @@ new class extends Component {
             'date' => now()->toDateString(),
             'type' => 'company_internal',
             'scope' => 'company',
-            'state_code' => '',
+            'jurisdiction_code' => '',
             'source_reference' => '',
             'status' => 'active',
         ];
@@ -281,15 +284,15 @@ new class extends Component {
 
                 <flux:select label="Alcance" wire:model.live="form.scope">
                     <flux:select.option value="national">Nacional</flux:select.option>
-                    <flux:select.option value="state">Estatal</flux:select.option>
+                    <flux:select.option value="subnational">Entidad federativa</flux:select.option>
                     <flux:select.option value="company">Empresa</flux:select.option>
                 </flux:select>
 
                 <flux:input
-                    label="Código de estado"
-                    placeholder="Ej. MX-JAL"
-                    wire:model="form.state_code"
-                    :disabled="$form['scope'] !== 'state'"
+                    label="Entidad federativa"
+                    placeholder="Ej. MX-TAB"
+                    wire:model="form.jurisdiction_code"
+                    :disabled="$form['scope'] !== 'subnational'"
                 />
 
                 <div class="space-y-1">
@@ -330,10 +333,10 @@ new class extends Component {
             <flux:select label="Alcance" wire:model.live="filters.scope">
                 <flux:select.option value="">Todos</flux:select.option>
                 <flux:select.option value="national">Nacional</flux:select.option>
-                <flux:select.option value="state">Estatal</flux:select.option>
+                <flux:select.option value="subnational">Entidad federativa</flux:select.option>
                 <flux:select.option value="company">Empresa</flux:select.option>
             </flux:select>
-            <flux:input label="Código de estado" placeholder="MX-JAL" wire:model.live="filters.state_code" />
+            <flux:input label="Entidad federativa" placeholder="MX-TAB" wire:model.live="filters.jurisdiction_code" />
             <flux:select label="Estado" wire:model.live="filters.status">
                 <flux:select.option value="">Todos</flux:select.option>
                 <flux:select.option value="active">Activo</flux:select.option>
@@ -367,7 +370,7 @@ new class extends Component {
                             <td class="px-4 py-3">{{ str($restDay->type)->replace('_', ' ')->title() }}</td>
                             <td class="px-4 py-3">{{ str($restDay->scope)->replace('_', ' ')->title() }}</td>
                             <td class="px-4 py-3">
-                                {{ $restDay->scope === 'state' ? $restDay->state_code : ($restDay->company?->name ?? 'Sin empresa') }}
+                                {{ $restDay->scope === 'subnational' ? $restDay->jurisdiction_code : ($restDay->company?->name ?? 'Sin empresa') }}
                             </td>
                             <td class="px-4 py-3">{{ $restDay->source_reference ?: 'Sin referencia' }}</td>
                             <td class="px-4 py-3">{{ ucfirst($restDay->status) }}</td>

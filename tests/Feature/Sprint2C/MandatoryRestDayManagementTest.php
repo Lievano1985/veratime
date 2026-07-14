@@ -48,7 +48,7 @@ it('unauthorized role cannot manage mandatory rest days', function (): void {
         ->assertForbidden();
 });
 
-it('company admin cannot create national state or electoral catalog records', function (): void {
+it('company admin cannot create national subnational or electoral catalog records', function (): void {
     $company = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company, 'admin');
 
@@ -58,8 +58,8 @@ it('company admin cannot create national state or electoral catalog records', fu
         ->set('form.name', 'Catalogo no permitido')
         ->set('form.date', '2026-06-07')
         ->set('form.type', 'electoral')
-        ->set('form.scope', 'state')
-        ->set('form.state_code', 'MX-JAL')
+        ->set('form.scope', 'subnational')
+        ->set('form.jurisdiction_code', 'MX-JAL')
         ->call('save')
         ->assertHasErrors(['form.type']);
 
@@ -68,7 +68,7 @@ it('company admin cannot create national state or electoral catalog records', fu
     ]);
 });
 
-it('super admin can create national and state catalog records', function (): void {
+it('super admin can create national and subnational catalog records', function (): void {
     $company = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company, 'super_admin');
 
@@ -79,16 +79,16 @@ it('super admin can create national and state catalog records', function (): voi
         ->set('form.date', '2026-12-25')
         ->set('form.type', 'legal_mandatory')
         ->set('form.scope', 'national')
-        ->set('form.state_code', '')
+        ->set('form.jurisdiction_code', '')
         ->call('save')
         ->assertHasNoErrors();
 
     Volt::test('mandatory-rest-days.index')
-        ->set('form.name', 'Descanso electoral estatal')
+        ->set('form.name', 'Descanso electoral subnacional')
         ->set('form.date', '2026-06-07')
         ->set('form.type', 'electoral')
-        ->set('form.scope', 'state')
-        ->set('form.state_code', 'mx-jal')
+        ->set('form.scope', 'subnational')
+        ->set('form.jurisdiction_code', 'mx-jal')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -97,14 +97,16 @@ it('super admin can create national and state catalog records', function (): voi
         'name' => 'Descanso nacional legal',
         'type' => 'legal_mandatory',
         'scope' => 'national',
-        'state_code' => null,
+        'country_code' => 'MX',
+        'jurisdiction_code' => null,
     ]);
     $this->assertDatabaseHas('mandatory_rest_days', [
         'company_id' => null,
-        'name' => 'Descanso electoral estatal',
+        'name' => 'Descanso electoral subnacional',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'MX-JAL',
+        'scope' => 'subnational',
+        'country_code' => 'MX',
+        'jurisdiction_code' => 'MX-JAL',
     ]);
 });
 
@@ -152,13 +154,13 @@ it('super admin can edit and inactivate global catalog records', function (): vo
     expect($restDay->refresh()->status)->toBe('inactive');
 });
 
-it('user sees national state and active company mandatory rest days', function (): void {
+it('user sees national subnational and active company mandatory rest days', function (): void {
     $company = Company::factory()->create();
     $otherCompany = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company);
 
     MandatoryRestDay::factory()->national()->create(['name' => 'Descanso nacional visible']);
-    MandatoryRestDay::factory()->stateScoped('MX-JAL')->create(['name' => 'Descanso estatal visible']);
+    MandatoryRestDay::factory()->stateScoped('MX-JAL')->create(['name' => 'Descanso subnacional visible']);
     MandatoryRestDay::factory()->create(['company_id' => $company->id, 'name' => 'Descanso empresa visible']);
     MandatoryRestDay::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Descanso empresa ajena']);
 
@@ -166,7 +168,7 @@ it('user sees national state and active company mandatory rest days', function (
 
     Volt::test('mandatory-rest-days.index')
         ->assertSee('Descanso nacional visible')
-        ->assertSee('Descanso estatal visible')
+        ->assertSee('Descanso subnacional visible')
         ->assertSee('Descanso empresa visible')
         ->assertDontSee('Descanso empresa ajena');
 });
@@ -182,7 +184,7 @@ it('creates company scoped mandatory rest day from ui', function (): void {
         ->set('form.date', '2026-09-16')
         ->set('form.type', 'company_internal')
         ->set('form.scope', 'company')
-        ->set('form.state_code', '')
+        ->set('form.jurisdiction_code', '')
         ->set('form.source_reference', 'Politica interna demo')
         ->set('form.status', 'active')
         ->call('save')
@@ -194,25 +196,26 @@ it('creates company scoped mandatory rest day from ui', function (): void {
         'date' => '2026-09-16 00:00:00',
         'type' => 'company_internal',
         'scope' => 'company',
-        'state_code' => null,
+        'country_code' => 'MX',
+        'jurisdiction_code' => null,
         'source_reference' => 'Politica interna demo',
         'capture_source' => 'manual',
         'status' => 'active',
     ]);
 });
 
-it('creates state scoped mandatory rest day from ui', function (): void {
+it('creates subnational scoped mandatory rest day from ui', function (): void {
     $company = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company, 'super_admin');
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('mandatory-rest-days.index')
-        ->set('form.name', 'Descanso estatal')
+        ->set('form.name', 'Descanso subnacional')
         ->set('form.date', '2026-11-02')
         ->set('form.type', 'electoral')
-        ->set('form.scope', 'state')
-        ->set('form.state_code', 'mx-jal')
+        ->set('form.scope', 'subnational')
+        ->set('form.jurisdiction_code', 'mx-jal')
         ->set('form.source_reference', 'Acuerdo electoral demo')
         ->set('form.status', 'active')
         ->call('save')
@@ -220,53 +223,54 @@ it('creates state scoped mandatory rest day from ui', function (): void {
 
     $this->assertDatabaseHas('mandatory_rest_days', [
         'company_id' => null,
-        'name' => 'Descanso estatal',
+        'name' => 'Descanso subnacional',
         'date' => '2026-11-02 00:00:00',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'MX-JAL',
+        'scope' => 'subnational',
+        'country_code' => 'MX',
+        'jurisdiction_code' => 'MX-JAL',
         'source_reference' => 'Acuerdo electoral demo',
         'capture_source' => 'manual',
         'status' => 'active',
     ]);
 });
 
-it('requires state code for state scoped mandatory rest day from ui', function (): void {
+it('requires jurisdiction code for subnational scoped mandatory rest day from ui', function (): void {
     $company = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('mandatory-rest-days.index')
-        ->set('form.name', 'Intento estatal')
+        ->set('form.name', 'Intento subnacional')
         ->set('form.date', '2026-12-25')
         ->set('form.type', 'electoral')
-        ->set('form.scope', 'state')
-        ->set('form.state_code', '')
+        ->set('form.scope', 'subnational')
+        ->set('form.jurisdiction_code', '')
         ->call('save')
-        ->assertHasErrors(['form.state_code']);
+        ->assertHasErrors(['form.jurisdiction_code']);
 
     $this->assertDatabaseMissing('mandatory_rest_days', [
-        'name' => 'Intento estatal',
+        'name' => 'Intento subnacional',
     ]);
 });
 
-it('does not allow state code for non state scope', function (): void {
+it('does not allow jurisdiction code for non subnational scope', function (): void {
     $company = Company::factory()->create();
     $user = mandatoryRestDayUserWithCompany($company);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('mandatory-rest-days.index')
-        ->set('form.name', 'Empresa con estado')
+        ->set('form.name', 'Empresa con jurisdiccion')
         ->set('form.date', '2026-10-01')
         ->set('form.scope', 'company')
-        ->set('form.state_code', 'MX-JAL')
+        ->set('form.jurisdiction_code', 'MX-JAL')
         ->call('save')
-        ->assertHasErrors(['form.state_code']);
+        ->assertHasErrors(['form.jurisdiction_code']);
 
     $this->assertDatabaseMissing('mandatory_rest_days', [
-        'name' => 'Empresa con estado',
+        'name' => 'Empresa con jurisdiccion',
     ]);
 });
 
@@ -411,34 +415,34 @@ it('does not allow duplicate national mandatory rest day with same type date and
     ]))->toThrow(InvalidArgumentException::class);
 });
 
-it('does not allow duplicate state mandatory rest day with same type state date and name', function (): void {
+it('does not allow duplicate subnational mandatory rest day with same type jurisdiction date and name', function (): void {
     $action = app(CreateMandatoryRestDayAction::class);
 
     $action->handle(null, [
-        'name' => 'Eleccion local',
+        'name' => 'Eleccion subnacional',
         'date' => '2026-06-07',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'MX-JAL',
+        'scope' => 'subnational',
+        'jurisdiction_code' => 'MX-JAL',
     ]);
 
     expect(fn () => $action->handle(null, [
-        'name' => 'Eleccion local',
+        'name' => 'Eleccion subnacional',
         'date' => '2026-06-07',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'mx-jal',
+        'scope' => 'subnational',
+        'jurisdiction_code' => 'mx-jal',
     ]))->toThrow(InvalidArgumentException::class);
 
-    $otherState = $action->handle(null, [
-        'name' => 'Eleccion local',
+    $otherJurisdiction = $action->handle(null, [
+        'name' => 'Eleccion subnacional',
         'date' => '2026-06-07',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'MX-NLE',
+        'scope' => 'subnational',
+        'jurisdiction_code' => 'MX-NLE',
     ]);
 
-    expect($otherState->state_code)->toBe('MX-NLE');
+    expect($otherJurisdiction->jurisdiction_code)->toBe('MX-NLE');
 });
 
 it('does not allow duplicate company mandatory rest day with same company date and name', function (): void {
@@ -537,7 +541,7 @@ it('update does not allow converting a mandatory rest day into a duplicate', fun
     ]))->toThrow(InvalidArgumentException::class);
 });
 
-it('scope national remains without company center or state code', function (): void {
+it('scope national remains without company center or jurisdiction code', function (): void {
     $restDay = app(CreateMandatoryRestDayAction::class)->handle(null, [
         'name' => 'Descanso nacional limpio',
         'date' => '2026-12-25',
@@ -546,25 +550,27 @@ it('scope national remains without company center or state code', function (): v
     ]);
 
     expect($restDay->scope)->toBe('national')
+        ->and($restDay->country_code)->toBe('MX')
         ->and($restDay->company_id)->toBeNull()
-        ->and($restDay->state_code)->toBeNull();
+        ->and($restDay->jurisdiction_code)->toBeNull();
 });
 
-it('scope state requires state code and remains without company', function (): void {
+it('scope subnational requires jurisdiction code and remains without company', function (): void {
     $restDay = app(CreateMandatoryRestDayAction::class)->handle(null, [
-        'name' => 'Descanso estatal limpio',
+        'name' => 'Descanso subnacional limpio',
         'date' => '2026-06-07',
         'type' => 'electoral',
-        'scope' => 'state',
-        'state_code' => 'mx-jal',
+        'scope' => 'subnational',
+        'jurisdiction_code' => 'mx-jal',
     ]);
 
-    expect($restDay->scope)->toBe('state')
+    expect($restDay->scope)->toBe('subnational')
+        ->and($restDay->country_code)->toBe('MX')
         ->and($restDay->company_id)->toBeNull()
-        ->and($restDay->state_code)->toBe('MX-JAL');
+        ->and($restDay->jurisdiction_code)->toBe('MX-JAL');
 });
 
-it('scope company remains attached to active company without state code', function (): void {
+it('scope company remains attached to active company without jurisdiction code', function (): void {
     $company = Company::factory()->create();
 
     $restDay = app(CreateMandatoryRestDayAction::class)->handle($company, [
@@ -576,8 +582,9 @@ it('scope company remains attached to active company without state code', functi
     ]);
 
     expect($restDay->scope)->toBe('company')
+        ->and($restDay->country_code)->toBe('MX')
         ->and($restDay->company_id)->toBe($company->id)
-        ->and($restDay->state_code)->toBeNull()
+        ->and($restDay->jurisdiction_code)->toBeNull()
         ->and($restDay->source_reference)->toBe('Referencia operativa')
         ->and($restDay->capture_source)->toBe('manual');
 });
@@ -610,9 +617,9 @@ it('rejects invalid capture source', function (): void {
     ]))->toThrow(InvalidArgumentException::class);
 });
 
-it('resolves national state and company mandatory rest days for a date', function (): void {
+it('resolves national subnational and company mandatory rest days for a date', function (): void {
     $company = Company::factory()->create();
-    $center = Center::factory()->create(['company_id' => $company->id, 'address' => ['state_code' => 'MX-JAL']]);
+    $center = Center::factory()->create(['company_id' => $company->id, 'address' => ['country_code' => 'MX', 'jurisdiction_code' => 'MX-JAL']]);
     $otherCompany = Company::factory()->create();
 
     MandatoryRestDay::factory()->national()->create(['name' => 'Nacional', 'date' => '2026-12-25']);
@@ -629,7 +636,7 @@ it('resolves national state and company mandatory rest days for a date', functio
         ->and($resolved->pluck('name')->all())->not->toContain('Otro estado', 'Otra empresa', 'Inactivo');
 });
 
-it('resolves only national and company mandatory rest days without center state code', function (): void {
+it('resolves only national and company mandatory rest days without center jurisdiction code', function (): void {
     $company = Company::factory()->create();
 
     MandatoryRestDay::factory()->national()->create(['name' => 'Nacional', 'date' => '2026-12-25']);
@@ -663,6 +670,9 @@ it('blocks hard deleting company with mandatory rest day history', function (): 
 it('sprint 2c does not create jornada calculation or operational tables', function (): void {
     expect(Schema::hasTable('mandatory_rest_days'))->toBeTrue()
         ->and(Schema::hasColumn('mandatory_rest_days', 'source'))->toBeFalse()
+        ->and(Schema::hasColumn('mandatory_rest_days', 'country_code'))->toBeTrue()
+        ->and(Schema::hasColumn('mandatory_rest_days', 'jurisdiction_code'))->toBeTrue()
+        ->and(Schema::hasColumn('mandatory_rest_days', 'state_code'))->toBeFalse()
         ->and(Schema::hasColumn('mandatory_rest_days', 'source_reference'))->toBeTrue()
         ->and(Schema::hasColumn('mandatory_rest_days', 'capture_source'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeFalse()
@@ -685,3 +695,4 @@ function mandatoryRestDayUserWithCompany(Company $company, string $roleKey = 'ow
 
     return $user;
 }
+

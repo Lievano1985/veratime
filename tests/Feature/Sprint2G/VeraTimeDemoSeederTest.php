@@ -32,7 +32,7 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
         ->and($company->scheduleBreaks()->count())->toBe(2)
         ->and($company->scheduleAssignments()->count())->toBe(3)
         ->and($company->mandatoryRestDays()->count())->toBe(1)
-        ->and(MandatoryRestDay::query()->where('type', 'electoral')->where('scope', 'state')->where('state_code', 'MX-NLE')->count())->toBe(1)
+        ->and(MandatoryRestDay::query()->where('type', 'electoral')->where('scope', 'subnational')->where('country_code', 'MX')->where('jurisdiction_code', 'MX-NLE')->count())->toBe(1)
         ->and(MandatoryRestDay::query()->where('capture_source', 'seeder')->count())->toBe(2)
         ->and(MandatoryRestDay::query()->where('source_reference', 'Referencia demo interna')->count())->toBe(1)
         ->and($company->timeEvents()->count())->toBe(10)

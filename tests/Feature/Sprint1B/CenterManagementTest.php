@@ -368,6 +368,8 @@ it('center form stores structured optional address as json', function (): void {
         ->set('form.address.city', 'Monterrey')
         ->set('form.address.state', 'Nuevo Leon')
         ->set('form.address.country', 'Mexico')
+        ->set('form.address.country_code', 'MX')
+        ->set('form.address.jurisdiction_code', 'MX-NLE')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -383,6 +385,8 @@ it('center form stores structured optional address as json', function (): void {
         'city' => 'Monterrey',
         'state' => 'Nuevo Leon',
         'country' => 'Mexico',
+        'country_code' => 'MX',
+        'jurisdiction_code' => 'MX-NLE',
     ]);
 });
 
@@ -398,6 +402,8 @@ it('center form loads existing address json into address fields', function (): v
             'city' => 'Guadalajara',
             'state' => 'Jalisco',
             'country' => 'Mexico',
+            'country_code' => 'MX',
+            'jurisdiction_code' => 'MX-JAL',
         ],
     ]);
 
@@ -411,7 +417,9 @@ it('center form loads existing address json into address fields', function (): v
         ->assertSet('form.address.postal_code', '44100')
         ->assertSet('form.address.city', 'Guadalajara')
         ->assertSet('form.address.state', 'Jalisco')
-        ->assertSet('form.address.country', 'Mexico');
+        ->assertSet('form.address.country', 'Mexico')
+        ->assertSet('form.address.country_code', 'MX')
+        ->assertSet('form.address.jurisdiction_code', 'MX-JAL');
 });
 
 it('centers migration is mysql mariadb compatible', function (): void {

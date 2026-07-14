@@ -702,8 +702,9 @@ Descansos obligatorios aplicables por fecha. Sprint 2C implementa este catalogo 
 | `name` | string | Nombre del descanso |
 | `date` | date | Fecha del descanso |
 | `type` | string | `legal_mandatory`, `electoral`, `company_internal` |
-| `scope` | string | `national`, `state`, `company` |
-| `state_code` | string nullable | Obligatorio solo para `scope = state`; formato tecnico normalizado, por ejemplo `MX-NLE` |
+| `scope` | string | `national`, `subnational`, `company` |
+| `country_code` | string | ISO de 2 letras; default `MX` |
+| `jurisdiction_code` | string nullable | Obligatorio solo para `scope = subnational`; formato tecnico normalizado, por ejemplo `MX-NLE` |
 | `source_reference` | text nullable | Fundamento o referencia visible: LFT, acuerdo electoral o politica interna |
 | `capture_source` | string | Origen tecnico de captura: `manual`, `seeder`, `import`, `system`; default `manual` |
 | `status` | string | `active`, `inactive` |
@@ -717,10 +718,11 @@ Indices:
 index(date)
 index(type, date)
 index(scope, date)
-index(scope, state_code, date)
+index(country_code, date)
+index(scope, country_code, jurisdiction_code, date)
 index(company_id, date)
 index(capture_source, date)
-index(type, scope, company_id, state_code, date)
+index(type, scope, country_code, company_id, jurisdiction_code, date)
 ```
 
 Reglas de persistencia:
@@ -731,16 +733,17 @@ company_id usa restrictOnDelete cuando aplica para evitar borrado destructivo de
 La inactivacion conserva el registro con status inactive.
 La unicidad por type, scope, fecha, nombre e identidad de alcance se valida en Actions para evitar depender de indices unique con columnas nullable en MySQL/MariaDB.
 No se define un indice unique nullable como garantia principal porque MySQL/MariaDB permite multiples NULL y podria no bloquear duplicados por alcance.
-legal_mandatory y electoral solo admiten scope national o state.
+legal_mandatory y electoral solo admiten scope national o subnational.
 company_internal solo admite scope company.
-scope national exige company_id null y state_code null.
-scope state exige company_id null y state_code normalizado.
-scope company exige company_id y state_code null.
-Los registros national, state y electoral globales solo son administrables por super_admin.
+scope national exige country_code, company_id null y jurisdiction_code null.
+scope subnational exige country_code, company_id null y jurisdiction_code normalizado.
+scope company exige company_id y jurisdiction_code null.
+Los registros national, subnational y electoral globales solo son administrables por super_admin.
 Los usuarios de empresa solo administran company_internal de su empresa.
-ResolveMandatoryRestDaysForDateAction obtiene state_code desde centers.address.state_code normalizado; no usa nombres estatales libres.
+ResolveMandatoryRestDaysForDateAction obtiene country_code y jurisdiction_code desde centers.address normalizado; no usa nombres libres de estados o regiones.
 source_reference es referencia visible y no debe usarse como origen tecnico.
 capture_source conserva el origen tecnico de captura y no se muestra en la tabla principal.
+Para el MVP el país queda fijo en MX. El modelo es compatible con futuros países, pero no implementa calendarios, reglas laborales ni cumplimiento internacional.
 ```
 
 ---

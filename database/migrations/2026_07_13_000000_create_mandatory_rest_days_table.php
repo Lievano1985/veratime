@@ -16,7 +16,8 @@ return new class extends Migration
             $table->date('date');
             $table->string('type');
             $table->string('scope');
-            $table->string('state_code', 10)->nullable();
+            $table->string('country_code', 2)->default('MX');
+            $table->string('jurisdiction_code', 16)->nullable();
             $table->text('source_reference')->nullable();
             $table->string('capture_source')->default('manual');
             $table->string('status')->default('active');
@@ -26,10 +27,11 @@ return new class extends Migration
             $table->index('date');
             $table->index(['type', 'date']);
             $table->index(['scope', 'date']);
-            $table->index(['scope', 'state_code', 'date']);
+            $table->index(['country_code', 'date']);
+            $table->index(['scope', 'country_code', 'jurisdiction_code', 'date'], 'mrd_scope_jurisdiction_date_idx');
             $table->index(['company_id', 'date']);
             $table->index(['capture_source', 'date']);
-            $table->index(['type', 'scope', 'company_id', 'state_code', 'date'], 'mrd_type_scope_identity_idx');
+            $table->index(['type', 'scope', 'country_code', 'company_id', 'jurisdiction_code', 'date'], 'mrd_type_scope_identity_idx');
         });
     }
 

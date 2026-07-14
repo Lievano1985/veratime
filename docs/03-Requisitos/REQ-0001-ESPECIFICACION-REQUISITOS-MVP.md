@@ -839,21 +839,23 @@ Se podrá configurar el día de descanso semanal y descansos obligatorios aplica
 Los descansos obligatorios se separan en dos conceptos:
 
 - `type`: `legal_mandatory`, `electoral` o `company_internal`.
-- `scope`: `national`, `state` o `company`.
+- `scope`: `national`, `subnational` o `company`.
 
 Combinaciones permitidas:
 
-- `legal_mandatory`: `national` o `state`.
-- `electoral`: `national` o `state`.
+- `legal_mandatory`: `national` o `subnational`.
+- `electoral`: `national` o `subnational`.
 - `company_internal`: únicamente `company`.
 
 Normalización requerida:
 
-- `national`: sin `company_id` y sin `state_code`.
-- `state`: sin `company_id` y con `state_code` normalizado.
-- `company`: con `company_id` y sin `state_code`.
+- `national`: requiere `country_code`, sin `company_id` y sin `jurisdiction_code`.
+- `subnational`: requiere `country_code` y `jurisdiction_code` normalizado, sin `company_id`.
+- `company`: con `company_id` y sin `jurisdiction_code`.
 
-Los registros nacionales, estatales o electorales globales solo podrán administrarse por `super_admin`. Los usuarios de empresa solo podrán administrar descansos `company_internal` de su empresa.
+Durante el MVP el país operativo queda fijo en México (`country_code = MX`). No se implementan calendarios de otros países, reglas laborales extranjeras ni selector internacional de país.
+
+Los registros nacionales, subnacionales o electorales globales solo podrán administrarse por `super_admin`. Los usuarios de empresa solo podrán administrar descansos `company_internal` de su empresa.
 
 **Prioridad:** P0
 

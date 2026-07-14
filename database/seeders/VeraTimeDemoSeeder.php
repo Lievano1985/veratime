@@ -138,8 +138,9 @@ class VeraTimeDemoSeeder extends Seeder
                 'status' => 'active',
                 'address' => [
                     'demo' => true,
+                    'country_code' => 'MX',
                     'city' => str_contains($timezone, 'Monterrey') ? 'Monterrey' : 'Ciudad de Mexico',
-                    'state_code' => str_contains($timezone, 'Monterrey') ? 'MX-NLE' : 'MX-CMX',
+                    'jurisdiction_code' => str_contains($timezone, 'Monterrey') ? 'MX-NLE' : 'MX-CMX',
                 ],
                 'metadata' => ['demo' => true],
             ],
@@ -319,18 +320,19 @@ class VeraTimeDemoSeeder extends Seeder
     private function mandatoryRestDays(Company $company): void
     {
         $this->mandatoryRestDay($company, 'Demo descanso empresa', '2026-09-16', 'company_internal', 'company', null, 'Referencia demo interna');
-        $this->mandatoryRestDay(null, 'Demo descanso estatal Nuevo Leon', '2026-11-16', 'electoral', 'state', 'MX-NLE', 'Referencia demo electoral');
+        $this->mandatoryRestDay(null, 'Demo descanso estatal Nuevo Leon', '2026-11-16', 'electoral', 'subnational', 'MX-NLE', 'Referencia demo electoral');
     }
 
-    private function mandatoryRestDay(?Company $company, string $name, string $date, string $type, string $scope, ?string $stateCode = null, ?string $sourceReference = null): void
+    private function mandatoryRestDay(?Company $company, string $name, string $date, string $type, string $scope, ?string $jurisdictionCode = null, ?string $sourceReference = null): void
     {
         $exists = MandatoryRestDay::query()
             ->where('type', $type)
             ->where('scope', $scope)
             ->whereDate('date', $date)
             ->where('name', $name)
+            ->where('country_code', 'MX')
             ->when($company, fn ($query) => $query->where('company_id', $company->id), fn ($query) => $query->whereNull('company_id'))
-            ->when($stateCode, fn ($query) => $query->where('state_code', $stateCode), fn ($query) => $query->whereNull('state_code'))
+            ->when($jurisdictionCode, fn ($query) => $query->where('jurisdiction_code', $jurisdictionCode), fn ($query) => $query->whereNull('jurisdiction_code'))
             ->exists();
 
         if ($exists) {
@@ -342,7 +344,8 @@ class VeraTimeDemoSeeder extends Seeder
             'date' => $date,
             'type' => $type,
             'scope' => $scope,
-            'state_code' => $stateCode,
+            'country_code' => 'MX',
+            'jurisdiction_code' => $jurisdictionCode,
             'source_reference' => $sourceReference,
             'capture_source' => 'seeder',
             'metadata' => ['demo' => true],

@@ -85,14 +85,17 @@ Nota de descansos obligatorios:
 
 - `mandatory_rest_days` no usa `center_id`.
 - `type`: `legal_mandatory`, `electoral`, `company_internal`.
-- `scope`: `national`, `state`, `company`.
-- `legal_mandatory` y `electoral` solo aplican a `national` o `state`.
+- `scope`: `national`, `subnational`, `company`.
+- `country_code`: ISO de 2 letras; durante el MVP se fija en `MX`.
+- `jurisdiction_code`: jurisdiccion normalizada, por ejemplo `MX-NLE`.
+- `legal_mandatory` y `electoral` solo aplican a `national` o `subnational`.
 - `company_internal` solo aplica a `company`.
-- `state_code` se toma normalizado desde `centers.address.state_code` al resolver por fecha; no se usan nombres estatales libres.
+- `country_code` y `jurisdiction_code` se toman normalizados desde `centers.address` al resolver por fecha; no se usan nombres libres de estados o regiones.
 - `source_reference` guarda el fundamento o referencia visible.
 - `capture_source` guarda el origen tecnico de captura: `manual`, `seeder`, `import`, `system`.
-- Solo `super_admin` administra catalogos nacionales, estatales o electorales globales.
+- Solo `super_admin` administra catalogos nacionales, subnacionales o electorales globales.
 - Usuarios de empresa solo administran descansos internos de su empresa.
+- No se implementa cumplimiento internacional, calendarios extranjeros ni selector de pais en el MVP.
 
 ## No implementado
 

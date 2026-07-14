@@ -82,6 +82,8 @@ new class extends Component {
             'form.address.city' => ['nullable', 'string', 'max:255'],
             'form.address.state' => ['nullable', 'string', 'max:255'],
             'form.address.country' => ['nullable', 'string', 'max:255'],
+            'form.address.country_code' => ['nullable', 'string', 'size:2', 'regex:/^[A-Za-z]{2}$/'],
+            'form.address.jurisdiction_code' => ['nullable', 'string', 'max:16', 'regex:/^[A-Za-z]{2}-[A-Za-z0-9]{2,8}$/'],
         ])['form'];
 
         $data = [
@@ -189,7 +191,9 @@ new class extends Component {
             'municipality' => '',
             'city' => '',
             'state' => '',
-            'country' => '',
+            'country' => 'Mexico',
+            'country_code' => 'MX',
+            'jurisdiction_code' => '',
         ];
     }
 
@@ -328,7 +332,10 @@ new class extends Component {
                             <flux:input wire:model="form.address.state" label="Estado" />
                         </div>
 
-                        <flux:input wire:model="form.address.country" label="País" />
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input wire:model="form.address.country" label="Pais" disabled />
+                            <flux:input wire:model="form.address.jurisdiction_code" label="Entidad federativa" placeholder="MX-TAB" />
+                        </div>
                     </section>
                 </div>
 
@@ -344,3 +351,4 @@ new class extends Component {
         </x-side-panel>
     @endif
 </section>
+

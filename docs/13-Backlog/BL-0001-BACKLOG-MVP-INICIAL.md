@@ -438,7 +438,7 @@ No se marcaron como implementadas:
 - BL-0507 Eventos fuera de orden/tardios
 
 Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDelete, reemplazo por vigencia e inactivacion sin borrado.
-Sprint 2C agrega mandatory_rest_days por fecha con type/scope separados: legal_mandatory o electoral para alcance national/state, y company_internal solo para alcance company. No usa center_id, separa source_reference visible de capture_source tecnico, conserva inactivacion no destructiva y no agrega calculos de jornada.
+Sprint 2C agrega mandatory_rest_days por fecha con type/scope separados: legal_mandatory o electoral para alcance national/subnational, y company_internal solo para alcance company. Usa country_code MX durante el MVP, usa jurisdiction_code, no usa center_id, separa source_reference visible de capture_source tecnico, conserva inactivacion no destructiva y no agrega calculos de jornada.
 Sprint 2D agrega time_events como modelo interno de eventos fuente.
 Sprint 2E agrega registro web basico en /time-clock para entrada, salida e inicio/fin de pausa, usando time_events y sin calculos de jornada.
 Quedan pendientes anulacion logica y eventos fuera de orden/tardios.

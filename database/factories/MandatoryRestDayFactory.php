@@ -19,7 +19,8 @@ class MandatoryRestDayFactory extends Factory
             'date' => now()->toDateString(),
             'type' => 'company_internal',
             'scope' => 'company',
-            'state_code' => null,
+            'country_code' => 'MX',
+            'jurisdiction_code' => null,
             'source_reference' => 'Referencia demo opcional',
             'capture_source' => 'manual',
             'status' => 'active',
@@ -33,7 +34,8 @@ class MandatoryRestDayFactory extends Factory
             'company_id' => null,
             'type' => 'legal_mandatory',
             'scope' => 'national',
-            'state_code' => null,
+            'country_code' => 'MX',
+            'jurisdiction_code' => null,
         ]);
     }
 
@@ -42,13 +44,14 @@ class MandatoryRestDayFactory extends Factory
         return $this->national();
     }
 
-    public function stateScoped(string $stateCode = 'MX-JAL'): static
+    public function stateScoped(string $jurisdictionCode = 'MX-JAL', string $countryCode = 'MX'): static
     {
         return $this->state(fn (): array => [
             'company_id' => null,
             'type' => 'electoral',
-            'scope' => 'state',
-            'state_code' => $stateCode,
+            'scope' => 'subnational',
+            'country_code' => $countryCode,
+            'jurisdiction_code' => $jurisdictionCode,
         ]);
     }
 
