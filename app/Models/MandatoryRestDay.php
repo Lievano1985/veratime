@@ -14,7 +14,7 @@ class MandatoryRestDay extends Model
 
     public const TYPES = ['legal_mandatory', 'electoral', 'company_internal'];
 
-    public const SCOPES = ['national', 'state', 'company'];
+    public const SCOPES = ['national', 'subnational', 'company'];
 
     public const STATUSES = ['active', 'inactive'];
 
@@ -25,7 +25,8 @@ class MandatoryRestDay extends Model
         'date',
         'type',
         'scope',
-        'state_code',
+        'country_code',
+        'jurisdiction_code',
         'source_reference',
         'capture_source',
         'status',

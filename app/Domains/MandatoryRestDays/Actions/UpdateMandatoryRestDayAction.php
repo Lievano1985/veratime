@@ -19,23 +19,25 @@ class UpdateMandatoryRestDayAction
         $scope = $data['scope'] ?? $restDay->scope;
         $status = $data['status'] ?? $restDay->status;
         $captureSource = $data['capture_source'] ?? $restDay->capture_source ?? 'manual';
-        $stateCode = $this->normalizeStateCode($data['state_code'] ?? $restDay->state_code);
+        $countryCode = $this->normalizeCountryCode($data['country_code'] ?? $restDay->country_code ?? 'MX');
+        $jurisdictionCode = $this->normalizeJurisdictionCode($data['jurisdiction_code'] ?? $restDay->jurisdiction_code);
 
         $targetCompany = $scope === 'company' ? $company : null;
 
-        $this->assertValidPayload($targetCompany, $type, $scope, $stateCode, $status, $captureSource, $data);
+        $this->assertValidPayload($targetCompany, $type, $scope, $countryCode, $jurisdictionCode, $status, $captureSource, $data);
 
         $date = CarbonImmutable::parse($data['date'])->toDateString();
 
-        return DB::transaction(function () use ($targetCompany, $restDay, $data, $type, $scope, $stateCode, $status, $captureSource, $date): MandatoryRestDay {
-            $this->assertUniqueMandatoryRestDay($type, $scope, $targetCompany, $stateCode, $date, $data['name'], $restDay->id);
+        return DB::transaction(function () use ($targetCompany, $restDay, $data, $type, $scope, $countryCode, $jurisdictionCode, $status, $captureSource, $date): MandatoryRestDay {
+            $this->assertUniqueMandatoryRestDay($type, $scope, $countryCode, $targetCompany, $jurisdictionCode, $date, $data['name'], $restDay->id);
 
             $restDay->forceFill([
                 'name' => $data['name'],
                 'date' => $date,
                 'type' => $type,
                 'scope' => $scope,
-                'state_code' => $scope === 'state' ? $stateCode : null,
+                'country_code' => $countryCode,
+                'jurisdiction_code' => $scope === 'subnational' ? $jurisdictionCode : null,
                 'source_reference' => $data['source_reference'] ?? $restDay->source_reference,
                 'capture_source' => $captureSource,
                 'status' => $status,
@@ -56,7 +58,7 @@ class UpdateMandatoryRestDayAction
         }
     }
 
-    private function assertValidPayload(?Company $company, string $type, ?string $scope, ?string $stateCode, string $status, string $captureSource, array $data): void
+    private function assertValidPayload(?Company $company, string $type, ?string $scope, string $countryCode, ?string $jurisdictionCode, string $status, string $captureSource, array $data): void
     {
         if (blank($data['name'] ?? null)) {
             throw new InvalidArgumentException('El nombre del descanso obligatorio es requerido.');
@@ -82,29 +84,33 @@ class UpdateMandatoryRestDayAction
             throw new InvalidArgumentException('El origen de captura del descanso obligatorio no es valido.');
         }
 
+        if (! $this->isValidCountryCode($countryCode)) {
+            throw new InvalidArgumentException('El codigo de pais es obligatorio y debe usar formato ISO de 2 letras.');
+        }
+
         if ($type === 'company_internal' && $scope !== 'company') {
             throw new InvalidArgumentException('Los descansos internos de empresa solo pueden tener alcance de empresa.');
         }
 
-        if (in_array($type, ['legal_mandatory', 'electoral'], true) && ! in_array($scope, ['national', 'state'], true)) {
-            throw new InvalidArgumentException('Los descansos legales o electorales solo pueden tener alcance nacional o estatal.');
+        if (in_array($type, ['legal_mandatory', 'electoral'], true) && ! in_array($scope, ['national', 'subnational'], true)) {
+            throw new InvalidArgumentException('Los descansos legales o electorales solo pueden tener alcance nacional o subnacional.');
         }
 
         if ($scope === 'national') {
-            if ($company || filled($stateCode)) {
-                throw new InvalidArgumentException('El alcance nacional no debe tener empresa ni codigo de estado.');
+            if ($company || filled($jurisdictionCode)) {
+                throw new InvalidArgumentException('El alcance nacional no debe tener empresa ni jurisdiccion.');
             }
 
             return;
         }
 
-        if ($scope === 'state') {
+        if ($scope === 'subnational') {
             if ($company) {
-                throw new InvalidArgumentException('El alcance estatal no debe pertenecer a una empresa.');
+                throw new InvalidArgumentException('El alcance subnacional no debe pertenecer a una empresa.');
             }
 
-            if (! $this->isValidStateCode($stateCode)) {
-                throw new InvalidArgumentException('El codigo de estado es obligatorio y debe tener formato normalizado.');
+            if (! $this->isValidJurisdictionCode($jurisdictionCode)) {
+                throw new InvalidArgumentException('La jurisdiccion es obligatoria y debe tener formato normalizado.');
             }
 
             return;
@@ -114,20 +120,21 @@ class UpdateMandatoryRestDayAction
             throw new InvalidArgumentException('Los descansos obligatorios de empresa requieren una empresa activa.');
         }
 
-        if ($scope === 'company' && filled($stateCode)) {
-            throw new InvalidArgumentException('El alcance de empresa no debe tener codigo de estado.');
+        if ($scope === 'company' && filled($jurisdictionCode)) {
+            throw new InvalidArgumentException('El alcance de empresa no debe tener jurisdiccion.');
         }
     }
 
-    private function assertUniqueMandatoryRestDay(string $type, string $scope, ?Company $company, ?string $stateCode, string $date, string $name, int $ignoreId): void
+    private function assertUniqueMandatoryRestDay(string $type, string $scope, string $countryCode, ?Company $company, ?string $jurisdictionCode, string $date, string $name, int $ignoreId): void
     {
         $exists = MandatoryRestDay::query()
             ->whereKeyNot($ignoreId)
             ->where('type', $type)
             ->where('scope', $scope)
+            ->where('country_code', $countryCode)
             ->whereDate('date', $date)
             ->where('name', $name)
-            ->tap(fn (Builder $query) => $this->applyScopeIdentity($query, $scope, $company, $stateCode))
+            ->tap(fn (Builder $query) => $this->applyScopeIdentity($query, $scope, $company, $jurisdictionCode))
             ->lockForUpdate()
             ->exists();
 
@@ -136,32 +143,42 @@ class UpdateMandatoryRestDayAction
         }
     }
 
-    private function applyScopeIdentity(Builder $query, string $scope, ?Company $company, ?string $stateCode): void
+    private function applyScopeIdentity(Builder $query, string $scope, ?Company $company, ?string $jurisdictionCode): void
     {
         if ($scope === 'national') {
-            $query->whereNull('company_id');
+            $query->whereNull('company_id')->whereNull('jurisdiction_code');
 
             return;
         }
 
-        if ($scope === 'state') {
-            $query->whereNull('company_id')->where('state_code', $stateCode);
+        if ($scope === 'subnational') {
+            $query->whereNull('company_id')->where('jurisdiction_code', $jurisdictionCode);
 
             return;
         }
 
-        $query->where('company_id', $company->id);
+        $query->where('company_id', $company->id)->whereNull('jurisdiction_code');
     }
 
-    private function normalizeStateCode(?string $stateCode): ?string
+    private function normalizeCountryCode(?string $countryCode): string
     {
-        $stateCode = trim((string) $stateCode);
-
-        return $stateCode === '' ? null : strtoupper($stateCode);
+        return strtoupper(trim((string) $countryCode));
     }
 
-    private function isValidStateCode(?string $stateCode): bool
+    private function normalizeJurisdictionCode(?string $jurisdictionCode): ?string
     {
-        return is_string($stateCode) && preg_match('/^[A-Z]{2}-[A-Z0-9]{2,5}$/', $stateCode) === 1;
+        $jurisdictionCode = trim((string) $jurisdictionCode);
+
+        return $jurisdictionCode === '' ? null : strtoupper($jurisdictionCode);
+    }
+
+    private function isValidCountryCode(string $countryCode): bool
+    {
+        return preg_match('/^[A-Z]{2}$/', $countryCode) === 1;
+    }
+
+    private function isValidJurisdictionCode(?string $jurisdictionCode): bool
+    {
+        return is_string($jurisdictionCode) && preg_match('/^[A-Z]{2}-[A-Z0-9]{2,8}$/', $jurisdictionCode) === 1;
     }
 }

@@ -690,11 +690,12 @@ Incluye:
 - Fecha.
 - Nombre.
 - Tipo: legal obligatorio, electoral o interno de empresa.
-- Alcance: nacional, estatal o empresa.
-- Codigo de estado normalizado cuando el alcance sea estatal.
+- Pais operativo fijo: Mexico.
+- Alcance: nacional, entidad federativa o empresa.
+- Codigo de jurisdiccion normalizado cuando el alcance sea entidad federativa.
 - Estado activo o inactivo.
 - Fundamento o referencia opcional.
-- Filtros por fecha, tipo, alcance, estado y codigo de estado.
+- Filtros por fecha, tipo, alcance, estado y entidad federativa.
 
 Nota:
 
@@ -704,9 +705,10 @@ El formulario muestra el campo "Fundamento o referencia" con ayuda: "Ejemplo: LF
 
 Reglas de acceso:
 
-- Solo `super_admin` administra registros nacionales, estatales o electorales globales.
+- Solo `super_admin` administra registros nacionales, subnacionales o electorales globales.
 - Usuarios de empresa solo administran descansos internos de su empresa.
-- El alcance por centro ya no existe en `mandatory_rest_days`; el estado aplicable se obtiene de `centers.address.state_code` normalizado al resolver por fecha.
+- El alcance por centro ya no existe en `mandatory_rest_days`; la entidad federativa aplicable se obtiene de `centers.address.jurisdiction_code` y el pais de `centers.address.country_code`.
+- No existe selector internacional de pais durante el MVP.
 
 ---
 

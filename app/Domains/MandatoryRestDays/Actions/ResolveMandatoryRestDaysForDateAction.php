@@ -6,8 +6,8 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\MandatoryRestDay;
 use Carbon\CarbonInterface;
-use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Collection;
+use InvalidArgumentException;
 
 class ResolveMandatoryRestDaysForDateAction
 {
@@ -18,22 +18,28 @@ class ResolveMandatoryRestDaysForDateAction
         }
 
         $dateString = is_string($date) ? $date : $date->toDateString();
-        $stateCode = $this->stateCodeFromCenter($center);
+        $countryCode = $this->countryCodeFromCenter($center);
+        $jurisdictionCode = $this->jurisdictionCodeFromCenter($center);
 
         return MandatoryRestDay::query()
             ->where('status', 'active')
             ->whereDate('date', $dateString)
-            ->where(function ($query) use ($company, $stateCode): void {
-                $query->where('scope', 'national')
-                    ->whereNull('company_id')
+            ->where(function ($query) use ($company, $countryCode, $jurisdictionCode): void {
+                $query->where(function ($query) use ($countryCode): void {
+                    $query->where('scope', 'national')
+                        ->where('country_code', $countryCode)
+                        ->whereNull('company_id')
+                        ->whereNull('jurisdiction_code');
+                })
                     ->orWhere(function ($query) use ($company): void {
                         $query->where('scope', 'company')
                             ->where('company_id', $company->id);
                     })
-                    ->orWhere(function ($query) use ($stateCode): void {
-                        $query->where('scope', 'state')
+                    ->orWhere(function ($query) use ($countryCode, $jurisdictionCode): void {
+                        $query->where('scope', 'subnational')
+                            ->where('country_code', $countryCode)
                             ->whereNull('company_id')
-                            ->when($stateCode, fn ($query) => $query->where('state_code', $stateCode), fn ($query) => $query->whereRaw('1 = 0'));
+                            ->when($jurisdictionCode, fn ($query) => $query->where('jurisdiction_code', $jurisdictionCode), fn ($query) => $query->whereRaw('1 = 0'));
                     });
             })
             ->orderBy('scope')
@@ -41,15 +47,21 @@ class ResolveMandatoryRestDaysForDateAction
             ->get();
     }
 
-    private function stateCodeFromCenter(?Center $center): ?string
+    private function countryCodeFromCenter(?Center $center): string
     {
-        $stateCode = trim((string) data_get($center?->address, 'state_code'));
-        $stateCode = strtoupper($stateCode);
+        $countryCode = strtoupper(trim((string) data_get($center?->address, 'country_code', 'MX')));
 
-        if ($stateCode === '') {
+        return preg_match('/^[A-Z]{2}$/', $countryCode) === 1 ? $countryCode : 'MX';
+    }
+
+    private function jurisdictionCodeFromCenter(?Center $center): ?string
+    {
+        $jurisdictionCode = strtoupper(trim((string) data_get($center?->address, 'jurisdiction_code')));
+
+        if ($jurisdictionCode === '') {
             return null;
         }
 
-        return preg_match('/^[A-Z]{2}-[A-Z0-9]{2,5}$/', $stateCode) === 1 ? $stateCode : null;
+        return preg_match('/^[A-Z]{2}-[A-Z0-9]{2,8}$/', $jurisdictionCode) === 1 ? $jurisdictionCode : null;
     }
 }

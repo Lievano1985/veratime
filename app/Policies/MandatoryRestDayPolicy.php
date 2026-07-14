@@ -52,7 +52,7 @@ class MandatoryRestDayPolicy
     {
         return $mandatoryRestDay->company_id === null
             && (
-                in_array($mandatoryRestDay->scope, ['national', 'state'], true)
+                in_array($mandatoryRestDay->scope, ['national', 'subnational'], true)
                 || $mandatoryRestDay->type === 'electoral'
             );
     }
