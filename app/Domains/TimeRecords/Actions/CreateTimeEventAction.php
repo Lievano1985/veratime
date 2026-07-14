@@ -29,9 +29,9 @@ class CreateTimeEventAction
         $this->assertCenterBelongsToCompany($center, $company);
         $this->assertSourceUserBelongsToCompany($sourceUser, $company);
 
-        $eventType = $this->validateInList($data['event_type'] ?? null, TimeEvent::EVENT_TYPES, 'Time event type is invalid.');
-        $source = $this->validateInList($data['source'] ?? null, TimeEvent::SOURCES, 'Time event source is invalid.');
-        $status = $this->validateInList($data['status'] ?? $this->defaultStatusForSource($source), TimeEvent::STATUSES, 'Time event status is invalid.');
+        $eventType = $this->validateInList($data['event_type'] ?? null, TimeEvent::EVENT_TYPES, 'El tipo de evento de jornada no es valido.');
+        $source = $this->validateInList($data['source'] ?? null, TimeEvent::SOURCES, 'La fuente del evento de jornada no es valida.');
+        $status = $this->validateInList($data['status'] ?? $this->defaultStatusForSource($source), TimeEvent::STATUSES, 'El estado del evento de jornada no es valido.');
         $times = $this->normalizeTimes($company, $center, $data);
 
         return DB::transaction(function () use ($company, $worker, $employmentRelationship, $center, $sourceUser, $data, $eventType, $source, $status, $times): TimeEvent {
@@ -67,14 +67,14 @@ class CreateTimeEventAction
     private function assertCompanyIsActive(Company $company): void
     {
         if ($company->status !== 'active') {
-            throw new InvalidArgumentException('Time events require an active company.');
+            throw new InvalidArgumentException('Los eventos de jornada requieren una empresa activa.');
         }
     }
 
     private function assertWorkerBelongsToCompany(Worker $worker, Company $company): void
     {
         if ($worker->company_id !== $company->id) {
-            throw new InvalidArgumentException('Worker must belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora debe pertenecer a la empresa activa.');
         }
     }
 
@@ -85,21 +85,21 @@ class CreateTimeEventAction
         }
 
         if ($employmentRelationship->company_id !== $company->id || $employmentRelationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Employment relationship must belong to the same worker and company.');
+            throw new InvalidArgumentException('La relacion laboral debe pertenecer a la misma persona trabajadora y empresa.');
         }
     }
 
     private function assertCenterBelongsToCompany(?Center $center, Company $company): void
     {
         if ($center && $center->company_id !== $company->id) {
-            throw new InvalidArgumentException('Center must belong to the active company.');
+            throw new InvalidArgumentException('El centro debe pertenecer a la empresa activa.');
         }
     }
 
     private function assertSourceUserBelongsToCompany(?User $sourceUser, Company $company): void
     {
         if ($sourceUser && ! $sourceUser->belongsToCompany($company)) {
-            throw new InvalidArgumentException('Source user must belong to the active company.');
+            throw new InvalidArgumentException('La persona usuaria origen debe pertenecer a la empresa activa.');
         }
     }
 
@@ -128,7 +128,7 @@ class CreateTimeEventAction
         $timezone = $data['timezone'] ?? $center?->timezone ?? $company->timezone;
 
         if (! $timezone || ! in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
-            throw new InvalidArgumentException('Time event timezone is invalid.');
+            throw new InvalidArgumentException('La zona horaria del evento de jornada no es valida.');
         }
 
         if (! blank($data['occurred_at_utc'] ?? null)) {
@@ -138,7 +138,7 @@ class CreateTimeEventAction
             $local = CarbonImmutable::parse($data['occurred_local_date'].' '.$data['occurred_local_time'], $timezone);
             $occurredAtUtc = $local->utc();
         } else {
-            throw new InvalidArgumentException('Time event occurrence time is required.');
+            throw new InvalidArgumentException('La hora del evento de jornada es requerida.');
         }
 
         $receivedAt = blank($data['received_at'] ?? null)

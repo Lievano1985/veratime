@@ -64,15 +64,15 @@ class RegisterKioskTimeEventAction
     private function assertCredentialCanRegister(WorkerCredential $credential, ?Company $company, ?Worker $worker): void
     {
         if ($credential->status !== 'active') {
-            throw new InvalidArgumentException('Kiosk credential is not active.');
+            throw new InvalidArgumentException('La credencial de kiosco no esta activa.');
         }
 
         if (! $company || $company->status !== 'active') {
-            throw new InvalidArgumentException('Kiosk registration requires an active company.');
+            throw new InvalidArgumentException('El registro de kiosco requiere una empresa activa.');
         }
 
         if (! $worker || $worker->company_id !== $company->id || $worker->status !== 'active') {
-            throw new InvalidArgumentException('Worker must be active and belong to the credential company.');
+            throw new InvalidArgumentException('La persona trabajadora debe estar activa y pertenecer a la empresa de la credencial.');
         }
     }
 
@@ -87,11 +87,11 @@ class RegisterKioskTimeEventAction
         }
 
         if ($relationship->company_id !== $company->id || $relationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Employment relationship must belong to the same worker and company.');
+            throw new InvalidArgumentException('La relacion laboral debe pertenecer a la misma persona trabajadora y empresa.');
         }
 
         if ($relationship->center && $relationship->center->company_id !== $company->id) {
-            throw new InvalidArgumentException('Center must belong to the active company.');
+            throw new InvalidArgumentException('El centro debe pertenecer a la empresa activa.');
         }
 
         return $relationship;

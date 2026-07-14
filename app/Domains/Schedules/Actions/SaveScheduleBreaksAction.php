@@ -14,14 +14,14 @@ class SaveScheduleBreaksAction
     public function handle(Company $company, ScheduleDay $scheduleDay, array $breaks): Collection
     {
         if ($scheduleDay->company_id !== $company->id || $scheduleDay->schedule?->company_id !== $company->id) {
-            throw new InvalidArgumentException('Schedule day must belong to the active company.');
+            throw new InvalidArgumentException('El dia del horario debe pertenecer a la empresa activa.');
         }
 
         foreach ($breaks as $break) {
             if (array_key_exists('duration_minutes', $break)
                 && filled($break['duration_minutes'])
                 && (int) $break['duration_minutes'] <= 0) {
-                throw new InvalidArgumentException('Schedule break duration must be positive.');
+                throw new InvalidArgumentException('La duracion de la pausa programada debe ser positiva.');
             }
         }
 

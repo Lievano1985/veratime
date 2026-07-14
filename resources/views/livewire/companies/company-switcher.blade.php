@@ -50,7 +50,7 @@ new class extends Component {
     <select
         id="company-switcher"
         wire:model.live="companyId"
-        class="w-full rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-900 shadow-xs outline-hidden transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+        class="w-full min-w-0 truncate rounded-md border border-zinc-200 bg-white py-1.5 pl-2 pr-9 text-sm text-zinc-900 shadow-xs outline-hidden transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
     >
         @foreach ($companies as $company)
             <option value="{{ $company->id }}">{{ $company->name }}</option>

@@ -21,7 +21,7 @@ class UpdateLaborConditionAction
             || $condition->company_id !== $company->id
             || $worker->company_id !== $company->id
             || $relationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Labor condition must belong to the active company worker relationship.');
+            throw new InvalidArgumentException('La condicion laboral debe pertenecer a la relacion laboral de la empresa activa.');
         }
 
         if ($this->relevantHistoricalFieldsChanged($condition, $data)) {

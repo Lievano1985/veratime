@@ -13,7 +13,7 @@ class ResolveScheduleForWorkerDateAction
     public function handle(Company $company, Worker $worker, CarbonInterface|string $date): ?ScheduleAssignment
     {
         if ($worker->company_id !== $company->id) {
-            throw new InvalidArgumentException('Worker must belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora debe pertenecer a la empresa activa.');
         }
 
         $dateString = is_string($date) ? $date : $date->toDateString();

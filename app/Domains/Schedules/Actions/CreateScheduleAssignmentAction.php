@@ -23,7 +23,7 @@ class CreateScheduleAssignmentAction
         $this->assertSameCompany($company, $worker, $schedule, $employmentRelationship);
 
         if (blank($data['effective_from'] ?? null)) {
-            throw new InvalidArgumentException('Assignment effective_from is required.');
+            throw new InvalidArgumentException('La fecha de inicio de la asignacion es requerida.');
         }
 
         $effectiveFrom = CarbonImmutable::parse($data['effective_from'])->startOfDay();
@@ -31,11 +31,11 @@ class CreateScheduleAssignmentAction
             ? CarbonImmutable::parse($data['effective_to'])->startOfDay()
             : null;
         if ($effectiveTo && $effectiveTo->lt($effectiveFrom)) {
-            throw new InvalidArgumentException('Assignment effective_to must be after effective_from.');
+            throw new InvalidArgumentException('La fecha final de la asignacion debe ser posterior a la fecha inicial.');
         }
 
         if ($this->hasActiveOverlap($company, $worker, $effectiveFrom, $effectiveTo)) {
-            throw new InvalidArgumentException('Worker already has an active schedule assignment for this period.');
+            throw new InvalidArgumentException('La persona trabajadora ya tiene una asignacion activa para este periodo.');
         }
 
         return DB::transaction(function () use ($company, $worker, $schedule, $employmentRelationship, $data, $effectiveFrom, $effectiveTo): ScheduleAssignment {
@@ -64,12 +64,12 @@ class CreateScheduleAssignmentAction
         ?EmploymentRelationship $employmentRelationship
     ): void {
         if ($worker->company_id !== $company->id || $schedule->company_id !== $company->id) {
-            throw new InvalidArgumentException('Worker and schedule must belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora y el horario deben pertenecer a la empresa activa.');
         }
 
         if ($employmentRelationship
             && ($employmentRelationship->company_id !== $company->id || $employmentRelationship->worker_id !== $worker->id)) {
-            throw new InvalidArgumentException('Employment relationship must belong to the worker and active company.');
+            throw new InvalidArgumentException('La relacion laboral debe pertenecer a la persona trabajadora y a la empresa activa.');
         }
     }
 

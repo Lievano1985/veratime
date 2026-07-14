@@ -521,49 +521,56 @@ new class extends Component {
             labelledby="worker-form-title"
         >
             <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-                <div class="flex-1 space-y-4 p-6">
-                    <flux:input wire:model="form.employee_code" label="Codigo interno" required />
-                    <flux:input wire:model="form.full_name" label="Nombre completo" required />
-                    <flux:input wire:model="form.email" label="Email" type="email" />
-                    <flux:input wire:model="form.phone" label="Telefono" />
-                    <flux:input wire:model="form.rfc" label="RFC" />
-                    <flux:input wire:model="form.curp" label="CURP" />
+                <div class="flex-1 space-y-5 p-6">
+                    <section class="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900/60">
+                        <div>
+                            <flux:heading size="sm">Datos generales</flux:heading>
+                            <flux:subheading>Identificación y relación laboral base.</flux:subheading>
+                        </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
-                        <select wire:model="form.center_id" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                            <option value="">Selecciona un centro</option>
-                            @foreach ($centers as $center)
-                                <option value="{{ $center->id }}">{{ $center->code }} - {{ $center->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('form.center_id')
-                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        <flux:input wire:model="form.employee_code" label="Codigo interno" required />
+                        <flux:input wire:model="form.full_name" label="Nombre completo" required />
+                        <flux:input wire:model="form.email" label="Email" type="email" />
+                        <flux:input wire:model="form.phone" label="Telefono" />
+                        <flux:input wire:model="form.rfc" label="RFC" />
+                        <flux:input wire:model="form.curp" label="CURP" />
 
-                    <flux:input wire:model="form.position_name" label="Puesto" />
-                    <flux:input wire:model="form.started_at" label="Fecha de ingreso" type="date" required />
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
+                            <select wire:model="form.center_id" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                <option value="">Selecciona un centro</option>
+                                @foreach ($centers as $center)
+                                    <option value="{{ $center->id }}">{{ $center->code }} - {{ $center->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('form.center_id')
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
-                        <select wire:model="form.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                            <option value="active">Activo</option>
-                            <option value="inactive">Inactivo</option>
-                            <option value="suspended">Suspendido</option>
-                            <option value="terminated">Baja</option>
-                        </select>
-                        @error('form.status')
-                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        <flux:input wire:model="form.position_name" label="Puesto" />
+                        <flux:input wire:model="form.started_at" label="Fecha de ingreso" type="date" required />
+
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
+                            <select wire:model="form.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                <option value="active">Activo</option>
+                                <option value="inactive">Inactivo</option>
+                                <option value="suspended">Suspendido</option>
+                                <option value="terminated">Baja</option>
+                            </select>
+                            @error('form.status')
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </section>
 
                     @if ($editingWorkerId)
                         @php($relationship = $editingWorker?->activeEmploymentRelationship)
                         @php($activeCondition = $relationship?->activeLaborCondition)
                         @php($credential = $editingWorker?->credential)
 
-                        <div class="border-t border-zinc-200 pt-5 dark:border-zinc-700">
+                        <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
                             <div class="mb-4">
                                 <flux:heading size="sm">Condicion laboral vigente</flux:heading>
                                 <flux:subheading>
@@ -652,9 +659,9 @@ new class extends Component {
                             @else
                                 <p class="text-sm text-zinc-500 dark:text-zinc-400">Primero guarda una relacion laboral activa.</p>
                             @endif
-                        </div>
+                        </section>
 
-                        <div class="border-t border-zinc-200 pt-5 dark:border-zinc-700">
+                        <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
                             <div class="mb-4">
                                 <flux:heading size="sm">Credencial kiosco</flux:heading>
                                 <flux:subheading>{{ $credential ? 'Estado: '.$credential->status : 'Sin credencial creada' }}</flux:subheading>
@@ -699,7 +706,7 @@ new class extends Component {
                                     @endif
                                 </div>
                             </div>
-                        </div>
+                        </section>
                     @endif
                 </div>
 

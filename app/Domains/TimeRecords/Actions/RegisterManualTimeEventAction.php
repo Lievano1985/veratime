@@ -65,18 +65,18 @@ class RegisterManualTimeEventAction
     private function assertWorkerCanReceiveManualEvent(Company $company, Worker $worker): void
     {
         if ($company->status !== 'active') {
-            throw new InvalidArgumentException('Manual capture requires an active company.');
+            throw new InvalidArgumentException('La captura manual requiere una empresa activa.');
         }
 
         if ($worker->company_id !== $company->id || $worker->status !== 'active') {
-            throw new InvalidArgumentException('Worker must be active and belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora debe estar activa y pertenecer a la empresa activa.');
         }
     }
 
     private function validateEventType(?string $eventType): string
     {
         if (! $eventType || ! in_array($eventType, self::ALLOWED_EVENT_TYPES, true)) {
-            throw new InvalidArgumentException('Manual event type is invalid.');
+            throw new InvalidArgumentException('El tipo de evento manual no es valido.');
         }
 
         return $eventType;
@@ -87,7 +87,7 @@ class RegisterManualTimeEventAction
         $reason = trim((string) $reason);
 
         if ($reason === '') {
-            throw new InvalidArgumentException('Manual capture reason is required.');
+            throw new InvalidArgumentException('El motivo de la captura manual es requerido.');
         }
 
         return $reason;
@@ -96,7 +96,7 @@ class RegisterManualTimeEventAction
     private function validateTimezone(?string $timezone): string
     {
         if (! $timezone || ! in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
-            throw new InvalidArgumentException('Manual event timezone is invalid.');
+            throw new InvalidArgumentException('La zona horaria del evento manual no es valida.');
         }
 
         return $timezone;
@@ -105,7 +105,7 @@ class RegisterManualTimeEventAction
     private function validateLocalDateTime(?string $date, ?string $time, string $timezone): CarbonImmutable
     {
         if (blank($date) || blank($time)) {
-            throw new InvalidArgumentException('Manual event date and time are required.');
+            throw new InvalidArgumentException('La fecha y hora del evento manual son requeridas.');
         }
 
         return CarbonImmutable::parse($date.' '.$time, $timezone);
@@ -122,11 +122,11 @@ class RegisterManualTimeEventAction
         }
 
         if ($relationship->company_id !== $company->id || $relationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Employment relationship must belong to the same worker and company.');
+            throw new InvalidArgumentException('La relacion laboral debe pertenecer a la misma persona trabajadora y empresa.');
         }
 
         if ($relationship->center && $relationship->center->company_id !== $company->id) {
-            throw new InvalidArgumentException('Center must belong to the active company.');
+            throw new InvalidArgumentException('El centro debe pertenecer a la empresa activa.');
         }
 
         return $relationship;

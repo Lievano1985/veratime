@@ -11,7 +11,7 @@ class InactivateScheduleAssignmentAction
     public function handle(Company $company, ScheduleAssignment $assignment): ScheduleAssignment
     {
         if ($assignment->company_id !== $company->id) {
-            throw new InvalidArgumentException('Schedule assignment must belong to the active company.');
+            throw new InvalidArgumentException('La asignacion de horario debe pertenecer a la empresa activa.');
         }
 
         $assignment->forceFill([

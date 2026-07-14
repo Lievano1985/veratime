@@ -80,11 +80,11 @@ class ResolveCurrentTimeRecordStateAction
     private function assertCompanyAndWorker(Company $company, Worker $worker): void
     {
         if ($company->status !== 'active') {
-            throw new InvalidArgumentException('Time registration requires an active company.');
+            throw new InvalidArgumentException('El registro de jornada requiere una empresa activa.');
         }
 
         if ($worker->company_id !== $company->id || $worker->status !== 'active') {
-            throw new InvalidArgumentException('Worker must be active and belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora debe estar activa y pertenecer a la empresa activa.');
         }
     }
 }

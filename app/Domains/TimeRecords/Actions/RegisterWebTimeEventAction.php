@@ -59,11 +59,11 @@ class RegisterWebTimeEventAction
     private function assertWorkerCanRegister(Company $company, Worker $worker): void
     {
         if ($company->status !== 'active') {
-            throw new InvalidArgumentException('Time registration requires an active company.');
+            throw new InvalidArgumentException('El registro de jornada requiere una empresa activa.');
         }
 
         if ($worker->company_id !== $company->id || $worker->status !== 'active') {
-            throw new InvalidArgumentException('Worker must be active and belong to the active company.');
+            throw new InvalidArgumentException('La persona trabajadora debe estar activa y pertenecer a la empresa activa.');
         }
     }
 
@@ -78,11 +78,11 @@ class RegisterWebTimeEventAction
         }
 
         if ($relationship->company_id !== $company->id || $relationship->worker_id !== $worker->id) {
-            throw new InvalidArgumentException('Employment relationship must belong to the same worker and company.');
+            throw new InvalidArgumentException('La relacion laboral debe pertenecer a la misma persona trabajadora y empresa.');
         }
 
         if ($relationship->center && $relationship->center->company_id !== $company->id) {
-            throw new InvalidArgumentException('Center must belong to the active company.');
+            throw new InvalidArgumentException('El centro debe pertenecer a la empresa activa.');
         }
 
         return $relationship;

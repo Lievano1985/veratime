@@ -13,7 +13,7 @@
 
             <flux:navbar class="-mb-px max-lg:hidden">
                 <flux:navbar.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
-                    Dashboard
+                    Inicio
                 </flux:navbar.item>
 
                 <flux:navbar.item icon="building-office" href="{{ route('companies.index') }}" :current="request()->routeIs('companies.*')" wire:navigate>
@@ -40,30 +40,30 @@
             </div>
 
             <flux:navbar class="mr-1.5 space-x-0.5 py-0!">
-                <flux:tooltip content="Search" position="bottom">
-                    <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" label="Search" />
+                <flux:tooltip content="Buscar" position="bottom">
+                    <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" label="Buscar" />
                 </flux:tooltip>
-                <flux:tooltip content="Repository" position="bottom">
+                <flux:tooltip content="Repositorio" position="bottom">
                     <flux:navbar.item
                         class="h-10 max-lg:hidden [&>div>svg]:size-5"
                         icon="folder-git-2"
                         href="https://github.com/Lievano1985/jornada360"
                         target="_blank"
-                        label="Repository"
+                        label="Repositorio"
                     />
                 </flux:tooltip>
-                <flux:tooltip content="Documentation" position="bottom">
+                <flux:tooltip content="Documentacion" position="bottom">
                     <flux:navbar.item
                         class="h-10 max-lg:hidden [&>div>svg]:size-5"
                         icon="book-open-text"
                         href="https://github.com/Lievano1985/jornada360/tree/main/docs"
                         target="_blank"
-                        label="Documentation"
+                        label="Documentacion"
                     />
                 </flux:tooltip>
             </flux:navbar>
 
-            <!-- Desktop User Menu -->
+            <!-- Menu de usuario de escritorio -->
             <flux:dropdown position="top" align="end">
                 <flux:profile
                     class="cursor-pointer"
@@ -93,7 +93,7 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item href="/settings/profile" icon="cog" wire:navigate>Settings</flux:menu.item>
+                        <flux:menu.item href="/settings/profile" icon="cog" wire:navigate>Configuracion</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
@@ -101,14 +101,14 @@
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
                         <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
-                            {{ __('Log Out') }}
+                            {{ __('Cerrar sesion') }}
                         </flux:menu.item>
                     </form>
                 </flux:menu>
             </flux:dropdown>
         </flux:header>
 
-        <!-- Mobile Menu -->
+        <!-- Menu movil -->
         <flux:sidebar stashable sticky class="lg:hidden border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
@@ -119,7 +119,7 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group heading="Plataforma">
                     <flux:navlist.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
-                        Dashboard
+                        Inicio
                     </flux:navlist.item>
                     <flux:navlist.item icon="building-office" href="{{ route('companies.index') }}" :current="request()->routeIs('companies.*')" wire:navigate>
                         Empresas
@@ -140,11 +140,11 @@
 
             <flux:navlist variant="outline">
                 <flux:navlist.item icon="folder-git-2" href="https://github.com/Lievano1985/jornada360" target="_blank">
-                    Repository
+                    Repositorio
                 </flux:navlist.item>
 
                 <flux:navlist.item icon="book-open-text" href="https://github.com/Lievano1985/jornada360/tree/main/docs" target="_blank">
-                    Documentation
+                    Documentacion
                 </flux:navlist.item>
             </flux:navlist>
         </flux:sidebar>
