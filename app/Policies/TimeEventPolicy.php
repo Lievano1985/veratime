@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Company;
 use App\Models\TimeEvent;
 use App\Models\User;
+use App\Support\RoleKey;
 
 class TimeEventPolicy
 {
@@ -27,6 +28,6 @@ class TimeEventPolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin', 'rh'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 }

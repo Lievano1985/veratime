@@ -20,6 +20,7 @@ use App\Models\ScheduleDay;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -72,9 +73,9 @@ class VeraTimeDemoSeeder extends Seeder
     private function users(Company $company): array
     {
         $roles = [
-            'owner' => $this->role('owner', 'Propietario'),
-            'admin' => $this->role('admin', 'Administrador'),
-            'rh' => $this->role('rh', 'Recursos Humanos'),
+            'owner' => $this->role(RoleKey::OWNER, 'Propietario'),
+            'admin' => $this->role(RoleKey::ADMIN, 'Administrador'),
+            'rh' => $this->role(RoleKey::RH, 'Recursos Humanos'),
         ];
 
         return [

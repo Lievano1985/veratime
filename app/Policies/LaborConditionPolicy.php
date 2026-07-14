@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\LaborCondition;
 use App\Models\User;
+use App\Support\RoleKey;
 
 class LaborConditionPolicy
 {
@@ -24,6 +25,6 @@ class LaborConditionPolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 }

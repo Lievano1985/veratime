@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Company;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Support\RoleKey;
 
 class SchedulePolicy
 {
@@ -32,6 +33,6 @@ class SchedulePolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 }

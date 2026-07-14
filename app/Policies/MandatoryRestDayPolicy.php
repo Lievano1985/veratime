@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Company;
 use App\Models\MandatoryRestDay;
 use App\Models\User;
+use App\Support\RoleKey;
 
 class MandatoryRestDayPolicy
 {
@@ -21,7 +22,7 @@ class MandatoryRestDayPolicy
     public function update(User $user, MandatoryRestDay $mandatoryRestDay): bool
     {
         if ($this->isGlobalCatalogRecord($mandatoryRestDay)) {
-            return $this->hasAnyRole($user, ['super_admin']);
+            return $this->hasAnyRole($user, RoleKey::globalCatalogManagers());
         }
 
         return $mandatoryRestDay->company !== null
@@ -38,14 +39,14 @@ class MandatoryRestDayPolicy
     private function canManageMandatoryRestDays(User $user, Company $company): bool
     {
         return $this->canManageCompanyInternalRestDays($user, $company)
-            || $this->hasAnyRole($user, ['super_admin']);
+            || $this->hasAnyRole($user, RoleKey::globalCatalogManagers());
     }
 
     private function canManageCompanyInternalRestDays(User $user, Company $company): bool
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 
     private function isGlobalCatalogRecord(MandatoryRestDay $mandatoryRestDay): bool

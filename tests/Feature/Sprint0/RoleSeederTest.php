@@ -3,6 +3,7 @@
 namespace Tests\Feature\Sprint0;
 
 use App\Models\Role;
+use App\Support\RoleKey;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,12 +17,12 @@ class RoleSeederTest extends TestCase
         $this->seed(RoleSeeder::class);
 
         $expectedRoles = [
-            'owner',
-            'admin',
-            'hr',
-            'supervisor',
-            'payroll',
-            'compliance',
+            RoleKey::OWNER,
+            RoleKey::ADMIN,
+            RoleKey::RH,
+            RoleKey::SUPERVISOR,
+            RoleKey::PAYROLL,
+            RoleKey::COMPLIANCE,
         ];
 
         foreach ($expectedRoles as $role) {
@@ -30,5 +31,9 @@ class RoleSeederTest extends TestCase
                 'is_system' => true,
             ]);
         }
+
+        $this->assertDatabaseMissing(Role::class, [
+            'key' => 'hr',
+        ]);
     }
 }

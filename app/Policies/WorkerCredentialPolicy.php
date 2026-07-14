@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Support\RoleKey;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
 
@@ -34,6 +35,6 @@ class WorkerCredentialPolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 }

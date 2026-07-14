@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -30,7 +31,7 @@ class DatabaseSeeder extends Seeder
 
         $company->setting()->create(Company::defaultSettings());
 
-        $role = Role::query()->where('key', 'owner')->first();
+        $role = Role::query()->where('key', RoleKey::OWNER)->first();
 
         $user->companies()->attach($company, [
             'role_id' => $role?->id,

@@ -5,6 +5,7 @@ namespace App\Domains\Companies\Actions;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Support\Facades\DB;
 
 class CreateCompanyAction
@@ -23,7 +24,7 @@ class CreateCompanyAction
 
             $company->setting()->create(Company::defaultSettings());
 
-            $ownerRole = Role::query()->where('key', 'owner')->first();
+            $ownerRole = Role::query()->where('key', RoleKey::OWNER)->first();
 
             $user->companies()->attach($company, [
                 'role_id' => $ownerRole?->id,

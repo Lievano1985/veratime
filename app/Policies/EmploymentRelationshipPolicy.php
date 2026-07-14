@@ -6,6 +6,7 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\User;
+use App\Support\RoleKey;
 
 class EmploymentRelationshipPolicy
 {
@@ -29,6 +30,6 @@ class EmploymentRelationshipPolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), ['owner', 'admin'], true);
+            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 }
