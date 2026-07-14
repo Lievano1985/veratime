@@ -719,6 +719,44 @@ Datos disponibles para pruebas manuales:
 - Horarios demo: diurno y nocturno con cruce de medianoche.
 - Eventos demo: web, kiosk y admin_manual.
 
+---
+
+## Fase de consolidacion WFM y cierres
+
+**Estado:** Diseno documental. No hay funcionalidad nueva para probar todavia.
+
+Cuando se implemente, la guia manual debera cubrir:
+
+- Unidades organizacionales por centro.
+- Responsables por centro o unidad.
+- Supervisor/responsable sin alcance explicito no puede operar.
+- Alcance por centro completo.
+- Alcance por una o varias unidades organizacionales.
+- Jerarquia visible `department` -> `area` -> `team`.
+- Supervisor con acceso limitado a su alcance.
+- Empresas sin unidades operando solo por centro.
+- Catalogo de turnos.
+- Perfiles `fixed`, `variable`, `rotating` y `flexible`.
+- Batches en borrador.
+- Importacion CSV/XLSX que genera borrador, no publicacion directa.
+- Publicacion diaria con version consecutiva por centro/periodo, snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256.
+- Correccion de publicacion creando nueva version y dejando la anterior `superseded`.
+- Resolucion de programacion diaria por trabajador y fecha.
+- Perfiles multiples de cierre.
+- Pantalla con:
+
+```text
+Perfil efectivo: [nombre]
+Origen: Empresa / Centro / Area / Relacion laboral
+```
+
+No debe probarse todavia como implementado:
+
+- Programacion diaria publicada.
+- Importacion CSV/XLSX de horarios.
+- Cierres multiples.
+- Periodos y miembros congelados.
+
 Usar estos datos solo en entorno local/demo. No representan datos reales ni deben usarse en produccion.
 
 El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, motor legal, calculos, alertas, incidencias, reportes, conformidad, API ni CSV.

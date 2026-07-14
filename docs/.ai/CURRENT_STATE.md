@@ -138,6 +138,24 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - No crea `work_days`, `work_day_calculations`, alertas, incidencias, reportes, API ni CSV.
 ## UX-01 refinamiento general Sprint 2
 
+## Consolidacion WFM propuesta
+
+- Estado: diseno documental en progreso, sin codigo funcional implementado.
+- ADRs propuestos:
+  - `docs/12-Decisiones/ADR-0002-PROGRAMACION-DIARIA-Y-ALCANCE-ORGANIZACIONAL.md`.
+  - `docs/12-Decisiones/ADR-0003-PERFILES-MULTIPLES-DE-CIERRE.md`.
+- Mexico es el unico pais operativo del MVP; el modelo conserva `country_code` y `jurisdiction_code`.
+- La clave oficial de Recursos Humanos sera `rh`; referencias `hr` deberan corregirse posteriormente.
+- La asignacion diaria publicada sera la unica fuente de verdad operativa.
+- `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
+- Los perfiles de horario solo generaran borradores.
+- Supervisor/responsable requiere alcance explicito por centro completo o unidad; el rol no otorga alcance automatico.
+- La jerarquia visible MVP sera `department` -> `area` -> `team`, conservando `parent_id`.
+- Cada `schedule_batch` pertenece a empresa, centro y rango; una operacion de empresa completa crea un batch por centro.
+- La publicacion usa version consecutiva por centro/periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`; una correccion crea nueva version y la anterior queda `superseded`.
+- Los cierres multiples tendran prioridad: relacion laboral, unidad, centro, empresa.
+- No se ha implementado todavia WFM nuevo, importacion CSV/XLSX, cierre multiple, migraciones ni vistas nuevas.
+
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
 Objetivo en curso: refinamiento visual y localizacion al espanol de Mexico de las pantallas visibles actuales.

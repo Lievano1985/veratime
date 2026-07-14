@@ -1257,15 +1257,21 @@ GET    /centers/{center_id}
 PATCH  /centers/{center_id}
 ```
 
-## 13.2 Schedules
+## 13.2 WFM scheduling
 
 ```http
-GET    /schedules
-POST   /schedules
-GET    /schedules/{schedule_id}
-PATCH  /schedules/{schedule_id}
-POST   /schedule-assignments
+GET    /shift-templates
+POST   /shift-templates
+GET    /schedule-profiles
+POST   /schedule-profiles
+POST   /schedule-profile-assignments
+POST   /schedule-batches
+POST   /schedule-batches/{batch_id}/import
+POST   /schedule-batches/{batch_id}/publish
+GET    /daily-schedule-assignments
 ```
+
+Los endpoints legacy `/schedules` y `/schedule-assignments` pertenecen al modelo Sprint 2A/2B y deberan reemplazarse cuando se implemente la programacion diaria publicada.
 
 ## 13.3 Evidence Packages
 
@@ -1274,6 +1280,19 @@ POST   /evidence-packages
 GET    /evidence-packages
 GET    /evidence-packages/{package_id}
 ```
+
+## 13.3.1 Closing profiles
+
+```http
+GET    /closing-period-profiles
+POST   /closing-period-profiles
+POST   /closing-profile-assignments
+POST   /closing-periods/generate
+GET    /closing-periods
+GET    /closing-periods/{period_id}/members
+```
+
+La API debera mostrar el perfil efectivo y su origen: empresa, centro, unidad organizacional o relacion laboral.
 
 ## 13.4 API Tokens
 
@@ -1603,9 +1622,15 @@ GET    /integration-logs
 POST   /centers
 PATCH  /centers/{id}
 
-POST   /schedules
-PATCH  /schedules/{id}
-POST   /schedule-assignments
+POST   /shift-templates
+PATCH  /shift-templates/{id}
+POST   /schedule-profiles
+PATCH  /schedule-profiles/{id}
+POST   /schedule-profile-assignments
+POST   /schedule-batches
+POST   /schedule-batches/{id}/import
+POST   /schedule-batches/{id}/publish
+GET    /daily-schedule-assignments
 
 POST   /alerts/{id}/resolve
 POST   /incidents/{id}/corrections
@@ -1619,6 +1644,12 @@ GET    /evidence-packages/{id}
 Webhooks
 ClickBalance API directa
 ```
+
+Nota WFM: CSV/XLSX/API de programacion variable siempre deben crear batches en `draft` para revision. Ningun endpoint de importacion publica automaticamente programacion diaria.
+
+Cada `schedule_batch` pertenece obligatoriamente a una empresa, un centro y un rango de fechas. Una operacion de empresa completa debe crear un batch por centro.
+
+La publicacion API debe generar version consecutiva por centro y periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`. Una correccion no edita una publicacion existente: crea nueva version y deja la anterior `superseded`.
 
 ---
 
@@ -1667,5 +1698,3 @@ Ahí se definirán:
 - Pruebas de cierre y conformidad.
 - Pruebas de importaciones/exportaciones.
 - Criterios mínimos para piloto.
-
-

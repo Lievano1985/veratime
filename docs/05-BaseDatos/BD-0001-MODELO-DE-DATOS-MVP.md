@@ -2006,6 +2006,60 @@ Nota: `kiosk_sessions` puede omitirse inicialmente si `time_events` conserva suf
 
 ---
 
+# 25.3 Modelo documental WFM y cierres
+
+Esta seccion documenta el diseno objetivo. No implica migraciones creadas todavia.
+
+## Organizacion
+
+`organizational_units`: departamentos, areas y equipos dentro de un centro. Campos: `company_id`, `center_id`, `parent_id`, `code`, `name`, `type`, `status`, `metadata`. Indices: unique `company_id/code`, index `company_id/center_id/status`, index `company_id/parent_id`. Restricciones: misma empresa y centro para padre e hijo; no destructivo si tiene historial.
+
+`employment_unit_assignments`: asignacion vigente de trabajador a unidad. Campos: `company_id`, `worker_id`, `employment_relationship_id`, `organizational_unit_id`, `assignment_type` (`primary`, `support`), `effective_from`, `effective_to`, `status`, `source`, `metadata`. Indices por trabajador/rango y unidad/estado. Restriccion: una unidad principal vigente por trabajador y fecha; apoyos temporales opcionales.
+
+`operational_scope_assignments`: alcance de responsables o supervisores. Campos: `company_id`, `user_id`, `center_id nullable`, `organizational_unit_id nullable`, `scope_role`, `effective_from`, `effective_to`, `status`, `metadata`. Debe existir centro completo o unidad, pero no ambos. `owner`, `admin_empresa` y `rh` tienen alcance completo de empresa. Supervisor/responsable nunca obtiene alcance automatico solo por poseer el rol.
+
+## Turnos y perfiles
+
+`shift_templates`: catalogo de turnos reutilizables. Campos: `company_id`, `code`, `name`, `timezone`, `start_time`, `end_time`, `crosses_midnight`, `required_minutes`, `window_start_time`, `window_end_time`, `status`, `metadata`. Indices: unique `company_id/code`, index `company_id/status`.
+
+`shift_template_segments`: pausas y segmentos de turno. Campos: `company_id`, `shift_template_id`, `segment_type`, `start_time`, `end_time`, `duration_minutes`, `is_paid`, `is_required`, `sort_order`, `metadata`. Indice: `company_id/shift_template_id/sort_order`.
+
+`schedule_profiles`: perfiles `fixed`, `variable`, `rotating` y `flexible`. Campos: `company_id`, `code`, `name`, `profile_type`, `timezone`, `status`, `metadata`. Indices: unique `company_id/code`, index `company_id/profile_type/status`.
+
+`schedule_profile_weekly_rules`: reglas semanales de perfiles `fixed`. Campos: `company_id`, `schedule_profile_id`, `day_of_week`, `shift_template_id`, `is_working_day`, `sort_order`. Indices: unique `schedule_profile_id/day_of_week/sort_order`.
+
+`rotation_patterns`: ciclos rotativos. Campos: `company_id`, `schedule_profile_id`, `name`, `cycle_length_days`, `anchor_date`, `status`, `metadata`.
+
+`rotation_pattern_days`: dias del ciclo rotativo. Campos: `company_id`, `rotation_pattern_id`, `cycle_day`, `shift_template_id`, `is_working_day`, `metadata`. Indice unique `rotation_pattern_id/cycle_day`.
+
+`schedule_profile_assignments`: asignacion de perfiles con vigencia. Campos: `company_id`, `worker_id`, `employment_relationship_id`, `organizational_unit_id`, `schedule_profile_id`, `effective_from`, `effective_to`, `status`, `source`, `metadata`. Indices por trabajador/rango, perfil/estado y unidad/estado.
+
+## Programacion
+
+`schedule_batches`: captura, importacion, revision y publicacion. Campos: `company_id`, `center_id` obligatorio, `organizational_unit_id`, `period_start`, `period_end`, `source` (`web`, `csv`, `xlsx`, `api`, `system`), `status` (`draft`, `published`, `superseded`, `cancelled`), `version`, `published_at`, `published_by`, `superseded_by_id`, `metadata`. Un batch pertenece obligatoriamente a empresa, centro y rango; la unidad puede actuar como filtro o alcance. Una operacion empresarial completa crea un batch por centro.
+
+`daily_schedule_assignments`: fuente de verdad diaria publicada junto con `daily_schedule_segments`. Campos: `company_id`, `schedule_batch_id`, `worker_id`, `employment_relationship_id`, `center_id`, `organizational_unit_id`, `work_date`, `timezone`, `status`, `source_profile_id`, `source_profile_assignment_id`, `source_type`, `version`, `published_snapshot` JSON canonico, `published_hash` SHA-256, `published_at`, `published_by`, `superseded_by_id`, `metadata`. Indices: `company_id/worker_id/work_date/status`, `company_id/center_id/work_date`, `company_id/organizational_unit_id/work_date`, `company_id/schedule_batch_id`. MySQL/MariaDB no tiene unique parcial portable; la unicidad de un publicado efectivo por trabajador/fecha se validara con transaccion e indice compuesto. La publicacion es inmutable; una correccion genera nueva version consecutiva por centro/periodo y deja la anterior `superseded`.
+
+`daily_schedule_segments`: multiples segmentos por dia y parte de la fuente operativa. Campos: `company_id`, `daily_schedule_assignment_id`, `segment_type`, `start_at_utc`, `end_at_utc`, `local_date`, `start_local_time`, `end_local_time`, `duration_minutes`, `is_paid`, `is_required`, `sort_order`, `snapshot` JSON canonico. Indices: `company_id/daily_schedule_assignment_id/sort_order`, `company_id/local_date`.
+
+## Cierres
+
+`closing_period_profiles`: catalogo de perfiles de cierre. Campos: `company_id`, `code`, `name`, `frequency` (`weekly`, `fourteen_day`, `semimonthly`, `monthly`, `custom`), `timezone`, `anchor_date`, `cutoff_day`, `payment_lag_days`, `is_default`, `status`, `metadata`. Toda empresa requiere un perfil default.
+
+`closing_profile_assignments`: excepciones por alcance. Campos: `company_id`, `closing_period_profile_id`, `center_id`, `organizational_unit_id`, `employment_relationship_id`, `effective_from`, `effective_to`, `status`, `metadata`. Solo una columna de alcance debe estar presente. Prioridad: relacion laboral, unidad, centro, empresa.
+
+`closing_periods`: periodos generados y versionados. Campos: `company_id`, `closing_period_profile_id`, `period_start`, `period_end`, `status`, `version`, `profile_snapshot`, `published_hash`, `published_at`, `published_by`, `metadata`.
+
+`closing_period_members`: miembros congelados. Campos: `company_id`, `closing_period_id`, `worker_id`, `employment_relationship_id`, `center_id`, `organizational_unit_id`, `effective_profile_id`, `effective_profile_origin`, `member_snapshot`, `status`.
+
+## `scope_type`/`scope_id` vs columnas explicitas
+
+`scope_type`/`scope_id` reduce columnas, pero debilita integridad referencial y obliga a validar pertenencia al tenant en codigo. En un sistema multi-tenant de cumplimiento, esto aumenta riesgo de acceso horizontal.
+
+Recomendacion MVP: usar columnas explicitas nullable cuando los alcances son conocidos (`center_id`, `organizational_unit_id`, `employment_relationship_id`) y validar que solo una este presente. Si se usa `scope_type`/`scope_id` en el futuro, cada Action debera validar tipo permitido, existencia y `company_id` antes de guardar.
+
+---
+
 # 26. Pendientes de decisión
 
 Antes de crear migraciones finales, se deben confirmar:
