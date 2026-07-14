@@ -968,3 +968,32 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 
 - Implementar alcances explicitos por centro completo o unidad organizacional para supervisores/responsables.
 - No otorgar acceso automatico por poseer el rol `supervisor`.
+---
+
+## Bloque B1 - modelo organizacional y alcances
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Validaciones manuales futuras cuando exista UI B2
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Empresa sin unidades | Operar trabajadores solo con centro. | La operacion sigue funcionando sin obligar unidades. |
+| Jerarquia | Crear departamento, area y equipo. | La jerarquia visible queda limitada a tres niveles. |
+| Unidad inactiva | Intentar asignar trabajador o alcance a unidad inactiva. | El sistema bloquea la asignacion. |
+| Unidad con hijos | Intentar inactivar unidad con hijos activos. | El sistema bloquea la inactivacion. |
+| Unidad con asignacion vigente | Intentar inactivar unidad con trabajador vigente. | El sistema bloquea la inactivacion. |
+| Supervisor sin alcance | Entrar con supervisor sin scope. | No obtiene acceso global. |
+| Supervisor por centro | Asignar alcance por centro. | Puede gestionar trabajadores aplicables de ese centro. |
+| Supervisor por unidad | Asignar alcance a departamento o area. | Incluye descendientes segun jerarquia. |
+| Apoyo temporal | Asignar apoyo temporal a unidad bajo supervisor. | El acceso aplica solo durante la vigencia. |
+| Aislamiento tenant | Intentar usar unidad, centro o trabajador de otra empresa. | El sistema bloquea el acceso horizontal. |
+
+### No incluido todavia
+
+- Pantallas Livewire/Volt para unidades o responsables.
+- Plantillas de turno.
+- Perfiles de horario.
+- Programacion diaria publicada.
+- Perfiles de cierre.
+- Incidencias, alertas, reportes, API o CSV.

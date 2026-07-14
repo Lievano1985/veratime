@@ -154,7 +154,8 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Cada `schedule_batch` pertenece a empresa, centro y rango; una operacion de empresa completa crea un batch por centro.
 - La publicacion usa version consecutiva por centro/periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`; una correccion crea nueva version y la anterior queda `superseded`.
 - Los cierres multiples tendran prioridad: relacion laboral, unidad, centro, empresa.
-- No se ha implementado todavia WFM nuevo, importacion CSV/XLSX, cierre multiple, migraciones ni vistas nuevas.
+- Bloque B1 implementa modelo organizacional base, asignaciones de trabajadores a unidades y alcances operativos por centro/unidad, sin pantallas.
+- No se ha implementado todavia B2, pantallas de areas/responsables, WFM nuevo completo, importacion CSV/XLSX, cierre multiple ni vistas nuevas.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -185,3 +186,15 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `owner`, `admin` y `rh` conservan acceso empresarial completo en el MVP actual.
 - `supervisor` no obtiene permisos globales; su alcance explicito queda pendiente para Bloque B.
 - No se implementaron unidades organizacionales, alcances operativos ni programacion diaria en este bloque.
+## Bloque B1 - modelo organizacional y alcances
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Tablas: `organizational_units`, `employment_unit_assignments`, `operational_scope_assignments`.
+- Jerarquia soportada: `department` -> `area` -> `team` dentro de un centro.
+- Las unidades son opcionales; una empresa puede operar solo con centros.
+- Trabajadores pueden tener una unidad principal vigente y apoyos temporales.
+- Supervisores solo tienen alcance mediante registros explicitos por centro o unidad.
+- `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito.
+- No se implementaron pantallas Livewire/Volt, importacion, programacion diaria, perfiles de horario ni cierres.
+- B2 queda pendiente para UI y administracion visual de unidades/responsables.

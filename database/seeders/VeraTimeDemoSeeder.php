@@ -3,6 +3,10 @@
 namespace Database\Seeders;
 
 use App\Domains\MandatoryRestDays\Actions\CreateMandatoryRestDayAction;
+use App\Domains\Organization\Actions\AssignOperationalScopeAction;
+use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
+use App\Domains\Organization\Actions\AssignTemporarySupportAction;
+use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
@@ -13,6 +17,7 @@ use App\Models\CompanySetting;
 use App\Models\EmploymentRelationship;
 use App\Models\LaborCondition;
 use App\Models\MandatoryRestDay;
+use App\Models\OrganizationalUnit;
 use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\ScheduleBreak;
@@ -38,6 +43,8 @@ class VeraTimeDemoSeeder extends Seeder
         $centers = $this->centers($company);
         $schedules = $this->schedules($company);
         $workers = $this->workers($company, $centers, $schedules);
+        $units = $this->organizationalUnits($company, $centers);
+        $this->organizationalAssignments($company, $users, $workers, $units);
 
         $this->mandatoryRestDays($company);
         $this->timeEvents($company, $users['rh'], $workers);
@@ -68,7 +75,7 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @return array{owner: User, admin: User, rh: User}
+     * @return array{owner: User, admin: User, rh: User, supervisor: User}
      */
     private function users(Company $company): array
     {
@@ -76,12 +83,14 @@ class VeraTimeDemoSeeder extends Seeder
             'owner' => $this->role(RoleKey::OWNER, 'Propietario'),
             'admin' => $this->role(RoleKey::ADMIN, 'Administrador'),
             'rh' => $this->role(RoleKey::RH, 'Recursos Humanos'),
+            'supervisor' => $this->role(RoleKey::SUPERVISOR, 'Supervisor'),
         ];
 
         return [
             'owner' => $this->user($company, $roles['owner'], 'Demo Owner', 'owner.demo@veratime.local', true),
             'admin' => $this->user($company, $roles['admin'], 'Demo Admin', 'admin.demo@veratime.local'),
             'rh' => $this->user($company, $roles['rh'], 'Demo RH', 'rh.demo@veratime.local'),
+            'supervisor' => $this->user($company, $roles['supervisor'], 'Demo Supervisor', 'supervisor.demo@veratime.local'),
         ];
     }
 
@@ -317,6 +326,118 @@ class VeraTimeDemoSeeder extends Seeder
         ]);
         $condition->company()->associate($company);
         $condition->save();
+    }
+    /**
+     * @return array<string, OrganizationalUnit>
+     */
+    private function organizationalUnits(Company $company, array $centers): array
+    {
+        $create = app(CreateOrganizationalUnitAction::class);
+
+        $admin = $this->unit($company, $centers['matriz'], 'ADM', 'Administracion', 'department');
+        $rh = $this->unit($company, $centers['matriz'], 'RH', 'Recursos Humanos', 'area', $admin);
+        $accounting = $this->unit($company, $centers['matriz'], 'CONT', 'Contabilidad', 'area', $admin);
+
+        $operations = $this->unit($company, $centers['planta'], 'OPS', 'Operaciones', 'department');
+        $production = $this->unit($company, $centers['planta'], 'PROD', 'Produccion', 'area', $operations);
+        $shiftA = $this->unit($company, $centers['planta'], 'PROD-A', 'Equipo Turno A', 'team', $production);
+        $warehouse = $this->unit($company, $centers['planta'], 'ALM', 'Almacen', 'area', $operations);
+
+        return [
+            'admin' => $admin,
+            'rh' => $rh,
+            'accounting' => $accounting,
+            'operations' => $operations,
+            'production' => $production,
+            'shift_a' => $shiftA,
+            'warehouse' => $warehouse,
+        ];
+    }
+
+    private function unit(Company $company, Center $center, string $code, string $name, string $type, ?OrganizationalUnit $parent = null): OrganizationalUnit
+    {
+        $unit = OrganizationalUnit::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->where('code', $code)
+            ->first();
+
+        if ($unit) {
+            return $unit->refresh();
+        }
+
+        return app(CreateOrganizationalUnitAction::class)->handle($company, $center, [
+            'code' => $code,
+            'name' => $name,
+            'type' => $type,
+            'metadata' => ['demo' => true],
+        ], $parent);
+    }
+
+    /**
+     * @param array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}> $workers
+     * @param array<string, OrganizationalUnit> $units
+     */
+    private function organizationalAssignments(Company $company, array $users, array $workers, array $units): void
+    {
+        $this->primaryUnit($company, $workers['ana']['relationship'], $units['rh']);
+        $this->primaryUnit($company, $workers['bruno']['relationship'], $units['shift_a']);
+        $this->primaryUnit($company, $workers['carla']['relationship'], $units['accounting']);
+
+        $this->temporarySupport($company, $workers['carla']['relationship'], $units['warehouse']);
+        $this->supervisorScope($company, $users['supervisor'], $units['production']);
+    }
+
+    private function primaryUnit(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit): void
+    {
+        if ($relationship->employmentUnitAssignments()->where('assignment_type', 'primary')->where('status', 'active')->exists()) {
+            return;
+        }
+
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, [
+            'effective_from' => '2026-08-01',
+            'source' => 'system',
+            'reason' => 'Asignacion demo local.',
+            'metadata' => ['demo' => true],
+        ]);
+    }
+
+    private function temporarySupport(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit): void
+    {
+        if ($relationship->employmentUnitAssignments()
+            ->where('assignment_type', 'temporary_support')
+            ->where('organizational_unit_id', $unit->id)
+            ->where('status', 'active')
+            ->exists()) {
+            return;
+        }
+
+        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $unit, [
+            'effective_from' => '2026-08-15',
+            'effective_to' => '2026-08-20',
+            'source' => 'system',
+            'reason' => 'Apoyo temporal demo.',
+            'metadata' => ['demo' => true],
+        ]);
+    }
+
+    private function supervisorScope(Company $company, User $supervisor, OrganizationalUnit $unit): void
+    {
+        if ($supervisor->operationalScopeAssignments()
+            ->where('company_id', $company->id)
+            ->where('organizational_unit_id', $unit->id)
+            ->where('status', 'active')
+            ->exists()) {
+            return;
+        }
+
+        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, [
+            'effective_from' => '2026-08-01',
+            'responsibility_type' => 'supervisor',
+            'source' => 'system',
+            'reason' => 'Alcance demo limitado a produccion.',
+            'metadata' => ['demo' => true],
+        ], unit: $unit);
     }
     private function mandatoryRestDays(Company $company): void
     {

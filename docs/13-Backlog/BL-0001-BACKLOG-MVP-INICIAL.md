@@ -593,12 +593,14 @@ Restricciones:
 | Bloque | Objetivo | Dependencias | Archivos esperados | Pruebas | Criterio de salida | Riesgo | Orden |
 |---|---|---|---|---|---|---|---|
 | A. Normalizacion de roles y permisos | Unificar `rh` y definir permisos base | Sprint 0/1 | `RoleSeeder`, policies, tests de roles | Pest policies | Implementado/candidato a cierre: `rh` es clave unica y `hr` no opera como alias | Romper usuarios demo | 1 |
-| B. Unidades organizacionales y responsables | Crear departamentos/areas/equipos y alcances explicitos por centro completo o unidad | Centros/trabajadores | migraciones docs futuras, modelos, Actions, vistas | multi-tenant y alcance supervisor | Supervisor solo ve alcance asignado; el rol no otorga acceso automatico | Acceso horizontal | 2 |
+| B. Unidades organizacionales y responsables | Crear departamentos/areas/equipos y alcances explicitos por centro completo o unidad | Centros/trabajadores | B1: migraciones, modelos, Actions, factories, tests. B2: vistas pendientes | multi-tenant y alcance supervisor | B1 implementado/candidato a cierre: modelo y dominio listos; B2 pantallas pendientes | Acceso horizontal | 2 |
 
 Nota Bloque A:
-h queda como clave canonica de Recursos Humanos; owner, dmin y
-h conservan permisos empresariales base. supervisor no recibe alcance global hasta Bloque B.
-| C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | `shift_templates`, segmentos, UI | CRUD, cruces medianoche | Turno no calcula jornada | Mezclar flexible con turno rigido | 3 |
+h queda como clave canonica de Recursos Humanos; owner, dmin y h conservan permisos empresariales base. supervisor no recibe alcance global automatico.
+Nota Bloque B1:
+Se implementa solo modelo organizacional, asignaciones de unidad y alcances operativos de dominio. No incluye pantallas, plantillas de turno, perfiles, programacion diaria ni cierres.
+
+| C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Turno no calcula jornada | Mezclar flexible con turno rigido | 3 |
 | D. Perfiles fixed y variable | Crear perfiles y generacion draft | C | `schedule_profiles`, weekly rules, assignments | generacion draft | Fixed genera dias, variable captura draft | Publicacion prematura | 4 |
 | E. Perfiles rotating y flexible | Agregar ciclos y ventanas/minutos | D | rotation patterns, flexible rules | patron y ventanas | Rotating/flexible generan draft correcto | Complejidad UX | 5 |
 | F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | Version consecutiva por centro/periodo, snapshot canonico, hash SHA-256 y `ResolveDailyScheduleForWorkerAction` listo | Versionado incorrecto | 6 |

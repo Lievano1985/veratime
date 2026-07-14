@@ -106,4 +106,8 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(TimeEvent::class, 'source_user_id');
     }
+    public function operationalScopeAssignments(): HasMany
+    {
+        return $this->hasMany(OperationalScopeAssignment::class);
+    }
 }
