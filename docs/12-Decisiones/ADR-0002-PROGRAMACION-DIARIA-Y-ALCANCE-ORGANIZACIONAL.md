@@ -131,6 +131,8 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `PublishScheduleBatchAction`
 - `ResolveDailyScheduleForWorkerAction`
 
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles `fixed` y `variable` con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil.
+
 ## Snapshots y Versionamiento
 
 La programacion publicada conserva snapshot JSON canonico. Cualquier cambio posterior crea nueva version y marca registros previos como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.

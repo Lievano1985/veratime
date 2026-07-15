@@ -606,8 +606,11 @@ Se implementan pantallas para areas/departamentos, asignaciones organizacionales
 Nota Bloque C:
 Se implementa `/scheduling/shifts` como catalogo de plantillas de turno por empresa con segmentos diarios. No guarda timezone, `center_id`, tipo legal ni ventanas flexibles. No asigna personas, no genera calendarios y no sincroniza con el modelo legacy. `schedules`, `schedule_days`, `schedule_breaks` y `schedule_assignments` siguen disponibles temporalmente hasta Bloque J.
 
+Nota Bloque D1:
+Se implementan `schedule_profiles`, `schedule_profile_weekly_rules` y `schedule_profile_assignments` para perfiles `fixed` y `variable`. Los perfiles fijos usan siete reglas semanales basadas en `shift_templates`; los variables no tienen reglas semanales. La resolucion efectiva usa prioridad relacion laboral, unidad principal vigente, centro y empresa. `temporary_support` no cambia la herencia. No se implementan pantallas D2, perfiles `rotating`/`flexible`, batches, programacion diaria publicada, CSV/API WFM ni calculos.
+
 | C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Implementado/candidato a cierre: catalogo disponible sin calcular jornada | Mezclar flexible con turno rigido | 3 |
-| D. Perfiles fixed y variable | Crear perfiles y generacion draft | C | `schedule_profiles`, weekly rules, assignments | generacion draft | Fixed genera dias, variable captura draft | Publicacion prematura | 4 |
+| D. Perfiles fixed y variable | Crear perfiles, reglas semanales y asignaciones con herencia | C | `schedule_profiles`, weekly rules, assignments | dominio y resolucion | D1 implementado/candidato a cierre: perfiles y resolutor disponibles; D2 UI pendiente | Publicacion prematura | 4 |
 | E. Perfiles rotating y flexible | Agregar ciclos y ventanas/minutos | D | rotation patterns, flexible rules | patron y ventanas | Rotating/flexible generan draft correcto | Complejidad UX | 5 |
 | F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | Version consecutiva por centro/periodo, snapshot canonico, hash SHA-256 y `ResolveDailyScheduleForWorkerAction` listo | Versionado incorrecto | 6 |
 | G. Importacion CSV/XLSX | Importar variable a draft | F | import batches/rows, parser, validadores | errores por fila | Importacion nunca publica directo | Calidad de archivos | 7 |

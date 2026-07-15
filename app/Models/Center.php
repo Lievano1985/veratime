@@ -53,4 +53,9 @@ class Center extends Model
     {
         return $this->hasMany(OperationalScopeAssignment::class);
     }
+
+    public function scheduleProfileAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileAssignment::class);
+    }
 }

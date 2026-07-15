@@ -271,7 +271,7 @@ class ShiftTemplateCatalogTest extends TestCase
 
     public function test_block_c_does_not_create_future_wfm_or_calculation_tables(): void
     {
-        foreach (['schedule_profiles', 'schedule_batches', 'daily_schedule_assignments', 'daily_schedule_segments', 'work_days', 'work_day_calculations'] as $table) {
+        foreach (['schedule_batches', 'daily_schedule_assignments', 'daily_schedule_segments', 'work_days', 'work_day_calculations'] as $table) {
             $this->assertFalse(Schema::hasTable($table), "{$table} no debe existir en Bloque C.");
         }
     }

@@ -87,6 +87,21 @@ class Company extends Model
         return $this->hasMany(ShiftTemplateSegment::class);
     }
 
+    public function scheduleProfiles(): HasMany
+    {
+        return $this->hasMany(ScheduleProfile::class);
+    }
+
+    public function scheduleProfileWeeklyRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileWeeklyRule::class);
+    }
+
+    public function scheduleProfileAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileAssignment::class);
+    }
+
     public function scheduleDays(): HasMany
     {
         return $this->hasMany(ScheduleDay::class);

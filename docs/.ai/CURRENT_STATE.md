@@ -160,7 +160,8 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - `shift_templates` y `shift_template_segments` existen como catalogo reutilizable por empresa.
 - Las plantillas usan horas locales de reloj, sin `timezone`, sin `center_id`, sin clasificacion legal y sin ventanas flexibles.
 - El modelo legacy `schedules`, `schedule_days`, `schedule_breaks` y `schedule_assignments` sigue temporalmente disponible; su retiro queda pendiente para Bloque J.
-- No se ha implementado todavia perfiles de horario, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
+- Bloque D1 implementa perfiles de horario `fixed` y `variable`, reglas semanales para `fixed`, asignaciones por vigencia y resolucion por herencia.
+- No se ha implementado todavia pantallas de perfiles, perfiles `rotating`/`flexible`, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -231,3 +232,19 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Supervisores solo consultan plantillas activas si tienen alcance operativo vigente; no administran.
 - El seeder demo crea plantillas neutrales sin asignar trabajadores ni generar dias.
 - No se implementaron `schedule_profiles`, perfiles fixed/variable/rotating/flexible, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+
+## Bloque D1 - perfiles fixed y variable
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Tablas: `schedule_profiles`, `schedule_profile_weekly_rules`, `schedule_profile_assignments`.
+- Tipos implementados: `fixed` y `variable`.
+- `fixed` requiere exactamente siete reglas semanales ISO 1-7 y al menos un dia con turno.
+- `variable` no admite reglas semanales en D1.
+- Los turnos de perfiles fijos usan `shift_templates` activos de la misma empresa.
+- Las asignaciones soportan alcance `company`, `center`, `organizational_unit` y `employment_relationship`.
+- La herencia se resuelve en este orden: relacion laboral -> unidad principal vigente -> centro -> empresa.
+- `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal vigente.
+- `ResolveScheduleProfileForRelationshipAction` es el resolutor central de D1.
+- Supervisores no crean perfiles; solo pueden asignar directamente a relaciones laborales dentro de su alcance operativo.
+- No se implementaron pantallas D2, `rotating`, `flexible`, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.

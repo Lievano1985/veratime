@@ -79,4 +79,9 @@ class EmploymentRelationship extends Model
     {
         return $this->hasMany(EmploymentUnitAssignment::class);
     }
+
+    public function scheduleProfileAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileAssignment::class);
+    }
 }

@@ -10,7 +10,10 @@ use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
+use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\UpdateScheduleProfileAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
 use App\Models\Center;
@@ -24,6 +27,8 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\ScheduleBreak;
 use App\Models\ScheduleDay;
+use App\Models\ScheduleProfile;
+use App\Models\ScheduleProfileAssignment;
 use App\Models\ShiftTemplate;
 use App\Models\TimeEvent;
 use App\Models\User;
@@ -49,6 +54,7 @@ class VeraTimeDemoSeeder extends Seeder
         $workers = $this->workers($company, $centers, $schedules);
         $units = $this->organizationalUnits($company, $centers);
         $this->organizationalAssignments($company, $users, $workers, $units);
+        $this->scheduleProfiles($company, $users['rh'], $centers, $workers, $units);
 
         $this->mandatoryRestDays($company);
         $this->timeEvents($company, $users['rh'], $workers);
@@ -299,6 +305,7 @@ class VeraTimeDemoSeeder extends Seeder
             'ana' => ['VT-001', 'Ana Demo Lopez', 'ana.demo@veratime.local', $centers['matriz'], $schedules['diurno'], 'Analista RH'],
             'bruno' => ['VT-002', 'Bruno Demo Perez', 'bruno.demo@veratime.local', $centers['planta'], $schedules['nocturno'], 'Operador nocturno'],
             'carla' => ['VT-003', 'Carla Demo Ruiz', 'carla.demo@veratime.local', $centers['matriz'], $schedules['diurno'], 'Supervisora demo'],
+            'diego' => ['VT-004', 'Diego Demo Santos', 'diego.demo@veratime.local', $centers['planta'], $schedules['diurno'], 'Auxiliar almacen'],
         ];
 
         $workers = [];
@@ -433,9 +440,112 @@ class VeraTimeDemoSeeder extends Seeder
         $this->primaryUnit($company, $workers['ana']['relationship'], $units['rh']);
         $this->primaryUnit($company, $workers['bruno']['relationship'], $units['shift_a']);
         $this->primaryUnit($company, $workers['carla']['relationship'], $units['accounting']);
+        $this->primaryUnit($company, $workers['diego']['relationship'], $units['warehouse']);
 
         $this->temporarySupport($company, $workers['carla']['relationship'], $units['warehouse']);
         $this->supervisorScope($company, $users['supervisor'], $units['production']);
+    }
+
+    /**
+     * @param array<string, Center> $centers
+     * @param array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}> $workers
+     * @param array<string, OrganizationalUnit> $units
+     */
+    private function scheduleProfiles(Company $company, User $createdBy, array $centers, array $workers, array $units): void
+    {
+        $apertura = ShiftTemplate::query()
+            ->where('company_id', $company->id)
+            ->where('code', 'APER')
+            ->firstOrFail();
+
+        $fixed = $this->scheduleProfile($company, 'OFIJA', 'Oficina fija demo', 'fixed', $this->fixedWeeklyRules($apertura));
+        $variable = $this->scheduleProfile($company, 'OVAR', 'Operacion variable demo', 'variable');
+
+        $this->scheduleProfileAssignment($company, $fixed, [
+            'assignment_scope' => 'company',
+            'effective_from' => '2026-08-01',
+            'reason' => 'Perfil base demo de empresa.',
+            'metadata' => ['demo' => true, 'expected_resolution' => 'company'],
+        ], $createdBy);
+
+        $this->scheduleProfileAssignment($company, $variable, [
+            'assignment_scope' => 'center',
+            'center_id' => $centers['planta']->id,
+            'effective_from' => '2026-08-01',
+            'reason' => 'Excepcion demo por centro.',
+            'metadata' => ['demo' => true, 'expected_resolution' => 'center'],
+        ], $createdBy);
+
+        $this->scheduleProfileAssignment($company, $variable, [
+            'assignment_scope' => 'organizational_unit',
+            'organizational_unit_id' => $units['rh']->id,
+            'effective_from' => '2026-08-01',
+            'reason' => 'Excepcion demo por area.',
+            'metadata' => ['demo' => true, 'expected_resolution' => 'organizational_unit'],
+        ], $createdBy);
+
+        $this->scheduleProfileAssignment($company, $fixed, [
+            'assignment_scope' => 'employment_relationship',
+            'employment_relationship_id' => $workers['bruno']['relationship']->id,
+            'effective_from' => '2026-08-01',
+            'reason' => 'Excepcion directa demo por relacion laboral.',
+            'metadata' => ['demo' => true, 'expected_resolution' => 'employment_relationship'],
+        ], $createdBy);
+    }
+
+    private function scheduleProfile(Company $company, string $code, string $name, string $type, array $rules = []): ScheduleProfile
+    {
+        $data = [
+            'code' => $code,
+            'name' => $name,
+            'description' => 'Perfil demo local sin generar programacion diaria.',
+            'profile_type' => $type,
+            'status' => 'active',
+            'metadata' => ['demo' => true],
+        ];
+
+        $profile = ScheduleProfile::query()
+            ->where('company_id', $company->id)
+            ->where('code', $code)
+            ->first();
+
+        return $profile
+            ? app(UpdateScheduleProfileAction::class)->handle($company, $profile, $data, $type === 'fixed' ? $rules : null)
+            : app(CreateScheduleProfileAction::class)->handle($company, $data, $rules);
+    }
+
+    private function fixedWeeklyRules(ShiftTemplate $template): array
+    {
+        $rules = [];
+
+        for ($day = 1; $day <= 5; $day++) {
+            $rules[] = ['day_of_week' => $day, 'day_type' => 'shift', 'shift_template_id' => $template->id];
+        }
+
+        $rules[] = ['day_of_week' => 6, 'day_type' => 'rest'];
+        $rules[] = ['day_of_week' => 7, 'day_type' => 'rest'];
+
+        return $rules;
+    }
+
+    private function scheduleProfileAssignment(Company $company, ScheduleProfile $profile, array $data, User $createdBy): void
+    {
+        $exists = ScheduleProfileAssignment::query()
+            ->where('company_id', $company->id)
+            ->where('assignment_scope', $data['assignment_scope'])
+            ->whereDate('effective_from', $data['effective_from'])
+            ->where('status', 'active')
+            ->when($data['assignment_scope'] === 'company', fn ($query) => $query->whereNull('center_id')->whereNull('organizational_unit_id')->whereNull('employment_relationship_id'))
+            ->when($data['assignment_scope'] === 'center', fn ($query) => $query->where('center_id', $data['center_id']))
+            ->when($data['assignment_scope'] === 'organizational_unit', fn ($query) => $query->where('organizational_unit_id', $data['organizational_unit_id']))
+            ->when($data['assignment_scope'] === 'employment_relationship', fn ($query) => $query->where('employment_relationship_id', $data['employment_relationship_id']))
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        app(AssignScheduleProfileAction::class)->handle($company, $profile, ['source' => 'system'] + $data, $createdBy);
     }
 
     private function primaryUnit(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit): void

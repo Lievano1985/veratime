@@ -1041,3 +1041,30 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 - Importacion CSV/XLSX.
 - Calculos legales.
 - Alertas, incidencias, reportes o API WFM.
+
+---
+
+## Bloque D1 - perfiles fixed y variable
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Validacion manual
+
+D1 no agrega pantallas. La validacion manual se limita a revisar que no aparezcan nuevas entradas de perfiles en la navegacion y que el catalogo de turnos siga funcionando.
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Sin pantalla D1 | Revisar sidebar y rutas visibles. | No aparece pantalla de perfiles de horario todavia. |
+| Catalogo de turnos | Abrir `/scheduling/shifts`. | Sigue operativo y no genera programacion diaria. |
+| Seeder demo | Ejecutar `php artisan db:seed --class=VeraTimeDemoSeeder`. | Crea perfiles demo y asignaciones sin duplicar registros. |
+| Resolucion por dominio | Ejecutar pruebas automatizadas D1. | Se validan prioridad relacion laboral, unidad principal, centro y empresa. |
+
+### No incluido todavia
+
+- Pantalla D2 de perfiles y asignaciones.
+- Perfiles `rotating` o `flexible`.
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Publicacion.
+- CSV/XLSX o API WFM.

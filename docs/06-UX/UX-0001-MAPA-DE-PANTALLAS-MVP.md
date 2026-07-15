@@ -633,10 +633,12 @@ Incluye:
 No incluye:
 
 - Asignacion de turnos a personas.
-- Perfiles fixed, variable, rotating o flexible.
+- Pantallas de perfiles.
 - Programacion diaria publicada.
 - Importacion CSV/XLSX.
 - Calculos legales, alertas, incidencias ni reportes.
+
+Bloque D1 implementa el dominio de perfiles `fixed` y `variable`, reglas semanales, asignaciones con vigencia y resolucion por herencia. No agrega pantalla. La futura pantalla D2 debera permitir administrar perfiles y asignaciones reutilizando las Actions D1.
 
 ## 10.0 Estructura organizacional
 
