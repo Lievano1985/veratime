@@ -1001,3 +1001,43 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 - Programacion diaria publicada.
 - Perfiles de cierre.
 - Incidencias, alertas, reportes, API o CSV.
+
+---
+
+## Bloque C - catalogo de plantillas de turno
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Ruta
+
+- `/scheduling/shifts`
+
+### Validaciones manuales sugeridas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Abrir catalogo | Entrar a `/scheduling/shifts` con owner/admin/rh. | Carga el listado y muestra "Catálogo de turnos". |
+| Crear turno simple | Crear plantilla con trabajo `08:00` a `16:00`. | Se guarda y la vista previa muestra 8 h de trabajo. |
+| Turno nocturno | Crear trabajo `22:00` a `06:00` con dia final siguiente. | Se guarda y muestra `+1 dia` / cruza medianoche. |
+| Jornada partida | Crear trabajo, descanso fijo y segundo trabajo. | Se guardan varios segmentos sin solaparse. |
+| Descanso por duracion | Agregar descanso de 30 minutos sin hora fija. | Se guarda como pausa requerida por duracion. |
+| Solapamiento | Intentar segmentos fijos traslapados. | El sistema rechaza la plantilla. |
+| Orden duplicado | Repetir `sort_order`. | El sistema rechaza la plantilla. |
+| Inactivar | Inactivar plantilla activa. | Cambia a inactiva sin borrar segmentos. |
+| Reactivar | Reactivar plantilla valida. | Vuelve a activa. |
+| Supervisor con alcance | Entrar como supervisor con scope vigente. | Consulta plantillas activas sin controles administrativos. |
+| Supervisor sin alcance | Entrar como supervisor sin scope. | Acceso bloqueado. |
+| Rol no autorizado | Entrar con rol sin permiso. | No ve enlace y la ruta queda bloqueada. |
+| Legacy separado | Revisar `/schedules`. | Sigue disponible como "Horarios legacy"; no hay doble escritura. |
+
+### No incluido todavia
+
+- Asignacion de turnos a trabajadores.
+- Perfiles `fixed`, `variable`, `rotating` o `flexible`.
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Programacion diaria publicada.
+- Importacion CSV/XLSX.
+- Calculos legales.
+- Alertas, incidencias, reportes o API WFM.

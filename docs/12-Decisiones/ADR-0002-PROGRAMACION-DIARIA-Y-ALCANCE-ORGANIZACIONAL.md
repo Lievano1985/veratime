@@ -29,6 +29,11 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - Los dias publicados conservan snapshot JSON canonico, version consecutiva por centro y periodo, autor, fecha de publicacion y hash SHA-256.
 - La publicacion es inmutable. Una correccion genera una nueva version y la version anterior queda `superseded`.
 - La base soportara multiples segmentos de trabajo el mismo dia.
+- Las plantillas de turno pertenecen a una empresa, no a un centro.
+- Las plantillas de turno usan horas locales de reloj y no guardan timezone.
+- Las plantillas de turno no guardan clasificacion legal diurna, nocturna o mixta; esa clasificacion sera resultado del motor legal.
+- Flexible no es una plantilla de turno rigida; minutos requeridos y ventanas flexibles pertenecen al perfil flexible y al dia publicado.
+- No habra doble escritura entre `schedules` legacy y el nuevo catalogo `shift_templates`.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - Existira un unico resolutor operativo: `ResolveDailyScheduleForWorkerAction`.
 - Mexico es el unico pais operativo del MVP, pero se conserva modelo compatible con `country_code` y `jurisdiction_code`.

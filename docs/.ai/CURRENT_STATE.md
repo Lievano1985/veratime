@@ -156,7 +156,11 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Los cierres multiples tendran prioridad: relacion laboral, unidad, centro, empresa.
 - Bloque B1 implementa modelo organizacional base, asignaciones de trabajadores a unidades y alcances operativos por centro/unidad.
 - Bloque B2 implementa pantallas Livewire/Volt para areas/departamentos, asignaciones organizacionales, responsables/supervisores y consulta "Mi alcance".
-- No se ha implementado todavia WFM nuevo completo, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
+- Bloque C implementa el catalogo nuevo de plantillas de turno y segmentos diarios en `/scheduling/shifts`.
+- `shift_templates` y `shift_template_segments` existen como catalogo reutilizable por empresa.
+- Las plantillas usan horas locales de reloj, sin `timezone`, sin `center_id`, sin clasificacion legal y sin ventanas flexibles.
+- El modelo legacy `schedules`, `schedule_days`, `schedule_breaks` y `schedule_assignments` sigue temporalmente disponible; su retiro queda pendiente para Bloque J.
+- No se ha implementado todavia perfiles de horario, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -213,3 +217,17 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `supervisor` puede consultar unidades y ver su propio alcance, pero no administra estructura ni scopes.
 - Las pantallas reutilizan Actions B1 para crear, reemplazar, finalizar e inactivar.
 - No se implementaron plantillas de turno, perfiles de horario, programacion diaria, incidencias, alertas, reportes, API WFM ni CSV.
+
+## Bloque C - catalogo de plantillas de turno
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Tablas: `shift_templates` y `shift_template_segments`.
+- Ruta: `/scheduling/shifts`.
+- Las plantillas pertenecen a una empresa, no a un centro.
+- No guardan timezone, tipo legal, trabajador, vigencias, minutos flexibles ni ventanas flexibles.
+- Soportan multiples segmentos de trabajo, descansos fijos, descansos por duracion y cruce de medianoche mediante offsets 0/1.
+- La pantalla permite listar, buscar, filtrar, crear, editar, inactivar, reactivar y previsualizar plantillas.
+- Supervisores solo consultan plantillas activas si tienen alcance operativo vigente; no administran.
+- El seeder demo crea plantillas neutrales sin asignar trabajadores ni generar dias.
+- No se implementaron `schedule_profiles`, perfiles fixed/variable/rotating/flexible, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
