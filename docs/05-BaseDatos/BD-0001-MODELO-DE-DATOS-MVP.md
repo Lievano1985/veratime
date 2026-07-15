@@ -2020,9 +2020,9 @@ Esta seccion documenta el diseno objetivo. No implica migraciones creadas todavi
 
 ## Turnos y perfiles
 
-`shift_templates`: catalogo de turnos reutilizables. Campos: `company_id`, `code`, `name`, `timezone`, `start_time`, `end_time`, `crosses_midnight`, `required_minutes`, `window_start_time`, `window_end_time`, `status`, `metadata`. Indices: unique `company_id/code`, index `company_id/status`.
+`shift_templates`: catalogo de turnos reutilizables implementado en Bloque C. Campos: `company_id`, `code`, `name`, `description`, `status`, `metadata`, timestamps. No incluye `center_id`, `timezone`, `profile_type`, `legal_type`, `worker_id`, vigencias, `required_minutes`, `window_start` ni `window_end`. Indices: unique `company_id/code`, index `company_id/status`.
 
-`shift_template_segments`: pausas y segmentos de turno. Campos: `company_id`, `shift_template_id`, `segment_type`, `start_time`, `end_time`, `duration_minutes`, `is_paid`, `is_required`, `sort_order`, `metadata`. Indice: `company_id/shift_template_id/sort_order`.
+`shift_template_segments`: segmentos diarios de una plantilla. Campos: `company_id`, `shift_template_id`, `segment_type` (`work`, `break`), `timing_mode` (`fixed`, `duration`), `start_local_time`, `end_local_time`, `start_day_offset`, `end_day_offset`, `duration_minutes`, `is_paid`, `is_required`, `sort_order`, `metadata`, timestamps. Indices: unique `shift_template_id/sort_order`, index `company_id/shift_template_id`, index `company_id/segment_type`. Reglas: al menos un segmento `work`, offsets 0 o 1, sin solapamientos fijos, span maximo 24 horas y sin calculos legales en esta etapa.
 
 `schedule_profiles`: perfiles `fixed`, `variable`, `rotating` y `flexible`. Campos: `company_id`, `code`, `name`, `profile_type`, `timezone`, `status`, `metadata`. Indices: unique `company_id/code`, index `company_id/profile_type/status`.
 

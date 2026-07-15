@@ -610,6 +610,34 @@ Origen: Empresa / Centro / Area / Relacion laboral
 
 Las pantallas actuales `/schedules` y `/schedule-assignments` se consideran legacy hasta que se implemente el nuevo WFM.
 
+Pantalla implementada en Bloque C:
+
+```text
+/scheduling/shifts
+```
+
+Nombre visible: `Catálogo de turnos`.
+
+Incluye:
+
+- Listado paginado.
+- Busqueda por codigo o nombre.
+- Filtro por estado.
+- Crear y editar plantilla.
+- Inactivar y reactivar.
+- Editor de segmentos de trabajo y descanso.
+- Segmentos fijos y descansos por duracion.
+- Offsets para turno nocturno con `+1 dia`.
+- Vista previa de trabajo programado, descansos y duracion total.
+
+No incluye:
+
+- Asignacion de turnos a personas.
+- Perfiles fixed, variable, rotating o flexible.
+- Programacion diaria publicada.
+- Importacion CSV/XLSX.
+- Calculos legales, alertas, incidencias ni reportes.
+
 ## 10.0 Estructura organizacional
 
 Pantallas objetivo:
@@ -710,9 +738,13 @@ Sprint 2B agrega la pantalla simple /schedule-assignments para:
 - inactivar asignaciones sin borrarlas
 - resolver vigencia por fecha desde dominio, sin calculos de jornada
 
+Bloque C agrega `/scheduling/shifts` para el nuevo catalogo de turnos. La pantalla legacy `/schedules` se mantiene disponible como "Horarios legacy" hasta su retiro en Bloque J.
+
 Quedan pendientes para sprints posteriores:
-- descansos obligatorios
-- registro avanzado de jornada, kiosco operativo, captura manual, calculos, alertas y reportes
+- perfiles de horario
+- programacion diaria publicada
+- importacion CSV/XLSX
+- calculos, alertas, incidencias y reportes
 ```
 
 ## 10.4 Calendario de descansos obligatorios

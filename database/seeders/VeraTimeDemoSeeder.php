@@ -9,6 +9,8 @@ use App\Domains\Organization\Actions\AssignTemporarySupportAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
+use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
 use App\Models\Center;
@@ -22,6 +24,7 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\ScheduleBreak;
 use App\Models\ScheduleDay;
+use App\Models\ShiftTemplate;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
@@ -42,6 +45,7 @@ class VeraTimeDemoSeeder extends Seeder
         $users = $this->users($company);
         $centers = $this->centers($company);
         $schedules = $this->schedules($company);
+        $this->shiftTemplates($company);
         $workers = $this->workers($company, $centers, $schedules);
         $units = $this->organizationalUnits($company, $centers);
         $this->organizationalAssignments($company, $users, $workers, $units);
@@ -238,6 +242,52 @@ class VeraTimeDemoSeeder extends Seeder
         $break->company()->associate($company);
         $break->scheduleDay()->associate($day);
         $break->save();
+    }
+
+    private function shiftTemplates(Company $company): void
+    {
+        $this->shiftTemplate($company, 'APER', 'Apertura demo', [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '08:00', 'end_local_time' => '16:00', 'sort_order' => 1],
+        ]);
+
+        $this->shiftTemplate($company, 'INT', 'Intermedio demo', [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '11:00', 'end_local_time' => '19:00', 'sort_order' => 1],
+        ]);
+
+        $this->shiftTemplate($company, 'CIERRE', 'Cierre demo', [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '14:00', 'end_local_time' => '22:00', 'sort_order' => 1],
+        ]);
+
+        $this->shiftTemplate($company, 'NOCT', 'Nocturno demo', [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '22:00', 'end_local_time' => '06:00', 'start_day_offset' => 0, 'end_day_offset' => 1, 'sort_order' => 1],
+        ]);
+
+        $this->shiftTemplate($company, 'PART', 'Jornada partida demo', [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '08:00', 'end_local_time' => '13:00', 'sort_order' => 1],
+            ['segment_type' => 'break', 'timing_mode' => 'fixed', 'start_local_time' => '13:00', 'end_local_time' => '15:00', 'is_paid' => false, 'is_required' => true, 'sort_order' => 2],
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '15:00', 'end_local_time' => '18:00', 'sort_order' => 3],
+            ['segment_type' => 'break', 'timing_mode' => 'duration', 'duration_minutes' => 30, 'is_paid' => false, 'is_required' => true, 'sort_order' => 4],
+        ]);
+    }
+
+    private function shiftTemplate(Company $company, string $code, string $name, array $segments): ShiftTemplate
+    {
+        $data = [
+            'code' => $code,
+            'name' => $name,
+            'description' => 'Plantilla demo local sin efecto operativo.',
+            'status' => 'active',
+            'metadata' => ['demo' => true],
+        ];
+
+        $template = ShiftTemplate::query()
+            ->where('company_id', $company->id)
+            ->where('code', $code)
+            ->first();
+
+        return $template
+            ? app(UpdateShiftTemplateAction::class)->handle($company, $template, $data, $segments)
+            : app(CreateShiftTemplateAction::class)->handle($company, $data, $segments);
     }
 
     /**

@@ -77,6 +77,16 @@ class Company extends Model
         return $this->hasMany(Schedule::class);
     }
 
+    public function shiftTemplates(): HasMany
+    {
+        return $this->hasMany(ShiftTemplate::class);
+    }
+
+    public function shiftTemplateSegments(): HasMany
+    {
+        return $this->hasMany(ShiftTemplateSegment::class);
+    }
+
     public function scheduleDays(): HasMany
     {
         return $this->hasMany(ScheduleDay::class);
