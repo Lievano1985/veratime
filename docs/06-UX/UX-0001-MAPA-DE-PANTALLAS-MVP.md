@@ -650,7 +650,9 @@ Bloque D2 agrega:
 - Navegacion de Horarios con catalogo de turnos, perfiles, asignaciones y descansos obligatorios.
 - Ocultamiento de las entradas legacy `/schedules` y `/schedule-assignments` en la navegacion normal, sin eliminar rutas ni codigo.
 
-Bloque E1 agrega dominio para ciclo repetitivo, flexible y bajo demanda. Bloque E2 agrega la interfaz en `/scheduling/profiles` con cuatro metodos: Por patron, Por calendario, Flexible y Bajo demanda. Dentro de Por patron distingue Patron semanal y Ciclo repetitivo. La UI no publica dias ni crea batches.
+Bloque E1 agrega dominio para ciclo repetitivo, flexible y bajo demanda. Bloque E2 agrega la interfaz en `/scheduling/profiles` con cuatro metodos: Por patron, Por calendario, Flexible y Bajo demanda. Dentro de Por patron distingue Patron semanal y Ciclo repetitivo. La UI no publica dias ni genera programacion diaria.
+
+Bloque F1 agrega el nucleo interno de programacion diaria (`schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`), snapshots canonicos y resolucion de programacion publicada, pero no agrega pantalla nueva. La publicacion operativa, generacion desde perfiles, importacion CSV/XLSX y API WFM quedan pendientes.
 
 ## 10.0 Estructura organizacional
 
@@ -757,7 +759,9 @@ Bloque C agrega `/scheduling/shifts` para el nuevo catalogo de turnos.
 Bloque D2 agrega `/scheduling/profiles` y `/scheduling/profile-assignments`. La pantalla legacy `/schedules` y la asignacion legacy `/schedule-assignments` se mantienen disponibles internamente hasta su retiro en Bloque J, pero ya no aparecen en la navegacion normal.
 
 Quedan pendientes para sprints posteriores:
-- programacion diaria publicada
+- pantalla de programacion diaria
+- generacion desde perfiles
+- publicacion operativa
 - importacion CSV/XLSX
 - calculos, alertas, incidencias y reportes
 ```

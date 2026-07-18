@@ -1037,10 +1037,8 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 
 - Asignacion de turnos a trabajadores.
 - Perfiles `pattern`, `calendar`, `flexible` u `on_call`.
-- `schedule_batches`.
-- `daily_schedule_assignments`.
-- `daily_schedule_segments`.
-- Programacion diaria publicada.
+- Generacion de programacion diaria desde perfiles.
+- Publicacion operativa desde UI.
 - Importacion CSV/XLSX.
 - Calculos legales.
 - Alertas, incidencias, reportes o API WFM.
@@ -1064,9 +1062,8 @@ D1 no agrega pantallas. La validacion manual se limita a revisar que no aparezca
 
 ### No incluido todavia
 
-- `schedule_batches`.
-- `daily_schedule_assignments`.
-- `daily_schedule_segments`.
+- Generacion de programacion diaria desde perfiles.
+- Publicacion operativa desde UI.
 - Publicacion.
 - CSV/XLSX o API WFM.
 
@@ -1121,12 +1118,9 @@ Credencial comun demo: `VeraDemo123!`.
 
 ### No incluido todavia
 
-- `schedule_batches`.
-- `daily_schedule_assignments`.
-- `daily_schedule_segments`.
 - Programacion semanal o por periodo.
-- Publicacion.
-- Snapshots.
+- Publicacion operativa desde UI.
+- Generacion de programacion diaria desde perfiles.
 - CSV/XLSX o API WFM.
 - Perfiles de cierre.
 - Calculos legales.
@@ -1156,9 +1150,8 @@ Credencial comun demo: `VeraDemo123!`.
 
 ### No incluido todavia
 
-- `schedule_batches`.
-- `daily_schedule_assignments`.
-- `daily_schedule_segments`.
+- Generacion de programacion diaria desde perfiles.
+- Publicacion operativa desde UI.
 - Activaciones on-call.
 - Publicacion.
 - Snapshots.
@@ -1194,12 +1187,50 @@ Credencial comun demo: `VeraDemo123!`.
 
 ### No incluido todavia
 
-- `schedule_batches`.
-- `daily_schedule_assignments`.
-- `daily_schedule_segments`.
+- Generacion de programacion diaria desde perfiles.
+- Publicacion operativa desde UI.
 - Publicacion.
 - Snapshots.
 - Activaciones on-call.
 - Alertas o notificaciones.
 - CSV/XLSX o API WFM.
 - Calculos legales.
+
+---
+
+## Bloque F1 - nucleo de programacion diaria
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+F1 no agrega pantalla nueva para probar manualmente. La validacion principal es automatizada y confirma que el dominio pueda preparar batches, dias, segmentos, snapshots y resolucion publicada sin activar generacion desde perfiles ni calculos.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Batch draft | Ejecutar pruebas F1. | Se crea batch por empresa, centro, periodo y version. |
+| Dia shift | Ejecutar pruebas F1. | Se guarda asignacion diaria con segmentos congelados. |
+| Dia rest | Ejecutar pruebas F1. | Se guarda dia de descanso sin segmentos incompatibles. |
+| Flexible | Ejecutar pruebas F1. | Guarda minutos requeridos y ventana opcional sin crear turno fijo. |
+| Bajo demanda | Ejecutar pruebas F1. | Guarda disponibilidad y maximo sin crear activacion. |
+| Snapshot | Ejecutar pruebas F1. | JSON canonico estable y hash SHA-256 de 64 caracteres. |
+| Resolver publicado | Ejecutar pruebas F1. | Solo devuelve batches `published`; no usa perfiles ni legacy como fallback. |
+| Inmutabilidad | Ejecutar pruebas F1. | Batches no draft no se modifican por Actions de borrador. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF1/DailyScheduleCoreDomainTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Pantalla de calendario diario.
+- Generacion desde perfiles.
+- Publicacion operativa desde UI.
+- Importacion CSV/XLSX.
+- API WFM.
+- `work_days`.
+- `work_day_calculations`.
+- Calculos legales.
+- Alertas, incidencias y reportes.

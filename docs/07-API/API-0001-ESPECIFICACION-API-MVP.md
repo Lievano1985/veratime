@@ -1273,7 +1273,7 @@ GET    /daily-schedule-assignments
 
 Los endpoints legacy `/schedules` y `/schedule-assignments` pertenecen al modelo Sprint 2A/2B y deberan reemplazarse cuando se implemente la programacion diaria publicada.
 
-Nota WFM E1: el dominio ya reconoce perfiles `pattern` weekly/cycle, `calendar`, `flexible` y `on_call`, pero no existe todavia API funcional para administrar perfiles avanzados, publicar programacion diaria, importar calendarios ni crear activaciones bajo demanda.
+Nota WFM F1: el nucleo interno ya cuenta con batches, asignaciones diarias, segmentos, snapshots canonicos y resolucion de programacion publicada. No existe todavia API funcional para administrar perfiles avanzados, generar borradores, publicar programacion diaria, importar calendarios ni crear activaciones bajo demanda.
 
 ## 13.3 Evidence Packages
 
@@ -1647,7 +1647,7 @@ Webhooks
 ClickBalance API directa
 ```
 
-Nota WFM: CSV/XLSX/API de programacion por calendario siempre deben crear batches en `draft` para revision. Ningun endpoint de importacion publica automaticamente programacion diaria.
+Nota WFM: CSV/XLSX/API de programacion por calendario deberan crear batches en `draft` para revision. Ningun endpoint de importacion publica automaticamente programacion diaria.
 
 Cada `schedule_batch` pertenece obligatoriamente a una empresa, un centro y un rango de fechas. Una operacion de empresa completa debe crear un batch por centro.
 

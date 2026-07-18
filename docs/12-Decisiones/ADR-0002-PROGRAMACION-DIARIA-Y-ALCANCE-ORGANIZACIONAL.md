@@ -35,7 +35,7 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - Flexible no es una plantilla de turno rigida; minutos requeridos y ventanas flexibles pertenecen al perfil flexible y al dia publicado.
 - No habra doble escritura entre `schedules` legacy y el nuevo catalogo `shift_templates`.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
-- Existira un unico resolutor operativo: `ResolveDailyScheduleForWorkerAction`.
+- Existira un unico resolutor operativo inicial: `ResolveDailyScheduleForRelationshipDateAction`.
 - Mexico es el unico pais operativo del MVP, pero se conserva modelo compatible con `country_code` y `jurisdiction_code`.
 - La clave oficial de Recursos Humanos es `rh`; el uso operativo de `hr` fue retirado en Bloque A.
 
@@ -99,24 +99,22 @@ No se mantienen alias operativos `fixed`, `variable` ni `rotating` para `schedul
 
 ## Publicacion Diaria
 
-`schedule_batches` agrupa la programacion de una empresa, un centro obligatorio y un rango de fechas. La unidad organizacional puede usarse como filtro o alcance dentro del batch.
+`schedule_batches` agrupa la programacion de una empresa, un centro obligatorio, un rango de fechas y una version.
 
 Una operacion empresarial completa crea un batch por centro.
 
-Al publicar, cada `daily_schedule_assignment` queda con:
+En Bloque F1 se implementa el nucleo de datos y dominio para crear batches en `draft`, reemplazar dias de borrador de forma atomica, construir snapshots canonicos y resolver programacion publicada. F1 no agrega pantalla, generacion desde perfiles ni publicacion operativa.
 
-- trabajador;
+Al publicar, el batch queda con snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`. Cada `daily_schedule_assignment` queda ligado al batch versionado con:
+
 - relacion laboral;
-- centro;
 - unidad organizacional, si aplica;
 - fecha de trabajo;
 - timezone;
-- estado publicado;
-- snapshot JSON canonico;
-- version consecutiva por centro y periodo;
-- `published_by`;
-- `published_at`;
-- hash SHA-256.
+- tipo de dia: `shift`, `rest`, `flexible`, `on_call` o `unassigned`;
+- plantilla fuente opcional;
+- fuente y referencia de origen;
+- minutos o ventanas cuando el tipo de dia lo requiera.
 
 ## Multiples Segmentos
 
@@ -139,13 +137,13 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `ResolveScheduleProfileForRelationshipAction`
 - `GenerateDailySchedulesFromProfileAction`
 - `PublishScheduleBatchAction`
-- `ResolveDailyScheduleForWorkerAction`
+- `ResolveDailyScheduleForRelationshipDateAction`
 
-En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`, sin crear `daily_schedule_assignments`.
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`, sin crear `daily_schedule_assignments`. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
 
 ## Snapshots y Versionamiento
 
-La programacion publicada conserva snapshot JSON canonico. Cualquier cambio posterior crea nueva version y marca registros previos como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
+La programacion publicada conserva snapshot JSON canonico a nivel batch. Cualquier cambio posterior crea nueva version y marca el batch previo como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
 
 ## Seguridad por Alcance
 

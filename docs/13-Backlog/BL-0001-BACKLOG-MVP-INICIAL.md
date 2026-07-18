@@ -610,18 +610,21 @@ Nota Bloque D1:
 Se implementan `schedule_profiles`, `schedule_profile_weekly_rules` y `schedule_profile_assignments` para perfiles `pattern` con `pattern_mode = weekly` y `calendar`. Los perfiles por patron semanal usan siete reglas semanales basadas en `shift_templates`; los perfiles por calendario no tienen reglas semanales. La resolucion efectiva usa prioridad relacion laboral, unidad principal vigente, centro y empresa. `temporary_support` no cambia la herencia.
 
 Nota Bloque D2:
-Se implementan `/scheduling/profiles` y `/scheduling/profile-assignments` para administrar perfiles por patron semanal y por calendario, reglas semanales de patron, asignaciones por herencia y consulta de perfil efectivo. La navegacion queda reorganizada y oculta las entradas legacy de `/schedules` y `/schedule-assignments` sin eliminar rutas ni codigo. No se implementan `pattern_mode = cycle`, perfiles `flexible`/`on_call`, batches, programacion diaria publicada, CSV/API WFM ni calculos.
+Se implementan `/scheduling/profiles` y `/scheduling/profile-assignments` para administrar perfiles por patron semanal y por calendario, reglas semanales de patron, asignaciones por herencia y consulta de perfil efectivo. La navegacion queda reorganizada y oculta las entradas legacy de `/schedules` y `/schedule-assignments` sin eliminar rutas ni codigo. En este bloque no se implementan `pattern_mode = cycle`, perfiles `flexible`/`on_call`, generacion diaria, publicacion operativa, CSV/API WFM ni calculos.
 
 Nota Bloque E1:
 Se implementa dominio y pruebas para `pattern` con `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`. Agrega reglas de ciclo, reglas flexibles, reglas bajo demanda, resolucion de regla por fecha y escenarios demo manuales. No incluye interfaz E2, programacion diaria publicada, batches, activaciones bajo demanda, CSV/API WFM ni calculos.
 
 Nota Bloque E2:
-Se implementa la interfaz de `/scheduling/profiles` para administrar Por patron con Patron semanal o Ciclo repetitivo, Por calendario, Flexible y Bajo demanda. La pantalla reutiliza Actions E1, conserva permisos existentes, exige confirmacion al cambiar de metodo y no crea programacion diaria publicada, batches, activaciones, CSV/API WFM ni calculos.
+Se implementa la interfaz de `/scheduling/profiles` para administrar Por patron con Patron semanal o Ciclo repetitivo, Por calendario, Flexible y Bajo demanda. La pantalla reutiliza Actions E1, conserva permisos existentes, exige confirmacion al cambiar de metodo y no genera programacion diaria, no publica batches, no crea activaciones, CSV/API WFM ni calculos.
+
+Nota Bloque F1:
+Se implementa el nucleo de programacion diaria sin interfaz: `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments`. Un batch pertenece a empresa, centro, periodo y version. Las asignaciones soportan `shift`, `rest`, `flexible`, `on_call` y `unassigned`; los segmentos congelan la estructura diaria. Se agrega snapshot JSON canonico con hash SHA-256 y resolver de programacion publicada sin fallback a perfiles ni modelo legacy. No incluye generacion desde perfiles, publicacion operativa, CSV/API WFM, `work_days`, calculos, alertas, incidencias ni reportes.
 
 | C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Implementado/candidato a cierre: catalogo disponible sin calcular jornada | Mezclar flexible con turno rigido | 3 |
 | D. Perfiles pattern weekly y calendar | Crear perfiles, reglas semanales y asignaciones con herencia | C | `schedule_profiles`, `pattern_mode`, weekly rules, assignments | dominio, resolucion y UI | D1/D2 implementado/candidato a cierre: perfiles, resolutor, pantallas y navegacion disponibles | Publicacion prematura | 4 |
 | E. Perfiles cycle, flexible y on_call | Agregar ciclos, ventanas/minutos y disponibilidad bajo demanda | D | cycle rules, flexible rules, on_call rules, UI perfiles | dominio, resolucion y UI | E1/E2 implementados/candidatos a cierre: dominio e interfaz cycle/flexible/on_call disponibles sin programacion diaria | Complejidad UX | 5 |
-| F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | Version consecutiva por centro/periodo, snapshot canonico, hash SHA-256 y `ResolveDailyScheduleForWorkerAction` listo | Versionado incorrecto | 6 |
+| F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | F1 implementado/candidato a cierre: nucleo de batches, dias, segmentos, snapshot canonico y resolutor publicado; generacion/publicacion operativa quedan pendientes | Versionado incorrecto | 6 |
 | G. Importacion CSV/XLSX | Importar programacion por calendario a draft | F | import batches/rows, parser, validadores | errores por fila | Importacion nunca publica directo | Calidad de archivos | 7 |
 | H. Perfiles multiples de cierre | Crear perfiles y excepciones | B/F | closing profiles/assignments | prioridad de resolucion | Empresa tiene default | Confusion de herencia | 8 |
 | I. Generacion de periodos de cierre | Generar periodos y miembros congelados | H | closing periods/members | congelacion/versiones | Periodo congela miembros | Cambios historicos | 9 |
@@ -636,7 +639,7 @@ Se implementa la interfaz de `/scheduling/profiles` para administrar Por patron 
 | `schedule_breaks` | Transformar | Migrar a `shift_template_segments`. |
 | `schedule_assignments` | Reemplazar | Migrar a `schedule_profile_assignments` y dias publicados. |
 | `labor_conditions.schedule_id` | Transformar | No debe ser fuente operativa; conservar solo referencia historica si aplica. |
-| `ResolveScheduleForWorkerDateAction` | Reemplazar | Usar `ResolveDailyScheduleForWorkerAction`. |
+| `ResolveScheduleForWorkerDateAction` | Reemplazar | Usar `ResolveDailyScheduleForRelationshipDateAction`. |
 | Vistas `/schedules` y `/schedule-assignments` | Transformar | Sustituir por turnos, perfiles, batches y publicacion. |
 | Factories Sprint 2A/2B | Transformar | Crear factories nuevas WFM. |
 | Seeders demo | Transformar | Generar turnos, perfiles, batches y dias publicados demo. |

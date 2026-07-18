@@ -14,6 +14,7 @@ use App\Domains\Scheduling\Actions\ResolveScheduleProfileForRelationshipAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleProfileRuleForDateAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\OrganizationalUnit;
 use App\Models\ScheduleProfile;
@@ -32,14 +33,17 @@ class AdvancedScheduleProfileDomainTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_e1_schema_adds_advanced_profile_rule_tables_without_daily_publishing(): void
+    public function test_e1_schema_keeps_daily_publishing_tables_without_generating_calculations(): void
     {
         $this->assertTrue(Schema::hasTable('schedule_profile_cycle_rules'));
         $this->assertTrue(Schema::hasTable('schedule_profile_flexible_rules'));
         $this->assertTrue(Schema::hasTable('schedule_profile_on_call_rules'));
-        $this->assertFalse(Schema::hasTable('schedule_batches'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_segments'));
+        $this->assertTrue(Schema::hasTable('schedule_batches'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
+        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
 
     public function test_profile_types_accept_e1_values_and_reject_legacy_aliases(): void
@@ -265,7 +269,7 @@ class AdvancedScheduleProfileDomainTest extends TestCase
         $this->assertSame(7, ScheduleProfileFlexibleRule::query()->where('company_id', $companies['VTSP-FLEX']->id)->count());
         $this->assertSame(7, ScheduleProfileOnCallRule::query()->where('company_id', $companies['VTSP-ONCALL']->id)->count());
         $this->assertSame(1, ScheduleProfileAssignment::query()->where('company_id', $companies['VTSP-CYCLE']->id)->where('status', 'active')->count());
-        $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
+        $this->assertSame(0, DailyScheduleAssignment::query()->whereIn('company_id', $companies->pluck('id'))->count());
     }
 
     private function assertInvalid(callable $callback): void

@@ -873,6 +873,8 @@ La publicacion sera inmutable. Una correccion generara una nueva version y la ve
 
 `daily_schedule_assignments` publicados y `daily_schedule_segments` seran la unica fuente operativa.
 
+En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. No incluye todavia interfaz, generacion desde perfiles ni publicacion operativa.
+
 **Prioridad:** P0
 
 ### RF-HOR-007 — Perfiles WFM
@@ -888,7 +890,7 @@ Vera Time debera soportar perfiles de horario:
 
 El perfil `flexible` no debera mezclarse con una plantilla de turno rigida.
 
-En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E1 queda operativo el dominio de `pattern` con `pattern_mode = cycle`, `flexible` y `on_call`: reglas, validacion y resolucion por fecha. No incluye interfaz E2, programacion diaria publicada, activaciones bajo demanda, alertas ni calculos.
+En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E1/E2 queda operativo el dominio y la interfaz de `pattern` con `pattern_mode = cycle`, `flexible` y `on_call`: reglas, validacion y resolucion por fecha. No incluye generacion de programacion diaria desde perfiles, activaciones bajo demanda, alertas ni calculos.
 
 **Prioridad:** P0
 

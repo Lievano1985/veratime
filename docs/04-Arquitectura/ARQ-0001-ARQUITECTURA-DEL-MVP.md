@@ -1027,15 +1027,16 @@ Las reglas legales críticas tendrán pruebas automatizadas.
 
 ## 26.1 Decision WFM: programacion diaria publicada
 
-Vera Time adoptara un modelo WFM donde `daily_schedule_assignments` es la unica fuente de verdad operativa.
+Vera Time adoptara un modelo WFM donde `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente de verdad operativa.
 
 Reglas arquitectonicas:
 
 - Livewire/Volt solo captura intencion y muestra estado.
 - API, CSV/XLSX, jobs y vistas reutilizan Actions/Services.
 - Los perfiles de horario generan borradores, no resultados operativos.
-- `PublishScheduleBatchAction` congela snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256.
-- `ResolveDailyScheduleForWorkerAction` sera el unico punto para resolver programacion efectiva por trabajador y fecha.
+- Bloque F1 crea el nucleo de batches, asignaciones diarias, segmentos, snapshot canonico y resolver publicado, sin UI ni publicacion operativa.
+- `PublishScheduleBatchAction` congelara snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256 cuando se implemente la publicacion operativa.
+- `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion efectiva publicada por relacion laboral y fecha.
 - La publicacion es inmutable. Una correccion genera nueva version y deja la anterior `superseded`.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - La seguridad por alcance se resuelve antes de consultar o mutar trabajadores.
@@ -1047,7 +1048,7 @@ Resolutores obligatorios:
 - `ResolveScheduleProfileForRelationshipAction`
 - `GenerateDailySchedulesFromProfileAction`
 - `PublishScheduleBatchAction`
-- `ResolveDailyScheduleForWorkerAction`
+- `ResolveDailyScheduleForRelationshipDateAction`
 - `ResolveClosingProfileForRelationshipAction`
 - `GenerateClosingPeriodsAction`
 
@@ -1060,8 +1061,12 @@ Responsabilidades:
 | `ResolveScheduleProfileForRelationshipAction` | Resuelve el perfil aplicable para una relacion laboral segun asignaciones vigentes. |
 | `GenerateDailySchedulesFromProfileAction` | Convertira perfiles `pattern`, `calendar`, `flexible` u `on_call` en dias borrador cuando se implemente la programacion diaria. En E1 ya existe dominio para `pattern_mode = cycle`, `flexible` y `on_call`, pero todavia no genera programacion diaria. |
 | `ResolveScheduleProfileRuleForDateAction` | Resuelve la regla aplicable por fecha desde una asignacion efectiva: weekly, cycle, calendar, flexible u on_call. No crea dias publicados ni batches. |
-| `PublishScheduleBatchAction` | Publica un batch por centro, genera snapshot JSON canonico, version consecutiva por centro/periodo, `published_by`, `published_at` y hash SHA-256. |
-| `ResolveDailyScheduleForWorkerAction` | Devuelve la programacion publicada efectiva para trabajador y fecha. |
+| `CreateScheduleBatchAction` | Crea batches en borrador por empresa, centro, periodo y version, sin aceptar datos de publicacion desde entrada no confiable. |
+| `ReplaceDraftDailyScheduleAssignmentAction` | Reemplaza de forma atomica la programacion de un dia dentro de un batch draft. |
+| `RemoveDraftDailyScheduleAssignmentAction` | Elimina solo dias de borrador; no aplica a batches publicados. |
+| `BuildScheduleBatchSnapshotAction` | Construye snapshot JSON canonico y hash SHA-256 sin persistirlo. |
+| `PublishScheduleBatchAction` | Publicara un batch por centro, genera snapshot JSON canonico, version consecutiva por centro/periodo, `published_by`, `published_at` y hash SHA-256. Pendiente despues de F1. |
+| `ResolveDailyScheduleForRelationshipDateAction` | Devuelve la programacion publicada efectiva por relacion laboral y fecha; no usa perfiles ni legacy como fallback. |
 | `ResolveClosingProfileForRelationshipAction` | Resuelve cierre efectivo con prioridad relacion laboral, unidad, centro, empresa. |
 | `GenerateClosingPeriodsAction` | Genera periodos y miembros congelados desde perfiles de cierre. |
 
