@@ -19,7 +19,10 @@ class UpdateScheduleProfileAction
 
         $code = $this->normalizeCode($data['code'] ?? $profile->code);
         $profileType = $this->normalizeProfileType($data['profile_type'] ?? $profile->profile_type);
-        $patternMode = $this->normalizePatternMode($profileType, $data['pattern_mode'] ?? $profile->pattern_mode);
+        $patternMode = $this->normalizePatternMode(
+            $profileType,
+            array_key_exists('pattern_mode', $data) ? $data['pattern_mode'] : $profile->pattern_mode,
+        );
         $this->assertCompatibleRules($profileType, $patternMode, $weeklyRules);
 
         $duplicate = ScheduleProfile::query()

@@ -736,7 +736,7 @@ Cuando se implemente, la guia manual debera cubrir:
 - Supervisor con acceso limitado a su alcance.
 - Empresas sin unidades operando solo por centro.
 - Catalogo de turnos.
-- Perfiles `pattern`, `calendar`, `flexible` y `on_call`; `pattern_mode = cycle` queda para ciclos futuros.
+- Perfiles `pattern`, `calendar`, `flexible` y `on_call`; `pattern_mode = cycle` ya cuenta con dominio e interfaz de configuracion, sin publicacion diaria.
 - Batches en borrador.
 - Importacion CSV/XLSX que genera borrador, no publicacion directa.
 - Publicacion diaria con version consecutiva por centro/periodo, snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256.
@@ -1064,8 +1064,6 @@ D1 no agrega pantallas. La validacion manual se limita a revisar que no aparezca
 
 ### No incluido todavia
 
-- `pattern_mode = cycle`.
-- Perfiles `flexible` u `on_call`.
 - `schedule_batches`.
 - `daily_schedule_assignments`.
 - `daily_schedule_segments`.
@@ -1123,8 +1121,6 @@ Credencial comun demo: `VeraDemo123!`.
 
 ### No incluido todavia
 
-- `pattern_mode = cycle`.
-- Perfiles `flexible` u `on_call`.
 - `schedule_batches`.
 - `daily_schedule_assignments`.
 - `daily_schedule_segments`.
@@ -1160,12 +1156,50 @@ Credencial comun demo: `VeraDemo123!`.
 
 ### No incluido todavia
 
-- Interfaz E2 para ciclo, flexible o bajo demanda.
 - `schedule_batches`.
 - `daily_schedule_assignments`.
 - `daily_schedule_segments`.
 - Activaciones on-call.
 - Publicacion.
 - Snapshots.
+- CSV/XLSX o API WFM.
+- Calculos legales.
+
+---
+
+## Bloque E2 - interfaz de perfiles avanzados
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Ruta
+
+- `/scheduling/profiles`.
+
+### Validaciones manuales sugeridas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Opciones visibles | Abrir Nuevo perfil. | Muestra Por patron, Por calendario, Flexible y Bajo demanda. |
+| Patron semanal | Crear perfil Por patron / Patron semanal. | Conserva editor lunes a domingo y guarda siete reglas semanales. |
+| Ciclo repetitivo | Crear perfil Por patron / Ciclo repetitivo. | Permite agregar, quitar y ordenar dias; la numeracion queda consecutiva desde 1. |
+| Ciclo menor a 2 dias | Intentar guardar ciclo con un solo dia. | Muestra error y no guarda reglas parciales. |
+| Flexible con ventana | Crear perfil Flexible con 480 minutos y ventana 07:00-20:00. | Guarda reglas flexibles; muestra minutos como 8 h. |
+| Flexible sin ventana | Crear perfil Flexible sin marcar ventana. | Guarda minutos requeridos sin horas fijas. |
+| Flexible descanso | Cambiar un dia a Descanso. | Limpia minutos y ventana del dia. |
+| Bajo demanda | Crear perfil Bajo demanda con disponibilidad 06:00-22:00 y maximo 480 minutos. | Guarda disponibilidad; no la muestra como trabajo. |
+| Bajo demanda descanso | Cambiar un dia a Descanso. | Limpia disponibilidad y maximo. |
+| Cambio de metodo | Editar un perfil y cambiar metodo. | Requiere confirmar reemplazo de reglas antes de guardar. |
+| Supervisor | Entrar como supervisor con alcance. | Puede consultar perfiles activos, pero no ve controles de creacion o edicion. |
+| Alcance prohibido | Intentar consultar ID de otro tenant. | Acceso bloqueado. |
+
+### No incluido todavia
+
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Publicacion.
+- Snapshots.
+- Activaciones on-call.
+- Alertas o notificaciones.
 - CSV/XLSX o API WFM.
 - Calculos legales.
