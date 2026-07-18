@@ -1135,3 +1135,37 @@ Credencial comun demo: `VeraDemo123!`.
 - Perfiles de cierre.
 - Calculos legales.
 - Incidencias, alertas o reportes.
+
+---
+
+## Bloque E1 - dominio de perfiles avanzados
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+E1 no agrega pantallas. La validacion manual se limita a ejecutar seeders y confirmar que las pantallas D2 existentes no muestren todavia opciones avanzadas como flujo operativo.
+
+Preparacion opcional de escenarios:
+
+```bash
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+```
+
+Credencial comun demo: `VeraDemo123!`.
+
+| Empresa demo | Escenario | Resultado esperado |
+|---|---|---|
+| Demo Ciclo Rotativo | Perfil `pattern` con `pattern_mode = cycle` y ciclo 2 manana, 2 tarde, 2 noche, 2 descanso. | Existe dominio y resolucion por fecha; no genera programacion diaria publicada. |
+| Demo Horario Flexible | Perfil `flexible` con lunes a viernes de 480 minutos y ventana 07:00-20:00. | Existe dominio de reglas flexibles; no muestra horario fijo ni calcula jornada. |
+| Demo Bajo Demanda | Perfil `on_call` con disponibilidad 06:00-22:00 y maximo 480 minutos. | Existe dominio de disponibilidad; no crea activaciones, alertas ni eventos automaticos. |
+
+### No incluido todavia
+
+- Interfaz E2 para ciclo, flexible o bajo demanda.
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Activaciones on-call.
+- Publicacion.
+- Snapshots.
+- CSV/XLSX o API WFM.
+- Calculos legales.

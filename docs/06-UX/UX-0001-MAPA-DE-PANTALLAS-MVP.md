@@ -645,10 +645,12 @@ Bloque D2 agrega:
 
 - `/scheduling/profiles` como pantalla de perfiles de horario.
 - `/scheduling/profile-assignments` como pantalla de asignaciones de perfiles.
-- Textos visibles "Por patron", "Patron semanal" y "Por calendario"; no muestra ciclo rotativo, flexible ni bajo demanda como opciones operativas todavia.
+- Textos visibles "Por patron", "Patron semanal" y "Por calendario"; en D2 no muestra ciclo rotativo, flexible ni bajo demanda como opciones operativas todavia.
 - Consulta de perfil efectivo por trabajador y fecha usando el resolutor de dominio.
 - Navegacion de Horarios con catalogo de turnos, perfiles, asignaciones y descansos obligatorios.
 - Ocultamiento de las entradas legacy `/schedules` y `/schedule-assignments` en la navegacion normal, sin eliminar rutas ni codigo.
+
+Bloque E1 agrega dominio para ciclo repetitivo, flexible y bajo demanda, pero no agrega interfaz. La UI futura E2 debera mostrar cuatro metodos: Por patron, Por calendario, Flexible y Bajo demanda. Dentro de Por patron debera distinguir Patron semanal y Ciclo repetitivo.
 
 ## 10.0 Estructura organizacional
 
