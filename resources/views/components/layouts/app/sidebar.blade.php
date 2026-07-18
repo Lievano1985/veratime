@@ -36,7 +36,12 @@
 
                 <flux:navlist.group heading="Horarios" class="grid">
                     @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\ShiftTemplate::class, $activeCompany]))
-                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.shifts')" :current="request()->routeIs('scheduling.*')" wire:navigate>Catálogo de turnos</flux:navlist.item>
+                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.shifts')" :current="request()->routeIs('scheduling.shifts')" wire:navigate>Catálogo de turnos</flux:navlist.item>
+                    @endif
+
+                    @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleProfile::class, $activeCompany]))
+                        <flux:navlist.item icon="calendar" :href="route('scheduling.profiles')" :current="request()->routeIs('scheduling.profiles')" wire:navigate>Perfiles de horario</flux:navlist.item>
+                        <flux:navlist.item icon="queue-list" :href="route('scheduling.profile-assignments')" :current="request()->routeIs('scheduling.profile-assignments')" wire:navigate>Asignaciones de perfiles</flux:navlist.item>
                     @endif
 
                     <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
