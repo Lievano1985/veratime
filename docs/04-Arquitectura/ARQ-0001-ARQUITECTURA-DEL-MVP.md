@@ -1058,7 +1058,7 @@ Responsabilidades:
 | `ResolveUserOperationalScopeAction` | Determina si el usuario tiene alcance completo de empresa o alcance limitado por centro/unidad. |
 | `EnsureUserCanManageWorkerAction` | Bloquea operaciones sobre trabajadores fuera del alcance del usuario. |
 | `ResolveScheduleProfileForRelationshipAction` | Resuelve el perfil aplicable para una relacion laboral segun asignaciones vigentes. |
-| `GenerateDailySchedulesFromProfileAction` | Convierte perfiles `fixed`, `variable`, `rotating` o `flexible` en dias borrador. |
+| `GenerateDailySchedulesFromProfileAction` | Convertira perfiles `pattern`, `calendar`, `flexible` u `on_call` en dias borrador cuando se implemente la programacion diaria. En D1/D2 solo estan operativos `pattern` con `pattern_mode = weekly` y `calendar`. |
 | `PublishScheduleBatchAction` | Publica un batch por centro, genera snapshot JSON canonico, version consecutiva por centro/periodo, `published_by`, `published_at` y hash SHA-256. |
 | `ResolveDailyScheduleForWorkerAction` | Devuelve la programacion publicada efectiva para trabajador y fecha. |
 | `ResolveClosingProfileForRelationshipAction` | Resuelve cierre efectivo con prioridad relacion laboral, unidad, centro, empresa. |

@@ -628,7 +628,8 @@ Incluye:
 - Editor de segmentos de trabajo y descanso.
 - Segmentos fijos y descansos por duracion.
 - Offsets para turno nocturno con `+1 dia`.
-- Vista previa de trabajo programado, descansos y duracion total.
+- Vista previa de trabajo programado bruto, descansos fijos pagados/no pagados, descansos por duracion pagados/no pagados, trabajo efectivo programado y duracion total.
+- El descanso fijo se muestra como tiempo fuera de los segmentos de trabajo; solo el descanso por duracion no pagado reduce el trabajo efectivo programado.
 
 No incluye:
 
@@ -638,7 +639,16 @@ No incluye:
 - Importacion CSV/XLSX.
 - Calculos legales, alertas, incidencias ni reportes.
 
-Bloque D1 implementa el dominio de perfiles `fixed` y `variable`, reglas semanales, asignaciones con vigencia y resolucion por herencia. No agrega pantalla. La futura pantalla D2 debera permitir administrar perfiles y asignaciones reutilizando las Actions D1.
+Bloque D1 implementa el dominio de perfiles `pattern` con `pattern_mode = weekly` y `calendar`, reglas semanales para patron semanal, asignaciones con vigencia y resolucion por herencia.
+
+Bloque D2 agrega:
+
+- `/scheduling/profiles` como pantalla de perfiles de horario.
+- `/scheduling/profile-assignments` como pantalla de asignaciones de perfiles.
+- Textos visibles "Por patron", "Patron semanal" y "Por calendario"; no muestra ciclo rotativo, flexible ni bajo demanda como opciones operativas todavia.
+- Consulta de perfil efectivo por trabajador y fecha usando el resolutor de dominio.
+- Navegacion de Horarios con catalogo de turnos, perfiles, asignaciones y descansos obligatorios.
+- Ocultamiento de las entradas legacy `/schedules` y `/schedule-assignments` en la navegacion normal, sin eliminar rutas ni codigo.
 
 ## 10.0 Estructura organizacional
 
@@ -740,10 +750,11 @@ Sprint 2B agrega la pantalla simple /schedule-assignments para:
 - inactivar asignaciones sin borrarlas
 - resolver vigencia por fecha desde dominio, sin calculos de jornada
 
-Bloque C agrega `/scheduling/shifts` para el nuevo catalogo de turnos. La pantalla legacy `/schedules` se mantiene disponible como "Horarios legacy" hasta su retiro en Bloque J.
+Bloque C agrega `/scheduling/shifts` para el nuevo catalogo de turnos.
+
+Bloque D2 agrega `/scheduling/profiles` y `/scheduling/profile-assignments`. La pantalla legacy `/schedules` y la asignacion legacy `/schedule-assignments` se mantienen disponibles internamente hasta su retiro en Bloque J, pero ya no aparecen en la navegacion normal.
 
 Quedan pendientes para sprints posteriores:
-- perfiles de horario
 - programacion diaria publicada
 - importacion CSV/XLSX
 - calculos, alertas, incidencias y reportes

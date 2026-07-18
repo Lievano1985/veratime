@@ -160,8 +160,9 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - `shift_templates` y `shift_template_segments` existen como catalogo reutilizable por empresa.
 - Las plantillas usan horas locales de reloj, sin `timezone`, sin `center_id`, sin clasificacion legal y sin ventanas flexibles.
 - El modelo legacy `schedules`, `schedule_days`, `schedule_breaks` y `schedule_assignments` sigue temporalmente disponible; su retiro queda pendiente para Bloque J.
-- Bloque D1 implementa perfiles de horario `fixed` y `variable`, reglas semanales para `fixed`, asignaciones por vigencia y resolucion por herencia.
-- No se ha implementado todavia pantallas de perfiles, perfiles `rotating`/`flexible`, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
+- Bloque D1 implementa perfiles de horario `pattern` con `pattern_mode = weekly` y `calendar`, reglas semanales para patron semanal, asignaciones por vigencia y resolucion por herencia.
+- Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
+- No se ha implementado todavia `pattern_mode = cycle`, perfiles `flexible`/`on_call`, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -228,23 +229,45 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Las plantillas pertenecen a una empresa, no a un centro.
 - No guardan timezone, tipo legal, trabajador, vigencias, minutos flexibles ni ventanas flexibles.
 - Soportan multiples segmentos de trabajo, descansos fijos, descansos por duracion y cruce de medianoche mediante offsets 0/1.
+- Las metricas derivadas distinguen trabajo programado bruto, descansos fijos pagados/no pagados, descansos por duracion pagados/no pagados, trabajo efectivo programado y duracion total.
+- El trabajo efectivo programado descuenta solo descansos por duracion no pagados; los descansos fijos ya estan fuera de los segmentos de trabajo y no se descuentan doble.
 - La pantalla permite listar, buscar, filtrar, crear, editar, inactivar, reactivar y previsualizar plantillas.
 - Supervisores solo consultan plantillas activas si tienen alcance operativo vigente; no administran.
 - El seeder demo crea plantillas neutrales sin asignar trabajadores ni generar dias.
-- No se implementaron `schedule_profiles`, perfiles fixed/variable/rotating/flexible, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+- No se implementaron `schedule_profiles`, perfiles pattern/calendar/flexible/on_call, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
 
-## Bloque D1 - perfiles fixed y variable
+## Bloque D1 - perfiles pattern weekly y calendar
 
 Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - Tablas: `schedule_profiles`, `schedule_profile_weekly_rules`, `schedule_profile_assignments`.
-- Tipos implementados: `fixed` y `variable`.
-- `fixed` requiere exactamente siete reglas semanales ISO 1-7 y al menos un dia con turno.
-- `variable` no admite reglas semanales en D1.
-- Los turnos de perfiles fijos usan `shift_templates` activos de la misma empresa.
+- Tipos implementados: `pattern` con `pattern_mode = weekly` y `calendar`.
+- `pattern` + `weekly` requiere exactamente siete reglas semanales ISO 1-7 y al menos un dia con turno.
+- `calendar` no admite reglas semanales en D1.
+- `pattern_mode = cycle`, `flexible` y `on_call` quedan preparados conceptualmente, pero no operativos.
+- Los turnos de perfiles por patron semanal usan `shift_templates` activos de la misma empresa.
 - Las asignaciones soportan alcance `company`, `center`, `organizational_unit` y `employment_relationship`.
 - La herencia se resuelve en este orden: relacion laboral -> unidad principal vigente -> centro -> empresa.
 - `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal vigente.
 - `ResolveScheduleProfileForRelationshipAction` es el resolutor central de D1.
 - Supervisores no crean perfiles; solo pueden asignar directamente a relaciones laborales dentro de su alcance operativo.
-- No se implementaron pantallas D2, `rotating`, `flexible`, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+- No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+
+## Bloque D2 - UI de perfiles y asignaciones
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Rutas:
+  - `/scheduling/profiles`.
+  - `/scheduling/profile-assignments`.
+- `/scheduling/profiles` permite listar, buscar, filtrar, crear, editar, consultar, inactivar y reactivar perfiles `pattern` semanal y `calendar`.
+- Los perfiles por patron semanal muestran exactamente siete reglas semanales ISO 1-7 y usan `shift_templates` activos de la empresa.
+- Los perfiles por calendario no crean reglas semanales y muestran nota neutral de captura futura por periodo, importacion o API.
+- `/scheduling/profile-assignments` permite asignar perfiles con vigencia a empresa, centro, unidad organizacional o relacion laboral.
+- La consulta de perfil efectivo usa `ResolveScheduleProfileForRelationshipAction` y muestra origen por relacion laboral, unidad, centro, empresa o sin perfil.
+- El sidebar muestra Horarios con catalogo de turnos, perfiles de horario, asignaciones de perfiles y descansos obligatorios.
+- Las rutas legacy `/schedules` y `/schedule-assignments` siguen existiendo, pero ya no aparecen en la navegacion normal.
+- Supervisores solo pueden asignar perfiles directamente a relaciones laborales dentro de su alcance operativo.
+- Existe seeder manual independiente `VeraTimeScheduleProfileScenarioSeeder` para probar aislamiento multi-tenant, perfiles `pattern` semanal, perfiles `calendar`, herencia empresa -> centro -> unidad -> relacion laboral y empresa sin perfil efectivo. Se ejecuta con `php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder`.
+- El seeder manual no se llama desde `DatabaseSeeder` y no crea `pattern_mode = cycle`, perfiles `flexible`/`on_call`, programacion diaria, batches ni modelo legacy.
+- No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, programacion semanal, batches, publicacion, snapshots, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
