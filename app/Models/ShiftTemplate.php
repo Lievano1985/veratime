@@ -47,4 +47,9 @@ class ShiftTemplate extends Model
     {
         return $this->hasMany(ScheduleProfileWeeklyRule::class);
     }
+
+    public function scheduleProfileCycleRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileCycleRule::class);
+    }
 }

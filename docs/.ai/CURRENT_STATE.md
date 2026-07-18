@@ -162,7 +162,9 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - El modelo legacy `schedules`, `schedule_days`, `schedule_breaks` y `schedule_assignments` sigue temporalmente disponible; su retiro queda pendiente para Bloque J.
 - Bloque D1 implementa perfiles de horario `pattern` con `pattern_mode = weekly` y `calendar`, reglas semanales para patron semanal, asignaciones por vigencia y resolucion por herencia.
 - Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
-- No se ha implementado todavia `pattern_mode = cycle`, perfiles `flexible`/`on_call`, importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
+- Bloque E1 implementa dominio y pruebas para `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`, con reglas completas y resolucion por fecha desde una asignacion efectiva.
+- Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
+- No se ha implementado todavia importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -234,7 +236,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La pantalla permite listar, buscar, filtrar, crear, editar, inactivar, reactivar y previsualizar plantillas.
 - Supervisores solo consultan plantillas activas si tienen alcance operativo vigente; no administran.
 - El seeder demo crea plantillas neutrales sin asignar trabajadores ni generar dias.
-- No se implementaron `schedule_profiles`, perfiles pattern/calendar/flexible/on_call, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+- En Bloque C no se implementaron perfiles, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV; esos elementos se abordan en bloques posteriores.
 
 ## Bloque D1 - perfiles pattern weekly y calendar
 
@@ -244,7 +246,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Tipos implementados: `pattern` con `pattern_mode = weekly` y `calendar`.
 - `pattern` + `weekly` requiere exactamente siete reglas semanales ISO 1-7 y al menos un dia con turno.
 - `calendar` no admite reglas semanales en D1.
-- `pattern_mode = cycle`, `flexible` y `on_call` quedan preparados conceptualmente, pero no operativos.
+- `pattern_mode = cycle`, `flexible` y `on_call` quedan preparados conceptualmente en D1 y operativos a nivel dominio en E1.
 - Los turnos de perfiles por patron semanal usan `shift_templates` activos de la misma empresa.
 - Las asignaciones soportan alcance `company`, `center`, `organizational_unit` y `employment_relationship`.
 - La herencia se resuelve en este orden: relacion laboral -> unidad principal vigente -> centro -> empresa.
@@ -269,5 +271,42 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Las rutas legacy `/schedules` y `/schedule-assignments` siguen existiendo, pero ya no aparecen en la navegacion normal.
 - Supervisores solo pueden asignar perfiles directamente a relaciones laborales dentro de su alcance operativo.
 - Existe seeder manual independiente `VeraTimeScheduleProfileScenarioSeeder` para probar aislamiento multi-tenant, perfiles `pattern` semanal, perfiles `calendar`, herencia empresa -> centro -> unidad -> relacion laboral y empresa sin perfil efectivo. Se ejecuta con `php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder`.
-- El seeder manual no se llama desde `DatabaseSeeder` y no crea `pattern_mode = cycle`, perfiles `flexible`/`on_call`, programacion diaria, batches ni modelo legacy.
-- No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, programacion semanal, batches, publicacion, snapshots, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
+- El seeder manual no se llama desde `DatabaseSeeder` y crea escenarios D2/E1 de perfiles, incluyendo ciclo, flexible y bajo demanda, sin programacion diaria ni batches.
+- Bloque E2 implementa la UI de perfiles avanzados, pero no implementa programacion semanal/publicada, batches, snapshots, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
+
+## Bloque E1 - perfiles avanzados de dominio
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Tablas:
+  - `schedule_profile_cycle_rules`.
+  - `schedule_profile_flexible_rules`.
+  - `schedule_profile_on_call_rules`.
+- `pattern` admite `pattern_mode = weekly` y `pattern_mode = cycle`.
+- `calendar`, `flexible` y `on_call` usan `pattern_mode = null`.
+- `fixed`, `variable` y `rotating` no son alias operativos.
+- El ciclo usa dias consecutivos desde 1 y la fecha `effective_from` de la asignacion como dia 1.
+- Flexible define minutos requeridos y ventana opcional por dia; la ventana no es turno fijo.
+- Bajo demanda define disponibilidad y maximo de trabajo futuro; la disponibilidad no cuenta como tiempo trabajado.
+- `ResolveScheduleProfileRuleForDateAction` resuelve la regla de una asignacion efectiva sin crear programacion diaria.
+- E2 agrega interfaz para administrar estas reglas desde `/scheduling/profiles`.
+- No se implementaron `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, activaciones on-call, API WFM, CSV/XLSX ni calculos legales.
+
+## Bloque E2 - interfaz de perfiles avanzados
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- `/scheduling/profiles` permite administrar cuatro metodos visibles:
+  - Por patron.
+  - Por calendario.
+  - Flexible.
+  - Bajo demanda.
+- Por patron permite:
+  - Patron semanal.
+  - Ciclo repetitivo.
+- La UI de ciclo permite agregar, quitar y ordenar dias, con numeracion consecutiva automatica.
+- La UI flexible administra siete reglas con minutos requeridos y ventana opcional.
+- La UI bajo demanda administra siete reglas de disponibilidad y maximo al activarse.
+- Cambiar de metodo en edicion requiere confirmacion antes de reemplazar reglas existentes.
+- Supervisores solo consultan perfiles activos con alcance; no crean ni editan reglas.
+- No se implementaron programacion diaria, batches, publicacion, snapshots, activaciones on-call, alertas, API WFM, CSV/XLSX ni calculos.

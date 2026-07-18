@@ -612,9 +612,15 @@ Se implementan `schedule_profiles`, `schedule_profile_weekly_rules` y `schedule_
 Nota Bloque D2:
 Se implementan `/scheduling/profiles` y `/scheduling/profile-assignments` para administrar perfiles por patron semanal y por calendario, reglas semanales de patron, asignaciones por herencia y consulta de perfil efectivo. La navegacion queda reorganizada y oculta las entradas legacy de `/schedules` y `/schedule-assignments` sin eliminar rutas ni codigo. No se implementan `pattern_mode = cycle`, perfiles `flexible`/`on_call`, batches, programacion diaria publicada, CSV/API WFM ni calculos.
 
+Nota Bloque E1:
+Se implementa dominio y pruebas para `pattern` con `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`. Agrega reglas de ciclo, reglas flexibles, reglas bajo demanda, resolucion de regla por fecha y escenarios demo manuales. No incluye interfaz E2, programacion diaria publicada, batches, activaciones bajo demanda, CSV/API WFM ni calculos.
+
+Nota Bloque E2:
+Se implementa la interfaz de `/scheduling/profiles` para administrar Por patron con Patron semanal o Ciclo repetitivo, Por calendario, Flexible y Bajo demanda. La pantalla reutiliza Actions E1, conserva permisos existentes, exige confirmacion al cambiar de metodo y no crea programacion diaria publicada, batches, activaciones, CSV/API WFM ni calculos.
+
 | C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Implementado/candidato a cierre: catalogo disponible sin calcular jornada | Mezclar flexible con turno rigido | 3 |
 | D. Perfiles pattern weekly y calendar | Crear perfiles, reglas semanales y asignaciones con herencia | C | `schedule_profiles`, `pattern_mode`, weekly rules, assignments | dominio, resolucion y UI | D1/D2 implementado/candidato a cierre: perfiles, resolutor, pantallas y navegacion disponibles | Publicacion prematura | 4 |
-| E. Perfiles cycle, flexible y on_call | Agregar ciclos, ventanas/minutos y disponibilidad bajo demanda | D | rotation patterns, flexible rules | patron y ventanas | Cycle/flexible/on_call generan draft correcto | Complejidad UX | 5 |
+| E. Perfiles cycle, flexible y on_call | Agregar ciclos, ventanas/minutos y disponibilidad bajo demanda | D | cycle rules, flexible rules, on_call rules, UI perfiles | dominio, resolucion y UI | E1/E2 implementados/candidatos a cierre: dominio e interfaz cycle/flexible/on_call disponibles sin programacion diaria | Complejidad UX | 5 |
 | F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | Version consecutiva por centro/periodo, snapshot canonico, hash SHA-256 y `ResolveDailyScheduleForWorkerAction` listo | Versionado incorrecto | 6 |
 | G. Importacion CSV/XLSX | Importar programacion por calendario a draft | F | import batches/rows, parser, validadores | errores por fila | Importacion nunca publica directo | Calidad de archivos | 7 |
 | H. Perfiles multiples de cierre | Crear perfiles y excepciones | B/F | closing profiles/assignments | prioridad de resolucion | Empresa tiene default | Confusion de herencia | 8 |

@@ -62,8 +62,9 @@ Entidades propuestas:
 - `shift_template_segments`
 - `schedule_profiles`
 - `schedule_profile_weekly_rules`
-- `rotation_patterns`
-- `rotation_pattern_days`
+- `schedule_profile_cycle_rules`
+- `schedule_profile_flexible_rules`
+- `schedule_profile_on_call_rules`
 - `schedule_profile_assignments`
 - `schedule_batches`
 - `daily_schedule_assignments`
@@ -78,9 +79,9 @@ Representa perfiles por patron. Usa `pattern_mode` para distinguir la modalidad.
 Modalidades previstas:
 
 - `weekly`: reglas semanales. Genera dias borrador a partir de `schedule_profile_weekly_rules`.
-- `cycle`: ciclos rotativos futuros. No operativo en D1/D2.
+- `cycle`: ciclo repetitivo a partir de `schedule_profile_cycle_rules`. La fecha `effective_from` de la asignacion representa el dia 1 del ciclo.
 
-En D1/D2 solo esta operativo `pattern` con `pattern_mode = weekly`.
+En D1/D2 solo esta operativo `pattern` con `pattern_mode = weekly`. En Bloque E1 queda operativo el dominio de `pattern` con `pattern_mode = cycle`, sin interfaz y sin publicar programacion diaria.
 
 ### Calendar
 
@@ -88,13 +89,13 @@ Se captura manualmente, por CSV/XLSX o por API. Siempre genera borrador para rev
 
 ### Flexible
 
-Define minutos requeridos y ventanas. No debe mezclarse con una plantilla de turno rigida. Preparado conceptualmente, no operativo en D1/D2.
+Define minutos requeridos y ventanas por dia de semana mediante `schedule_profile_flexible_rules`. No debe mezclarse con una plantilla de turno rigida. La ventana representa disponibilidad o margen operativo para iniciar o realizar la jornada; el detalle exacto se congelara despues en el dia publicado. En E1 queda operativo solo a nivel dominio, sin interfaz ni publicacion.
 
 ### On call
 
-Representa disponibilidad bajo demanda o guardias futuras. Preparado conceptualmente, no operativo en D1/D2.
+Representa disponibilidad bajo demanda o guardias mediante `schedule_profile_on_call_rules`. Separa disponibilidad, activacion futura y trabajo real. La disponibilidad no cuenta automaticamente como tiempo trabajado. En E1 no existen todavia activaciones `on_call`, alertas ni eventos automaticos.
 
-No se mantienen alias operativos `fixed` ni `variable` para `schedule_profiles`.
+No se mantienen alias operativos `fixed`, `variable` ni `rotating` para `schedule_profiles`.
 
 ## Publicacion Diaria
 
@@ -140,7 +141,7 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `PublishScheduleBatchAction`
 - `ResolveDailyScheduleForWorkerAction`
 
-En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles `pattern` con `pattern_mode = weekly` y perfiles `calendar` con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil.
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`, sin crear `daily_schedule_assignments`.
 
 ## Snapshots y Versionamiento
 

@@ -97,6 +97,21 @@ class Company extends Model
         return $this->hasMany(ScheduleProfileWeeklyRule::class);
     }
 
+    public function scheduleProfileCycleRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileCycleRule::class);
+    }
+
+    public function scheduleProfileFlexibleRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileFlexibleRule::class);
+    }
+
+    public function scheduleProfileOnCallRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileOnCallRule::class);
+    }
+
     public function scheduleProfileAssignments(): HasMany
     {
         return $this->hasMany(ScheduleProfileAssignment::class);

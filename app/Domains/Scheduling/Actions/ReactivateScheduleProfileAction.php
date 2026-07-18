@@ -29,9 +29,30 @@ class ReactivateScheduleProfileAction
                 }
             }
 
+            if ($lockedProfile->profile_type === 'pattern' && $lockedProfile->pattern_mode === 'cycle') {
+                $rules = $lockedProfile->cycleRules()->lockForUpdate()->get();
+                if ($rules->count() < 2 || $rules->where('day_type', 'shift')->isEmpty()) {
+                    throw new InvalidArgumentException('El perfil por ciclo no tiene reglas validas para reactivarse.');
+                }
+            }
+
+            if ($lockedProfile->profile_type === 'flexible') {
+                $rules = $lockedProfile->flexibleRules()->lockForUpdate()->get();
+                if ($rules->count() !== 7 || $rules->where('day_type', 'work')->isEmpty()) {
+                    throw new InvalidArgumentException('El perfil flexible no tiene reglas validas para reactivarse.');
+                }
+            }
+
+            if ($lockedProfile->profile_type === 'on_call') {
+                $rules = $lockedProfile->onCallRules()->lockForUpdate()->get();
+                if ($rules->count() !== 7 || $rules->where('day_type', 'on_call')->isEmpty()) {
+                    throw new InvalidArgumentException('El perfil bajo demanda no tiene reglas validas para reactivarse.');
+                }
+            }
+
             $lockedProfile->forceFill(['status' => 'active'])->save();
 
-            return $lockedProfile->refresh()->load('weeklyRules.shiftTemplate');
+            return $lockedProfile->refresh()->load(['weeklyRules.shiftTemplate', 'cycleRules.shiftTemplate', 'flexibleRules', 'onCallRules']);
         });
     }
 }

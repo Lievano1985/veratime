@@ -888,7 +888,7 @@ Vera Time debera soportar perfiles de horario:
 
 El perfil `flexible` no debera mezclarse con una plantilla de turno rigida.
 
-En D1/D2 solo esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. `cycle`, `flexible` y `on_call` quedan preparados conceptualmente, sin flujo operativo.
+En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E1 queda operativo el dominio de `pattern` con `pattern_mode = cycle`, `flexible` y `on_call`: reglas, validacion y resolucion por fecha. No incluye interfaz E2, programacion diaria publicada, activaciones bajo demanda, alertas ni calculos.
 
 **Prioridad:** P0
 

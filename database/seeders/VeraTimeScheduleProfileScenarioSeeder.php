@@ -8,6 +8,9 @@ use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\ReplaceScheduleProfileCycleRulesAction;
+use App\Domains\Scheduling\Actions\ReplaceScheduleProfileFlexibleRulesAction;
+use App\Domains\Scheduling\Actions\ReplaceScheduleProfileOnCallRulesAction;
 use App\Domains\Scheduling\Actions\UpdateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
 use App\Models\Center;
@@ -36,6 +39,9 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
         $this->storeCalendarScenario();
         $this->constructionInheritanceScenario();
         $this->noProfileScenario();
+        $this->cyclePatternScenario();
+        $this->flexibleScenario();
+        $this->onCallScenario();
     }
 
     private function officePatternScenario(): void
@@ -179,6 +185,79 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
         }
     }
 
+    private function cyclePatternScenario(): void
+    {
+        $company = $this->company('VTSP-CYCLE', 'Demo Ciclo Rotativo');
+        $users = $this->users($company, 'cycle');
+        $center = $this->center($company, 'ROT', 'Centro Rotativo');
+        $unit = $this->unit($company, $center, 'OPS', 'Operacion Rotativa', 'area');
+
+        $morning = $this->shiftTemplate($company, 'CYCLE-MORNING', 'Manana 06:00-14:00', '06:00', '14:00');
+        $afternoon = $this->shiftTemplate($company, 'CYCLE-AFTERNOON', 'Tarde 14:00-22:00', '14:00', '22:00');
+        $night = $this->shiftTemplate($company, 'CYCLE-NIGHT', 'Noche 22:00-06:00', '22:00', '06:00', 0, 1);
+        $profile = $this->profile($company, 'CYCLE-2X2', 'Ciclo rotativo 2x2', 'pattern', 'cycle');
+
+        app(ReplaceScheduleProfileCycleRulesAction::class)->handle($company, $profile, [
+            ['cycle_day' => 1, 'day_type' => 'shift', 'shift_template_id' => $morning->id],
+            ['cycle_day' => 2, 'day_type' => 'shift', 'shift_template_id' => $morning->id],
+            ['cycle_day' => 3, 'day_type' => 'shift', 'shift_template_id' => $afternoon->id],
+            ['cycle_day' => 4, 'day_type' => 'shift', 'shift_template_id' => $afternoon->id],
+            ['cycle_day' => 5, 'day_type' => 'shift', 'shift_template_id' => $night->id],
+            ['cycle_day' => 6, 'day_type' => 'shift', 'shift_template_id' => $night->id],
+            ['cycle_day' => 7, 'day_type' => 'rest'],
+            ['cycle_day' => 8, 'day_type' => 'rest'],
+        ]);
+
+        $context = $this->worker($company, $center, 'CYC-001', 'Ciclo Demo Ana', 'Operadora rotativa');
+        $this->primaryUnit($company, $context['relationship'], $unit);
+        $this->assignProfile($company, $profile, [
+            'assignment_scope' => 'company',
+            'effective_from' => self::EFFECTIVE_FROM,
+            'reason' => 'Escenario demo: ciclo rotativo desde empresa.',
+            'metadata' => ['scenario' => 'cycle', 'expected_origin' => 'company'],
+        ], $users['rh']);
+    }
+
+    private function flexibleScenario(): void
+    {
+        $company = $this->company('VTSP-FLEX', 'Demo Horario Flexible');
+        $users = $this->users($company, 'flex');
+        $center = $this->center($company, 'FLEX', 'Centro Flexible');
+        $unit = $this->unit($company, $center, 'FLEXOPS', 'Operacion Flexible', 'area');
+        $profile = $this->profile($company, 'FLEX-480', 'Flexible 480 minutos', 'flexible');
+
+        app(ReplaceScheduleProfileFlexibleRulesAction::class)->handle($company, $profile, $this->flexibleRules());
+
+        $context = $this->worker($company, $center, 'FLX-001', 'Flexible Demo Ana', 'Consultora flexible');
+        $this->primaryUnit($company, $context['relationship'], $unit);
+        $this->assignProfile($company, $profile, [
+            'assignment_scope' => 'company',
+            'effective_from' => self::EFFECTIVE_FROM,
+            'reason' => 'Escenario demo: horario flexible desde empresa.',
+            'metadata' => ['scenario' => 'flexible', 'expected_origin' => 'company'],
+        ], $users['rh']);
+    }
+
+    private function onCallScenario(): void
+    {
+        $company = $this->company('VTSP-ONCALL', 'Demo Bajo Demanda');
+        $users = $this->users($company, 'oncall');
+        $center = $this->center($company, 'MANT', 'Centro de Mantenimiento');
+        $unit = $this->unit($company, $center, 'MANT', 'Mantenimiento', 'area');
+        $profile = $this->profile($company, 'ONCALL-BASE', 'Bajo demanda base', 'on_call');
+
+        app(ReplaceScheduleProfileOnCallRulesAction::class)->handle($company, $profile, $this->onCallRules());
+
+        $context = $this->worker($company, $center, 'ONC-001', 'Bajo Demanda Demo Ana', 'Tecnica de mantenimiento');
+        $this->primaryUnit($company, $context['relationship'], $unit);
+        $this->assignProfile($company, $profile, [
+            'assignment_scope' => 'company',
+            'effective_from' => self::EFFECTIVE_FROM,
+            'reason' => 'Escenario demo: bajo demanda desde empresa.',
+            'metadata' => ['scenario' => 'on_call', 'expected_origin' => 'company'],
+        ], $users['rh']);
+    }
+
     private function company(string $taxId, string $name): Company
     {
         $company = Company::query()->updateOrCreate(
@@ -283,7 +362,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
         ], $parent);
     }
 
-    private function shiftTemplate(Company $company, string $code, string $name, string $start, string $end): ShiftTemplate
+    private function shiftTemplate(Company $company, string $code, string $name, string $start, string $end, int $startOffset = 0, int $endOffset = 0): ShiftTemplate
     {
         $data = [
             'code' => $code,
@@ -293,7 +372,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'metadata' => ['demo' => true, 'scenario' => 'schedule_profiles'],
         ];
         $segments = [
-            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => $start, 'end_local_time' => $end, 'sort_order' => 1],
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => $start, 'end_local_time' => $end, 'start_day_offset' => $startOffset, 'end_day_offset' => $endOffset, 'sort_order' => 1],
         ];
         $template = ShiftTemplate::query()->where('company_id', $company->id)->where('code', $code)->first();
 
@@ -336,6 +415,46 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
 
         $rules[] = ['day_of_week' => 6, 'day_type' => 'rest'];
         $rules[] = ['day_of_week' => 7, 'day_type' => 'rest'];
+
+        return $rules;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function flexibleRules(): array
+    {
+        $rules = [];
+        for ($day = 1; $day <= 5; $day++) {
+            $rules[] = [
+                'day_of_week' => $day,
+                'day_type' => 'work',
+                'required_minutes' => 480,
+                'window_start_local_time' => '07:00',
+                'window_end_local_time' => '20:00',
+            ];
+        }
+        $rules[] = ['day_of_week' => 6, 'day_type' => 'rest'];
+        $rules[] = ['day_of_week' => 7, 'day_type' => 'rest'];
+
+        return $rules;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function onCallRules(): array
+    {
+        $rules = [];
+        for ($day = 1; $day <= 7; $day++) {
+            $rules[] = [
+                'day_of_week' => $day,
+                'day_type' => 'on_call',
+                'availability_start_local_time' => '06:00',
+                'availability_end_local_time' => '22:00',
+                'max_work_minutes' => 480,
+            ];
+        }
 
         return $rules;
     }

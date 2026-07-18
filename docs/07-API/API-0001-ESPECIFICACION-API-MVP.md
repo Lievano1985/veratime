@@ -1273,6 +1273,8 @@ GET    /daily-schedule-assignments
 
 Los endpoints legacy `/schedules` y `/schedule-assignments` pertenecen al modelo Sprint 2A/2B y deberan reemplazarse cuando se implemente la programacion diaria publicada.
 
+Nota WFM E1: el dominio ya reconoce perfiles `pattern` weekly/cycle, `calendar`, `flexible` y `on_call`, pero no existe todavia API funcional para administrar perfiles avanzados, publicar programacion diaria, importar calendarios ni crear activaciones bajo demanda.
+
 ## 13.3 Evidence Packages
 
 ```http
