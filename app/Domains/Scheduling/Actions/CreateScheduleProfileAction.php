@@ -29,8 +29,8 @@ class CreateScheduleProfileAction
             throw new InvalidArgumentException('Un perfil por patron semanal requiere siete reglas semanales.');
         }
 
-        if ($profileType === 'calendar' && $weeklyRules !== []) {
-            throw new InvalidArgumentException('Un perfil por calendario no admite reglas semanales.');
+        if (! ($profileType === 'pattern' && $patternMode === 'weekly') && $weeklyRules !== []) {
+            throw new InvalidArgumentException('Solo un perfil por patron semanal admite reglas semanales.');
         }
 
         return DB::transaction(function () use ($company, $data, $weeklyRules, $code, $profileType, $patternMode): ScheduleProfile {
@@ -50,7 +50,7 @@ class CreateScheduleProfileAction
                 $this->replaceWeeklyRules->handle($company, $profile, $weeklyRules);
             }
 
-            return $profile->refresh()->load('weeklyRules.shiftTemplate');
+            return $profile->refresh()->load(['weeklyRules.shiftTemplate', 'cycleRules.shiftTemplate', 'flexibleRules', 'onCallRules']);
         });
     }
 
@@ -63,8 +63,8 @@ class CreateScheduleProfileAction
 
     private function normalizeProfileType(?string $type): string
     {
-        if (! in_array($type, ['pattern', 'calendar'], true)) {
-            throw new InvalidArgumentException('El tipo de perfil no es valido para D1.');
+        if (! in_array($type, ['pattern', 'calendar', 'flexible', 'on_call'], true)) {
+            throw new InvalidArgumentException('El tipo de perfil no es valido.');
         }
 
         return $type;
@@ -73,11 +73,11 @@ class CreateScheduleProfileAction
     private function normalizePatternMode(string $profileType, ?string $patternMode): ?string
     {
         if ($profileType === 'pattern') {
-            if ($patternMode !== 'weekly') {
-                throw new InvalidArgumentException('Un perfil por patron requiere modalidad semanal en este bloque.');
+            if (! in_array($patternMode, ['weekly', 'cycle'], true)) {
+                throw new InvalidArgumentException('Un perfil por patron requiere modalidad semanal o ciclo.');
             }
 
-            return 'weekly';
+            return $patternMode;
         }
 
         if (filled($patternMode)) {

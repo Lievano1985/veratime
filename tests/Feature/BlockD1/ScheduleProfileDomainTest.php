@@ -113,12 +113,12 @@ class ScheduleProfileDomainTest extends TestCase
         app(ReplaceScheduleProfileWeeklyRulesAction::class)->handle($company, $calendar, $this->weeklyRules($template));
     }
 
-    public function test_legacy_fixed_variable_aliases_and_future_modes_are_not_operational(): void
+    public function test_legacy_fixed_variable_rotating_aliases_are_not_operational(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $template = $this->shiftTemplate($company, 'APER');
 
-        foreach (['fixed', 'variable', 'flexible', 'on_call'] as $type) {
+        foreach (['fixed', 'variable', 'rotating'] as $type) {
             try {
                 app(CreateScheduleProfileAction::class)->handle($company, [
                     'code' => 'BAD'.strtoupper(str_replace('_', '', $type)),
@@ -126,13 +126,13 @@ class ScheduleProfileDomainTest extends TestCase
                     'profile_type' => $type,
                     'pattern_mode' => $type === 'fixed' ? 'weekly' : null,
                 ], $this->weeklyRules($template));
-                $this->fail('Tipo de perfil no operativo aceptado.');
+                $this->fail('Alias legacy aceptado como tipo de perfil.');
             } catch (InvalidArgumentException) {
                 $this->assertTrue(true);
             }
         }
 
-        foreach ([null, 'cycle'] as $mode) {
+        foreach ([null, 'rotating'] as $mode) {
             try {
                 app(CreateScheduleProfileAction::class)->handle($company, [
                     'code' => 'MOD'.($mode ?: 'NULL'),
@@ -140,7 +140,7 @@ class ScheduleProfileDomainTest extends TestCase
                     'profile_type' => 'pattern',
                     'pattern_mode' => $mode,
                 ], $this->weeklyRules($template));
-                $this->fail('Modalidad de patron no operativa aceptada.');
+                $this->fail('Modalidad de patron invalida aceptada.');
             } catch (InvalidArgumentException) {
                 $this->assertTrue(true);
             }

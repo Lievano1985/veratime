@@ -18,14 +18,9 @@ class UpdateScheduleProfileAction
         $this->assertTenant($company, $profile);
 
         $code = $this->normalizeCode($data['code'] ?? $profile->code);
-        $profileType = $data['profile_type'] ?? $profile->profile_type;
+        $profileType = $this->normalizeProfileType($data['profile_type'] ?? $profile->profile_type);
         $patternMode = $this->normalizePatternMode($profileType, $data['pattern_mode'] ?? $profile->pattern_mode);
-        if ($profileType !== $profile->profile_type) {
-            throw new InvalidArgumentException('El tipo del perfil no se cambia en D1.');
-        }
-        if ($patternMode !== $profile->pattern_mode) {
-            throw new InvalidArgumentException('La modalidad del perfil no se cambia en D1.');
-        }
+        $this->assertCompatibleRules($profileType, $patternMode, $weeklyRules);
 
         $duplicate = ScheduleProfile::query()
             ->where('company_id', $company->id)
@@ -37,7 +32,7 @@ class UpdateScheduleProfileAction
             throw new InvalidArgumentException('Ya existe un perfil con el mismo codigo en esta empresa.');
         }
 
-        return DB::transaction(function () use ($company, $profile, $data, $weeklyRules, $code, $patternMode): ScheduleProfile {
+        return DB::transaction(function () use ($company, $profile, $data, $weeklyRules, $code, $profileType, $patternMode): ScheduleProfile {
             $lockedProfile = ScheduleProfile::query()
                 ->where('company_id', $company->id)
                 ->whereKey($profile->id)
@@ -48,6 +43,7 @@ class UpdateScheduleProfileAction
                 'code' => $code,
                 'name' => $this->requiredString($data['name'] ?? $lockedProfile->name, 'El nombre del perfil es requerido.'),
                 'description' => blank($data['description'] ?? null) ? null : trim((string) $data['description']),
+                'profile_type' => $profileType,
                 'pattern_mode' => $patternMode,
                 'status' => in_array($data['status'] ?? $lockedProfile->status, ['active', 'inactive'], true)
                     ? ($data['status'] ?? $lockedProfile->status)
@@ -60,7 +56,20 @@ class UpdateScheduleProfileAction
                 $this->replaceWeeklyRules->handle($company, $lockedProfile, $weeklyRules);
             }
 
-            return $lockedProfile->refresh()->load('weeklyRules.shiftTemplate');
+            if ($profileType !== 'pattern' || $patternMode !== 'weekly') {
+                $lockedProfile->weeklyRules()->delete();
+            }
+            if ($profileType !== 'pattern' || $patternMode !== 'cycle') {
+                $lockedProfile->cycleRules()->delete();
+            }
+            if ($profileType !== 'flexible') {
+                $lockedProfile->flexibleRules()->delete();
+            }
+            if ($profileType !== 'on_call') {
+                $lockedProfile->onCallRules()->delete();
+            }
+
+            return $lockedProfile->refresh()->load(['weeklyRules.shiftTemplate', 'cycleRules.shiftTemplate', 'flexibleRules', 'onCallRules']);
         });
     }
 
@@ -82,14 +91,23 @@ class UpdateScheduleProfileAction
         return $code;
     }
 
+    private function normalizeProfileType(?string $type): string
+    {
+        if (! in_array($type, ['pattern', 'calendar', 'flexible', 'on_call'], true)) {
+            throw new InvalidArgumentException('El tipo de perfil no es valido.');
+        }
+
+        return $type;
+    }
+
     private function normalizePatternMode(string $profileType, ?string $patternMode): ?string
     {
         if ($profileType === 'pattern') {
-            if ($patternMode !== 'weekly') {
-                throw new InvalidArgumentException('Un perfil por patron requiere modalidad semanal en este bloque.');
+            if (! in_array($patternMode, ['weekly', 'cycle'], true)) {
+                throw new InvalidArgumentException('Un perfil por patron requiere modalidad semanal o ciclo.');
             }
 
-            return 'weekly';
+            return $patternMode;
         }
 
         if (filled($patternMode)) {
@@ -97,6 +115,17 @@ class UpdateScheduleProfileAction
         }
 
         return null;
+    }
+
+    private function assertCompatibleRules(string $profileType, ?string $patternMode, ?array $weeklyRules): void
+    {
+        if ($profileType === 'pattern' && $patternMode === 'weekly') {
+            return;
+        }
+
+        if ($weeklyRules !== null) {
+            throw new InvalidArgumentException('Solo los perfiles por patron semanal admiten reglas semanales.');
+        }
     }
 
     private function requiredString(?string $value, string $message): string

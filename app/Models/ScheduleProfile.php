@@ -40,6 +40,21 @@ class ScheduleProfile extends Model
         return $this->hasMany(ScheduleProfileWeeklyRule::class)->orderBy('day_of_week');
     }
 
+    public function cycleRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileCycleRule::class)->orderBy('cycle_day');
+    }
+
+    public function flexibleRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileFlexibleRule::class)->orderBy('day_of_week');
+    }
+
+    public function onCallRules(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileOnCallRule::class)->orderBy('day_of_week');
+    }
+
     public function assignments(): HasMany
     {
         return $this->hasMany(ScheduleProfileAssignment::class);
