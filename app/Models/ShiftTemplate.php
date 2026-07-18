@@ -52,4 +52,9 @@ class ShiftTemplate extends Model
     {
         return $this->hasMany(ScheduleProfileCycleRule::class);
     }
+
+    public function dailyScheduleAssignments(): HasMany
+    {
+        return $this->hasMany(DailyScheduleAssignment::class);
+    }
 }

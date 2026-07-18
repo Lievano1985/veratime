@@ -212,12 +212,14 @@ class AdvancedScheduleProfileUiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_e2_does_not_create_future_wfm_operational_tables(): void
+    public function test_e2_keeps_daily_core_tables_without_future_operational_modules(): void
     {
-        $this->assertFalse(Schema::hasTable('schedule_batches'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_segments'));
+        $this->assertTrue(Schema::hasTable('schedule_batches'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
+        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertFalse(Schema::hasTable('work_day_calculations'));
     }
 
     private function shiftTemplate(

@@ -115,4 +115,19 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(ScheduleProfileAssignment::class, 'created_by');
     }
+
+    public function createdScheduleBatches(): HasMany
+    {
+        return $this->hasMany(ScheduleBatch::class, 'created_by');
+    }
+
+    public function publishedScheduleBatches(): HasMany
+    {
+        return $this->hasMany(ScheduleBatch::class, 'published_by');
+    }
+
+    public function cancelledScheduleBatches(): HasMany
+    {
+        return $this->hasMany(ScheduleBatch::class, 'cancelled_by');
+    }
 }

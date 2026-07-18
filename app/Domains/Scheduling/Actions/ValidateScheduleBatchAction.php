@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Domains\Scheduling\Actions;
+
+use App\Models\Center;
+use App\Models\Company;
+use App\Models\ScheduleBatch;
+use Carbon\CarbonImmutable;
+use InvalidArgumentException;
+
+class ValidateScheduleBatchAction
+{
+    public const STATUSES = ['draft', 'published', 'superseded', 'cancelled'];
+    public const CREATION_SOURCES = ['manual', 'profile', 'csv', 'api', 'mixed', 'system'];
+
+    public function validatePeriod(string $periodStart, string $periodEnd): array
+    {
+        $start = CarbonImmutable::parse($periodStart)->toDateString();
+        $end = CarbonImmutable::parse($periodEnd)->toDateString();
+
+        if ($end < $start) {
+            throw new InvalidArgumentException('El periodo del lote no es valido.');
+        }
+
+        return [$start, $end];
+    }
+
+    public function validateCenter(Company $company, Center $center): void
+    {
+        if ($company->status !== 'active') {
+            throw new InvalidArgumentException('La programacion diaria requiere una empresa activa.');
+        }
+
+        if ($center->company_id !== $company->id || $center->status !== 'active') {
+            throw new InvalidArgumentException('El centro no pertenece a la empresa activa.');
+        }
+    }
+
+    public function validateCreationSource(string $source): string
+    {
+        if (! in_array($source, self::CREATION_SOURCES, true)) {
+            throw new InvalidArgumentException('La fuente de creacion del lote no es valida.');
+        }
+
+        return $source;
+    }
+
+    public function validatePreviousBatch(
+        Company $company,
+        Center $center,
+        string $periodStart,
+        string $periodEnd,
+        ?ScheduleBatch $previousBatch,
+        int $version,
+    ): void {
+        if (! $previousBatch) {
+            return;
+        }
+
+        if ($previousBatch->company_id !== $company->id
+            || $previousBatch->center_id !== $center->id
+            || $previousBatch->period_start->toDateString() !== $periodStart
+            || $previousBatch->period_end->toDateString() !== $periodEnd) {
+            throw new InvalidArgumentException('El lote anterior no corresponde al mismo centro y periodo.');
+        }
+
+        if ($previousBatch->version >= $version) {
+            throw new InvalidArgumentException('La version del lote debe ser posterior al lote anterior.');
+        }
+    }
+
+    public function assertDraft(ScheduleBatch $batch): void
+    {
+        if ($batch->status !== 'draft') {
+            throw new InvalidArgumentException('Solo se puede modificar un lote en borrador.');
+        }
+    }
+
+    public function assertImmutable(ScheduleBatch $batch): void
+    {
+        if (in_array($batch->status, ['published', 'superseded', 'cancelled'], true)) {
+            throw new InvalidArgumentException('El lote no permite modificaciones destructivas.');
+        }
+    }
+}

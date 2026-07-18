@@ -16,6 +16,7 @@ use App\Domains\Scheduling\Actions\ReplaceScheduleProfileWeeklyRulesAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleProfileForRelationshipAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
@@ -35,7 +36,7 @@ class ScheduleProfileDomainTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_schema_creates_only_d1_tables_without_daily_schedule_or_profile_e_fields(): void
+    public function test_schema_keeps_d1_tables_and_daily_core_without_future_calculation_tables(): void
     {
         $this->assertTrue(Schema::hasTable('schedule_profiles'));
         $this->assertTrue(Schema::hasTable('schedule_profile_weekly_rules'));
@@ -46,9 +47,11 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertFalse(Schema::hasColumn('schedule_profiles', 'timezone'));
         $this->assertFalse(Schema::hasColumn('schedule_profiles', 'required_minutes'));
         $this->assertFalse(Schema::hasTable('rotation_patterns'));
-        $this->assertFalse(Schema::hasTable('schedule_batches'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
-        $this->assertFalse(Schema::hasTable('daily_schedule_segments'));
+        $this->assertTrue(Schema::hasTable('schedule_batches'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
+        $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
+        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertFalse(Schema::hasTable('work_day_calculations'));
     }
 
     public function test_creates_pattern_weekly_and_calendar_profiles_with_d1_rules(): void
@@ -341,7 +344,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertSame('employment_relationship', $resolver->handle($company, $relationships['demo-rel-VT-002'], '2026-08-17')['assignment_scope']);
         $this->assertSame('company', $resolver->handle($company, $relationships['demo-rel-VT-003'], '2026-08-17')['assignment_scope']);
         $this->assertSame('center', $resolver->handle($company, $relationships['demo-rel-VT-004'], '2026-08-17')['assignment_scope']);
-        $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
+        $this->assertSame(0, DailyScheduleAssignment::query()->where('company_id', $company->id)->count());
     }
 
     private function patternProfile(Company $company, ShiftTemplate $template, string $code): ScheduleProfile

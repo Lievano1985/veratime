@@ -58,4 +58,9 @@ class Center extends Model
     {
         return $this->hasMany(ScheduleProfileAssignment::class);
     }
+
+    public function scheduleBatches(): HasMany
+    {
+        return $this->hasMany(ScheduleBatch::class);
+    }
 }

@@ -2,36 +2,41 @@
 
 namespace App\Models;
 
-use Database\Factories\ShiftTemplateSegmentFactory;
+use Database\Factories\DailyScheduleSegmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ShiftTemplateSegment extends Model
+class DailyScheduleSegment extends Model
 {
-    /** @use HasFactory<ShiftTemplateSegmentFactory> */
+    /** @use HasFactory<DailyScheduleSegmentFactory> */
     use HasFactory;
 
     protected $fillable = [
+        'segment_order',
         'segment_type',
         'timing_mode',
         'start_local_time',
         'end_local_time',
         'start_day_offset',
         'end_day_offset',
+        'starts_at_utc',
+        'ends_at_utc',
         'duration_minutes',
         'is_paid',
-        'is_required',
-        'sort_order',
         'metadata',
     ];
 
     protected function casts(): array
     {
         return [
+            'segment_order' => 'integer',
+            'start_day_offset' => 'integer',
+            'end_day_offset' => 'integer',
+            'starts_at_utc' => 'datetime',
+            'ends_at_utc' => 'datetime',
+            'duration_minutes' => 'integer',
             'is_paid' => 'boolean',
-            'is_required' => 'boolean',
             'metadata' => 'array',
         ];
     }
@@ -41,13 +46,13 @@ class ShiftTemplateSegment extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function shiftTemplate(): BelongsTo
+    public function dailyScheduleAssignment(): BelongsTo
     {
-        return $this->belongsTo(ShiftTemplate::class);
+        return $this->belongsTo(DailyScheduleAssignment::class);
     }
 
-    public function dailyScheduleSegments(): HasMany
+    public function shiftTemplateSegment(): BelongsTo
     {
-        return $this->hasMany(DailyScheduleSegment::class);
+        return $this->belongsTo(ShiftTemplateSegment::class);
     }
 }

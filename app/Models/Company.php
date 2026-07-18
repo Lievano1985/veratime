@@ -92,6 +92,21 @@ class Company extends Model
         return $this->hasMany(ScheduleProfile::class);
     }
 
+    public function scheduleBatches(): HasMany
+    {
+        return $this->hasMany(ScheduleBatch::class);
+    }
+
+    public function dailyScheduleAssignments(): HasMany
+    {
+        return $this->hasMany(DailyScheduleAssignment::class);
+    }
+
+    public function dailyScheduleSegments(): HasMany
+    {
+        return $this->hasMany(DailyScheduleSegment::class);
+    }
+
     public function scheduleProfileWeeklyRules(): HasMany
     {
         return $this->hasMany(ScheduleProfileWeeklyRule::class);

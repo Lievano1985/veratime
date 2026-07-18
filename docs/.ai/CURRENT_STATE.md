@@ -47,7 +47,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Sprint 2G en progreso: seeder demo local hasta Sprint 2.
+- Bloque F1 en progreso: nucleo de programacion diaria, batches, asignaciones diarias, segmentos, snapshots deterministas y resolucion de programacion publicada.
 
 ## Estado de epics
 
@@ -110,6 +110,9 @@ Nota de descansos obligatorios:
 - Conformidad digital.
 - API de negocio.
 - CSV.
+- Programacion diaria operativa desde UI.
+- Generacion desde perfiles.
+- Publicacion operativa de batches.
 
 ## Validacion Sprint 2F
 
@@ -164,7 +167,7 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
 - Bloque E1 implementa dominio y pruebas para `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`, con reglas completas y resolucion por fecha desde una asignacion efectiva.
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
-- No se ha implementado todavia importacion CSV/XLSX, cierre multiple ni programacion diaria publicada.
+- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, generacion desde perfiles ni publicacion operativa desde UI. El nucleo de programacion diaria se implementa en Bloque F1.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -236,7 +239,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La pantalla permite listar, buscar, filtrar, crear, editar, inactivar, reactivar y previsualizar plantillas.
 - Supervisores solo consultan plantillas activas si tienen alcance operativo vigente; no administran.
 - El seeder demo crea plantillas neutrales sin asignar trabajadores ni generar dias.
-- En Bloque C no se implementaron perfiles, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV; esos elementos se abordan en bloques posteriores.
+- En Bloque C no se implementaron perfiles, programacion diaria, API WFM ni CSV; esos elementos se abordan en bloques posteriores. El nucleo `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments` se implementa en Bloque F1.
 
 ## Bloque D1 - perfiles pattern weekly y calendar
 
@@ -253,7 +256,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal vigente.
 - `ResolveScheduleProfileForRelationshipAction` es el resolutor central de D1.
 - Supervisores no crean perfiles; solo pueden asignar directamente a relaciones laborales dentro de su alcance operativo.
-- No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, API WFM ni CSV.
+- No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, generacion diaria, publicacion operativa, API WFM ni CSV. El nucleo `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments` se implementa en Bloque F1.
 
 ## Bloque D2 - UI de perfiles y asignaciones
 
@@ -271,8 +274,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Las rutas legacy `/schedules` y `/schedule-assignments` siguen existiendo, pero ya no aparecen en la navegacion normal.
 - Supervisores solo pueden asignar perfiles directamente a relaciones laborales dentro de su alcance operativo.
 - Existe seeder manual independiente `VeraTimeScheduleProfileScenarioSeeder` para probar aislamiento multi-tenant, perfiles `pattern` semanal, perfiles `calendar`, herencia empresa -> centro -> unidad -> relacion laboral y empresa sin perfil efectivo. Se ejecuta con `php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder`.
-- El seeder manual no se llama desde `DatabaseSeeder` y crea escenarios D2/E1 de perfiles, incluyendo ciclo, flexible y bajo demanda, sin programacion diaria ni batches.
-- Bloque E2 implementa la UI de perfiles avanzados, pero no implementa programacion semanal/publicada, batches, snapshots, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
+- El seeder manual no se llama desde `DatabaseSeeder` y crea escenarios D2/E1 de perfiles, incluyendo ciclo, flexible y bajo demanda, sin generar programacion diaria.
+- Bloque E2 implementa la UI de perfiles avanzados, pero no implementa generacion semanal/publicada, publicacion operativa, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
 
 ## Bloque E1 - perfiles avanzados de dominio
 
@@ -290,7 +293,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Bajo demanda define disponibilidad y maximo de trabajo futuro; la disponibilidad no cuenta como tiempo trabajado.
 - `ResolveScheduleProfileRuleForDateAction` resuelve la regla de una asignacion efectiva sin crear programacion diaria.
 - E2 agrega interfaz para administrar estas reglas desde `/scheduling/profiles`.
-- No se implementaron `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`, activaciones on-call, API WFM, CSV/XLSX ni calculos legales.
+- No se implementaron activaciones on-call, API WFM, CSV/XLSX ni calculos legales. El nucleo `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments` se implementa en Bloque F1 sin generacion ni publicacion operativa desde UI.
 
 ## Bloque E2 - interfaz de perfiles avanzados
 
@@ -309,4 +312,23 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La UI bajo demanda administra siete reglas de disponibilidad y maximo al activarse.
 - Cambiar de metodo en edicion requiere confirmacion antes de reemplazar reglas existentes.
 - Supervisores solo consultan perfiles activos con alcance; no crean ni editan reglas.
-- No se implementaron programacion diaria, batches, publicacion, snapshots, activaciones on-call, alertas, API WFM, CSV/XLSX ni calculos.
+- No se implementaron generacion de programacion diaria desde perfiles, publicacion operativa desde UI, activaciones on-call, alertas, API WFM, CSV/XLSX ni calculos. El nucleo de batches, asignaciones diarias, segmentos y snapshots se implementa en Bloque F1.
+
+## Bloque F1 - nucleo de programacion diaria
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Tablas:
+  - `schedule_batches`.
+  - `daily_schedule_assignments`.
+  - `daily_schedule_segments`.
+- Cada batch pertenece a empresa, centro, periodo y version.
+- Estados de batch: `draft`, `published`, `superseded`, `cancelled`.
+- Las asignaciones diarias soportan `day_type`: `shift`, `rest`, `flexible`, `on_call`, `unassigned`.
+- Los segmentos diarios congelan horas locales, offsets, UTC opcional, tipo, modalidad, pago, obligatoriedad y orden.
+- El snapshot canonico se construye desde el batch y sus dias/segmentos con JSON determinista y hash SHA-256.
+- `ResolveDailyScheduleForRelationshipDateAction` resuelve solo programacion diaria publicada; no usa perfiles ni modelo legacy como fallback.
+- Las versiones no draft son inmutables desde las Actions F1.
+- MySQL/MariaDB compatible; la unicidad del dia dentro del batch se apoya en indice compuesto portable.
+- No hay pantalla F1 todavia.
+- No se implementa generacion desde perfiles, publicacion operativa desde UI, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
