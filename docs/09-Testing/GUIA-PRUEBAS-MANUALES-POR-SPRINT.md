@@ -736,7 +736,7 @@ Cuando se implemente, la guia manual debera cubrir:
 - Supervisor con acceso limitado a su alcance.
 - Empresas sin unidades operando solo por centro.
 - Catalogo de turnos.
-- Perfiles `fixed`, `variable`, `rotating` y `flexible`.
+- Perfiles `pattern`, `calendar`, `flexible` y `on_call`; `pattern_mode = cycle` queda para ciclos futuros.
 - Batches en borrador.
 - Importacion CSV/XLSX que genera borrador, no publicacion directa.
 - Publicacion diaria con version consecutiva por centro/periodo, snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256.
@@ -1021,6 +1021,9 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 | Turno nocturno | Crear trabajo `22:00` a `06:00` con dia final siguiente. | Se guarda y muestra `+1 dia` / cruza medianoche. |
 | Jornada partida | Crear trabajo, descanso fijo y segundo trabajo. | Se guardan varios segmentos sin solaparse. |
 | Descanso por duracion | Agregar descanso de 30 minutos sin hora fija. | Se guarda como pausa requerida por duracion. |
+| Metricas de jornada normal | Crear trabajo `08:00` a `16:00` sin descansos. | Muestra trabajo programado bruto 8 h, trabajo efectivo programado 8 h y duracion total 8 h. |
+| Metricas de jornada partida | Crear trabajo `08:00` a `13:00`, descanso fijo no pagado `13:00` a `15:00`, trabajo `15:00` a `18:00` y descanso por duracion no pagado de 30 min. | Muestra trabajo bruto 8 h, descanso fijo no pagado 2 h, descanso por duracion no pagado 30 min, trabajo efectivo 7 h 30 min y duracion total 10 h. |
+| Descanso por duracion pagado | Agregar un descanso por duracion pagado de 30 min dentro de una plantilla con 8 h de trabajo. | El descanso se muestra como pagado y no reduce el trabajo efectivo programado. |
 | Solapamiento | Intentar segmentos fijos traslapados. | El sistema rechaza la plantilla. |
 | Orden duplicado | Repetir `sort_order`. | El sistema rechaza la plantilla. |
 | Inactivar | Inactivar plantilla activa. | Cambia a inactiva sin borrar segmentos. |
@@ -1033,7 +1036,7 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 ### No incluido todavia
 
 - Asignacion de turnos a trabajadores.
-- Perfiles `fixed`, `variable`, `rotating` o `flexible`.
+- Perfiles `pattern`, `calendar`, `flexible` u `on_call`.
 - `schedule_batches`.
 - `daily_schedule_assignments`.
 - `daily_schedule_segments`.
@@ -1041,3 +1044,94 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 - Importacion CSV/XLSX.
 - Calculos legales.
 - Alertas, incidencias, reportes o API WFM.
+
+---
+
+## Bloque D1 - perfiles pattern weekly y calendar
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Validacion manual
+
+D1 no agrega pantallas. La validacion manual se limita a revisar que no aparezcan nuevas entradas de perfiles en la navegacion y que el catalogo de turnos siga funcionando.
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Sin pantalla D1 | Revisar sidebar y rutas visibles. | No aparece pantalla de perfiles de horario todavia. |
+| Catalogo de turnos | Abrir `/scheduling/shifts`. | Sigue operativo y no genera programacion diaria. |
+| Seeder demo | Ejecutar `php artisan db:seed --class=VeraTimeDemoSeeder`. | Crea perfiles demo y asignaciones sin duplicar registros. |
+| Resolucion por dominio | Ejecutar pruebas automatizadas D1. | Se validan prioridad relacion laboral, unidad principal, centro y empresa. |
+
+### No incluido todavia
+
+- `pattern_mode = cycle`.
+- Perfiles `flexible` u `on_call`.
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Publicacion.
+- CSV/XLSX o API WFM.
+
+---
+
+## Bloque D2 - UI de perfiles y asignaciones
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+### Rutas
+
+- `/scheduling/profiles`.
+- `/scheduling/profile-assignments`.
+
+### Validacion manual
+
+Preparacion opcional de escenarios:
+
+```bash
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+```
+
+Credencial comun demo: `VeraDemo123!`.
+
+| Empresa demo | Usuario sugerido | Escenario | Perfil esperado | Origen esperado |
+|---|---|---|---|---|
+| Demo Oficina por Patron | `owner.office.demo@veratime.local` | Trabajadores de oficina con perfil semanal. | `OFFICE-WEEKLY` - Por patron semanal | Empresa |
+| Demo Tienda por Calendario | `owner.store.demo@veratime.local` | Operacion por calendario sin programacion diaria publicada. | `STORE-CALENDAR` - Por calendario | Empresa |
+| Demo Constructora con Herencia | `owner.construction.demo@veratime.local` | Administracion. | `CONST-BASE` - Por patron semanal | Empresa |
+| Demo Constructora con Herencia | `admin.construction.demo@veratime.local` | Trabajador de Construccion en Obra Norte. | `CONST-CALENDAR` - Por calendario | Centro |
+| Demo Constructora con Herencia | `rh.construction.demo@veratime.local` | Trabajador de Almacen. | `CONST-WAREHOUSE` - Por patron semanal | Unidad organizacional |
+| Demo Constructora con Herencia | `supervisor.construction.demo@veratime.local` | Supervisor con alcance limitado a Area Construccion. | Consulta/operacion limitada a su alcance | Unidad organizacional |
+| Demo Constructora con Herencia | `owner.construction.demo@veratime.local` | Trabajador con excepcion directa. | `CONST-DIRECT-CAL` - Por calendario | Relacion laboral |
+| Demo Sin Perfil de Horario | `owner.noprofile.demo@veratime.local` | Empresa sin asignaciones de perfil. | Sin perfil | Sin origen |
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Navegacion | Abrir dashboard con owner/admin/rh. | En Horarios aparecen Catalogo de turnos, Perfiles de horario, Asignaciones de perfiles y Descansos obligatorios. |
+| Legacy oculto | Revisar sidebar. | No aparecen Horarios legacy ni Asignacion de Horarios legacy. Las rutas legacy siguen existiendo internamente. |
+| Crear perfil por patron | Abrir `/scheduling/profiles`, crear perfil por patron semanal y seleccionar turnos de lunes a viernes con descanso sabado/domingo. | Se guarda con siete reglas semanales y vista previa. |
+| Crear perfil por calendario | Crear perfil por calendario. | No muestra editor semanal ni crea reglas semanales. |
+| Plantillas disponibles | Editar perfil por patron semanal. | Solo aparecen plantillas activas de la empresa actual. |
+| Asignar por empresa | Abrir `/scheduling/profile-assignments` y crear asignacion de alcance empresa. | Se guarda vigencia con fuente manual desde servidor. |
+| Asignar por centro | Crear asignacion de alcance centro. | Solo permite centros activos de la empresa actual. |
+| Asignar por unidad | Seleccionar centro y despues unidad. | La unidad pertenece al centro seleccionado y a la empresa activa. |
+| Asignar por relacion laboral | Buscar trabajador por clave o nombre. | El selector limita resultados y resuelve relacion laboral vigente. |
+| Resolver perfil efectivo | Seleccionar trabajador y fecha. | Muestra perfil efectivo, tipo, origen, unidad principal y centro. |
+| Reemplazar asignacion | Reemplazar una asignacion vigente con nueva fecha y motivo. | La anterior queda reemplazada y se conserva historial. |
+| Finalizar excepcion | Finalizar una asignacion directa. | La asignacion queda finalizada y vuelve a aplicar la herencia superior. |
+| Supervisor con alcance | Entrar como supervisor con scope vigente. | No administra perfiles y solo puede asignar relacion laboral dentro de su alcance. |
+| Supervisor sin alcance | Entrar como supervisor sin scope. | No obtiene acceso operativo por solo tener rol. |
+
+### No incluido todavia
+
+- `pattern_mode = cycle`.
+- Perfiles `flexible` u `on_call`.
+- `schedule_batches`.
+- `daily_schedule_assignments`.
+- `daily_schedule_segments`.
+- Programacion semanal o por periodo.
+- Publicacion.
+- Snapshots.
+- CSV/XLSX o API WFM.
+- Perfiles de cierre.
+- Calculos legales.
+- Incidencias, alertas o reportes.

@@ -71,21 +71,30 @@ Entidades propuestas:
 
 ## Perfiles
 
-### Fixed
+### Pattern
 
-Usa reglas semanales. Genera dias borrador a partir de `schedule_profile_weekly_rules`.
+Representa perfiles por patron. Usa `pattern_mode` para distinguir la modalidad.
 
-### Variable
+Modalidades previstas:
+
+- `weekly`: reglas semanales. Genera dias borrador a partir de `schedule_profile_weekly_rules`.
+- `cycle`: ciclos rotativos futuros. No operativo en D1/D2.
+
+En D1/D2 solo esta operativo `pattern` con `pattern_mode = weekly`.
+
+### Calendar
 
 Se captura manualmente, por CSV/XLSX o por API. Siempre genera borrador para revision antes de publicar.
 
-### Rotating
-
-Usa patrones y ciclos rotativos con fecha ancla. Genera dias borrador segun `rotation_patterns` y `rotation_pattern_days`.
-
 ### Flexible
 
-Define minutos requeridos y ventanas. No debe mezclarse con una plantilla de turno rigida.
+Define minutos requeridos y ventanas. No debe mezclarse con una plantilla de turno rigida. Preparado conceptualmente, no operativo en D1/D2.
+
+### On call
+
+Representa disponibilidad bajo demanda o guardias futuras. Preparado conceptualmente, no operativo en D1/D2.
+
+No se mantienen alias operativos `fixed` ni `variable` para `schedule_profiles`.
 
 ## Publicacion Diaria
 
@@ -131,6 +140,8 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `PublishScheduleBatchAction`
 - `ResolveDailyScheduleForWorkerAction`
 
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles `pattern` con `pattern_mode = weekly` y perfiles `calendar` con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil.
+
 ## Snapshots y Versionamiento
 
 La programacion publicada conserva snapshot JSON canonico. Cualquier cambio posterior crea nueva version y marca registros previos como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
@@ -158,7 +169,7 @@ Las pantallas del Bloque B2 solo capturan intencion, validan permisos de entrada
 
 ## Importacion
 
-CSV/XLSX/API preparados para programacion variable:
+CSV/XLSX/API preparados para programacion por calendario:
 
 - crean batches en `draft`;
 - validan empresa, centro, unidad y trabajador;
@@ -177,7 +188,7 @@ CSV/XLSX/API preparados para programacion variable:
 
 - Mas tablas y mas flujo de publicacion.
 - Mayor trazabilidad y menor riesgo de cambios destructivos.
-- Mejor soporte para variable, rotating y flexible.
+- Mejor soporte para calendar, pattern cycle, flexible y on call.
 - Base preparada para incidencias, alertas, reportes y cierres.
 
 ## Riesgos
@@ -194,5 +205,5 @@ CSV/XLSX/API preparados para programacion variable:
 - Los perfiles generan borradores, no resultados operativos.
 - Supervisor solo accede a trabajadores dentro de su alcance.
 - Empresas sin unidades operan por centro.
-- La importacion variable crea borrador revisable.
+- La importacion por calendario crea borrador revisable.
 - No se implementa optimizacion automatica ni IA.

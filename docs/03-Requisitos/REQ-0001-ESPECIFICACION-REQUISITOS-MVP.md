@@ -879,12 +879,16 @@ La publicacion sera inmutable. Una correccion generara una nueva version y la ve
 
 Vera Time debera soportar perfiles de horario:
 
-- `fixed`: reglas semanales.
-- `variable`: captura manual, CSV/XLSX o API.
-- `rotating`: patrones y ciclos.
+- `pattern`: perfiles por patron.
+  - `pattern_mode = weekly`: reglas semanales.
+  - `pattern_mode = cycle`: ciclos rotativos futuros.
+- `calendar`: captura manual, CSV/XLSX o API.
 - `flexible`: minutos requeridos y ventanas.
+- `on_call`: disponibilidad bajo demanda futura.
 
 El perfil `flexible` no debera mezclarse con una plantilla de turno rigida.
+
+En D1/D2 solo esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. `cycle`, `flexible` y `on_call` quedan preparados conceptualmente, sin flujo operativo.
 
 **Prioridad:** P0
 

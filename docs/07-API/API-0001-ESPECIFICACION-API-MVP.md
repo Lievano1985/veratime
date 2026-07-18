@@ -1645,7 +1645,7 @@ Webhooks
 ClickBalance API directa
 ```
 
-Nota WFM: CSV/XLSX/API de programacion variable siempre deben crear batches en `draft` para revision. Ningun endpoint de importacion publica automaticamente programacion diaria.
+Nota WFM: CSV/XLSX/API de programacion por calendario siempre deben crear batches en `draft` para revision. Ningun endpoint de importacion publica automaticamente programacion diaria.
 
 Cada `schedule_batch` pertenece obligatoriamente a una empresa, un centro y un rango de fechas. Una operacion de empresa completa debe crear un batch por centro.
 

@@ -19,6 +19,8 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('workers', 'workers.index')->name('workers.index');
     Volt::route('schedules', 'schedules.index')->name('schedules.index');
     Volt::route('scheduling/shifts', 'scheduling.shifts')->name('scheduling.shifts');
+    Volt::route('scheduling/profiles', 'scheduling.profiles')->name('scheduling.profiles');
+    Volt::route('scheduling/profile-assignments', 'scheduling.profile-assignments')->name('scheduling.profile-assignments');
     Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
     Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
     Volt::route('organization/units', 'organization.units')->name('organization.units');

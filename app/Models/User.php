@@ -110,4 +110,9 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(OperationalScopeAssignment::class);
     }
+
+    public function createdScheduleProfileAssignments(): HasMany
+    {
+        return $this->hasMany(ScheduleProfileAssignment::class, 'created_by');
+    }
 }

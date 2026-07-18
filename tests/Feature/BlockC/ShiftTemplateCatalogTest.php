@@ -105,6 +105,10 @@ class ShiftTemplateCatalogTest extends TestCase
     {
         $company = Company::factory()->create(['status' => 'active']);
 
+        $normal = app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'NORM', 'name' => 'Normal'], [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '08:00', 'end_local_time' => '16:00', 'sort_order' => 1],
+        ]);
+
         $night = app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'NOCT', 'name' => 'Nocturno'], [[
             'segment_type' => 'work',
             'timing_mode' => 'fixed',
@@ -119,16 +123,41 @@ class ShiftTemplateCatalogTest extends TestCase
             ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '08:00', 'end_local_time' => '13:00', 'sort_order' => 1],
             ['segment_type' => 'break', 'timing_mode' => 'fixed', 'start_local_time' => '13:00', 'end_local_time' => '15:00', 'is_paid' => false, 'sort_order' => 2],
             ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '15:00', 'end_local_time' => '18:00', 'sort_order' => 3],
-            ['segment_type' => 'break', 'timing_mode' => 'duration', 'duration_minutes' => 30, 'is_paid' => true, 'sort_order' => 4],
+            ['segment_type' => 'break', 'timing_mode' => 'duration', 'duration_minutes' => 30, 'is_paid' => false, 'sort_order' => 4],
         ]);
 
+        $this->assertSame(480, $normal->metrics()['gross_work_minutes']);
+        $this->assertSame(480, $normal->metrics()['effective_work_minutes']);
+        $this->assertSame(480, $normal->metrics()['total_span_minutes']);
         $this->assertTrue($night->metrics()['crosses_midnight']);
-        $this->assertSame(480, $night->metrics()['work_minutes']);
-        $this->assertSame(480, $split->metrics()['work_minutes']);
+        $this->assertSame(480, $night->metrics()['gross_work_minutes']);
+        $this->assertSame(480, $night->metrics()['effective_work_minutes']);
+        $this->assertSame(480, $split->metrics()['gross_work_minutes']);
+        $this->assertSame(450, $split->metrics()['effective_work_minutes']);
         $this->assertSame(120, $split->metrics()['fixed_break_minutes']);
-        $this->assertSame(30, $split->metrics()['paid_break_minutes']);
+        $this->assertSame(0, $split->metrics()['fixed_paid_break_minutes']);
+        $this->assertSame(120, $split->metrics()['fixed_unpaid_break_minutes']);
+        $this->assertSame(0, $split->metrics()['duration_paid_break_minutes']);
+        $this->assertSame(30, $split->metrics()['duration_unpaid_break_minutes']);
+        $this->assertSame(0, $split->metrics()['paid_break_minutes']);
+        $this->assertSame(150, $split->metrics()['unpaid_break_minutes']);
         $this->assertSame(600, $split->metrics()['total_span_minutes']);
         $this->assertSame(2, $split->metrics()['work_segment_count']);
+    }
+
+    public function test_paid_duration_break_does_not_reduce_effective_work(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+
+        $template = app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'PAGO', 'name' => 'Pausa pagada'], [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '08:00', 'end_local_time' => '16:00', 'sort_order' => 1],
+            ['segment_type' => 'break', 'timing_mode' => 'duration', 'duration_minutes' => 30, 'is_paid' => true, 'sort_order' => 2],
+        ]);
+
+        $this->assertSame(480, $template->metrics()['gross_work_minutes']);
+        $this->assertSame(30, $template->metrics()['duration_paid_break_minutes']);
+        $this->assertSame(0, $template->metrics()['duration_unpaid_break_minutes']);
+        $this->assertSame(480, $template->metrics()['effective_work_minutes']);
     }
 
     public function test_invalid_segment_rules_are_blocked(): void
@@ -210,8 +239,10 @@ class ShiftTemplateCatalogTest extends TestCase
             ->set('filters.search', 'PART')
             ->assertSee('Jornada partida')
             ->assertSee('8 h')
+            ->assertSee('Trabajo efectivo')
             ->call('showDetail', $template->id)
             ->assertSee('Detalle de segmentos')
+            ->assertSee('Trabajo efectivo programado')
             ->assertSee('08:00')
             ->call('loadEditForm', $template->id)
             ->set('form.name', 'Jornada partida editada')
@@ -271,7 +302,7 @@ class ShiftTemplateCatalogTest extends TestCase
 
     public function test_block_c_does_not_create_future_wfm_or_calculation_tables(): void
     {
-        foreach (['schedule_profiles', 'schedule_batches', 'daily_schedule_assignments', 'daily_schedule_segments', 'work_days', 'work_day_calculations'] as $table) {
+        foreach (['schedule_batches', 'daily_schedule_assignments', 'daily_schedule_segments', 'work_days', 'work_day_calculations'] as $table) {
             $this->assertFalse(Schema::hasTable($table), "{$table} no debe existir en Bloque C.");
         }
     }
