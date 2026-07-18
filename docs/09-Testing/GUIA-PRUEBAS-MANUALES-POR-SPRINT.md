@@ -1234,3 +1234,57 @@ php artisan test tests/Feature/BlockF1/DailyScheduleCoreDomainTest.php --stop-on
 - `work_day_calculations`.
 - Calculos legales.
 - Alertas, incidencias y reportes.
+
+---
+
+## Bloque F2 - generacion draft desde perfiles
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+F2 no agrega pantalla nueva. La revision manual consiste en preparar escenarios demo y verificar que los batches quedan en borrador, sin publicar ni calcular jornadas.
+
+Preparacion opcional:
+
+```bash
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+```
+
+El periodo demo usado por F2 es:
+
+```text
+2026-08-03 a 2026-08-16
+```
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Seeder F2 | Ejecutar `VeraTimeDailyScheduleScenarioSeeder` dos veces. | No duplica batches ni dias. |
+| Oficina por patron | Revisar datos generados por pruebas/seeder. | Lunes a viernes quedan `shift`; sabado y domingo `rest`. |
+| Ciclo rotativo | Revisar escenario ciclo. | El ciclo respeta `effective_from` de la asignacion, no el inicio del batch. |
+| Flexible | Revisar escenario flexible. | Dias laborales quedan `flexible` con minutos y ventana; descansos quedan `rest`. |
+| Bajo demanda | Revisar escenario on_call. | Dias aplicables quedan `on_call` con disponibilidad y maximo; no crean trabajo real. |
+| Calendario | Revisar tienda por calendario. | Dias quedan `unassigned` con motivo `calendar_requires_daily_definition`. |
+| Sin perfil | Revisar empresa sin perfil. | Dias quedan `unassigned` con motivo `no_effective_schedule_profile`. |
+| Regeneracion missing_only | Ejecutar generacion dos veces. | La segunda ejecucion crea 0 dias. |
+| Regeneracion refresh | Cambiar perfil y refrescar. | Solo se reemplazan dias generados por perfiles. |
+| Proteccion manual/csv/api | Preparar dia manual/csv/api y refrescar. | El dia se conserva sin cambios. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Interfaz de calendario diario.
+- Boton visual para generar.
+- Publicacion de batch.
+- Snapshots persistidos de publicacion.
+- CSV/XLSX o API WFM.
+- `work_days`.
+- `work_day_calculations`.
+- Activaciones on-call.
+- Motor legal, calculos, alertas, incidencias y reportes.

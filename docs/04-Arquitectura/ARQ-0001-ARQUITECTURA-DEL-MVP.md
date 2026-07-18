@@ -1035,6 +1035,7 @@ Reglas arquitectonicas:
 - API, CSV/XLSX, jobs y vistas reutilizan Actions/Services.
 - Los perfiles de horario generan borradores, no resultados operativos.
 - Bloque F1 crea el nucleo de batches, asignaciones diarias, segmentos, snapshot canonico y resolver publicado, sin UI ni publicacion operativa.
+- Bloque F2 genera programacion diaria en borrador desde perfiles, sin publicar ni persistir snapshots de publicacion.
 - `PublishScheduleBatchAction` congelara snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256 cuando se implemente la publicacion operativa.
 - `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion efectiva publicada por relacion laboral y fecha.
 - La publicacion es inmutable. Una correccion genera nueva version y deja la anterior `superseded`.
@@ -1059,8 +1060,11 @@ Responsabilidades:
 | `ResolveUserOperationalScopeAction` | Determina si el usuario tiene alcance completo de empresa o alcance limitado por centro/unidad. |
 | `EnsureUserCanManageWorkerAction` | Bloquea operaciones sobre trabajadores fuera del alcance del usuario. |
 | `ResolveScheduleProfileForRelationshipAction` | Resuelve el perfil aplicable para una relacion laboral segun asignaciones vigentes. |
-| `GenerateDailySchedulesFromProfileAction` | Convertira perfiles `pattern`, `calendar`, `flexible` u `on_call` en dias borrador cuando se implemente la programacion diaria. En E1 ya existe dominio para `pattern_mode = cycle`, `flexible` y `on_call`, pero todavia no genera programacion diaria. |
+| `GenerateDailySchedulesFromProfileAction` | Nombre conceptual previo. La implementacion F2 usa `GenerateDraftScheduleBatchFromProfilesAction` para crear solo borradores. |
 | `ResolveScheduleProfileRuleForDateAction` | Resuelve la regla aplicable por fecha desde una asignacion efectiva: weekly, cycle, calendar, flexible u on_call. No crea dias publicados ni batches. |
+| `GenerateDraftScheduleBatchFromProfilesAction` | Genera o refresca dias de un batch `draft` usando perfiles efectivos por relacion laboral y fecha. Modos: `missing_only` y `refresh_profile_generated`. Preserva dias manual/csv/api y otros system. |
+| `BuildDraftDailyScheduleFromResolvedProfileAction` | Convierte una regla resuelta en payload de `daily_schedule_assignment`: `shift`, `rest`, `flexible`, `on_call` o `unassigned`. |
+| `BuildDailyScheduleSegmentsFromShiftTemplateAction` | Copia segmentos de `shift_templates` y calcula UTC con timezone del centro. |
 | `CreateScheduleBatchAction` | Crea batches en borrador por empresa, centro, periodo y version, sin aceptar datos de publicacion desde entrada no confiable. |
 | `ReplaceDraftDailyScheduleAssignmentAction` | Reemplaza de forma atomica la programacion de un dia dentro de un batch draft. |
 | `RemoveDraftDailyScheduleAssignmentAction` | Elimina solo dias de borrador; no aplica a batches publicados. |

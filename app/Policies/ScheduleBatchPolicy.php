@@ -40,6 +40,11 @@ class ScheduleBatchPolicy
         return $batch->status === 'draft' && $this->canManageCompanyScheduling($user, $batch->company);
     }
 
+    public function generate(User $user, ScheduleBatch $batch): bool
+    {
+        return $this->update($user, $batch);
+    }
+
     public function deleteDraft(User $user, ScheduleBatch $batch): bool
     {
         return $this->update($user, $batch);

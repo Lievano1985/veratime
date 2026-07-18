@@ -873,7 +873,9 @@ La publicacion sera inmutable. Una correccion generara una nueva version y la ve
 
 `daily_schedule_assignments` publicados y `daily_schedule_segments` seran la unica fuente operativa.
 
-En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. No incluye todavia interfaz, generacion desde perfiles ni publicacion operativa.
+En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. En Bloque F2 se implementa la generacion de borradores desde perfiles con modos `missing_only` y `refresh_profile_generated`.
+
+La generacion F2 debe preservar dias manuales, CSV, API o system ajenos al generador; debe congelar unidad principal y timezone por fecha; `calendar` y ausencia de perfil generan `unassigned` con motivo explicito. No publica, no persiste snapshot de publicacion y no calcula jornada.
 
 **Prioridad:** P0
 
@@ -890,7 +892,7 @@ Vera Time debera soportar perfiles de horario:
 
 El perfil `flexible` no debera mezclarse con una plantilla de turno rigida.
 
-En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E1/E2 queda operativo el dominio y la interfaz de `pattern` con `pattern_mode = cycle`, `flexible` y `on_call`: reglas, validacion y resolucion por fecha. No incluye generacion de programacion diaria desde perfiles, activaciones bajo demanda, alertas ni calculos.
+En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E1/E2 queda operativo el dominio y la interfaz de `pattern` con `pattern_mode = cycle`, `flexible` y `on_call`: reglas, validacion y resolucion por fecha. En F2 esos perfiles pueden generar borradores diarios. No incluye activaciones bajo demanda, publicacion, alertas ni calculos.
 
 **Prioridad:** P0
 

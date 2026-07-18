@@ -105,6 +105,8 @@ Una operacion empresarial completa crea un batch por centro.
 
 En Bloque F1 se implementa el nucleo de datos y dominio para crear batches en `draft`, reemplazar dias de borrador de forma atomica, construir snapshots canonicos y resolver programacion publicada. F1 no agrega pantalla, generacion desde perfiles ni publicacion operativa.
 
+En Bloque F2 se implementa la generacion de dias en borrador desde perfiles. La generacion opera solo sobre batches `draft`, resuelve nuevamente perfil y regla por cada relacion laboral/fecha, congela unidad principal y timezone del centro, copia segmentos de plantilla y preserva dias manuales, CSV, API o de otros procesos. F2 no publica, no persiste snapshots de publicacion y no crea `work_days`.
+
 Al publicar, el batch queda con snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`. Cada `daily_schedule_assignment` queda ligado al batch versionado con:
 
 - relacion laboral;
@@ -135,11 +137,13 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `ResolveUserOperationalScopeAction`
 - `EnsureUserCanManageWorkerAction`
 - `ResolveScheduleProfileForRelationshipAction`
+- `ResolveScheduleProfileRuleForDateAction`
 - `GenerateDailySchedulesFromProfileAction`
+- `GenerateDraftScheduleBatchFromProfilesAction`
 - `PublishScheduleBatchAction`
 - `ResolveDailyScheduleForRelationshipDateAction`
 
-En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`, sin crear `daily_schedule_assignments`. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
 
 ## Snapshots y Versionamiento
 
