@@ -18,6 +18,7 @@ class ScheduleProfile extends Model
         'name',
         'description',
         'profile_type',
+        'pattern_mode',
         'status',
         'metadata',
     ];

@@ -40,6 +40,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertTrue(Schema::hasTable('schedule_profiles'));
         $this->assertTrue(Schema::hasTable('schedule_profile_weekly_rules'));
         $this->assertTrue(Schema::hasTable('schedule_profile_assignments'));
+        $this->assertTrue(Schema::hasColumn('schedule_profiles', 'pattern_mode'));
         $this->assertFalse(Schema::hasColumn('schedule_profiles', 'center_id'));
         $this->assertFalse(Schema::hasColumn('schedule_profiles', 'worker_id'));
         $this->assertFalse(Schema::hasColumn('schedule_profiles', 'timezone'));
@@ -50,30 +51,33 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertFalse(Schema::hasTable('daily_schedule_segments'));
     }
 
-    public function test_creates_fixed_and_variable_profiles_with_d1_rules(): void
+    public function test_creates_pattern_weekly_and_calendar_profiles_with_d1_rules(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $template = $this->shiftTemplate($company, 'APER');
 
-        $fixed = app(CreateScheduleProfileAction::class)->handle($company, [
-            'code' => 'FIX',
-            'name' => 'Fijo',
-            'profile_type' => 'fixed',
+        $pattern = app(CreateScheduleProfileAction::class)->handle($company, [
+            'code' => 'PAT',
+            'name' => 'Patron semanal',
+            'profile_type' => 'pattern',
+            'pattern_mode' => 'weekly',
         ], $this->weeklyRules($template));
 
-        $variable = app(CreateScheduleProfileAction::class)->handle($company, [
-            'code' => 'VAR',
-            'name' => 'Variable',
-            'profile_type' => 'variable',
+        $calendar = app(CreateScheduleProfileAction::class)->handle($company, [
+            'code' => 'CAL',
+            'name' => 'Calendario',
+            'profile_type' => 'calendar',
         ]);
 
-        $this->assertSame('fixed', $fixed->profile_type);
-        $this->assertCount(7, $fixed->weeklyRules);
-        $this->assertSame('variable', $variable->profile_type);
-        $this->assertCount(0, $variable->weeklyRules);
+        $this->assertSame('pattern', $pattern->profile_type);
+        $this->assertSame('weekly', $pattern->pattern_mode);
+        $this->assertCount(7, $pattern->weeklyRules);
+        $this->assertSame('calendar', $calendar->profile_type);
+        $this->assertNull($calendar->pattern_mode);
+        $this->assertCount(0, $calendar->weeklyRules);
     }
 
-    public function test_weekly_rules_require_exact_fixed_configuration(): void
+    public function test_weekly_rules_require_exact_pattern_configuration(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $template = $this->shiftTemplate($company, 'APER');
@@ -95,7 +99,8 @@ class ScheduleProfileDomainTest extends TestCase
                 app(CreateScheduleProfileAction::class)->handle($company, [
                     'code' => 'BAD'.uniqid(),
                     'name' => 'Invalido',
-                    'profile_type' => 'fixed',
+                    'profile_type' => 'pattern',
+                    'pattern_mode' => 'weekly',
                 ], $rules);
                 $this->fail('Reglas invalidas aceptadas.');
             } catch (InvalidArgumentException) {
@@ -103,9 +108,43 @@ class ScheduleProfileDomainTest extends TestCase
             }
         }
 
-        $variable = app(CreateScheduleProfileAction::class)->handle($company, ['code' => 'VAR', 'name' => 'Variable', 'profile_type' => 'variable']);
+        $calendar = app(CreateScheduleProfileAction::class)->handle($company, ['code' => 'CAL', 'name' => 'Calendario', 'profile_type' => 'calendar']);
         $this->expectException(InvalidArgumentException::class);
-        app(ReplaceScheduleProfileWeeklyRulesAction::class)->handle($company, $variable, $this->weeklyRules($template));
+        app(ReplaceScheduleProfileWeeklyRulesAction::class)->handle($company, $calendar, $this->weeklyRules($template));
+    }
+
+    public function test_legacy_fixed_variable_aliases_and_future_modes_are_not_operational(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        $template = $this->shiftTemplate($company, 'APER');
+
+        foreach (['fixed', 'variable', 'flexible', 'on_call'] as $type) {
+            try {
+                app(CreateScheduleProfileAction::class)->handle($company, [
+                    'code' => 'BAD'.strtoupper(str_replace('_', '', $type)),
+                    'name' => 'Invalido',
+                    'profile_type' => $type,
+                    'pattern_mode' => $type === 'fixed' ? 'weekly' : null,
+                ], $this->weeklyRules($template));
+                $this->fail('Tipo de perfil no operativo aceptado.');
+            } catch (InvalidArgumentException) {
+                $this->assertTrue(true);
+            }
+        }
+
+        foreach ([null, 'cycle'] as $mode) {
+            try {
+                app(CreateScheduleProfileAction::class)->handle($company, [
+                    'code' => 'MOD'.($mode ?: 'NULL'),
+                    'name' => 'Modo invalido',
+                    'profile_type' => 'pattern',
+                    'pattern_mode' => $mode,
+                ], $this->weeklyRules($template));
+                $this->fail('Modalidad de patron no operativa aceptada.');
+            } catch (InvalidArgumentException) {
+                $this->assertTrue(true);
+            }
+        }
     }
 
     public function test_profile_code_uniqueness_inactivation_and_reactivation(): void
@@ -113,9 +152,9 @@ class ScheduleProfileDomainTest extends TestCase
         $company = Company::factory()->create(['status' => 'active']);
         $otherCompany = Company::factory()->create(['status' => 'active']);
         $template = $this->shiftTemplate($company, 'APER');
-        $profile = $this->fixedProfile($company, $template, 'BASE');
+        $profile = $this->patternProfile($company, $template, 'BASE');
 
-        $this->fixedProfile($otherCompany, $this->shiftTemplate($otherCompany, 'APER'), 'BASE');
+        $this->patternProfile($otherCompany, $this->shiftTemplate($otherCompany, 'APER'), 'BASE');
 
         app(InactivateScheduleProfileAction::class)->handle($company, $profile);
         $this->assertSame('inactive', $profile->refresh()->status);
@@ -123,13 +162,13 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertSame('active', $profile->refresh()->status);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->fixedProfile($company, $template, 'base');
+        $this->patternProfile($company, $template, 'base');
     }
 
     public function test_inactivation_blocks_active_or_future_assignments(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $profile = $this->fixedProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
+        $profile = $this->patternProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
 
         app(AssignScheduleProfileAction::class)->handle($company, $profile, [
             'assignment_scope' => 'company',
@@ -144,8 +183,8 @@ class ScheduleProfileDomainTest extends TestCase
     {
         $company = Company::factory()->create(['status' => 'active']);
         $otherCompany = Company::factory()->create(['status' => 'active']);
-        $profile = $this->fixedProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
-        $otherProfile = $this->fixedProfile($otherCompany, $this->shiftTemplate($otherCompany, 'APER'), 'BASE');
+        $profile = $this->patternProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
+        $otherProfile = $this->patternProfile($otherCompany, $this->shiftTemplate($otherCompany, 'APER'), 'BASE');
         $center = Center::factory()->for($company)->create(['status' => 'active']);
         $unit = OrganizationalUnit::factory()->for($company)->for($center)->create(['status' => 'active']);
         $relationship = EmploymentRelationship::factory()->forCompany($company)->create([
@@ -180,8 +219,8 @@ class ScheduleProfileDomainTest extends TestCase
     public function test_replacement_and_end_preserve_assignment_history(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $base = $this->fixedProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
-        $newProfile = app(CreateScheduleProfileAction::class)->handle($company, ['code' => 'VAR', 'name' => 'Variable', 'profile_type' => 'variable']);
+        $base = $this->patternProfile($company, $this->shiftTemplate($company, 'APER'), 'BASE');
+        $newProfile = app(CreateScheduleProfileAction::class)->handle($company, ['code' => 'CAL', 'name' => 'Calendario', 'profile_type' => 'calendar']);
 
         $assignment = app(AssignScheduleProfileAction::class)->handle($company, $base, ['assignment_scope' => 'company', 'effective_from' => '2026-08-01']);
         $replacement = app(ReplaceScheduleProfileAssignmentAction::class)->handle($company, $assignment, $newProfile, ['effective_from' => '2026-09-01']);
@@ -207,10 +246,10 @@ class ScheduleProfileDomainTest extends TestCase
             'started_at' => '2026-08-01',
         ]);
 
-        $companyProfile = $this->fixedProfile($company, $this->shiftTemplate($company, 'COMP'), 'COMP');
-        $centerProfile = $this->fixedProfile($company, $this->shiftTemplate($company, 'CENT'), 'CENT');
-        $unitProfile = $this->fixedProfile($company, $this->shiftTemplate($company, 'UNIT'), 'UNIT');
-        $directProfile = $this->fixedProfile($company, $this->shiftTemplate($company, 'DIR'), 'DIR');
+        $companyProfile = $this->patternProfile($company, $this->shiftTemplate($company, 'COMP'), 'COMP');
+        $centerProfile = $this->patternProfile($company, $this->shiftTemplate($company, 'CENT'), 'CENT');
+        $unitProfile = $this->patternProfile($company, $this->shiftTemplate($company, 'UNIT'), 'UNIT');
+        $directProfile = $this->patternProfile($company, $this->shiftTemplate($company, 'DIR'), 'DIR');
 
         app(AssignScheduleProfileAction::class)->handle($company, $companyProfile, ['assignment_scope' => 'company', 'effective_from' => '2026-08-01']);
         app(AssignScheduleProfileAction::class)->handle($company, $centerProfile, ['assignment_scope' => 'center', 'center_id' => $center->id, 'effective_from' => '2026-08-01']);
@@ -235,7 +274,7 @@ class ScheduleProfileDomainTest extends TestCase
         $company = Company::factory()->create(['status' => 'active']);
         $center = Center::factory()->for($company)->create(['status' => 'active']);
         $relationship = EmploymentRelationship::factory()->forCompany($company)->create(['center_id' => $center->id]);
-        $profile = $this->fixedProfile($company, $this->shiftTemplate($company, 'BASE'), 'BASE');
+        $profile = $this->patternProfile($company, $this->shiftTemplate($company, 'BASE'), 'BASE');
 
         foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $roleKey) {
             $user = $this->userWithCompanyRole($company, $roleKey);
@@ -265,7 +304,7 @@ class ScheduleProfileDomainTest extends TestCase
     public function test_invalid_rules_or_failed_replacement_do_not_leave_partial_state(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $profile = $this->fixedProfile($company, $this->shiftTemplate($company, 'BASE'), 'BASE');
+        $profile = $this->patternProfile($company, $this->shiftTemplate($company, 'BASE'), 'BASE');
         $assignment = app(AssignScheduleProfileAction::class)->handle($company, $profile, ['assignment_scope' => 'company', 'effective_from' => '2026-08-01']);
 
         try {
@@ -305,12 +344,13 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertFalse(Schema::hasTable('daily_schedule_assignments'));
     }
 
-    private function fixedProfile(Company $company, ShiftTemplate $template, string $code): ScheduleProfile
+    private function patternProfile(Company $company, ShiftTemplate $template, string $code): ScheduleProfile
     {
         return app(CreateScheduleProfileAction::class)->handle($company, [
             'code' => $code,
             'name' => 'Perfil '.$code,
-            'profile_type' => 'fixed',
+            'profile_type' => 'pattern',
+            'pattern_mode' => 'weekly',
         ], $this->weeklyRules($template));
     }
 

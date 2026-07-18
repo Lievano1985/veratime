@@ -458,17 +458,17 @@ class VeraTimeDemoSeeder extends Seeder
             ->where('code', 'APER')
             ->firstOrFail();
 
-        $fixed = $this->scheduleProfile($company, 'OFIJA', 'Oficina fija demo', 'fixed', $this->fixedWeeklyRules($apertura));
-        $variable = $this->scheduleProfile($company, 'OVAR', 'Operacion variable demo', 'variable');
+        $pattern = $this->scheduleProfile($company, 'OPAT', 'Oficina por patron demo', 'pattern', 'weekly', $this->weeklyPatternRules($apertura));
+        $calendar = $this->scheduleProfile($company, 'OCAL', 'Operacion por calendario demo', 'calendar');
 
-        $this->scheduleProfileAssignment($company, $fixed, [
+        $this->scheduleProfileAssignment($company, $pattern, [
             'assignment_scope' => 'company',
             'effective_from' => '2026-08-01',
             'reason' => 'Perfil base demo de empresa.',
             'metadata' => ['demo' => true, 'expected_resolution' => 'company'],
         ], $createdBy);
 
-        $this->scheduleProfileAssignment($company, $variable, [
+        $this->scheduleProfileAssignment($company, $calendar, [
             'assignment_scope' => 'center',
             'center_id' => $centers['planta']->id,
             'effective_from' => '2026-08-01',
@@ -476,7 +476,7 @@ class VeraTimeDemoSeeder extends Seeder
             'metadata' => ['demo' => true, 'expected_resolution' => 'center'],
         ], $createdBy);
 
-        $this->scheduleProfileAssignment($company, $variable, [
+        $this->scheduleProfileAssignment($company, $calendar, [
             'assignment_scope' => 'organizational_unit',
             'organizational_unit_id' => $units['rh']->id,
             'effective_from' => '2026-08-01',
@@ -484,7 +484,7 @@ class VeraTimeDemoSeeder extends Seeder
             'metadata' => ['demo' => true, 'expected_resolution' => 'organizational_unit'],
         ], $createdBy);
 
-        $this->scheduleProfileAssignment($company, $fixed, [
+        $this->scheduleProfileAssignment($company, $pattern, [
             'assignment_scope' => 'employment_relationship',
             'employment_relationship_id' => $workers['bruno']['relationship']->id,
             'effective_from' => '2026-08-01',
@@ -493,13 +493,14 @@ class VeraTimeDemoSeeder extends Seeder
         ], $createdBy);
     }
 
-    private function scheduleProfile(Company $company, string $code, string $name, string $type, array $rules = []): ScheduleProfile
+    private function scheduleProfile(Company $company, string $code, string $name, string $type, ?string $patternMode = null, array $rules = []): ScheduleProfile
     {
         $data = [
             'code' => $code,
             'name' => $name,
             'description' => 'Perfil demo local sin generar programacion diaria.',
             'profile_type' => $type,
+            'pattern_mode' => $patternMode,
             'status' => 'active',
             'metadata' => ['demo' => true],
         ];
@@ -510,11 +511,11 @@ class VeraTimeDemoSeeder extends Seeder
             ->first();
 
         return $profile
-            ? app(UpdateScheduleProfileAction::class)->handle($company, $profile, $data, $type === 'fixed' ? $rules : null)
+            ? app(UpdateScheduleProfileAction::class)->handle($company, $profile, $data, $type === 'pattern' && $patternMode === 'weekly' ? $rules : null)
             : app(CreateScheduleProfileAction::class)->handle($company, $data, $rules);
     }
 
-    private function fixedWeeklyRules(ShiftTemplate $template): array
+    private function weeklyPatternRules(ShiftTemplate $template): array
     {
         $rules = [];
 

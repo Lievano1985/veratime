@@ -14,8 +14,8 @@ class ReplaceScheduleProfileWeeklyRulesAction
     {
         $this->assertTenant($company, $profile);
 
-        if ($profile->profile_type !== 'fixed') {
-            throw new InvalidArgumentException('Solo los perfiles fijos admiten reglas semanales.');
+        if ($profile->profile_type !== 'pattern' || $profile->pattern_mode !== 'weekly') {
+            throw new InvalidArgumentException('Solo los perfiles por patron semanal admiten reglas semanales.');
         }
 
         $normalized = $this->normalizeRules($company, $rules);
@@ -50,7 +50,7 @@ class ReplaceScheduleProfileWeeklyRulesAction
     private function normalizeRules(Company $company, array $rules): array
     {
         if (count($rules) !== 7) {
-            throw new InvalidArgumentException('Un perfil fijo requiere exactamente siete reglas semanales.');
+            throw new InvalidArgumentException('Un perfil por patron semanal requiere exactamente siete reglas semanales.');
         }
 
         $normalized = [];
@@ -99,7 +99,7 @@ class ReplaceScheduleProfileWeeklyRulesAction
         }
 
         if (! $hasShift) {
-            throw new InvalidArgumentException('Un perfil fijo requiere al menos un dia con turno.');
+            throw new InvalidArgumentException('Un perfil por patron semanal requiere al menos un dia con turno.');
         }
 
         usort($normalized, fn (array $a, array $b): int => $a['day_of_week'] <=> $b['day_of_week']);

@@ -16,12 +16,14 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('profile_type');
+            $table->string('pattern_mode')->nullable();
             $table->string('status')->default('active');
             $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->unique(['company_id', 'code']);
             $table->index(['company_id', 'profile_type']);
+            $table->index(['company_id', 'profile_type', 'pattern_mode'], 'schedule_profiles_company_type_mode_idx');
             $table->index(['company_id', 'status']);
         });
     }

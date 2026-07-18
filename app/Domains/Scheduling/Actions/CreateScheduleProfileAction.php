@@ -19,32 +19,34 @@ class CreateScheduleProfileAction
 
         $code = $this->normalizeCode($data['code'] ?? null);
         $profileType = $this->normalizeProfileType($data['profile_type'] ?? null);
+        $patternMode = $this->normalizePatternMode($profileType, $data['pattern_mode'] ?? null);
 
         if (ScheduleProfile::query()->where('company_id', $company->id)->where('code', $code)->exists()) {
             throw new InvalidArgumentException('Ya existe un perfil con el mismo codigo en esta empresa.');
         }
 
-        if ($profileType === 'fixed' && $weeklyRules === []) {
-            throw new InvalidArgumentException('Un perfil fijo requiere siete reglas semanales.');
+        if ($profileType === 'pattern' && $patternMode === 'weekly' && $weeklyRules === []) {
+            throw new InvalidArgumentException('Un perfil por patron semanal requiere siete reglas semanales.');
         }
 
-        if ($profileType === 'variable' && $weeklyRules !== []) {
-            throw new InvalidArgumentException('Un perfil variable no admite reglas semanales.');
+        if ($profileType === 'calendar' && $weeklyRules !== []) {
+            throw new InvalidArgumentException('Un perfil por calendario no admite reglas semanales.');
         }
 
-        return DB::transaction(function () use ($company, $data, $weeklyRules, $code, $profileType): ScheduleProfile {
+        return DB::transaction(function () use ($company, $data, $weeklyRules, $code, $profileType, $patternMode): ScheduleProfile {
             $profile = new ScheduleProfile([
                 'code' => $code,
                 'name' => $this->requiredString($data['name'] ?? null, 'El nombre del perfil es requerido.'),
                 'description' => blank($data['description'] ?? null) ? null : trim((string) $data['description']),
                 'profile_type' => $profileType,
+                'pattern_mode' => $patternMode,
                 'status' => in_array($data['status'] ?? 'active', ['active', 'inactive'], true) ? ($data['status'] ?? 'active') : 'active',
                 'metadata' => $data['metadata'] ?? [],
             ]);
             $profile->company()->associate($company);
             $profile->save();
 
-            if ($profileType === 'fixed') {
+            if ($profileType === 'pattern' && $patternMode === 'weekly') {
                 $this->replaceWeeklyRules->handle($company, $profile, $weeklyRules);
             }
 
@@ -61,11 +63,28 @@ class CreateScheduleProfileAction
 
     private function normalizeProfileType(?string $type): string
     {
-        if (! in_array($type, ['fixed', 'variable'], true)) {
+        if (! in_array($type, ['pattern', 'calendar'], true)) {
             throw new InvalidArgumentException('El tipo de perfil no es valido para D1.');
         }
 
         return $type;
+    }
+
+    private function normalizePatternMode(string $profileType, ?string $patternMode): ?string
+    {
+        if ($profileType === 'pattern') {
+            if ($patternMode !== 'weekly') {
+                throw new InvalidArgumentException('Un perfil por patron requiere modalidad semanal en este bloque.');
+            }
+
+            return 'weekly';
+        }
+
+        if (filled($patternMode)) {
+            throw new InvalidArgumentException('Solo los perfiles por patron admiten modalidad de patron.');
+        }
+
+        return null;
     }
 
     private function normalizeCode(?string $code): string

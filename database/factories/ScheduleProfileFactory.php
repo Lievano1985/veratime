@@ -18,16 +18,18 @@ class ScheduleProfileFactory extends Factory
             'code' => strtoupper(fake()->unique()->bothify('PER-###')),
             'name' => fake()->words(2, true),
             'description' => null,
-            'profile_type' => 'fixed',
+            'profile_type' => 'pattern',
+            'pattern_mode' => 'weekly',
             'status' => 'active',
             'metadata' => [],
         ];
     }
 
-    public function variable(): static
+    public function calendar(): static
     {
         return $this->state(fn (): array => [
-            'profile_type' => 'variable',
+            'profile_type' => 'calendar',
+            'pattern_mode' => null,
         ]);
     }
 }

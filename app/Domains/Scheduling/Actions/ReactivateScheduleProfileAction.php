@@ -22,10 +22,10 @@ class ReactivateScheduleProfileAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedProfile->profile_type === 'fixed') {
+            if ($lockedProfile->profile_type === 'pattern' && $lockedProfile->pattern_mode === 'weekly') {
                 $rules = $lockedProfile->weeklyRules()->lockForUpdate()->get();
                 if ($rules->count() !== 7 || $rules->where('day_type', 'shift')->isEmpty()) {
-                    throw new InvalidArgumentException('El perfil fijo no tiene reglas semanales validas para reactivarse.');
+                    throw new InvalidArgumentException('El perfil por patron semanal no tiene reglas semanales validas para reactivarse.');
                 }
             }
 
