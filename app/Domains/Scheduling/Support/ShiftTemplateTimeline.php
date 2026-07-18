@@ -57,6 +57,10 @@ class ShiftTemplateTimeline
         $fixed = $this->fixedSegments();
         $workMinutes = 0;
         $fixedBreakMinutes = 0;
+        $fixedPaidBreakMinutes = 0;
+        $fixedUnpaidBreakMinutes = 0;
+        $durationPaidBreakMinutes = 0;
+        $durationUnpaidBreakMinutes = 0;
         $paidBreakMinutes = 0;
         $unpaidBreakMinutes = 0;
         $workSegments = 0;
@@ -80,20 +84,39 @@ class ShiftTemplateTimeline
                 $workSegments++;
             } elseif ($type === 'break' && $mode === 'fixed') {
                 $fixedBreakMinutes += $duration;
-                $isPaid ? $paidBreakMinutes += $duration : $unpaidBreakMinutes += $duration;
+                if ($isPaid) {
+                    $fixedPaidBreakMinutes += $duration;
+                    $paidBreakMinutes += $duration;
+                } else {
+                    $fixedUnpaidBreakMinutes += $duration;
+                    $unpaidBreakMinutes += $duration;
+                }
             } elseif ($type === 'break' && $mode === 'duration') {
-                $isPaid ? $paidBreakMinutes += $duration : $unpaidBreakMinutes += $duration;
+                if ($isPaid) {
+                    $durationPaidBreakMinutes += $duration;
+                    $paidBreakMinutes += $duration;
+                } else {
+                    $durationUnpaidBreakMinutes += $duration;
+                    $unpaidBreakMinutes += $duration;
+                }
             }
         }
 
         $firstStart = $fixed->min('start');
         $lastEnd = $fixed->max('end');
+        $effectiveWorkMinutes = max(0, $workMinutes - $durationUnpaidBreakMinutes);
 
         return [
+            'gross_work_minutes' => $workMinutes,
             'work_minutes' => $workMinutes,
             'fixed_break_minutes' => $fixedBreakMinutes,
+            'fixed_paid_break_minutes' => $fixedPaidBreakMinutes,
+            'fixed_unpaid_break_minutes' => $fixedUnpaidBreakMinutes,
+            'duration_paid_break_minutes' => $durationPaidBreakMinutes,
+            'duration_unpaid_break_minutes' => $durationUnpaidBreakMinutes,
             'paid_break_minutes' => $paidBreakMinutes,
             'unpaid_break_minutes' => $unpaidBreakMinutes,
+            'effective_work_minutes' => $effectiveWorkMinutes,
             'total_span_minutes' => $firstStart === null || $lastEnd === null ? 0 : $lastEnd - $firstStart,
             'crosses_midnight' => $fixed->contains(fn (array $segment) => $segment['end'] > 1440 || $segment['start'] >= 1440),
             'work_segment_count' => $workSegments,

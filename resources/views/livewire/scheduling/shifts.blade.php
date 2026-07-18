@@ -391,7 +391,7 @@ new class extends Component {
                 <tr>
                     <th class="px-4 py-3">Plantilla</th>
                     <th class="px-4 py-3">Segmentos</th>
-                    <th class="px-4 py-3">Trabajo</th>
+                    <th class="px-4 py-3">Trabajo efectivo</th>
                     <th class="px-4 py-3">Duración total</th>
                     <th class="px-4 py-3">Estado</th>
                     <th class="px-4 py-3 text-right">Acciones</th>
@@ -406,7 +406,10 @@ new class extends Component {
                             <span class="text-xs text-zinc-500">{{ $template->description ?: 'Sin descripción' }}</span>
                         </td>
                         <td class="px-4 py-3">{{ $template->segments->count() }}</td>
-                        <td class="px-4 py-3">{{ $this->formatMinutes($metrics['work_minutes']) }}</td>
+                        <td class="px-4 py-3">
+                            <span class="block">{{ $this->formatMinutes($metrics['effective_work_minutes']) }}</span>
+                            <span class="text-xs text-zinc-500">Bruto: {{ $this->formatMinutes($metrics['gross_work_minutes']) }}</span>
+                        </td>
                         <td class="px-4 py-3">
                             {{ $this->formatMinutes($metrics['total_span_minutes']) }}
                             @if ($metrics['crosses_midnight'])
@@ -459,9 +462,12 @@ new class extends Component {
             </div>
 
             <div class="mt-4 grid gap-2 text-sm md:grid-cols-2">
-                <p>Trabajo programado: {{ $this->formatMinutes($detailMetrics['work_minutes']) }}</p>
-                <p>Descanso pagado: {{ $this->formatMinutes($detailMetrics['paid_break_minutes']) }}</p>
-                <p>Descanso no pagado: {{ $this->formatMinutes($detailMetrics['unpaid_break_minutes']) }}</p>
+                <p>Trabajo programado bruto: {{ $this->formatMinutes($detailMetrics['gross_work_minutes']) }}</p>
+                <p>Descanso fijo pagado: {{ $this->formatMinutes($detailMetrics['fixed_paid_break_minutes']) }}</p>
+                <p>Descanso fijo no pagado: {{ $this->formatMinutes($detailMetrics['fixed_unpaid_break_minutes']) }}</p>
+                <p>Descanso por duración pagado: {{ $this->formatMinutes($detailMetrics['duration_paid_break_minutes']) }}</p>
+                <p>Descanso por duración no pagado: {{ $this->formatMinutes($detailMetrics['duration_unpaid_break_minutes']) }}</p>
+                <p>Trabajo efectivo programado: {{ $this->formatMinutes($detailMetrics['effective_work_minutes']) }}</p>
                 <p>Duración total: {{ $this->formatMinutes($detailMetrics['total_span_minutes']) }}</p>
             </div>
         </section>
@@ -549,9 +555,12 @@ new class extends Component {
                         @endforeach
                     </div>
                     <div class="mt-4 grid gap-2 text-sm md:grid-cols-2">
-                        <p>Trabajo programado: {{ $this->formatMinutes($preview['metrics']['work_minutes']) }}</p>
-                        <p>Descanso pagado: {{ $this->formatMinutes($preview['metrics']['paid_break_minutes']) }}</p>
-                        <p>Descanso no pagado: {{ $this->formatMinutes($preview['metrics']['unpaid_break_minutes']) }}</p>
+                        <p>Trabajo programado bruto: {{ $this->formatMinutes($preview['metrics']['gross_work_minutes']) }}</p>
+                        <p>Descanso fijo pagado: {{ $this->formatMinutes($preview['metrics']['fixed_paid_break_minutes']) }}</p>
+                        <p>Descanso fijo no pagado: {{ $this->formatMinutes($preview['metrics']['fixed_unpaid_break_minutes']) }}</p>
+                        <p>Descanso por duración pagado: {{ $this->formatMinutes($preview['metrics']['duration_paid_break_minutes']) }}</p>
+                        <p>Descanso por duración no pagado: {{ $this->formatMinutes($preview['metrics']['duration_unpaid_break_minutes']) }}</p>
+                        <p>Trabajo efectivo programado: {{ $this->formatMinutes($preview['metrics']['effective_work_minutes']) }}</p>
                         <p>Duración total: {{ $this->formatMinutes($preview['metrics']['total_span_minutes']) }}</p>
                         <p>Cruza medianoche: {{ $preview['metrics']['crosses_midnight'] ? 'Sí' : 'No' }}</p>
                     </div>
