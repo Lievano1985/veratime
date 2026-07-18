@@ -2048,6 +2048,8 @@ Las metricas del catalogo de turnos son derivadas y no se almacenan en columnas 
 
 Regla F1: los batches `published`, `superseded` y `cancelled` son inmutables desde las Actions. El snapshot canonico y el hash SHA-256 se construyen a nivel batch. MySQL/MariaDB no tiene unique parcial portable para "un publicado efectivo por trabajador/fecha"; F1 conserva unicidad dentro del batch y el resolver detecta conflictos si existen dos batches publicados aplicables. No se implementan todavia `work_days`, `work_day_calculations`, publicacion operativa desde UI, API WFM ni CSV.
 
+Regla F2: `GenerateDraftScheduleBatchFromProfilesAction` crea o refresca solo asignaciones dentro de batches `draft`. `source_reference` usa estructura estable con `schema_version`, `generator = schedule_profile_generation`, perfil, asignacion de perfil, origen, regla, `cycle_day`, plantilla y motivo. `missing_only` no toca dias existentes. `refresh_profile_generated` solo reemplaza dias `profile` o `system` creados por ese generador y conserva `manual`, `csv`, `api` y `system` de otros procesos. Los segmentos copiados desde `shift_templates` guardan horas locales, offsets y UTC calculado con timezone del centro. F2 no persiste `snapshot_sha256` ni `snapshot_canonical_json`; esos campos quedan para publicacion posterior.
+
 ## Cierres
 
 `closing_period_profiles`: catalogo de perfiles de cierre. Campos: `company_id`, `code`, `name`, `frequency` (`weekly`, `fourteen_day`, `semimonthly`, `monthly`, `custom`), `timezone`, `anchor_date`, `cutoff_day`, `payment_lag_days`, `is_default`, `status`, `metadata`. Toda empresa requiere un perfil default.

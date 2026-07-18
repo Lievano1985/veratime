@@ -27,18 +27,19 @@ class ReplaceDraftDailyScheduleAssignmentAction
             $lockedBatch = ScheduleBatch::query()->with('center')->lockForUpdate()->findOrFail($batch->id);
             $this->batchValidator->assertDraft($lockedBatch);
 
-            DailyScheduleAssignment::query()
+            $existing = DailyScheduleAssignment::query()
                 ->where('schedule_batch_id', $lockedBatch->id)
                 ->where('employment_relationship_id', $relationship->id)
                 ->whereDate('work_date', $validated['work_date'])
                 ->lockForUpdate()
-                ->get()
-                ->each(function (DailyScheduleAssignment $assignment): void {
-                    $assignment->segments()->delete();
-                    $assignment->delete();
-                });
+                ->first();
 
-            $assignment = new DailyScheduleAssignment($validated);
+            $assignment = $existing ?: new DailyScheduleAssignment();
+            if ($existing) {
+                $existing->segments()->delete();
+            }
+
+            $assignment->fill($validated);
             $assignment->company()->associate($company);
             $assignment->scheduleBatch()->associate($lockedBatch);
             $assignment->employmentRelationship()->associate($relationship);

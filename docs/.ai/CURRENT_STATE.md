@@ -47,7 +47,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Bloque F1 en progreso: nucleo de programacion diaria, batches, asignaciones diarias, segmentos, snapshots deterministas y resolucion de programacion publicada.
+- Bloque F2 en progreso: generacion de programacion diaria en borrador desde perfiles.
 
 ## Estado de epics
 
@@ -167,7 +167,7 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
 - Bloque E1 implementa dominio y pruebas para `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`, con reglas completas y resolucion por fecha desde una asignacion efectiva.
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
-- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, generacion desde perfiles ni publicacion operativa desde UI. El nucleo de programacion diaria se implementa en Bloque F1.
+- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, publicacion operativa desde UI ni interfaz de calendario. El nucleo de programacion diaria se implementa en Bloque F1 y la generacion draft desde perfiles en Bloque F2.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -331,4 +331,26 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Las versiones no draft son inmutables desde las Actions F1.
 - MySQL/MariaDB compatible; la unicidad del dia dentro del batch se apoya en indice compuesto portable.
 - No hay pantalla F1 todavia.
-- No se implementa generacion desde perfiles, publicacion operativa desde UI, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
+- En F1 no se implemento generacion desde perfiles, publicacion operativa desde UI, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
+
+## Bloque F2 - generacion draft desde perfiles
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- `GenerateDraftScheduleBatchFromProfilesAction` llena un `schedule_batch` en `draft`.
+- Modos permitidos: `missing_only` y `refresh_profile_generated`.
+- `missing_only` solo crea dias faltantes y es idempotente.
+- `refresh_profile_generated` reemplaza solo dias creados por el generador `schedule_profile_generation`.
+- Se conservan dias `manual`, `csv`, `api` y `system` de otros procesos.
+- La generacion resuelve perfil por relacion laboral y fecha: relacion laboral -> unidad principal -> centro -> empresa.
+- Los apoyos temporales no modifican el perfil heredado.
+- La unidad principal y timezone del centro se congelan por fecha en la asignacion diaria.
+- `pattern` semanal/ciclo genera `shift` o `rest`.
+- `calendar` genera `unassigned` con `reason = calendar_requires_daily_definition`.
+- `flexible` genera `flexible` o `rest`.
+- `on_call` genera `on_call` o `rest`.
+- Sin perfil efectivo genera `unassigned` con `source_type = system` y `reason = no_effective_schedule_profile`.
+- Los segmentos de `shift_templates` se copian como snapshot diario y calculan UTC con la zona horaria del centro.
+- Seeder manual: `php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder`.
+- No hay interfaz F2 todavia.
+- No se implementa publicacion, snapshots persistidos, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
