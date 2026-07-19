@@ -45,6 +45,11 @@ class ScheduleBatchPolicy
         return $this->update($user, $batch);
     }
 
+    public function publish(User $user, ScheduleBatch $batch): bool
+    {
+        return $this->update($user, $batch);
+    }
+
     public function deleteDraft(User $user, ScheduleBatch $batch): bool
     {
         return $this->update($user, $batch);

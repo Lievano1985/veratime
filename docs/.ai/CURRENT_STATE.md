@@ -47,7 +47,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Bloque F2 en progreso: generacion de programacion diaria en borrador desde perfiles.
+- Bloque F3A en progreso/candidato a cierre: validacion integral y publicacion atomica de batches de programacion diaria.
 
 ## Estado de epics
 
@@ -111,8 +111,7 @@ Nota de descansos obligatorios:
 - API de negocio.
 - CSV.
 - Programacion diaria operativa desde UI.
-- Generacion desde perfiles.
-- Publicacion operativa de batches.
+- Publicacion operativa de batches desde UI.
 
 ## Validacion Sprint 2F
 
@@ -167,7 +166,7 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
 - Bloque E1 implementa dominio y pruebas para `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`, con reglas completas y resolucion por fecha desde una asignacion efectiva.
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
-- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, publicacion operativa desde UI ni interfaz de calendario. El nucleo de programacion diaria se implementa en Bloque F1 y la generacion draft desde perfiles en Bloque F2.
+- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, publicacion operativa desde UI ni interfaz de calendario. El nucleo de programacion diaria se implementa en Bloque F1, la generacion draft desde perfiles en Bloque F2 y la publicacion atomica de batches en Bloque F3A.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -354,3 +353,20 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Seeder manual: `php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder`.
 - No hay interfaz F2 todavia.
 - No se implementa publicacion, snapshots persistidos, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
+
+## Bloque F3A - publicacion atomica de batches diarios
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- `ValidateScheduleBatchForPublicationAction` valida cobertura completa por centro y periodo antes de publicar.
+- La cobertura usa `ResolveScheduleBatchExpectedRelationshipDatesAction`, compartida con F2, para resolver relaciones laborales activas y fechas vigentes.
+- Un batch solo publica si esta en `draft`, `version = 1`, `previous_batch_id = null`, pertenece a empresa/centro activos y no contiene dias `unassigned`.
+- La validacion bloquea dias faltantes, dias fuera de vigencia, relaciones de otro centro/tenant, configuraciones incompatibles y conflictos con batches `published` por relacion laboral y fecha.
+- `PublishScheduleBatchAction` publica dentro de una transaccion, bloquea empresa, centro, batch, dias, segmentos y batches publicados intersectados del mismo centro.
+- Al publicar persiste `status = published`, `snapshot_schema_version`, `snapshot_canonical_json`, `snapshot_sha256`, `published_by` y `published_at`.
+- `VerifyPublishedScheduleBatchSnapshotAction` verifica el JSON y hash persistidos sin reconstruir desde catalogos actuales.
+- `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion publicada y devuelve `snapshot_sha256`; si no existe publicacion devuelve ausencia controlada.
+- Seeder manual: `php artisan db:seed --class=VeraTimePublishedScheduleScenarioSeeder`.
+- El seeder publica Oficina por Patron, Ciclo Rotativo, Horario Flexible y Bajo Demanda; deja Tienda por Calendario y Sin Perfil en `draft` por dias `unassigned`.
+- No hay interfaz F3A todavia.
+- No se implementan versiones correctivas, supersede automatico, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.

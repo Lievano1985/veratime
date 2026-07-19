@@ -652,7 +652,7 @@ Bloque D2 agrega:
 
 Bloque E1 agrega dominio para ciclo repetitivo, flexible y bajo demanda. Bloque E2 agrega la interfaz en `/scheduling/profiles` con cuatro metodos: Por patron, Por calendario, Flexible y Bajo demanda. Dentro de Por patron distingue Patron semanal y Ciclo repetitivo. La UI no publica dias ni genera programacion diaria.
 
-Bloque F1 agrega el nucleo interno de programacion diaria (`schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`), snapshots canonicos y resolucion de programacion publicada, pero no agrega pantalla nueva. Bloque F2 agrega generacion interna de borradores desde perfiles, tambien sin pantalla nueva. La publicacion operativa, interfaz de calendario, importacion CSV/XLSX y API WFM quedan pendientes.
+Bloque F1 agrega el nucleo interno de programacion diaria (`schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`), snapshots canonicos y resolucion de programacion publicada, pero no agrega pantalla nueva. Bloque F2 agrega generacion interna de borradores desde perfiles, tambien sin pantalla nueva. Bloque F3A agrega publicacion atomica desde dominio con validacion integral, snapshot persistido, SHA-256, `published_by` y `published_at`, pero tampoco agrega pantalla nueva. La publicacion operativa desde UI, interfaz de calendario, importacion CSV/XLSX y API WFM quedan pendientes.
 
 ## 10.0 Estructura organizacional
 

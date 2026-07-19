@@ -107,6 +107,8 @@ En Bloque F1 se implementa el nucleo de datos y dominio para crear batches en `d
 
 En Bloque F2 se implementa la generacion de dias en borrador desde perfiles. La generacion opera solo sobre batches `draft`, resuelve nuevamente perfil y regla por cada relacion laboral/fecha, congela unidad principal y timezone del centro, copia segmentos de plantilla y preserva dias manuales, CSV, API o de otros procesos. F2 no publica, no persiste snapshots de publicacion y no crea `work_days`.
 
+En Bloque F3A se implementa la publicacion atomica desde dominio. La publicacion solo acepta batches `draft`, `version = 1` y sin `previous_batch_id`; exige cobertura completa de relaciones laborales vigentes por centro y periodo; bloquea dias `unassigned`; valida tipos `shift`, `rest`, `flexible` y `on_call`; y detecta conflictos con cualquier batch `published` por relacion laboral y fecha. No agrega interfaz, CSV, API ni correcciones de versiones.
+
 Al publicar, el batch queda con snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`. Cada `daily_schedule_assignment` queda ligado al batch versionado con:
 
 - relacion laboral;
@@ -140,14 +142,21 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `ResolveScheduleProfileRuleForDateAction`
 - `GenerateDailySchedulesFromProfileAction`
 - `GenerateDraftScheduleBatchFromProfilesAction`
+- `ResolveScheduleBatchExpectedRelationshipDatesAction`
+- `ValidateScheduleBatchForPublicationAction`
 - `PublishScheduleBatchAction`
+- `VerifyPublishedScheduleBatchSnapshotAction`
 - `ResolveDailyScheduleForRelationshipDateAction`
 
-En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F3A, `ResolveScheduleBatchExpectedRelationshipDatesAction` se reutiliza para validar cobertura antes de publicar. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
 
 ## Snapshots y Versionamiento
 
 La programacion publicada conserva snapshot JSON canonico a nivel batch. Cualquier cambio posterior crea nueva version y marca el batch previo como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
+
+En F3A la verificacion de integridad calcula SHA-256 directamente sobre `snapshot_canonical_json` persistido y compara con `snapshot_sha256` mediante comparacion segura. No reconstruye el snapshot desde relaciones actuales, porque nombres, plantillas, unidades o catalogos pueden cambiar despues de publicar sin invalidar la evidencia historica.
+
+La serializacion de publicaciones del mismo centro se apoya en una transaccion con `lockForUpdate` sobre `Center`, el batch, sus dias y segmentos. MySQL/MariaDB no usa indice parcial portable para "un published por relacion y fecha"; la Action valida conflictos dentro de la transaccion antes de persistir.
 
 ## Seguridad por Alcance
 

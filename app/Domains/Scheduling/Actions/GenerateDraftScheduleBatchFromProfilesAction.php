@@ -6,14 +6,10 @@ use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
 use App\Domains\Scheduling\Data\GenerateDraftScheduleBatchFromProfilesResult;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
-use App\Models\EmploymentRelationship;
 use App\Models\ScheduleBatch;
 use App\Models\User;
 use App\Support\RoleKey;
-use Carbon\CarbonImmutable;
-use Carbon\CarbonPeriod;
 use DateTimeZone;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -29,6 +25,7 @@ class GenerateDraftScheduleBatchFromProfilesAction
         private ResolveScheduleProfileForRelationshipAction $resolveProfile,
         private BuildDraftDailyScheduleFromResolvedProfileAction $buildDraftDay,
         private ReplaceDraftDailyScheduleAssignmentAction $replaceDraftDay,
+        private ResolveScheduleBatchExpectedRelationshipDatesAction $expectedRelationshipDates,
     ) {
     }
 
@@ -54,14 +51,15 @@ class GenerateDraftScheduleBatchFromProfilesAction
             $this->batchValidator->assertDraft($lockedBatch);
             $this->assertTimezone((string) $lockedBatch->center->timezone);
 
-            $relationships = $this->relationshipsForBatch($company, $lockedBatch);
+            $relationshipDates = $this->expectedRelationshipDates->handle($company, $lockedBatch, true);
             $existing = $this->existingAssignmentsForBatch($lockedBatch);
             $result = new GenerateDraftScheduleBatchFromProfilesResult($lockedBatch, $regenerationMode);
-            $result->relationshipsConsidered = $relationships->count();
+            $result->relationshipsConsidered = $relationshipDates->count();
 
-            foreach ($relationships as $relationship) {
+            foreach ($relationshipDates as $item) {
+                $relationship = $item['relationship'];
                 $generatedForRelationship = false;
-                foreach ($this->datesForRelationship($lockedBatch, $relationship) as $workDate) {
+                foreach ($item['dates'] as $workDate) {
                     $result->datesConsidered++;
                     $key = $this->assignmentKey($relationship->id, $workDate);
                     $current = $existing[$key] ?? null;
@@ -129,28 +127,6 @@ class GenerateDraftScheduleBatchFromProfilesAction
     }
 
     /**
-     * @return Collection<int, EmploymentRelationship>
-     */
-    private function relationshipsForBatch(Company $company, ScheduleBatch $batch): Collection
-    {
-        return EmploymentRelationship::query()
-            ->with(['worker', 'center'])
-            ->where('company_id', $company->id)
-            ->where('center_id', $batch->center_id)
-            ->where('status', 'active')
-            ->whereDate('started_at', '<=', $batch->period_end->toDateString())
-            ->where(function ($query) use ($batch): void {
-                $query->whereNull('ended_at')
-                    ->orWhereDate('ended_at', '>=', $batch->period_start->toDateString());
-            })
-            ->whereHas('worker', fn ($query) => $query->where('company_id', $company->id)->where('status', 'active'))
-            ->orderBy('worker_id')
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get();
-    }
-
-    /**
      * @return array<string, DailyScheduleAssignment>
      */
     private function existingAssignmentsForBatch(ScheduleBatch $batch): array
@@ -168,30 +144,7 @@ class GenerateDraftScheduleBatchFromProfilesAction
             ->all();
     }
 
-    /**
-     * @return list<string>
-     */
-    private function datesForRelationship(ScheduleBatch $batch, EmploymentRelationship $relationship): array
-    {
-        $start = CarbonImmutable::parse(max(
-            $batch->period_start->toDateString(),
-            $relationship->started_at->toDateString(),
-        ));
-        $end = CarbonImmutable::parse($relationship->ended_at
-            ? min($batch->period_end->toDateString(), $relationship->ended_at->toDateString())
-            : $batch->period_end->toDateString());
-
-        if ($end->lt($start)) {
-            return [];
-        }
-
-        return collect(CarbonPeriod::create($start, $end))
-            ->map(fn ($date): string => $date->toDateString())
-            ->values()
-            ->all();
-    }
-
-    private function primaryUnit(Company $company, EmploymentRelationship $relationship, string $workDate, ScheduleBatch $batch): ?\App\Models\OrganizationalUnit
+    private function primaryUnit(Company $company, \App\Models\EmploymentRelationship $relationship, string $workDate, ScheduleBatch $batch): ?\App\Models\OrganizationalUnit
     {
         $unit = $this->resolveEmploymentUnits->handle($company, $relationship, $workDate)['primary'];
         if (! $unit) {
