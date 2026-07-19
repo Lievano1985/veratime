@@ -1288,3 +1288,54 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 - `work_day_calculations`.
 - Activaciones on-call.
 - Motor legal, calculos, alertas, incidencias y reportes.
+
+## Bloque F3A - publicacion atomica de batches diarios
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+F3A no agrega pantalla nueva. La revision manual se limita a preparar escenarios demo y verificar por comandos que los batches validos se publican con snapshot persistido, mientras que los escenarios incompletos permanecen en borrador.
+
+Preparacion opcional:
+
+```bash
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimePublishedScheduleScenarioSeeder
+```
+
+El periodo demo usado por F3A es:
+
+```text
+2026-08-03 a 2026-08-16
+```
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Seeder F3A | Ejecutar `VeraTimePublishedScheduleScenarioSeeder` dos veces. | No duplica batches, no crea version 2 y conserva hashes. |
+| Oficina por patron | Revisar batch demo. | Queda `published` con `snapshot_sha256`, `published_by` y `published_at`. |
+| Ciclo rotativo | Revisar batch demo. | Queda `published` y conserva segmentos nocturnos con offsets. |
+| Flexible | Revisar batch demo. | Queda `published` con dias `flexible` y descansos. |
+| Bajo demanda | Revisar batch demo. | Queda `published` con dias `on_call`; no crea tiempo trabajado real. |
+| Tienda por calendario | Revisar batch demo. | Permanece `draft` porque contiene `unassigned`. |
+| Sin perfil | Revisar batch demo. | Permanece `draft` porque contiene `unassigned`. |
+| Snapshot | Verificar con prueba automatizada. | JSON decodificable y hash SHA-256 coincidente. |
+| Resolver diario | Verificar despues de publicar. | Devuelve `resolution_status = published` y `snapshot_sha256`. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF3A/ScheduleBatchPublicationDomainTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Interfaz de calendario diario.
+- Boton visual para publicar.
+- Correcciones F4 o supersede automatico.
+- CSV/XLSX o API WFM.
+- `work_days`.
+- `work_day_calculations`.
+- Activaciones on-call.
+- Motor legal, calculos, alertas, incidencias y reportes.

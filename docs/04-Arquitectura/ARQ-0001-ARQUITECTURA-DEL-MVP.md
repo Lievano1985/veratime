@@ -1036,7 +1036,8 @@ Reglas arquitectonicas:
 - Los perfiles de horario generan borradores, no resultados operativos.
 - Bloque F1 crea el nucleo de batches, asignaciones diarias, segmentos, snapshot canonico y resolver publicado, sin UI ni publicacion operativa.
 - Bloque F2 genera programacion diaria en borrador desde perfiles, sin publicar ni persistir snapshots de publicacion.
-- `PublishScheduleBatchAction` congelara snapshot JSON canonico, version consecutiva por centro y periodo, `published_by`, `published_at` y hash SHA-256 cuando se implemente la publicacion operativa.
+- Bloque F3A publica batches completos de forma atomica desde dominio, sin UI, persistiendo snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256.
+- La publicacion serializa por centro con transaccion y `lockForUpdate` sobre `Center`; la unicidad efectiva publicada por relacion laboral/fecha se valida en dominio para MySQL/MariaDB.
 - `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion efectiva publicada por relacion laboral y fecha.
 - La publicacion es inmutable. Una correccion genera nueva version y deja la anterior `superseded`.
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
@@ -1069,7 +1070,10 @@ Responsabilidades:
 | `ReplaceDraftDailyScheduleAssignmentAction` | Reemplaza de forma atomica la programacion de un dia dentro de un batch draft. |
 | `RemoveDraftDailyScheduleAssignmentAction` | Elimina solo dias de borrador; no aplica a batches publicados. |
 | `BuildScheduleBatchSnapshotAction` | Construye snapshot JSON canonico y hash SHA-256 sin persistirlo. |
-| `PublishScheduleBatchAction` | Publicara un batch por centro, genera snapshot JSON canonico, version consecutiva por centro/periodo, `published_by`, `published_at` y hash SHA-256. Pendiente despues de F1. |
+| `ResolveScheduleBatchExpectedRelationshipDatesAction` | Resuelve relaciones laborales y fechas esperadas para un batch, compartido por F2 y F3A. |
+| `ValidateScheduleBatchForPublicationAction` | Valida cobertura completa, tipos de dia, segmentos UTC, ausencia de `unassigned` y conflictos con batches publicados. |
+| `PublishScheduleBatchAction` | Publica un batch `draft` completo dentro de una transaccion, persiste snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256. |
+| `VerifyPublishedScheduleBatchSnapshotAction` | Verifica el snapshot persistido comparando JSON y hash sin reconstruir desde catalogos actuales. |
 | `ResolveDailyScheduleForRelationshipDateAction` | Devuelve la programacion publicada efectiva por relacion laboral y fecha; no usa perfiles ni legacy como fallback. |
 | `ResolveClosingProfileForRelationshipAction` | Resuelve cierre efectivo con prioridad relacion laboral, unidad, centro, empresa. |
 | `GenerateClosingPeriodsAction` | Genera periodos y miembros congelados desde perfiles de cierre. |

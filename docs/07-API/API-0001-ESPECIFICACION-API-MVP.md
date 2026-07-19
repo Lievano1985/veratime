@@ -1273,7 +1273,7 @@ GET    /daily-schedule-assignments
 
 Los endpoints legacy `/schedules` y `/schedule-assignments` pertenecen al modelo Sprint 2A/2B y deberan reemplazarse cuando se implemente la programacion diaria publicada.
 
-Nota WFM F2: el nucleo interno ya cuenta con batches, asignaciones diarias, segmentos, snapshots canonicos, resolucion de programacion publicada y generacion interna de borradores desde perfiles. No existe todavia API funcional para administrar perfiles avanzados, disparar generacion, publicar programacion diaria, importar calendarios ni crear activaciones bajo demanda.
+Nota WFM F3A: el nucleo interno ya cuenta con batches, asignaciones diarias, segmentos, snapshots canonicos, resolucion de programacion publicada, generacion interna de borradores desde perfiles y publicacion atomica de batches completos desde dominio. No existe todavia API funcional para administrar perfiles avanzados, disparar generacion, publicar programacion diaria, importar calendarios ni crear activaciones bajo demanda.
 
 ## 13.3 Evidence Packages
 
