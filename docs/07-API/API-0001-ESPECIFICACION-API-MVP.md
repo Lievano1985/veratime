@@ -1700,3 +1700,9 @@ Ahí se definirán:
 - Pruebas de cierre y conformidad.
 - Pruebas de importaciones/exportaciones.
 - Criterios mínimos para piloto.
+
+---
+
+## Nota Bloque F4
+
+F4 implementa correcciones versionadas desde dominio e interfaz web. No agrega endpoints API WFM. Cuando se exponga por API, debera reutilizar las mismas Actions de dominio: crear correccion, comparar versiones, validar y publicar correccion.

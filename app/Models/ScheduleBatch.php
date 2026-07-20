@@ -20,6 +20,7 @@ class ScheduleBatch extends Model
         'status',
         'creation_source',
         'notes',
+        'correction_reason',
         'snapshot_schema_version',
         'snapshot_canonical_json',
         'snapshot_sha256',
@@ -54,6 +55,11 @@ class ScheduleBatch extends Model
     public function previousBatch(): BelongsTo
     {
         return $this->belongsTo(self::class, 'previous_batch_id');
+    }
+
+    public function correctiveBatches(): HasMany
+    {
+        return $this->hasMany(self::class, 'previous_batch_id');
     }
 
     public function supersededByBatch(): BelongsTo

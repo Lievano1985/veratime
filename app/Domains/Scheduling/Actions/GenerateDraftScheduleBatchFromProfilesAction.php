@@ -124,6 +124,10 @@ class GenerateDraftScheduleBatchFromProfilesAction
             || ! in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
             throw new InvalidArgumentException('El usuario no puede generar programacion diaria para este lote.');
         }
+
+        if ($batch->previous_batch_id !== null) {
+            throw new InvalidArgumentException('Una correccion versionada no puede regenerarse desde perfiles.');
+        }
     }
 
     /**

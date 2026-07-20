@@ -23,7 +23,7 @@ class VerifyPublishedScheduleBatchSnapshotAction
             $errors[] = 'Solo se verifica un lote publicado o sustituido.';
         }
 
-        if ($batch->snapshot_schema_version !== BuildScheduleBatchSnapshotAction::SCHEMA_VERSION) {
+        if (! in_array($batch->snapshot_schema_version, BuildScheduleBatchSnapshotAction::SUPPORTED_SCHEMA_VERSIONS, true)) {
             $errors[] = 'La version del snapshot no es compatible.';
         }
 

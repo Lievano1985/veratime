@@ -3,15 +3,23 @@
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Scheduling\Actions\BulkReplaceDraftDailyScheduleAssignmentsAction;
 use App\Domains\Scheduling\Actions\BuildDailyScheduleSegmentsFromShiftTemplateAction;
+use App\Domains\Scheduling\Actions\CompareScheduleBatchVersionsAction;
+use App\Domains\Scheduling\Actions\CreateCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
 use App\Domains\Scheduling\Actions\GenerateDraftScheduleBatchFromProfilesAction;
+use App\Domains\Scheduling\Actions\PublishCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\PublishScheduleBatchAction;
 use App\Domains\Scheduling\Actions\ReplaceDraftDailyScheduleAssignmentAction;
+use App\Domains\Scheduling\Actions\ResolveScheduleBatchVersionChainAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleBatchExpectedRelationshipDatesAction;
+use App\Domains\Scheduling\Actions\ValidateCorrectiveScheduleBatchForPublicationAction;
 use App\Domains\Scheduling\Actions\ValidateScheduleBatchForPublicationAction;
 use App\Domains\Scheduling\Actions\VerifyPublishedScheduleBatchSnapshotAction;
 use App\Domains\Scheduling\Data\ScheduleBatchPublicationValidationResult;
 use App\Domains\Scheduling\Exceptions\ScheduleBatchPublicationValidationException;
+use App\Domains\Scheduling\Exceptions\ScheduleCorrectionAlreadyExistsException;
+use App\Domains\Scheduling\Exceptions\ScheduleCorrectionHasNoChangesException;
+use App\Domains\Scheduling\Exceptions\ScheduleCorrectionPublicationConflictException;
 use App\Domains\Scheduling\Support\ShiftTemplateTimeline;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\DailyScheduleAssignment;
@@ -34,16 +42,20 @@ new class extends Component {
 
     public array $filters = [];
     public array $batchForm = [];
+    public array $correctionForm = [];
     public array $dayForm = [];
     public array $bulkForm = [];
     public array $validationPanel = [];
     public array $integrityPanel = [];
+    public array $comparisonPanel = [];
+    public array $versionHistoryPanel = [];
     public ?int $selectedBatchId = null;
     public ?int $editingAssignmentId = null;
     public ?int $editingRelationshipId = null;
     public ?string $editingWorkDate = null;
     public ?string $weekStart = null;
     public bool $showCreatePanel = false;
+    public bool $showCorrectionPanel = false;
     public bool $showDayPanel = false;
     public bool $showBulkPanel = false;
     public bool $confirmBulk = false;
@@ -62,10 +74,13 @@ new class extends Component {
             'pending_only' => false,
         ];
         $this->batchForm = $this->emptyBatchForm();
+        $this->correctionForm = ['correction_reason' => ''];
         $this->dayForm = $this->emptyDayForm();
         $this->bulkForm = $this->emptyBulkForm();
         $this->validationPanel = [];
         $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+        $this->versionHistoryPanel = [];
     }
 
     public function updated($property): void
@@ -77,6 +92,7 @@ new class extends Component {
         if ($property === 'selectedBatchId') {
             $this->validationPanel = [];
             $this->integrityPanel = [];
+            $this->comparisonPanel = [];
         }
     }
 
@@ -88,6 +104,41 @@ new class extends Component {
         $this->batchForm = $this->emptyBatchForm();
         $this->showCreatePanel = true;
         $this->resetValidation();
+    }
+
+    public function openCorrectionPanel(CurrentCompany $currentCompany): void
+    {
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('createCorrection', $batch);
+        $this->correctionForm = ['correction_reason' => ''];
+        $this->showCorrectionPanel = true;
+        $this->resetValidation();
+    }
+
+    public function createCorrection(CurrentCompany $currentCompany, CreateCorrectiveScheduleBatchAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $batch = $this->selectedBatch($currentCompany, false);
+        $validated = $this->validate([
+            'correctionForm.correction_reason' => ['required', 'string', 'min:5', 'max:2000'],
+        ])['correctionForm'];
+
+        try {
+            $result = $action->handle(auth()->user(), $company, $batch, $validated['correction_reason']);
+        } catch (ScheduleCorrectionAlreadyExistsException $exception) {
+            if ($exception->existingBatchId) {
+                $this->selectedBatchId = $exception->existingBatchId;
+                $this->weekStart = null;
+            }
+            throw ValidationException::withMessages(['correctionForm.correction_reason' => $exception->getMessage()]);
+        } catch (\InvalidArgumentException|\Illuminate\Auth\Access\AuthorizationException $exception) {
+            throw ValidationException::withMessages(['correctionForm.correction_reason' => $exception->getMessage()]);
+        }
+
+        $this->selectedBatchId = $result->correctiveBatch->id;
+        $this->weekStart = $result->correctiveBatch->period_start->toDateString();
+        $this->showCorrectionPanel = false;
+        Session::flash('status', "Correccion creada: {$result->assignmentsCloned} dias clonados.");
     }
 
     public function createEmptyBatch(CurrentCompany $currentCompany, CreateScheduleBatchAction $action): void
@@ -262,16 +313,56 @@ new class extends Component {
         $batch = $this->selectedBatch($currentCompany, false);
         Gate::authorize('view', $batch);
 
+        if ($batch->previous_batch_id !== null) {
+            $result = app(ValidateCorrectiveScheduleBatchForPublicationAction::class)->handle(auth()->user(), $company, $batch);
+            $this->validationPanel = $this->normalValidationPanel($result->toArray());
+            $this->confirmPublish = false;
+
+            return;
+        }
+
         $result = $action->handle(auth()->user(), $company, $batch);
         $this->validationPanel = $result->toArray();
         $this->confirmPublish = false;
     }
 
-    public function publishBatch(CurrentCompany $currentCompany, PublishScheduleBatchAction $action, ValidateScheduleBatchForPublicationAction $validator): void
+    public function publishBatch(
+        CurrentCompany $currentCompany,
+        PublishScheduleBatchAction $action,
+        ValidateScheduleBatchForPublicationAction $validator,
+        PublishCorrectiveScheduleBatchAction $correctivePublisher,
+        ValidateCorrectiveScheduleBatchForPublicationAction $correctiveValidator,
+    ): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $batch = $this->selectedBatch($currentCompany, true);
-        Gate::authorize('publish', $batch);
+        Gate::authorize($batch->previous_batch_id ? 'publishCorrection' : 'publish', $batch);
+
+        if ($batch->previous_batch_id !== null) {
+            $result = $correctiveValidator->handle(auth()->user(), $company, $batch);
+            $this->validationPanel = $this->normalValidationPanel($result->toArray());
+
+            if (! $result->valid()) {
+                throw ValidationException::withMessages(['publication' => 'La correccion todavia tiene bloqueos para publicar.']);
+            }
+
+            if (! $this->confirmPublish) {
+                throw ValidationException::withMessages(['confirmPublish' => 'Confirma la publicacion de la correccion para continuar.']);
+            }
+
+            try {
+                $published = $correctivePublisher->handle(auth()->user(), $company, $batch);
+            } catch (ScheduleCorrectionHasNoChangesException|ScheduleCorrectionPublicationConflictException $exception) {
+                throw ValidationException::withMessages(['publication' => $exception->getMessage()]);
+            }
+
+            $this->confirmPublish = false;
+            $this->validationPanel = [];
+            $this->comparisonPanel = [];
+            Session::flash('status', "Correccion publicada. Version anterior sustituida. SHA-256: {$published->snapshotSha256}");
+
+            return;
+        }
 
         $result = $validator->handle(auth()->user(), $company, $batch);
         $this->validationPanel = $result->toArray();
@@ -294,6 +385,40 @@ new class extends Component {
         $this->confirmPublish = false;
         $this->validationPanel = [];
         Session::flash('status', "Programacion publicada. SHA-256: {$published->snapshotSha256}");
+    }
+
+    public function compareWithPrevious(CurrentCompany $currentCompany, CompareScheduleBatchVersionsAction $action): void
+    {
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('compareVersions', $batch);
+
+        if (! $batch->previousBatch) {
+            throw ValidationException::withMessages(['comparison' => 'Esta version no tiene version anterior para comparar.']);
+        }
+
+        $this->comparisonPanel = $action->handle($batch->previousBatch, $batch)->toArray();
+    }
+
+    public function loadVersionHistory(CurrentCompany $currentCompany, ResolveScheduleBatchVersionChainAction $action): void
+    {
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('viewVersionHistory', $batch);
+        $result = $action->handle($batch);
+        $this->versionHistoryPanel = [
+            'valid' => $result->valid(),
+            'errors' => $result->errors,
+            'versions' => $result->versions->map(fn (ScheduleBatch $version): array => [
+                'id' => $version->id,
+                'version' => $version->version,
+                'status' => $version->status,
+                'published_at' => $version->published_at?->format('Y-m-d H:i'),
+                'published_by' => $version->publisher?->name,
+                'hash' => $version->snapshot_sha256,
+                'correction_reason' => $version->correction_reason,
+                'previous_batch_id' => $version->previous_batch_id,
+                'superseded_by' => $version->superseded_by,
+            ])->all(),
+        ];
     }
 
     public function verifyIntegrity(CurrentCompany $currentCompany, VerifyPublishedScheduleBatchSnapshotAction $action): void
@@ -319,7 +444,7 @@ new class extends Component {
         Gate::authorize('viewAny', [ScheduleBatch::class, $company]);
 
         $selectedBatch = $this->selectedBatchId
-            ? $company->scheduleBatches()->with(['center', 'publisher', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker', 'dailyAssignments.organizationalUnit', 'dailyAssignments.shiftTemplate'])->whereKey($this->selectedBatchId)->first()
+            ? $company->scheduleBatches()->with(['center', 'publisher', 'previousBatch', 'supersededByBatch', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker', 'dailyAssignments.organizationalUnit', 'dailyAssignments.shiftTemplate'])->whereKey($this->selectedBatchId)->first()
             : null;
 
         if ($selectedBatch && ! Gate::allows('view', $selectedBatch)) {
@@ -340,6 +465,8 @@ new class extends Component {
             'canCreateBatch' => Gate::allows('create', [ScheduleBatch::class, $company]),
             'canEditSelectedBatch' => $selectedBatch ? Gate::allows('update', $selectedBatch) : false,
             'canPublishSelectedBatch' => $selectedBatch ? Gate::allows('publish', $selectedBatch) : false,
+            'canCreateCorrection' => $selectedBatch ? Gate::allows('createCorrection', $selectedBatch) : false,
+            'canPublishCorrection' => $selectedBatch ? Gate::allows('publishCorrection', $selectedBatch) : false,
             'previewTemplate' => $this->previewTemplate($company),
             'bulkPreview' => $selectedBatch ? $this->bulkPreview($selectedBatch) : null,
         ];
@@ -446,7 +573,7 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $batch = $company->scheduleBatches()
-            ->with(['center', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker', 'dailyAssignments.organizationalUnit', 'dailyAssignments.shiftTemplate'])
+            ->with(['center', 'previousBatch', 'supersededByBatch', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker', 'dailyAssignments.organizationalUnit', 'dailyAssignments.shiftTemplate'])
             ->whereKey($batchId)
             ->firstOrFail();
 
@@ -654,6 +781,7 @@ new class extends Component {
             'source_reference' => [
                 'schema_version' => 1,
                 'editor' => 'daily_schedule_ui',
+                'correction' => $batch->previous_batch_id !== null,
                 'reason' => trim((string) $data['reason']),
                 'previous_source_type' => $previousSourceType,
                 'pending_reason' => $dayType === 'unassigned' ? ($data['pending_reason'] ?: 'manual_definition_required') : null,
@@ -701,7 +829,7 @@ new class extends Component {
         return EmploymentRelationship::query()
             ->where('company_id', $batch->company_id)
             ->where('center_id', $batch->center_id)
-            ->where('status', 'active')
+            ->when($batch->previous_batch_id === null, fn ($query) => $query->where('status', 'active'))
             ->whereDate('started_at', '<=', $workDate)
             ->where(function ($query) use ($workDate): void {
                 $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $workDate);
@@ -842,6 +970,30 @@ new class extends Component {
     private function generationMessage($result): string
     {
         return "Generacion lista: {$result->relationshipsConsidered} relaciones, {$result->assignmentsCreated} dias creados, {$result->assignmentsRefreshed} actualizados, {$result->assignmentsPreserved} preservados.";
+    }
+
+    private function normalValidationPanel(array $result): array
+    {
+        return [
+            'valid' => $result['valid'],
+            'errors' => $result['errors'],
+            'warnings' => $result['warnings'] ?? [],
+            'relationships_expected' => $result['relationships_expected'] ?? 0,
+            'dates_expected' => $result['dates_expected'] ?? $result['assignments_expected'] ?? 0,
+            'assignments_expected' => $result['assignments_expected'] ?? 0,
+            'assignments_found' => $result['assignments_found'] ?? 0,
+            'assignments_missing' => $result['assignments_missing'] ?? 0,
+            'assignments_added' => $result['assignments_added'] ?? 0,
+            'assignments_unassigned' => $result['assignments_unassigned'] ?? 0,
+            'assignments_shift' => $result['assignments_shift'] ?? ($result['counts_by_day_type']['shift'] ?? 0),
+            'assignments_rest' => $result['assignments_rest'] ?? ($result['counts_by_day_type']['rest'] ?? 0),
+            'assignments_flexible' => $result['assignments_flexible'] ?? ($result['counts_by_day_type']['flexible'] ?? 0),
+            'assignments_on_call' => $result['assignments_on_call'] ?? ($result['counts_by_day_type']['on_call'] ?? 0),
+            'conflicting_assignments' => $result['conflicting_assignments'] ?? $result['conflicting_batches'] ?? 0,
+            'changed_days' => $result['changed_days'] ?? null,
+            'unchanged_days' => $result['unchanged_days'] ?? null,
+            'snapshot_ready' => $result['snapshot_ready'] ?? false,
+        ];
     }
 
     private function statusLabel(string $status): string
@@ -1075,20 +1227,51 @@ new class extends Component {
             <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                     <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
-                    <flux:subheading>Version {{ $selectedBatch->version }} - {{ $this->statusLabel($selectedBatch->status) }}</flux:subheading>
+                    <flux:subheading>
+                        @if ($selectedBatch->previous_batch_id)
+                            Correccion de programacion - Version {{ $selectedBatch->version }} - {{ $this->statusLabel($selectedBatch->status) }}
+                        @else
+                            Version {{ $selectedBatch->version }} - {{ $this->statusLabel($selectedBatch->status) }}
+                        @endif
+                    </flux:subheading>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    @if ($canEditSelectedBatch)
+                    @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
                         <flux:button size="sm" variant="ghost" wire:click="generateMissing">Generar faltantes</flux:button>
                         <flux:button size="sm" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar desde perfiles</flux:button>
+                    @endif
+                    @if ($canEditSelectedBatch)
                         <flux:button size="sm" variant="ghost" wire:click="openBulkPanel">Cambio masivo</flux:button>
                     @endif
                     <flux:button size="sm" variant="ghost" wire:click="reviewBatch">Revisar antes de publicar</flux:button>
+                    @if ($selectedBatch->previous_batch_id)
+                        <flux:button size="sm" variant="ghost" wire:click="compareWithPrevious">Comparar con version anterior</flux:button>
+                    @endif
+                    <flux:button size="sm" variant="ghost" wire:click="loadVersionHistory">Historial de versiones</flux:button>
                     @if ($selectedBatch->status === 'published')
                         <flux:button size="sm" variant="ghost" wire:click="verifyIntegrity">Verificar integridad</flux:button>
                     @endif
+                    @if ($canCreateCorrection)
+                        <flux:button size="sm" variant="primary" wire:click="openCorrectionPanel">Crear correccion</flux:button>
+                    @endif
                 </div>
             </div>
+
+            @if ($selectedBatch->previous_batch_id)
+                <div class="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                    <p class="font-medium">Version {{ $selectedBatch->version }} - Borrador de correccion</p>
+                    <p>Corrige la version {{ $selectedBatch->previousBatch?->version }}. Motivo: {{ $selectedBatch->correction_reason }}</p>
+                </div>
+            @endif
+
+            @if ($selectedBatch->status === 'superseded')
+                <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                    Esta version fue sustituida. Se conserva como evidencia historica.
+                    @if ($selectedBatch->supersededByBatch)
+                        Sustituida por version {{ $selectedBatch->supersededByBatch->version }}.
+                    @endif
+                </div>
+            @endif
 
             <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
                 <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Trabajadores</p><p class="font-semibold">{{ $selectedSummary['workers'] }}</p></div>
@@ -1126,6 +1309,9 @@ new class extends Component {
                         <p>Dias esperados: {{ $validationPanel['dates_expected'] }}</p>
                         <p>Encontrados: {{ $validationPanel['assignments_found'] }}</p>
                         <p>Faltantes: {{ $validationPanel['assignments_missing'] }}</p>
+                        @if (($validationPanel['assignments_added'] ?? 0) > 0)
+                            <p>Adicionales: {{ $validationPanel['assignments_added'] }}</p>
+                        @endif
                     </div>
                     <div class="text-sm">
                         <p>Turnos: {{ $validationPanel['assignments_shift'] }}</p>
@@ -1133,11 +1319,21 @@ new class extends Component {
                         <p>Flexibles: {{ $validationPanel['assignments_flexible'] }}</p>
                         <p>Guardias: {{ $validationPanel['assignments_on_call'] }}</p>
                         <p>Conflictos: {{ $validationPanel['conflicting_assignments'] }}</p>
+                        @if (($validationPanel['changed_days'] ?? null) !== null)
+                            <p>Modificados: {{ $validationPanel['changed_days'] }}</p>
+                            <p>Sin cambio: {{ $validationPanel['unchanged_days'] }}</p>
+                        @endif
                     </div>
-                    @if ($validationPanel['valid'] && $canPublishSelectedBatch)
+                    @if ($validationPanel['valid'] && ($canPublishSelectedBatch || $canPublishCorrection))
                         <div class="md:col-span-3 rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                            <p class="font-medium">Publicar programacion</p>
-                            <p>Despues de publicar, esta version no podra modificarse. Las correcciones posteriores se realizaran mediante una nueva version.</p>
+                            <p class="font-medium">{{ $selectedBatch->previous_batch_id ? 'Publicar correccion' : 'Publicar programacion' }}</p>
+                            <p>
+                                @if ($selectedBatch->previous_batch_id)
+                                    Al publicar, la version anterior quedara marcada como Sustituida. Ambas versiones y sus evidencias se conservaran.
+                                @else
+                                    Despues de publicar, esta version no podra modificarse. Las correcciones posteriores se realizaran mediante una nueva version.
+                                @endif
+                            </p>
                             <label class="mt-3 flex items-center gap-2">
                                 <input type="checkbox" wire:model="confirmPublish" class="rounded border-zinc-300">
                                 <span>Confirmo publicar esta version.</span>
@@ -1147,6 +1343,52 @@ new class extends Component {
                             <flux:button class="mt-3" size="sm" variant="primary" wire:click="publishBatch">Publicar</flux:button>
                         </div>
                     @endif
+                </div>
+            @endif
+
+            @if ($comparisonPanel !== [])
+                <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <p class="font-medium">Comparacion con version anterior</p>
+                    <div class="mt-3 grid gap-3 text-sm md:grid-cols-4">
+                        <p>Dias totales: {{ $comparisonPanel['total_days'] }}</p>
+                        <p>Sin cambio: {{ $comparisonPanel['unchanged_days'] }}</p>
+                        <p>Modificados: {{ $comparisonPanel['changed_days'] }}</p>
+                        <p>Trabajadores con cambios: {{ count($comparisonPanel['changed_relationships']) }}</p>
+                    </div>
+                    <div class="mt-4 divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        @forelse (array_slice($comparisonPanel['differences'], 0, 20) as $difference)
+                            <div class="py-3">
+                                <p class="font-medium">{{ $difference['employee_code'] }} - {{ $difference['worker_name'] }} | {{ $difference['work_date'] }}</p>
+                                <p>Antes: {{ $difference['before_summary'] ?? 'Sin programacion' }}</p>
+                                <p>Despues: {{ $difference['after_summary'] ?? 'Sin programacion' }}</p>
+                            </div>
+                        @empty
+                            <p class="py-3 text-zinc-500">No hay diferencias funcionales.</p>
+                        @endforelse
+                    </div>
+                </div>
+            @endif
+
+            @if ($versionHistoryPanel !== [])
+                <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <p class="font-medium">Historial de versiones</p>
+                    @foreach ($versionHistoryPanel['errors'] as $error)
+                        <p class="mt-1 text-sm text-red-600">{{ $error }}</p>
+                    @endforeach
+                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        @foreach ($versionHistoryPanel['versions'] as $version)
+                            <button type="button" wire:click="selectBatch({{ $version['id'] }})" class="rounded-md border border-zinc-200 p-3 text-left text-sm hover:border-sky-400 dark:border-zinc-700">
+                                <span class="block font-medium">Version {{ $version['version'] }} - {{ $this->statusLabel($version['status']) }}</span>
+                                <span class="block text-xs text-zinc-500">Publicada: {{ $version['published_at'] ?? 'Sin publicar' }}</span>
+                                @if ($version['correction_reason'])
+                                    <span class="block text-xs text-zinc-500">Motivo: {{ $version['correction_reason'] }}</span>
+                                @endif
+                                @if ($version['hash'])
+                                    <span class="block break-all text-xs text-zinc-400">Hash: {{ $version['hash'] }}</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
                 </div>
             @endif
 
@@ -1237,6 +1479,24 @@ new class extends Component {
                 <flux:button type="button" variant="ghost" wire:click="$set('showCreatePanel', false)">Cancelar</flux:button>
                 <flux:button type="button" variant="ghost" wire:click="createEmptyBatch">Crear lote vacio</flux:button>
                 <flux:button type="button" variant="primary" wire:click="createAndGenerate">Crear y generar desde perfiles</flux:button>
+            </div>
+        </form>
+    </x-side-panel>
+
+    <x-side-panel wire:model="showCorrectionPanel" title="Crear correccion" subheading="Se creara una nueva version editable sin modificar la publicacion vigente." maxWidth="max-w-2xl">
+        <form wire:submit="createCorrection" class="space-y-5 p-6">
+            @if ($selectedBatch)
+                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                    <p>Centro: {{ $selectedBatch->center?->name }}</p>
+                    <p>Periodo: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                    <p>Version actual: {{ $selectedBatch->version }}</p>
+                </div>
+            @endif
+            <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara una nueva version editable. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
+            <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
+            <div class="flex justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</flux:button>
+                <flux:button type="submit" variant="primary">Crear correccion</flux:button>
             </div>
         </form>
     </x-side-panel>

@@ -54,6 +54,17 @@ class VeraTimePublishedScheduleScenarioSeeder extends Seeder
                 continue;
             }
 
+            if ($batch->status === 'superseded'
+                && ScheduleBatch::query()
+                    ->where('company_id', $company->id)
+                    ->whereDate('period_start', self::PERIOD_START)
+                    ->whereDate('period_end', self::PERIOD_END)
+                    ->where('status', 'published')
+                    ->where('version', '>', 1)
+                    ->exists()) {
+                continue;
+            }
+
             if ($batch->status !== 'draft') {
                 throw new InvalidArgumentException('El batch demo publicado debe estar en borrador o publicado.');
             }

@@ -1168,3 +1168,19 @@ Ese documento definirá:
 - Laravel Sanctum: https://laravel.com/docs/sanctum
 - Livewire Documentation: https://livewire.laravel.com/docs
 - Pest Documentation: https://pestphp.com/docs
+
+---
+
+## Nota Bloque F4 - Correcciones versionadas
+
+Las correcciones de programacion diaria publicada se resuelven domain-first. Livewire solo solicita motivo, muestra comparacion y confirma publicacion. La creacion, clonacion, comparacion, validacion y publicacion correctiva viven en Actions de dominio.
+
+Reglas arquitectonicas:
+
+- no editar publicaciones;
+- no regresar publicados a borrador;
+- no regenerar correcciones desde perfiles;
+- no crear ramas paralelas;
+- publicar correccion y sustituir version anterior en una transaccion;
+- mantener snapshots anteriores sin reconstruccion;
+- resolver solo la version `published` vigente.

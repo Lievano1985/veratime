@@ -50,7 +50,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Bloque F3B implementado/candidato a cierre: interfaz de usuario para administrar, revisar y publicar programacion diaria.
+- Bloque F4 implementado/candidato a cierre: correcciones versionadas de programacion diaria publicada.
 
 ## Estado de epics
 
@@ -120,7 +120,6 @@ Nota de descansos obligatorios:
 - Conformidad digital.
 - API de negocio.
 - CSV.
-- Correcciones versionadas F4.
 - Importacion CSV/XLSX WFM.
 - API WFM.
 
@@ -177,7 +176,9 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque D2 implementa las pantallas `/scheduling/profiles` y `/scheduling/profile-assignments`, consulta de perfil efectivo y navegacion reorganizada de horarios.
 - Bloque E1 implementa dominio y pruebas para `pattern_mode = cycle`, perfiles `flexible` y perfiles `on_call`, con reglas completas y resolucion por fecha desde una asignacion efectiva.
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
-- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, publicacion operativa desde UI ni interfaz de calendario. El nucleo de programacion diaria se implementa en Bloque F1, la generacion draft desde perfiles en Bloque F2 y la publicacion atomica de batches en Bloque F3A.
+- Bloque F3B implementa interfaz de calendario y publicacion operativa desde UI.
+- Bloque F4 implementa correcciones versionadas no destructivas: clona desde la publicacion congelada, exige motivo general, compara cambios funcionales y publica en una transaccion que sustituye la version anterior.
+- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, API WFM, calculos legales, `work_days`, alertas, incidencias ni reportes.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 
@@ -396,4 +397,17 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados muestra hash SHA-256 y permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`.
 - Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
-- No se implementan correcciones versionadas F4, supersede automatico desde UI, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad ni reportes.
+- F4 implementa correcciones versionadas en la misma pantalla; CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+
+## Bloque F4 - correcciones versionadas
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Una publicacion vigente puede crear una nueva version correctiva en borrador.
+- `correction_reason` es obligatorio para versiones mayores a 1.
+- La correccion se clona desde `daily_schedule_assignments` y `daily_schedule_segments` congelados, sin consultar perfiles actuales.
+- La comparacion ignora IDs y timestamps y exige al menos un cambio funcional para publicar.
+- Al publicar, la version anterior pasa a `superseded` y la correctiva queda `published` dentro de una transaccion.
+- `/scheduling/daily` muestra crear correccion, comparar con version anterior, publicar correccion e historial de versiones.
+- `VeraTimeCorrectedScheduleScenarioSeeder` prepara una correccion publicada y una correccion draft para pruebas manuales.
+- F5 CSV/XLSX, API WFM, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
