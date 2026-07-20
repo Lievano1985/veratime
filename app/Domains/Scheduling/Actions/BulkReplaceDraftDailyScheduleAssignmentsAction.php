@@ -38,7 +38,7 @@ class BulkReplaceDraftDailyScheduleAssignmentsAction
                 ->where('company_id', $company->id)
                 ->where('center_id', $batch->center_id)
                 ->whereIn('id', $employmentRelationshipIds)
-                ->where('status', 'active')
+                ->when($batch->previous_batch_id === null, fn ($query) => $query->where('status', 'active'))
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');

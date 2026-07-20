@@ -111,6 +111,8 @@ En Bloque F3A se implementa la publicacion atomica desde dominio. La publicacion
 
 En Bloque F3B se implementa la interfaz `/scheduling/daily`. Livewire/Volt solo captura intencion y muestra resultados: creacion de lotes, generacion, edicion individual, cambio masivo basico, validacion, publicacion y verificacion delegan en Actions de dominio. F3B no agrega correcciones versionadas, supersede automatico, CSV/XLSX ni API WFM.
 
+En Bloque F4 se implementan correcciones versionadas no destructivas. Solo una version `published` vigente puede iniciar correccion. La nueva version se crea en `draft`, conserva empresa, centro y periodo, usa `previous_batch_id`, version consecutiva y `correction_reason` obligatorio. La clonacion toma dias y segmentos congelados de la publicacion anterior; no consulta perfiles ni plantillas actuales. Al publicar, la version anterior pasa a `superseded` y la correctiva queda `published` en una unica transaccion. No existen ramas paralelas, despublicacion ni reapertura de publicaciones.
+
 Al publicar, el batch queda con snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`. Cada `daily_schedule_assignment` queda ligado al batch versionado con:
 
 - relacion laboral;

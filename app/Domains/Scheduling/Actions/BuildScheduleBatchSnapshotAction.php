@@ -7,7 +7,8 @@ use App\Models\ScheduleBatch;
 
 class BuildScheduleBatchSnapshotAction
 {
-    public const SCHEMA_VERSION = 'f1.v1';
+    public const SCHEMA_VERSION = 'f4.v2';
+    public const SUPPORTED_SCHEMA_VERSIONS = ['f1.v1', self::SCHEMA_VERSION];
 
     public function handle(ScheduleBatch $batch): array
     {
@@ -48,6 +49,8 @@ class BuildScheduleBatchSnapshotAction
                 'period_start' => $batch->period_start->toDateString(),
                 'period_end' => $batch->period_end->toDateString(),
                 'version' => $batch->version,
+                'previous_batch_id' => $batch->previous_batch_id,
+                'correction_reason' => $batch->correction_reason,
                 'creation_source' => $batch->creation_source,
             ],
             'assignments' => $batch->dailyAssignments

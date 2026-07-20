@@ -23,6 +23,7 @@ class ScheduleBatchFactory extends Factory
             'status' => 'draft',
             'creation_source' => 'manual',
             'notes' => null,
+            'correction_reason' => null,
             'snapshot_schema_version' => null,
             'snapshot_canonical_json' => null,
             'snapshot_sha256' => null,

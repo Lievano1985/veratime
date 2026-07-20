@@ -51,6 +51,29 @@ class ScheduleBatchPolicy
         return $this->update($user, $batch);
     }
 
+    public function createCorrection(User $user, ScheduleBatch $batch): bool
+    {
+        return $batch->status === 'published'
+            && $this->canManageCompanyScheduling($user, $batch->company);
+    }
+
+    public function compareVersions(User $user, ScheduleBatch $batch): bool
+    {
+        return $this->view($user, $batch);
+    }
+
+    public function publishCorrection(User $user, ScheduleBatch $batch): bool
+    {
+        return $batch->status === 'draft'
+            && $batch->previous_batch_id !== null
+            && $this->canManageCompanyScheduling($user, $batch->company);
+    }
+
+    public function viewVersionHistory(User $user, ScheduleBatch $batch): bool
+    {
+        return $this->view($user, $batch);
+    }
+
     public function deleteDraft(User $user, ScheduleBatch $batch): bool
     {
         return $this->update($user, $batch);

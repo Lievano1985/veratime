@@ -2100,3 +2100,15 @@ Ahí se definirán:
 - Seguridad.
 - Integraciones.
 - Despliegue.
+
+---
+
+## Nota Bloque F4 - Correcciones versionadas de programacion diaria
+
+- Una programacion diaria publicada no se edita directamente.
+- Toda correccion crea una nueva version en borrador con motivo general obligatorio.
+- La nueva version conserva empresa, centro y periodo, y usa `previous_batch_id`.
+- La cobertura correctiva conserva las mismas combinaciones `employment_relationship_id` + `work_date`.
+- La comparacion debe detectar cambios funcionales e ignorar IDs y timestamps.
+- Publicar una correccion sustituye atomica y no destructivamente la version anterior.
+- CSV/XLSX, API WFM, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.

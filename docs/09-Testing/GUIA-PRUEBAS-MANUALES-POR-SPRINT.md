@@ -1291,6 +1291,42 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 
 ---
 
+## Bloque F4 - correcciones versionadas de programacion diaria
+
+Estado: implementado/candidato a cierre.
+
+Preparacion sugerida:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimePublishedScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimeCorrectedScheduleScenarioSeeder
+```
+
+Pruebas manuales:
+
+| Area | Paso | Resultado esperado |
+| --- | --- | --- |
+| Crear correccion | Entrar a `/scheduling/daily`, abrir un lote `Publicado` y elegir `Crear correccion`. | Solicita motivo general y crea version 2 en borrador. |
+| Clonacion | Abrir la version correctiva. | Muestra mismos trabajadores y fechas que la version publicada. |
+| Edicion | Cambiar un dia individual o con cambio masivo. | El cambio queda `Manual` y no modifica la version publicada. |
+| Comparacion | Usar `Comparar con version anterior`. | Muestra dias modificados, antes y despues. |
+| Validacion | Usar `Revisar antes de publicar`. | Bloquea si no hay cambios o existen pendientes. |
+| Publicacion | Confirmar publicacion correctiva. | Version anterior queda `Sustituido`; nueva version queda `Publicado`. |
+| Historial | Abrir `Historial de versiones`. | Muestra versiones cronologicas, hash, motivo y estado. |
+| Integridad | Verificar integridad en versiones publicadas/sustituidas. | Hash valido; una alteracion debe detectarse. |
+
+No incluido:
+
+- CSV/XLSX.
+- API WFM.
+- `work_days` y calculos legales.
+- Alertas, incidencias, cierres, conformidad y reportes.
+
+---
+
 ## Bloque F3B - interfaz de programacion diaria
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.

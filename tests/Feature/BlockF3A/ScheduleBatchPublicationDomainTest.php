@@ -74,7 +74,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertSame('published', $result->scheduleBatch->status);
         $this->assertSame($actor->id, $result->publishedBy);
         $this->assertNotNull($result->publishedAt);
-        $this->assertSame('f1.v1', $result->snapshotSchemaVersion);
+        $this->assertSame(\App\Domains\Scheduling\Actions\BuildScheduleBatchSnapshotAction::SCHEMA_VERSION, $result->snapshotSchemaVersion);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $result->snapshotSha256);
         $this->assertSame(42, $result->assignmentCount);
         $this->assertGreaterThan(0, $result->segmentCount);
