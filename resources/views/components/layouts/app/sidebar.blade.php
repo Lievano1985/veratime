@@ -44,6 +44,10 @@
                         <flux:navlist.item icon="queue-list" :href="route('scheduling.profile-assignments')" :current="request()->routeIs('scheduling.profile-assignments')" wire:navigate>Asignaciones de perfiles</flux:navlist.item>
                     @endif
 
+                    @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleBatch::class, $activeCompany]))
+                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.daily')" :current="request()->routeIs('scheduling.daily')" wire:navigate>Programacion diaria</flux:navlist.item>
+                    @endif
+
                     <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
                 </flux:navlist.group>
 

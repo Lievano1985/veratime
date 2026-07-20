@@ -1,0 +1,345 @@
+<?php
+
+namespace Tests\Feature\BlockF3B;
+
+use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
+use App\Domains\Scheduling\Actions\ReplaceDraftDailyScheduleAssignmentAction;
+use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
+use App\Models\EmploymentRelationship;
+use App\Models\ScheduleBatch;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Database\Seeders\VeraTimeDailyScheduleScenarioSeeder;
+use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
+use Database\Seeders\VeraTimeScheduleProfileScenarioSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+use Livewire\Volt\Volt;
+use Tests\TestCase;
+
+class DailyScheduleCalendarUiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_managers_can_open_daily_scheduling_and_sidebar_entry_is_visible(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('scheduling.daily'))
+            ->assertOk()
+            ->assertSee('Programacion diaria')
+            ->assertSee('Los perfiles representan la forma habitual de trabajo')
+            ->assertSee('Nuevo lote');
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Programacion diaria');
+    }
+
+    public function test_daily_batch_list_is_filtered_by_active_company_and_translates_enums(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->assertSee('Oficinas Corporativas')
+            ->assertDontSee('Demo Ciclo Rotativo')
+            ->assertSee('Borrador')
+            ->set('filters.status', 'all')
+            ->set('filters.worker_search', 'OFF-001')
+            ->assertSee('Oficinas Corporativas');
+    }
+
+    public function test_it_creates_empty_batch_and_creates_batch_generated_from_profiles(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $center = $company->centers()->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('openCreatePanel')
+            ->set('batchForm.center_id', (string) $center->id)
+            ->set('batchForm.period_start', '2026-09-01')
+            ->set('batchForm.period_end', '2026-09-07')
+            ->call('createEmptyBatch')
+            ->assertHasNoErrors()
+            ->assertSee('Lote creado en borrador.');
+
+        $this->assertTrue(ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->whereDate('period_start', '2026-09-01')
+            ->whereDate('period_end', '2026-09-07')
+            ->where('status', 'draft')
+            ->where('creation_source', 'manual')
+            ->exists());
+
+        Volt::test('scheduling.daily')
+            ->call('openCreatePanel')
+            ->set('batchForm.center_id', (string) $center->id)
+            ->set('batchForm.period_start', '2026-09-08')
+            ->set('batchForm.period_end', '2026-09-14')
+            ->call('createAndGenerate')
+            ->assertHasNoErrors()
+            ->assertSee('Generacion lista');
+
+        $batch = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->whereDate('period_start', '2026-09-08')
+            ->firstOrFail();
+
+        $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
+    }
+
+    public function test_period_and_tenant_validation_blocks_invalid_creation(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $foreignCenter = Company::query()->where('tax_id', 'VTSP-CYCLE')->firstOrFail()->centers()->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('openCreatePanel')
+            ->set('batchForm.center_id', (string) $foreignCenter->id)
+            ->set('batchForm.period_start', '2026-09-15')
+            ->set('batchForm.period_end', '2026-09-14')
+            ->call('createEmptyBatch')
+            ->assertHasErrors(['batchForm.center_id', 'batchForm.period_end']);
+    }
+
+    public function test_calendar_shows_day_types_and_manual_edit_preserves_profile_generated_days(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+        $relationship = $this->firstRelationship($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->assertSee('Oficina Demo Ana')
+            ->assertSee('Turno')
+            ->call('openDayEditor', $relationship->id, '2026-08-03')
+            ->set('dayForm.day_type', 'rest')
+            ->set('dayForm.reason', 'Cambio manual para prueba UI')
+            ->call('saveDay')
+            ->assertHasNoErrors()
+            ->call('refreshGenerated')
+            ->assertSee('preservados');
+
+        $assignment = DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $batch->id)
+            ->where('employment_relationship_id', $relationship->id)
+            ->whereDate('work_date', '2026-08-03')
+            ->firstOrFail();
+
+        $this->assertSame('rest', $assignment->day_type);
+        $this->assertSame('manual', $assignment->source_type);
+    }
+
+    public function test_bulk_change_is_transactional_and_requires_confirmation(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+        $relationships = EmploymentRelationship::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $batch->center_id)
+            ->where('status', 'active')
+            ->limit(2)
+            ->pluck('id')
+            ->all();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('openBulkPanel')
+            ->set('bulkForm.employment_relationship_ids', $relationships)
+            ->set('bulkForm.date_from', '2026-08-04')
+            ->set('bulkForm.date_to', '2026-08-05')
+            ->set('bulkForm.day_type', 'rest')
+            ->set('bulkForm.reason', 'Cambio masivo justificado')
+            ->call('applyBulk')
+            ->assertHasErrors(['confirmBulk'])
+            ->set('confirmBulk', true)
+            ->call('applyBulk')
+            ->assertHasNoErrors()
+            ->assertSee('Cambio masivo aplicado a 4 dias.');
+
+        $this->assertSame(4, DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $batch->id)
+            ->whereIn('employment_relationship_id', $relationships)
+            ->where(function ($query): void {
+                $query->whereDate('work_date', '2026-08-04')
+                    ->orWhereDate('work_date', '2026-08-05');
+            })
+            ->where('day_type', 'rest')
+            ->where('source_type', 'manual')
+            ->count());
+    }
+
+    public function test_review_publish_and_integrity_verification_work_from_ui(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('reviewBatch')
+            ->assertSee('Listo para publicar')
+            ->call('publishBatch')
+            ->assertHasErrors(['confirmPublish']);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->set('confirmPublish', true)
+            ->call('publishBatch')
+            ->assertHasNoErrors()
+            ->assertSee('Programacion publicada')
+            ->call('verifyIntegrity')
+            ->assertSee('Integridad verificada');
+
+        $batch->refresh();
+        $this->assertSame('published', $batch->status);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', (string) $batch->snapshot_sha256);
+    }
+
+    public function test_unassigned_batch_cannot_be_published(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-STORE', 'rh.store.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('reviewBatch')
+            ->assertSee('Bloqueos para publicar')
+            ->set('confirmPublish', true)
+            ->call('publishBatch')
+            ->assertHasErrors(['publication']);
+
+        $this->assertSame('draft', $batch->refresh()->status);
+    }
+
+    public function test_published_batches_are_read_only_and_snapshot_tampering_is_detected(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $batch->id)
+            ->assertSee('Publicado')
+            ->assertDontSee('Generar faltantes')
+            ->call('verifyIntegrity')
+            ->assertSee('Integridad verificada');
+
+        $batch->forceFill(['snapshot_canonical_json' => '{"tampered":true}'])->save();
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $batch->id)
+            ->call('verifyIntegrity')
+            ->assertSee('No fue posible verificar la integridad');
+    }
+
+    public function test_supervisor_scope_is_read_only_and_other_company_is_blocked(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-08-03 09:00:00'));
+
+        Artisan::call('db:seed', ['--class' => VeraTimeScheduleProfileScenarioSeeder::class]);
+        [$company, $supervisor] = $this->companyAndUser('VTSP-CONSTRUCT', 'supervisor.construction.demo@veratime.local');
+        $center = $company->centers()->where('name', 'like', '%Obra%')->firstOrFail();
+        $batch = app(CreateScheduleBatchAction::class)->handle($company, $center, [
+            'period_start' => '2026-08-03',
+            'period_end' => '2026-08-09',
+            'creation_source' => 'manual',
+        ], $supervisor);
+        $relationship = EmploymentRelationship::query()->where('company_id', $company->id)->where('center_id', $center->id)->where('status', 'active')->firstOrFail();
+        app(ReplaceDraftDailyScheduleAssignmentAction::class)->handle($company, $batch, $relationship, [
+            'work_date' => '2026-08-03',
+            'day_type' => 'unassigned',
+            'timezone' => $center->timezone,
+            'source_type' => 'manual',
+            'source_reference' => ['schema_version' => 1, 'reason' => 'Supervisor scope fixture'],
+        ]);
+
+        $this->actingAs($supervisor)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('scheduling.daily'))
+            ->assertOk()
+            ->assertSee('Demo Constructora con Herencia')
+            ->assertDontSee('Generar faltantes');
+
+        [$otherCompany] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $this->assertFalse($supervisor->can('publish', $batch));
+        $this->assertFalse($supervisor->can('viewAny', [ScheduleBatch::class, $otherCompany]));
+    }
+
+    public function test_f3b_does_not_create_future_operational_tables(): void
+    {
+        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertFalse(Schema::hasTable('incidents'));
+    }
+
+    private function seedDailyScenarios(): void
+    {
+        Artisan::call('db:seed', ['--class' => VeraTimeDailyScheduleScenarioSeeder::class]);
+    }
+
+    private function seedPublishedScenarios(): void
+    {
+        Artisan::call('db:seed', ['--class' => VeraTimePublishedScheduleScenarioSeeder::class]);
+    }
+
+    /**
+     * @return array{0: Company, 1: User}
+     */
+    private function companyAndUser(string $taxId, string $email): array
+    {
+        $company = Company::query()->where('tax_id', $taxId)->firstOrFail();
+        $user = User::query()->where('email', $email)->firstOrFail();
+
+        return [$company, $user];
+    }
+
+    private function firstBatch(Company $company): ScheduleBatch
+    {
+        return ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->whereDate('period_start', '2026-08-03')
+            ->whereDate('period_end', '2026-08-16')
+            ->firstOrFail();
+    }
+
+    private function firstRelationship(Company $company): EmploymentRelationship
+    {
+        return EmploymentRelationship::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->orderBy('id')
+            ->firstOrFail();
+    }
+}

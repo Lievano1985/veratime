@@ -44,10 +44,13 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 - Sprint 2D.
 - Sprint 2E.
 - Sprint 2F.
+- Bloque F1.
+- Bloque F2.
+- Bloque F3A.
 
 Sprint actual:
 
-- Bloque F3A en progreso/candidato a cierre: validacion integral y publicacion atomica de batches de programacion diaria.
+- Bloque F3B implementado/candidato a cierre: interfaz de usuario para administrar, revisar y publicar programacion diaria.
 
 ## Estado de epics
 
@@ -80,6 +83,13 @@ EPIC-05:
 - /time-clock.
 - /kiosk.
 - Captura manual justificada.
+- Nucleo de programacion diaria.
+- Generacion draft desde perfiles.
+- Publicacion atomica de batches diarios.
+- /scheduling/daily para programacion diaria.
+- Calendario semanal de programacion diaria.
+- Edicion individual y masiva basica de dias en borrador.
+- Verificacion de integridad de publicaciones.
 
 Nota de descansos obligatorios:
 
@@ -110,8 +120,9 @@ Nota de descansos obligatorios:
 - Conformidad digital.
 - API de negocio.
 - CSV.
-- Programacion diaria operativa desde UI.
-- Publicacion operativa de batches desde UI.
+- Correcciones versionadas F4.
+- Importacion CSV/XLSX WFM.
+- API WFM.
 
 ## Validacion Sprint 2F
 
@@ -368,5 +379,21 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion publicada y devuelve `snapshot_sha256`; si no existe publicacion devuelve ausencia controlada.
 - Seeder manual: `php artisan db:seed --class=VeraTimePublishedScheduleScenarioSeeder`.
 - El seeder publica Oficina por Patron, Ciclo Rotativo, Horario Flexible y Bajo Demanda; deja Tienda por Calendario y Sin Perfil en `draft` por dias `unassigned`.
-- No hay interfaz F3A todavia.
 - No se implementan versiones correctivas, supersede automatico, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
+
+## Bloque F3B - interfaz de programacion diaria
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Ruta: `/scheduling/daily`.
+- Navegacion: Horarios -> Programacion diaria.
+- La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y periodo, crear lote vacio o crear y generar desde perfiles.
+- El listado filtra por centro, periodo, estado, trabajador, unidad organizacional, tipo de dia y solo pendientes.
+- El calendario muestra una semana dentro del periodo, con filas por relacion laboral/trabajador y alternativa movil en lista.
+- Permite generar faltantes (`missing_only`) y actualizar desde perfiles (`refresh_profile_generated`) sin tocar cambios manuales ni fuentes externas.
+- Permite editar un dia en borrador como `shift`, `rest`, `flexible`, `on_call` o `unassigned` usando `ReplaceDraftDailyScheduleAssignmentAction`.
+- Permite cambio masivo basico con `BulkReplaceDraftDailyScheduleAssignmentsAction`; si falla un dia se revierte toda la operacion.
+- La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
+- La consulta de lotes publicados muestra hash SHA-256 y permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`.
+- Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
+- No se implementan correcciones versionadas F4, supersede automatico desde UI, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad ni reportes.

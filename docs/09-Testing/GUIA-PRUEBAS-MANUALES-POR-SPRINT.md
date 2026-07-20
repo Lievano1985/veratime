@@ -1289,6 +1289,64 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 - Activaciones on-call.
 - Motor legal, calculos, alertas, incidencias y reportes.
 
+---
+
+## Bloque F3B - interfaz de programacion diaria
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+F3B agrega la pantalla `/scheduling/daily` para administrar, revisar y publicar programacion diaria desde la interfaz web. La pantalla reutiliza las Actions F1/F2/F3A y no implementa correcciones versionadas F4, importacion CSV/XLSX, API WFM ni calculos legales.
+
+Preparacion opcional:
+
+```bash
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimePublishedScheduleScenarioSeeder
+```
+
+Periodo demo:
+
+```text
+2026-08-03 a 2026-08-16
+```
+
+### Flujo manual recomendado
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion diaria. | Carga `/scheduling/daily` y muestra lotes de la empresa activa. |
+| Crear lote vacio | Crear lote para un centro y periodo valido. | Queda en `Borrador`; no se publica ni genera automaticamente. |
+| Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador desde perfiles y se muestra resumen de generacion. |
+| Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
+| Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
+| Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia. |
+| Edicion individual | Cambiar un dia a Turno, Descanso, Flexible, Guardia o Pendiente con motivo. | Guarda con `source_type = manual` usando Action de dominio. |
+| Cambio masivo | Seleccionar trabajadores y rango dentro del lote; confirmar motivo. | Aplica el cambio de forma atomica o revierte todo si falla. |
+| Revisar antes de publicar | Ejecutar la revision. | Muestra bloqueos, advertencias y resumen alineado con dominio. |
+| Publicar | Confirmar publicacion de un lote completo. | Persiste `published_at`, `published_by`, SHA-256 y cambia a solo lectura. |
+| Verificar integridad | En un lote publicado, usar Verificar integridad. | Muestra integridad verificada si el snapshot coincide. |
+| Supervisor con alcance | Entrar con supervisor demo con alcance vigente. | Puede consultar segun alcance; no crea, genera, edita masivo ni publica. |
+| Otra empresa | Cambiar a otra empresa o manipular IDs. | No muestra ni opera lotes ajenos. |
+| Responsive | Reducir ancho de pantalla. | El calendario ofrece vista en lista usable, sin depender solo de tabla ancha. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF3B/DailyScheduleCalendarUiTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Correcciones versionadas F4.
+- Version 2 o supersede automatico desde UI.
+- Importacion CSV/XLSX.
+- API WFM.
+- Activaciones on-call.
+- `work_days`.
+- `work_day_calculations`.
+- Motor legal, calculos, alertas, incidencias, cierres, conformidad y reportes.
+
 ## Bloque F3A - publicacion atomica de batches diarios
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
