@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Models\Company;
+use App\Models\OrganizationalUnit;
 use App\Models\ScheduleBatch;
 use App\Models\User;
 use App\Support\RoleKey;
@@ -92,6 +93,18 @@ class ScheduleBatchPolicy
 
         $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, $user, $date);
 
-        return in_array($centerId, $scope['center_ids'], true);
+        if (in_array($centerId, $scope['center_ids'], true)) {
+            return true;
+        }
+
+        if ($scope['organizational_unit_ids'] === []) {
+            return false;
+        }
+
+        return OrganizationalUnit::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $centerId)
+            ->whereIn('id', $scope['organizational_unit_ids'])
+            ->exists();
     }
 }

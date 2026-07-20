@@ -1037,6 +1037,7 @@ Reglas arquitectonicas:
 - Bloque F1 crea el nucleo de batches, asignaciones diarias, segmentos, snapshot canonico y resolver publicado, sin UI ni publicacion operativa.
 - Bloque F2 genera programacion diaria en borrador desde perfiles, sin publicar ni persistir snapshots de publicacion.
 - Bloque F3A publica batches completos de forma atomica desde dominio, sin UI, persistiendo snapshot JSON canonico, `published_by`, `published_at` y hash SHA-256.
+- Bloque F3B agrega interfaz Livewire/Volt para administrar batches, calendario, edicion individual, cambio masivo basico, validacion, publicacion y verificacion de integridad reutilizando Actions de dominio.
 - La publicacion serializa por centro con transaccion y `lockForUpdate` sobre `Center`; la unicidad efectiva publicada por relacion laboral/fecha se valida en dominio para MySQL/MariaDB.
 - `ResolveDailyScheduleForRelationshipDateAction` resuelve programacion efectiva publicada por relacion laboral y fecha.
 - La publicacion es inmutable. Una correccion genera nueva version y deja la anterior `superseded`.
@@ -1068,6 +1069,7 @@ Responsabilidades:
 | `BuildDailyScheduleSegmentsFromShiftTemplateAction` | Copia segmentos de `shift_templates` y calcula UTC con timezone del centro. |
 | `CreateScheduleBatchAction` | Crea batches en borrador por empresa, centro, periodo y version, sin aceptar datos de publicacion desde entrada no confiable. |
 | `ReplaceDraftDailyScheduleAssignmentAction` | Reemplaza de forma atomica la programacion de un dia dentro de un batch draft. |
+| `BulkReplaceDraftDailyScheduleAssignmentsAction` | Aplica cambios manuales basicos a varios trabajadores y fechas dentro de un batch `draft`; coordina transaccion y reutiliza `ReplaceDraftDailyScheduleAssignmentAction`. |
 | `RemoveDraftDailyScheduleAssignmentAction` | Elimina solo dias de borrador; no aplica a batches publicados. |
 | `BuildScheduleBatchSnapshotAction` | Construye snapshot JSON canonico y hash SHA-256 sin persistirlo. |
 | `ResolveScheduleBatchExpectedRelationshipDatesAction` | Resuelve relaciones laborales y fechas esperadas para un batch, compartido por F2 y F3A. |

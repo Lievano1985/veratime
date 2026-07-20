@@ -873,11 +873,11 @@ La publicacion sera inmutable. Una correccion generara una nueva version y la ve
 
 `daily_schedule_assignments` publicados y `daily_schedule_segments` seran la unica fuente operativa.
 
-En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. En Bloque F2 se implementa la generacion de borradores desde perfiles con modos `missing_only` y `refresh_profile_generated`. En Bloque F3A se implementa la validacion integral y publicacion atomica de batches completos desde dominio, sin interfaz de usuario.
+En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. En Bloque F2 se implementa la generacion de borradores desde perfiles con modos `missing_only` y `refresh_profile_generated`. En Bloque F3A se implementa la validacion integral y publicacion atomica de batches completos desde dominio. En Bloque F3B se implementa la interfaz `/scheduling/daily` para crear lotes, generar desde perfiles, editar borradores, validar, publicar y verificar integridad de publicaciones.
 
 La generacion F2 debe preservar dias manuales, CSV, API o system ajenos al generador; debe congelar unidad principal y timezone por fecha; `calendar` y ausencia de perfil generan `unassigned` con motivo explicito. No publica, no persiste snapshot de publicacion y no calcula jornada.
 
-La publicacion F3A debe bloquear batches incompletos, dias `unassigned`, conflictos con programacion ya publicada por relacion laboral/fecha, versiones correctivas y cualquier configuracion incompatible por tipo de dia. Al publicar debe persistir `snapshot_schema_version`, `snapshot_canonical_json`, `snapshot_sha256`, `published_by` y `published_at`; la verificacion de integridad debe validar el JSON y hash persistidos sin reconstruir desde catalogos actuales.
+La publicacion F3A/F3B debe bloquear batches incompletos, dias `unassigned`, conflictos con programacion ya publicada por relacion laboral/fecha, versiones correctivas y cualquier configuracion incompatible por tipo de dia. Al publicar debe persistir `snapshot_schema_version`, `snapshot_canonical_json`, `snapshot_sha256`, `published_by` y `published_at`; la verificacion de integridad debe validar el JSON y hash persistidos sin reconstruir desde catalogos actuales. F3B no implementa correcciones versionadas, CSV/XLSX, API WFM, calculos legales, alertas, incidencias, cierres, conformidad ni reportes.
 
 **Prioridad:** P0
 
