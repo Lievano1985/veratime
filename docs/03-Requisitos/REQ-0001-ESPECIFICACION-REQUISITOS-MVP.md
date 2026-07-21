@@ -2112,3 +2112,14 @@ Ahí se definirán:
 - La comparacion debe detectar cambios funcionales e ignorar IDs y timestamps.
 - Publicar una correccion sustituye atomica y no destructivamente la version anterior.
 - CSV/XLSX, API WFM, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+
+## Nota Bloque F5A - Dominio de importacion CSV de programacion diaria
+
+- La importacion CSV de programacion diaria registra un lote de importacion asociado a un `schedule_batch` en borrador.
+- El archivo usa encabezados estrictos version 1 y se almacena en disco privado.
+- La validacion resuelve trabajador, relacion laboral, fecha, tipo de dia y plantilla de turno antes de escribir.
+- Las filas invalidas bloquean toda aplicacion.
+- La aplicacion es transaccional y usa las Actions de programacion diaria existentes.
+- Las filas aplicadas quedan con `source_type = csv`.
+- Una correccion versionada en borrador solo puede modificar cobertura ya clonada.
+- F5A no implementa pantalla de carga, descarga de plantilla, descarga de errores, XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.

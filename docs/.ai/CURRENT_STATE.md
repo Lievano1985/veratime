@@ -1,7 +1,7 @@
 ---
 title: Estado actual compacto
 project: Vera Time
-updated: 2026-07-12
+updated: 2026-07-20
 ---
 
 # Estado actual compacto
@@ -47,10 +47,12 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 - Bloque F1.
 - Bloque F2.
 - Bloque F3A.
+- Bloque F3B.
+- Bloque F4.
 
 Sprint actual:
 
-- Bloque F4 implementado/candidato a cierre: correcciones versionadas de programacion diaria publicada.
+- Bloque F5A implementado/candidato a cierre: dominio para importacion CSV de programacion diaria a lotes draft.
 
 ## Estado de epics
 
@@ -90,6 +92,14 @@ EPIC-05:
 - Calendario semanal de programacion diaria.
 - Edicion individual y masiva basica de dias en borrador.
 - Verificacion de integridad de publicaciones.
+- Correcciones versionadas no destructivas de programacion diaria publicada.
+- Dominio de importacion CSV de programacion diaria:
+  - `import_batches`.
+  - `import_rows`.
+  - registro, parseo, validacion, preview, huella de vigencia y aplicacion transaccional.
+  - aplica solo a lotes `draft`.
+  - usa `source_type = csv`.
+  - reutiliza `ReplaceDraftDailyScheduleAssignmentAction`.
 
 Nota de descansos obligatorios:
 
@@ -119,8 +129,9 @@ Nota de descansos obligatorios:
 - Reportes.
 - Conformidad digital.
 - API de negocio.
-- CSV.
-- Importacion CSV/XLSX WFM.
+- Interfaz de carga CSV/XLSX WFM.
+- Descarga de plantilla CSV/XLSX.
+- Descarga de errores de importacion.
 - API WFM.
 
 ## Validacion Sprint 2F
@@ -178,7 +189,8 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
 - Bloque F3B implementa interfaz de calendario y publicacion operativa desde UI.
 - Bloque F4 implementa correcciones versionadas no destructivas: clona desde la publicacion congelada, exige motivo general, compara cambios funcionales y publica en una transaccion que sustituye la version anterior.
-- No se ha implementado todavia importacion CSV/XLSX, cierre multiple, API WFM, calculos legales, `work_days`, alertas, incidencias ni reportes.
+- Bloque F5A implementa dominio de importacion CSV de programacion diaria. No agrega pantalla, subida de archivos, descarga de plantilla, descarga de errores, API, jobs asincronos ni XLSX.
+- No se ha implementado todavia interfaz CSV/XLSX, cierre multiple, API WFM, calculos legales, `work_days`, alertas, incidencias ni reportes.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 

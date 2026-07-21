@@ -1184,3 +1184,27 @@ Reglas arquitectonicas:
 - publicar correccion y sustituir version anterior en una transaccion;
 - mantener snapshots anteriores sin reconstruccion;
 - resolver solo la version `published` vigente.
+
+## Nota Bloque F5A - Importacion CSV de programacion diaria
+
+La importacion CSV de programacion diaria se resuelve domain-first y sin interfaz en este bloque. El flujo vive en Actions:
+
+- `CreateDailyScheduleCsvImportAction`.
+- `ParseDailyScheduleCsvAction`.
+- `ValidateDailyScheduleCsvImportAction`.
+- `ResolveDailyScheduleCsvRowAction`.
+- `BuildDailyScheduleCsvAssignmentPayloadAction`.
+- `ApplyDailyScheduleCsvImportAction`.
+- `CancelDailyScheduleCsvImportAction`.
+
+Reglas arquitectonicas:
+
+- no aceptar `company_id` desde archivo;
+- no escribir programacion diaria antes de validar todas las filas;
+- no aplicar sobre batches publicados, sustituidos o cancelados;
+- no publicar automaticamente;
+- detectar preview obsoleto antes de aplicar;
+- aplicar en transaccion all-or-nothing;
+- reutilizar `ReplaceDraftDailyScheduleAssignmentAction`;
+- mantener archivos en almacenamiento privado;
+- no implementar UI, API, XLSX ni jobs asincronos en F5A.

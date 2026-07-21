@@ -2069,6 +2069,22 @@ El mapa de pantallas se considera aprobado cuando:
 
 ---
 
+## Nota Bloque F5A - UX de importacion CSV
+
+F5A no agrega pantalla nueva. El bloque implementa dominio para registrar, validar y aplicar CSV de programacion diaria a lotes `draft`.
+
+La futura pantalla F5B debera permitir:
+
+- cargar archivo CSV;
+- mostrar preview y errores por fila;
+- confirmar aplicacion;
+- evitar publicacion automatica;
+- distinguir registros aplicados, omitidos e invalidos.
+
+Mientras F5B no exista, no debe aparecer en navegacion una opcion funcional de carga CSV de programacion diaria.
+
+---
+
 # 31. Siguiente documento
 
 Después de aprobar este mapa de pantallas, el siguiente documento recomendado es:
