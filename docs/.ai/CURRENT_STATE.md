@@ -52,7 +52,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Bloque F5A implementado/candidato a cierre: dominio para importacion CSV de programacion diaria a lotes draft.
+- Bloque F5B implementado/candidato a cierre: interfaz de importacion CSV de programacion diaria sobre lotes draft.
 
 ## Estado de epics
 
@@ -100,6 +100,13 @@ EPIC-05:
   - aplica solo a lotes `draft`.
   - usa `source_type = csv`.
   - reutiliza `ReplaceDraftDailyScheduleAssignmentAction`.
+- Interfaz CSV de programacion diaria en `/scheduling/daily`:
+  - descarga plantilla CSV version 1.
+  - carga archivo CSV privado.
+  - muestra vista previa paginada con errores y advertencias.
+  - permite aplicar al lote borrador despues de confirmar la vista previa.
+  - descarga reporte CSV de errores.
+  - no publica automaticamente.
 
 Nota de descansos obligatorios:
 
@@ -129,9 +136,7 @@ Nota de descansos obligatorios:
 - Reportes.
 - Conformidad digital.
 - API de negocio.
-- Interfaz de carga CSV/XLSX WFM.
-- Descarga de plantilla CSV/XLSX.
-- Descarga de errores de importacion.
+- Carga XLSX WFM.
 - API WFM.
 
 ## Validacion Sprint 2F
@@ -189,8 +194,9 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Bloque E2 implementa la interfaz de `/scheduling/profiles` para ciclo repetitivo, flexible y bajo demanda.
 - Bloque F3B implementa interfaz de calendario y publicacion operativa desde UI.
 - Bloque F4 implementa correcciones versionadas no destructivas: clona desde la publicacion congelada, exige motivo general, compara cambios funcionales y publica en una transaccion que sustituye la version anterior.
-- Bloque F5A implementa dominio de importacion CSV de programacion diaria. No agrega pantalla, subida de archivos, descarga de plantilla, descarga de errores, API, jobs asincronos ni XLSX.
-- No se ha implementado todavia interfaz CSV/XLSX, cierre multiple, API WFM, calculos legales, `work_days`, alertas, incidencias ni reportes.
+- Bloque F5A implementa dominio de importacion CSV de programacion diaria.
+- Bloque F5B implementa la interfaz de importacion CSV en `/scheduling/daily`, descarga de plantilla CSV y descarga de errores.
+- No se ha implementado todavia XLSX, cierre multiple, API WFM, calculos legales, `work_days`, alertas, incidencias ni reportes.
 
 Rama de trabajo: `ux-01-refinamiento-general-sprint-2`.
 

@@ -1382,6 +1382,59 @@ No incluido:
 
 ---
 
+## Bloque F5B - interfaz de importacion CSV de programacion diaria
+
+Estado: implementado/candidato a cierre.
+
+F5B agrega la importacion CSV dentro de `/scheduling/daily`. La importacion solo aplica a lotes `draft`; no publica programacion y no modifica lotes publicados.
+
+Preparacion sugerida:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleCsvScenarioSeeder
+```
+
+Usuario recomendado:
+
+```text
+rh.store.demo@veratime.local
+```
+
+Flujo manual:
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Abrir pantalla | Entrar a `/scheduling/daily`, abrir un lote `Borrador`. | Muestra bloque `Importacion CSV`. |
+| Plantilla | Elegir `Descargar plantilla`. | Descarga CSV version 1 con encabezados esperados. |
+| Carga valida | Cargar archivo CSV valido con motivo. | Muestra preview paginado sin errores bloqueantes. |
+| Aplicar | Confirmar que se reviso la vista previa y aplicar. | Filas validas modifican el lote draft con `source_type = csv`. |
+| Errores | Cargar CSV con trabajador o turno inexistente. | Queda `Con errores` y no permite aplicar. |
+| Reporte de errores | Descargar errores. | Descarga CSV sin rutas privadas ni trazas tecnicas. |
+| Cancelar | Cancelar importacion con motivo. | La importacion queda cancelada sin borrar historial. |
+| Publicado | Abrir lote `Publicado`. | No aparece carga CSV editable. |
+| Supervisor | Entrar con supervisor. | No puede cargar, aplicar ni descargar importaciones fuera de su permiso. |
+| Otra empresa | Manipular IDs de importacion o lote. | Acceso bloqueado. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF5B/DailyScheduleCsvImportUiTest.php --stop-on-failure
+```
+
+No incluido:
+
+- XLSX.
+- API WFM.
+- Jobs asincronos.
+- Publicacion automatica.
+- `work_days` y calculos legales.
+- Alertas, incidencias, cierres, conformidad y reportes.
+
+---
+
 ## Bloque F3B - interfaz de programacion diaria
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.

@@ -652,7 +652,7 @@ Bloque D2 agrega:
 
 Bloque E1 agrega dominio para ciclo repetitivo, flexible y bajo demanda. Bloque E2 agrega la interfaz en `/scheduling/profiles` con cuatro metodos: Por patron, Por calendario, Flexible y Bajo demanda. Dentro de Por patron distingue Patron semanal y Ciclo repetitivo. La UI no publica dias ni genera programacion diaria.
 
-Bloque F1 agrega el nucleo interno de programacion diaria (`schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`), snapshots canonicos y resolucion de programacion publicada, pero no agrega pantalla nueva. Bloque F2 agrega generacion interna de borradores desde perfiles, tambien sin pantalla nueva. Bloque F3A agrega publicacion atomica desde dominio con validacion integral, snapshot persistido, SHA-256, `published_by` y `published_at`, pero tampoco agrega pantalla nueva. Bloque F3B agrega `/scheduling/daily` para crear lotes, generar desde perfiles, revisar calendario semanal, editar dias, aplicar cambio masivo basico, validar, publicar, consultar publicados y verificar integridad. Bloque F4 agrega en la misma pantalla crear correccion, motivo obligatorio, comparacion con version anterior, publicacion correctiva, version anterior sustituida e historial de versiones. Importacion CSV/XLSX, API WFM y calculos quedan pendientes.
+Bloque F1 agrega el nucleo interno de programacion diaria (`schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments`), snapshots canonicos y resolucion de programacion publicada, pero no agrega pantalla nueva. Bloque F2 agrega generacion interna de borradores desde perfiles, tambien sin pantalla nueva. Bloque F3A agrega publicacion atomica desde dominio con validacion integral, snapshot persistido, SHA-256, `published_by` y `published_at`, pero tampoco agrega pantalla nueva. Bloque F3B agrega `/scheduling/daily` para crear lotes, generar desde perfiles, revisar calendario semanal, editar dias, aplicar cambio masivo basico, validar, publicar, consultar publicados y verificar integridad. Bloque F4 agrega en la misma pantalla crear correccion, motivo obligatorio, comparacion con version anterior, publicacion correctiva, version anterior sustituida e historial de versiones. Bloque F5B agrega importacion CSV web a lotes `draft`. XLSX, API WFM y calculos quedan pendientes.
 
 ## 10.0 Estructura organizacional
 
@@ -2073,15 +2073,17 @@ El mapa de pantallas se considera aprobado cuando:
 
 F5A no agrega pantalla nueva. El bloque implementa dominio para registrar, validar y aplicar CSV de programacion diaria a lotes `draft`.
 
-La futura pantalla F5B debera permitir:
+La pantalla F5B ya permite:
 
 - cargar archivo CSV;
-- mostrar preview y errores por fila;
+- descargar plantilla;
+- mostrar preview paginado y errores por fila;
 - confirmar aplicacion;
+- descargar errores;
 - evitar publicacion automatica;
 - distinguir registros aplicados, omitidos e invalidos.
 
-Mientras F5B no exista, no debe aparecer en navegacion una opcion funcional de carga CSV de programacion diaria.
+La carga se integra dentro de `/scheduling/daily` y aparece solo para lotes `draft` editables. No muestra rutas privadas de archivo, JSON tecnico ni enums internos como texto principal. XLSX, API WFM, jobs asincronos y publicacion automatica siguen pendientes.
 
 ---
 
