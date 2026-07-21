@@ -1480,6 +1480,55 @@ Resultado por fila.
 index(company_id, import_batch_id, status)
 ```
 
+### Implementacion F5A actual - CSV de programacion diaria
+
+El Bloque F5A materializa `import_batches` e `import_rows` para importacion CSV de programacion diaria a `schedule_batches` en `draft`.
+
+`import_batches` implementado:
+
+- `company_id`.
+- `import_type = daily_schedule`.
+- `target_type = schedule_batch`.
+- `target_id`.
+- `status`: `uploaded`, `validating`, `validated`, `invalid`, `applying`, `applied`, `cancelled`.
+- `existing_assignment_policy`: `preserve_existing`, `replace_existing`.
+- `original_filename`, `storage_disk`, `storage_path`.
+- `file_sha256`, `file_size_bytes`.
+- `encoding`, `delimiter`, `header_schema_version`.
+- `validation_sha256`.
+- `idempotency_key`.
+- `reason`.
+- contadores de filas.
+- usuarios y timestamps de validacion, aplicacion y cancelacion.
+- `metadata` JSON.
+
+`import_rows` implementado:
+
+- `company_id`.
+- `import_batch_id`.
+- `row_number`.
+- `status`: `valid`, `invalid`, `warning`, `applied`, `skipped`.
+- `raw_data` JSON.
+- `normalized_data` JSON.
+- `errors` JSON.
+- `warnings` JSON.
+- `employment_relationship_id`.
+- `work_date`.
+- `existing_daily_schedule_assignment_id`.
+- `applied_daily_schedule_assignment_id`.
+- `row_fingerprint`.
+
+Reglas F5A:
+
+- Solo aplica a lotes `draft`.
+- No publica automaticamente.
+- La aplicacion es transaccional all-or-nothing.
+- Una fila invalida bloquea toda la aplicacion.
+- La vista previa usa `validation_sha256` para detectar cambios entre validacion y aplicacion.
+- En versiones correctivas solo puede reemplazar cobertura ya clonada.
+- Las asignaciones aplicadas usan `source_type = csv`.
+- No se implementa UI de carga, XLSX, API WFM ni jobs asincronos.
+
 ## 17.4 `export_batches`
 
 Exportaciones de prenómina u otras salidas.
@@ -2046,7 +2095,7 @@ Las metricas del catalogo de turnos son derivadas y no se almacenan en columnas 
 
 `daily_schedule_segments`: segmentos congelados de una asignacion diaria. Campos: `company_id`, `daily_schedule_assignment_id`, `segment_order`, `segment_type` (`work`, `break`), `timing_mode` (`fixed`, `duration`), `start_local_time`, `end_local_time`, `start_day_offset`, `end_day_offset`, `starts_at_utc`, `ends_at_utc`, `duration_minutes`, `is_paid`, `shift_template_segment_id`, `metadata`, timestamps. Indices: unique `daily_schedule_assignment_id/segment_order`, index `company_id/daily_schedule_assignment_id`, index `company_id/segment_type`.
 
-Regla F1-F3B: los batches `published`, `superseded` y `cancelled` son inmutables desde las Actions. El snapshot canonico y el hash SHA-256 se construyen a nivel batch. MySQL/MariaDB no tiene unique parcial portable para "un publicado efectivo por trabajador/fecha"; F1 conserva unicidad dentro del batch y el resolver detecta conflictos si existen dos batches publicados aplicables. Desde F3B existe publicacion operativa desde UI usando las Actions de dominio. No se implementan todavia `work_days`, `work_day_calculations`, API WFM ni CSV.
+Regla F1-F5A: los batches `published`, `superseded` y `cancelled` son inmutables desde las Actions. El snapshot canonico y el hash SHA-256 se construyen a nivel batch. MySQL/MariaDB no tiene unique parcial portable para "un publicado efectivo por trabajador/fecha"; F1 conserva unicidad dentro del batch y el resolver detecta conflictos si existen dos batches publicados aplicables. Desde F3B existe publicacion operativa desde UI usando las Actions de dominio. Desde F5A existe importacion CSV de dominio a lotes `draft` con `import_batches` e `import_rows`. No se implementan todavia `work_days`, `work_day_calculations`, API WFM ni UI de carga CSV/XLSX.
 
 Regla F2: `GenerateDraftScheduleBatchFromProfilesAction` crea o refresca solo asignaciones dentro de batches `draft`. `source_reference` usa estructura estable con `schema_version`, `generator = schedule_profile_generation`, perfil, asignacion de perfil, origen, regla, `cycle_day`, plantilla y motivo. `missing_only` no toca dias existentes. `refresh_profile_generated` solo reemplaza dias `profile` o `system` creados por ese generador y conserva `manual`, `csv`, `api` y `system` de otros procesos. Los segmentos copiados desde `shift_templates` guardan horas locales, offsets y UTC calculado con timezone del centro. F2 no persiste `snapshot_sha256` ni `snapshot_canonical_json`; esos campos quedan para publicacion posterior.
 

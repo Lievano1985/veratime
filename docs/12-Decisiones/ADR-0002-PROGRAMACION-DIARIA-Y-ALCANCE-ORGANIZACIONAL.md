@@ -155,6 +155,8 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 
 En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F3A, `ResolveScheduleBatchExpectedRelationshipDatesAction` se reutiliza para validar cobertura antes de publicar. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
 
+En Bloque F5A, la importacion CSV de programacion diaria se resuelve como dominio interno, sin UI ni API. El flujo registra `import_batches`, parsea CSV version 1, valida filas en `import_rows`, genera preview con huella, detecta cambios posteriores y aplica en transaccion usando `ReplaceDraftDailyScheduleAssignmentAction`. No publica automaticamente y no duplica reglas de asignacion diaria.
+
 ## Snapshots y Versionamiento
 
 La programacion publicada conserva snapshot JSON canonico a nivel batch. Cualquier cambio posterior crea nueva version y marca el batch previo como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
@@ -193,6 +195,18 @@ CSV/XLSX/API preparados para programacion por calendario:
 - no publican automaticamente;
 - registran errores por fila;
 - reutilizan las mismas Actions de dominio.
+
+F5A implementa la primera parte para CSV de programacion diaria:
+
+- encabezados version 1 estrictos;
+- almacenamiento privado por disco/ruta;
+- idempotencia por empresa, tipo e idempotency key;
+- validacion previa completa antes de escribir dias;
+- aplicacion all-or-nothing a lotes draft;
+- `source_type = csv`;
+- bloqueo de preview obsoleto mediante `validation_sha256`.
+
+Quedan fuera de F5A: pantalla de carga, descarga de plantilla, descarga de errores, XLSX, API WFM, jobs asincronos y publicacion automatica.
 
 ## Alternativas Descartadas
 

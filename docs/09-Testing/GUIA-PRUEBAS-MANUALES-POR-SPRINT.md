@@ -1327,6 +1327,61 @@ No incluido:
 
 ---
 
+## Bloque F5A - dominio de importacion CSV de programacion diaria
+
+Estado: implementado/candidato a cierre.
+
+F5A no agrega pantalla de carga. La validacion manual se realiza con comandos y revisando registros `import_batches`, `import_rows` y `daily_schedule_assignments` en entorno local.
+
+Preparacion sugerida:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
+php artisan db:seed --class=VeraTimeDailyScheduleCsvScenarioSeeder
+```
+
+El escenario demo usa:
+
+```text
+Empresa: Demo Tienda por Calendario
+Periodo: 2026-08-03 a 2026-08-16
+Seeder: VeraTimeDailyScheduleCsvScenarioSeeder
+```
+
+Validaciones esperadas:
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Seeder F5A | Ejecutar `VeraTimeDailyScheduleCsvScenarioSeeder` dos veces. | No duplica imports por idempotencia. |
+| Import valido | Revisar `import_batches` aplicado. | Queda `applied` con filas `applied` o `skipped`. |
+| Import invalido | Revisar `import_batches` invalido. | Queda `invalid` con errores por fila. |
+| Programacion diaria | Revisar dias del lote demo. | Filas aplicadas quedan con `source_type = csv`. |
+| Borrador requerido | Intentar aplicar sobre batch no draft desde prueba automatizada. | Se bloquea por estado. |
+| Preview obsoleto | Cambiar un dia despues de validar y antes de aplicar desde prueba automatizada. | La aplicacion se bloquea por huella stale. |
+| Correccion draft | Aplicar CSV a correccion versionada desde prueba automatizada. | Solo modifica cobertura ya clonada. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/BlockF5A/DailyScheduleCsvImportDomainTest.php --stop-on-failure
+```
+
+No incluido:
+
+- Pantalla de carga CSV.
+- Descarga de plantilla.
+- Descarga de archivo de errores.
+- XLSX.
+- API WFM.
+- Jobs asincronos.
+- Publicacion automatica.
+- `work_days` y calculos legales.
+- Alertas, incidencias, cierres, conformidad y reportes.
+
+---
+
 ## Bloque F3B - interfaz de programacion diaria
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
