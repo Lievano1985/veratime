@@ -53,6 +53,7 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 Sprint actual:
 
 - Bloque F5B implementado/candidato a cierre: interfaz de importacion CSV de programacion diaria sobre lotes draft.
+- Modulo de horarios en preparacion de revision integral documental.
 
 ## Estado de epics
 
@@ -138,6 +139,25 @@ Nota de descansos obligatorios:
 - API de negocio.
 - Carga XLSX WFM.
 - API WFM.
+
+## Revision integral del modulo de horarios
+
+Estado: documentacion preparada, revision manual no ejecutada.
+
+Documentos creados:
+
+- `docs/06-UX/MANUAL-OPERATIVO-MODULO-DE-HORARIOS.md`.
+- `docs/09-Testing/PLAN-REVISION-INTEGRAL-MODULO-DE-HORARIOS.md`.
+- `docs/09-Testing/MATRIZ-RESULTADOS-REVISION-MODULO-DE-HORARIOS.md`.
+- `docs/09-Testing/INVENTARIO-FUNCIONAL-MODULO-DE-HORARIOS.md`.
+
+Objetivo:
+
+- revisar el modulo de horarios de punta a punta antes de iniciar `work_days` y motor legal;
+- validar rutas, permisos, multi-tenant, programacion diaria, snapshots, versiones y CSV;
+- registrar hallazgos manuales con severidad.
+
+No implica aprobacion manual del modulo. `work_days`, motor legal, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
 
 ## Validacion Sprint 2F
 
