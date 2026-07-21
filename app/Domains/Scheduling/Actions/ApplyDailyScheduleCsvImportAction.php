@@ -20,12 +20,12 @@ class ApplyDailyScheduleCsvImportAction
     ) {
     }
 
-    public function handle(User $actor, ImportBatch $importBatch): DailyScheduleCsvApplyResult
+    public function handle(User $actor, ImportBatch $importBatch, ?string $expectedValidationSha256 = null): DailyScheduleCsvApplyResult
     {
         $importBatch->loadMissing('scheduleBatch.company');
         Gate::forUser($actor)->authorize('update', $importBatch->scheduleBatch);
 
-        return DB::transaction(function () use ($actor, $importBatch): DailyScheduleCsvApplyResult {
+        return DB::transaction(function () use ($actor, $importBatch, $expectedValidationSha256): DailyScheduleCsvApplyResult {
             $lockedImport = ImportBatch::query()->with('rows')->lockForUpdate()->findOrFail($importBatch->id);
             $batch = $lockedImport->scheduleBatch()->with(['company', 'center'])->lockForUpdate()->firstOrFail();
             $company = $batch->company;
@@ -36,6 +36,10 @@ class ApplyDailyScheduleCsvImportAction
 
             if ($batch->status !== 'draft') {
                 throw new DailyScheduleCsvImportStateException('La aplicacion requiere un lote borrador.');
+            }
+
+            if ($expectedValidationSha256 !== null && $expectedValidationSha256 !== $lockedImport->validation_sha256) {
+                throw new DailyScheduleCsvStalePreviewException('La vista previa ya no corresponde a la validacion actual. Vuelve a validar antes de aplicar.');
             }
 
             if ($this->fingerprints->handle($lockedImport) !== $lockedImport->validation_sha256) {

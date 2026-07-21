@@ -1287,6 +1287,10 @@ new class extends Component {
                 <p class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">Existen {{ $selectedSummary['unassigned'] }} dias pendientes de definicion.</p>
             @endif
 
+            @if ($canEditSelectedBatch)
+                <livewire:scheduling.daily-schedule-csv-import :schedule-batch-id="$selectedBatch->id" :key="'daily-csv-import-'.$selectedBatch->id" />
+            @endif
+
             @if ($selectedBatch->status === 'published')
                 <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
                     <p>Publicado: {{ $selectedBatch->published_at?->format('Y-m-d H:i') }} por {{ $selectedBatch->publisher?->name ?? 'Usuario' }}</p>

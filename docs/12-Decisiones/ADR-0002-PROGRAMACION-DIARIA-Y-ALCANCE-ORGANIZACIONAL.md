@@ -157,6 +157,8 @@ En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles co
 
 En Bloque F5A, la importacion CSV de programacion diaria se resuelve como dominio interno, sin UI ni API. El flujo registra `import_batches`, parsea CSV version 1, valida filas en `import_rows`, genera preview con huella, detecta cambios posteriores y aplica en transaccion usando `ReplaceDraftDailyScheduleAssignmentAction`. No publica automaticamente y no duplica reglas de asignacion diaria.
 
+En Bloque F5B, la importacion CSV queda disponible desde `/scheduling/daily` para lotes `draft`. La UI descarga plantilla version 1, carga archivo privado, muestra preview paginado, aplica con confirmacion y hash vigente, permite cancelar importaciones y descarga reporte de errores. No agrega API WFM, XLSX, jobs asincronos ni publicacion automatica.
+
 ## Snapshots y Versionamiento
 
 La programacion publicada conserva snapshot JSON canonico a nivel batch. Cualquier cambio posterior crea nueva version y marca el batch previo como `superseded`, sin destruir historial. Las cancelaciones usan estado `cancelled` y tambien conservan evidencia.
@@ -206,7 +208,7 @@ F5A implementa la primera parte para CSV de programacion diaria:
 - `source_type = csv`;
 - bloqueo de preview obsoleto mediante `validation_sha256`.
 
-Quedan fuera de F5A: pantalla de carga, descarga de plantilla, descarga de errores, XLSX, API WFM, jobs asincronos y publicacion automatica.
+Quedan fuera de F5B: XLSX, API WFM, jobs asincronos y publicacion automatica.
 
 ## Alternativas Descartadas
 

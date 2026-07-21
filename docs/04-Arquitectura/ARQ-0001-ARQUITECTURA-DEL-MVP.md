@@ -1208,3 +1208,23 @@ Reglas arquitectonicas:
 - reutilizar `ReplaceDraftDailyScheduleAssignmentAction`;
 - mantener archivos en almacenamiento privado;
 - no implementar UI, API, XLSX ni jobs asincronos en F5A.
+
+## Nota Bloque F5B - UI de importacion CSV de programacion diaria
+
+F5B agrega la entrada web en `/scheduling/daily` para cargar CSV sobre lotes `draft`. Livewire solo captura archivo, motivo, politica de existentes y confirmacion; la escritura sigue en Actions de dominio.
+
+Actions agregadas para la UI:
+
+- `StoreDailyScheduleCsvUploadAction`.
+- `GenerateDailyScheduleCsvTemplateAction`.
+- `GenerateDailyScheduleCsvErrorReportAction`.
+- `ListDailyScheduleCsvImportsAction`.
+
+Reglas arquitectonicas F5B:
+
+- los controladores de descarga son delgados y delegan en Actions;
+- el archivo se guarda en storage privado con ruta interna aleatoria;
+- la UI no expone rutas privadas ni trazas tecnicas;
+- la aplicacion de una importacion exige el hash de validacion esperado;
+- los lotes publicados no pueden importarse;
+- F5B no agrega API WFM, XLSX, jobs asincronos ni publicacion automatica.

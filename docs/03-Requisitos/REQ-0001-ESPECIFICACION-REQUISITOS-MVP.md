@@ -2122,4 +2122,13 @@ Ahí se definirán:
 - La aplicacion es transaccional y usa las Actions de programacion diaria existentes.
 - Las filas aplicadas quedan con `source_type = csv`.
 - Una correccion versionada en borrador solo puede modificar cobertura ya clonada.
-- F5A no implementa pantalla de carga, descarga de plantilla, descarga de errores, XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.
+- F5A no implementa pantalla de carga, XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.
+
+## Nota Bloque F5B - Interfaz de importacion CSV de programacion diaria
+
+- La pantalla `/scheduling/daily` permite importar CSV solo sobre lotes `draft`.
+- La interfaz permite descargar plantilla CSV version 1, cargar archivo privado, validar, revisar preview paginado, aplicar con confirmacion y descargar errores.
+- La aplicacion exige hash de validacion vigente para evitar aplicar una vista previa obsoleta.
+- Los archivos se almacenan con ruta interna aleatoria; la ruta privada no se expone al usuario.
+- Supervisores, usuarios de otra empresa y lotes publicados no pueden usar la importacion CSV.
+- F5B no implementa XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.

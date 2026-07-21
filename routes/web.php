@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
+use App\Http\Controllers\Scheduling\DailyScheduleCsvTemplateController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -22,6 +24,8 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('scheduling/profiles', 'scheduling.profiles')->name('scheduling.profiles');
     Volt::route('scheduling/profile-assignments', 'scheduling.profile-assignments')->name('scheduling.profile-assignments');
     Volt::route('scheduling/daily', 'scheduling.daily')->name('scheduling.daily');
+    Route::get('scheduling/daily/csv/template', DailyScheduleCsvTemplateController::class)->name('scheduling.daily.csv.template');
+    Route::get('scheduling/daily/imports/{importBatch}/errors', DailyScheduleCsvErrorReportController::class)->name('scheduling.daily.imports.errors');
     Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
     Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
     Volt::route('organization/units', 'organization.units')->name('organization.units');
