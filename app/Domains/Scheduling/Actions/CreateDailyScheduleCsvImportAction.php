@@ -26,7 +26,7 @@ class CreateDailyScheduleCsvImportAction
         $disk = (string) ($data['storage_disk'] ?? 'local');
         $path = trim((string) ($data['storage_path'] ?? ''));
         $filename = trim((string) ($data['original_filename'] ?? basename($path)));
-        $reason = trim((string) ($data['reason'] ?? ''));
+        $reason = trim(preg_replace('/\s+/', ' ', (string) ($data['reason'] ?? '')) ?? '');
         $policy = (string) ($data['existing_assignment_policy'] ?? 'replace_existing');
         $idempotencyKey = blank($data['idempotency_key'] ?? null) ? null : trim((string) $data['idempotency_key']);
 
