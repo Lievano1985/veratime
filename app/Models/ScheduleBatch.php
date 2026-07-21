@@ -86,4 +86,10 @@ class ScheduleBatch extends Model
     {
         return $this->hasMany(DailyScheduleAssignment::class);
     }
+
+    public function imports(): HasMany
+    {
+        return $this->hasMany(ImportBatch::class, 'target_id')
+            ->where('target_type', 'schedule_batch');
+    }
 }
