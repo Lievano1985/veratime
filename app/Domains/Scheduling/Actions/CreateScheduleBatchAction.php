@@ -23,33 +23,18 @@ class CreateScheduleBatchAction
                 (string) ($data['period_end'] ?? ''),
             );
 
-            $previousBatch = isset($data['previous_batch_id'])
-                ? ScheduleBatch::query()->lockForUpdate()->find($data['previous_batch_id'])
-                : null;
-
-            $version = isset($data['version'])
-                ? max(1, (int) $data['version'])
-                : ((int) ScheduleBatch::query()
-                    ->where('company_id', $company->id)
-                    ->where('center_id', $center->id)
-                    ->whereDate('period_start', $periodStart)
-                    ->whereDate('period_end', $periodEnd)
-                    ->lockForUpdate()
-                    ->max('version')) + 1;
-
-            $this->validator->validatePreviousBatch($company, $center, $periodStart, $periodEnd, $previousBatch, $version);
+            $this->validator->ensureNoOpenDraft($company, $center, $periodStart, $periodEnd);
 
             $batch = new ScheduleBatch([
                 'period_start' => $periodStart,
                 'period_end' => $periodEnd,
-                'version' => $version,
+                'version' => null,
                 'status' => 'draft',
                 'creation_source' => $this->validator->validateCreationSource((string) ($data['creation_source'] ?? 'manual')),
                 'notes' => blank($data['notes'] ?? null) ? null : trim((string) $data['notes']),
             ]);
             $batch->company()->associate($company);
             $batch->center()->associate($center);
-            $batch->previousBatch()->associate($previousBatch);
             $batch->creator()->associate($createdBy);
             $batch->save();
 

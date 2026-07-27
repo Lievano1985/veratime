@@ -11,6 +11,7 @@ use App\Models\EmploymentUnitAssignment;
 use App\Models\OrganizationalUnit;
 use App\Models\Worker;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -34,21 +35,35 @@ new class extends Component {
         $this->primaryForm = $this->emptyPrimaryForm();
         $this->supportForm = $this->emptySupportForm();
         $this->endForm = $this->emptyEndForm();
-        $this->filters = ['center_id' => '', 'search' => '', 'status' => 'all'];
+        $this->filters = ['center_id' => '', 'organizational_unit_id' => '', 'search' => '', 'status' => 'all'];
     }
 
     public function updated($property): void
     {
         if (str_starts_with((string) $property, 'filters.')) {
+            if ($property === 'filters.center_id') {
+                $this->filters['organizational_unit_id'] = '';
+            }
+
             $this->resetPage();
         }
 
         if ($property === 'primaryForm.worker_ids') {
             $this->primaryForm['organizational_unit_id'] = '';
+            $this->resetValidation(['primaryForm.worker_ids', 'primaryForm.organizational_unit_id']);
+        }
+
+        if (in_array($property, ['primaryForm.operation', 'primaryForm.organizational_unit_id', 'primaryForm.effective_from', 'primaryForm.reason'], true)) {
+            $this->resetValidation(['primaryForm.organizational_unit_id', 'primaryForm.reason']);
         }
 
         if ($property === 'supportForm.support_center_id') {
             $this->supportForm['organizational_unit_id'] = '';
+            $this->resetValidation(['supportForm.support_center_id', 'supportForm.organizational_unit_id']);
+        }
+
+        if (in_array($property, ['supportForm.worker_ids', 'supportForm.organizational_unit_id', 'supportForm.effective_from', 'supportForm.effective_to', 'supportForm.reason'], true)) {
+            $this->resetValidation(['supportForm.worker_ids', 'supportForm.organizational_unit_id', 'supportForm.reason']);
         }
     }
 
@@ -79,7 +94,7 @@ new class extends Component {
         Gate::authorize('create', [EmploymentUnitAssignment::class, $company]);
 
         $validated = $this->validate([
-            'primaryForm.worker_ids' => ['required', 'array', 'size:1'],
+            'primaryForm.worker_ids' => ['required', 'array', 'min:1'],
             'primaryForm.worker_ids.*' => [
                 'required',
                 'integer',
@@ -95,7 +110,6 @@ new class extends Component {
             'primaryForm.reason' => ['required_if:primaryForm.operation,replace', 'nullable', 'string', 'max:1000'],
         ])['primaryForm'];
 
-        $relationship = $this->activeRelationshipForWorker($company, (int) $validated['worker_ids'][0]);
         $unit = $company->organizationalUnits()->whereKey((int) $validated['organizational_unit_id'])->firstOrFail();
 
         try {
@@ -106,9 +120,15 @@ new class extends Component {
                 'created_by' => auth()->id(),
             ];
 
-            $validated['operation'] === 'replace'
-                ? $replaceAction->handle($company, $relationship, $unit, $data)
-                : $assignAction->handle($company, $relationship, $unit, $data);
+            DB::transaction(function () use ($company, $validated, $unit, $data, $replaceAction, $assignAction): void {
+                foreach ($validated['worker_ids'] as $workerId) {
+                    $relationship = $this->activeRelationshipForWorker($company, (int) $workerId, date: $validated['effective_from']);
+
+                    $validated['operation'] === 'replace'
+                        ? $replaceAction->handle($company, $relationship, $unit, $data)
+                        : $assignAction->handle($company, $relationship, $unit, $data);
+                }
+            });
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['primaryForm.organizational_unit_id' => $exception->getMessage()]);
         }
@@ -116,7 +136,8 @@ new class extends Component {
         $this->showPrimaryPanel = false;
         $this->primaryForm = $this->emptyPrimaryForm();
         $this->resetPage();
-        Session::flash('status', 'Unidad principal guardada.');
+        $count = count($validated['worker_ids']);
+        Session::flash('status', $count === 1 ? 'Unidad principal guardada.' : "Unidad principal guardada para {$count} trabajadores.");
     }
 
     public function saveSupport(CurrentCompany $currentCompany, AssignTemporarySupportAction $action): void
@@ -125,7 +146,7 @@ new class extends Component {
         Gate::authorize('create', [EmploymentUnitAssignment::class, $company]);
 
         $validated = $this->validate([
-            'supportForm.worker_ids' => ['required', 'array', 'size:1'],
+            'supportForm.worker_ids' => ['required', 'array', 'min:1'],
             'supportForm.worker_ids.*' => [
                 'required',
                 'integer',
@@ -146,20 +167,27 @@ new class extends Component {
             'supportForm.reason' => ['required', 'string', 'max:1000'],
         ])['supportForm'];
 
-        $relationship = $this->activeRelationshipForWorker($company, (int) $validated['worker_ids'][0]);
         $unit = $company->organizationalUnits()
             ->where('center_id', (int) $validated['support_center_id'])
             ->whereKey((int) $validated['organizational_unit_id'])
             ->firstOrFail();
 
         try {
-            $action->handle($company, $relationship, $unit, [
+            $data = [
                 'effective_from' => $validated['effective_from'],
                 'effective_to' => $validated['effective_to'],
                 'source' => 'manual',
                 'reason' => $validated['reason'],
                 'created_by' => auth()->id(),
-            ]);
+            ];
+
+            DB::transaction(function () use ($company, $validated, $unit, $data, $action): void {
+                foreach ($validated['worker_ids'] as $workerId) {
+                    $relationship = $this->activeRelationshipForWorker($company, (int) $workerId, date: $validated['effective_from']);
+
+                    $action->handle($company, $relationship, $unit, $data);
+                }
+            });
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['supportForm.organizational_unit_id' => $exception->getMessage()]);
         }
@@ -167,7 +195,8 @@ new class extends Component {
         $this->showSupportPanel = false;
         $this->supportForm = $this->emptySupportForm();
         $this->resetPage();
-        Session::flash('status', 'Apoyo temporal guardado.');
+        $count = count($validated['worker_ids']);
+        Session::flash('status', $count === 1 ? 'Apoyo temporal guardado.' : "Apoyo temporal guardado para {$count} trabajadores.");
     }
 
     public function openEndSupportPanel(int $assignmentId, CurrentCompany $currentCompany): void
@@ -225,8 +254,10 @@ new class extends Component {
         return [
             'currentCompany' => $company,
             'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
+            'organizationalUnits' => $this->organizationalUnitFilterOptions($company),
             'assignments' => $this->assignmentQuery($company)->paginate(12),
-            'primaryUnits' => $this->primaryUnitOptions($company, $selectedPrimaryWorker),
+            'primaryUnits' => $this->primaryUnitOptions($company),
+            'primaryUnitHelp' => $this->primaryUnitHelp($company),
             'supportUnits' => $this->supportUnitOptions($company),
             'selectedSummary' => $this->selectedSummary($company, $selectedPrimaryWorker, $resolver),
         ];
@@ -236,11 +267,13 @@ new class extends Component {
     {
         $search = trim((string) ($this->filters['search'] ?? ''));
         $centerId = trim((string) ($this->filters['center_id'] ?? ''));
+        $unitId = trim((string) ($this->filters['organizational_unit_id'] ?? ''));
         $status = trim((string) ($this->filters['status'] ?? 'all'));
 
         return $company->employmentUnitAssignments()
             ->with(['employmentRelationship.worker', 'employmentRelationship.center', 'organizationalUnit.center', 'replacedBy'])
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($unitId !== '', fn ($query) => $query->where('organizational_unit_id', (int) $unitId))
             ->when($centerId !== '', function ($query) use ($centerId): void {
                 $query->whereHas('employmentRelationship', fn ($relationshipQuery) => $relationshipQuery->where('center_id', (int) $centerId));
             })
@@ -252,6 +285,17 @@ new class extends Component {
             })
             ->orderByDesc('effective_from')
             ->orderByDesc('id');
+    }
+
+    private function organizationalUnitFilterOptions($company)
+    {
+        $centerId = trim((string) ($this->filters['center_id'] ?? ''));
+
+        return $company->organizationalUnits()
+            ->where('status', 'active')
+            ->when($centerId !== '', fn ($query) => $query->where('center_id', (int) $centerId))
+            ->orderBy('name')
+            ->get();
     }
 
     private function selectedSummary($company, ?Worker $worker, ResolveEmploymentUnitsForDateAction $resolver): ?array
@@ -272,15 +316,74 @@ new class extends Component {
         ];
     }
 
-    private function primaryUnitOptions($company, ?Worker $worker)
+    private function primaryUnitOptions($company)
     {
-        $relationship = $worker ? $this->activeRelationshipForWorker($company, $worker->id, fail: false) : null;
+        $centerIds = $this->selectedPrimaryCenterIds($company);
 
         return $company->organizationalUnits()
             ->where('status', 'active')
-            ->when($relationship, fn ($query) => $query->where('center_id', $relationship->center_id))
+            ->when($centerIds !== null, fn ($query) => $query->whereIn('center_id', $centerIds))
             ->orderBy('name')
             ->get();
+    }
+
+    private function selectedPrimaryCenterIds($company): ?array
+    {
+        $workerIds = collect($this->primaryForm['worker_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($workerIds->isEmpty()) {
+            return null;
+        }
+
+        $date = filled($this->primaryForm['effective_from'] ?? null)
+            ? (string) $this->primaryForm['effective_from']
+            : now()->toDateString();
+
+        $relationships = EmploymentRelationship::query()
+            ->where('company_id', $company->id)
+            ->whereIn('worker_id', $workerIds)
+            ->where('status', 'active')
+            ->whereDate('started_at', '<=', $date)
+            ->where(function ($query) use ($date): void {
+                $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $date);
+            })
+            ->get(['worker_id', 'center_id']);
+
+        $centerIds = $relationships
+            ->pluck('center_id')
+            ->unique()
+            ->values();
+
+        if ($relationships->pluck('worker_id')->unique()->count() !== $workerIds->count() || $centerIds->count() !== 1) {
+            return [];
+        }
+
+        return $centerIds->all();
+    }
+
+    private function primaryUnitHelp($company): ?string
+    {
+        $workerIds = collect($this->primaryForm['worker_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($workerIds->isEmpty()) {
+            return 'Primero selecciona trabajadores; se mostraran las unidades compatibles con su centro.';
+        }
+
+        $centerIds = $this->selectedPrimaryCenterIds($company);
+
+        if ($centerIds === []) {
+            return 'Selecciona trabajadores con relacion laboral vigente en el mismo centro para asignar una unidad principal.';
+        }
+
+        return 'Solo se muestran unidades activas del centro de los trabajadores seleccionados.';
     }
 
     private function supportUnitOptions($company)
@@ -305,15 +408,17 @@ new class extends Component {
         return $company->workers()->where('status', 'active')->whereKey($workerId)->first();
     }
 
-    private function activeRelationshipForWorker($company, int $workerId, bool $fail = true): ?EmploymentRelationship
+    private function activeRelationshipForWorker($company, int $workerId, bool $fail = true, ?string $date = null): ?EmploymentRelationship
     {
+        $date ??= now()->toDateString();
+
         $query = EmploymentRelationship::query()
             ->where('company_id', $company->id)
             ->where('worker_id', $workerId)
             ->where('status', 'active')
-            ->whereDate('started_at', '<=', now()->toDateString())
-            ->where(function ($query): void {
-                $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', now()->toDateString());
+            ->whereDate('started_at', '<=', $date)
+            ->where(function ($query) use ($date): void {
+                $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $date);
             })
             ->latest('started_at');
 
@@ -344,7 +449,7 @@ new class extends Component {
         return [
             'worker_ids' => [],
             'organizational_unit_id' => '',
-            'operation' => 'assign',
+            'operation' => 'replace',
             'effective_from' => now()->toDateString(),
             'reason' => '',
         ];
@@ -415,12 +520,18 @@ new class extends Component {
     @endif
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-3">
+        <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-4">
             <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="filters.search" />
             <flux:select label="Centro" wire:model.live="filters.center_id">
                 <flux:select.option value="">Todos</flux:select.option>
                 @foreach ($centers as $center)
                     <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:select label="Unidad" wire:model.live="filters.organizational_unit_id">
+                <flux:select.option value="">Todas</flux:select.option>
+                @foreach ($organizationalUnits as $unit)
+                    <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }}</flux:select.option>
                 @endforeach
             </flux:select>
             <flux:select label="Estado" wire:model.live="filters.status">
@@ -481,11 +592,11 @@ new class extends Component {
     <x-side-panel wire:model="showPrimaryPanel" title="Unidad principal" subheading="Asigna o reemplaza la unidad principal vigente." labelledby="primary-unit-form-title">
         <form wire:submit="savePrimary" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
-                <livewire:workers.multi-select wire:model="primaryForm.worker_ids" mode="single" heading="Trabajador" subheading="Selecciona un trabajador activo." />
+                <livewire:workers.multi-select wire:model.live="primaryForm.worker_ids" heading="Trabajadores" subheading="Selecciona uno o varios trabajadores activos." :result-limit="150" :show-primary-assignment-status="true" :assignment-date="$primaryForm['effective_from']" />
 
                 <flux:select label="Operacion" wire:model="primaryForm.operation">
-                    <flux:select.option value="assign">Asignar primera unidad</flux:select.option>
-                    <flux:select.option value="replace">Reemplazar unidad vigente</flux:select.option>
+                    <flux:select.option value="replace">Asignar o reemplazar unidad vigente</flux:select.option>
+                    <flux:select.option value="assign">Asignar solo si no tiene unidad vigente</flux:select.option>
                 </flux:select>
 
                 <flux:select label="Unidad" wire:model="primaryForm.organizational_unit_id">
@@ -494,6 +605,9 @@ new class extends Component {
                         <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
+                @if ($primaryUnitHelp)
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ $primaryUnitHelp }}</p>
+                @endif
 
                 <flux:input type="date" label="Vigente desde" wire:model="primaryForm.effective_from" />
                 <flux:textarea label="Motivo" wire:model="primaryForm.reason" placeholder="Requerido al reemplazar." />
@@ -513,7 +627,7 @@ new class extends Component {
     <x-side-panel wire:model="showSupportPanel" title="Apoyo temporal" subheading="El apoyo puede ser en otro centro de la misma empresa." labelledby="support-unit-form-title">
         <form wire:submit="saveSupport" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
-                <livewire:workers.multi-select wire:model="supportForm.worker_ids" mode="single" heading="Trabajador" subheading="Selecciona un trabajador activo." />
+                <livewire:workers.multi-select wire:model.live="supportForm.worker_ids" heading="Trabajadores" subheading="Selecciona uno o varios trabajadores activos." :result-limit="150" />
 
                 <flux:select label="Centro de apoyo" wire:model.live="supportForm.support_center_id">
                     <flux:select.option value="">Selecciona un centro</flux:select.option>

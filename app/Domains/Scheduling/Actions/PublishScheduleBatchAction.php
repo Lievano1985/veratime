@@ -58,6 +58,10 @@ class PublishScheduleBatchAction
                 throw new ScheduleBatchPublicationValidationException($validation);
             }
 
+            $lockedBatch->forceFill([
+                'version' => 1,
+            ])->save();
+
             $snapshot = $this->snapshotBuilder->handle($lockedBatch);
             $this->assertSnapshot($snapshot);
 

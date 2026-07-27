@@ -3,9 +3,7 @@
 namespace App\Livewire\Scheduling;
 
 use App\Domains\Scheduling\Actions\ApplyDailyScheduleCsvImportAction;
-use App\Domains\Scheduling\Actions\CancelDailyScheduleCsvImportAction;
 use App\Domains\Scheduling\Actions\CreateDailyScheduleCsvImportAction;
-use App\Domains\Scheduling\Actions\ListDailyScheduleCsvImportsAction;
 use App\Domains\Scheduling\Actions\StoreDailyScheduleCsvUploadAction;
 use App\Domains\Scheduling\Actions\ValidateDailyScheduleCsvImportAction;
 use App\Domains\Scheduling\Exceptions\DailyScheduleCsvImportStateException;
@@ -29,6 +27,10 @@ class DailyScheduleCsvImport extends Component
 
     public int $scheduleBatchId;
 
+    public string $workerSearch = '';
+
+    public string $organizationalUnitId = '';
+
     public bool $showPanel = false;
 
     public ?int $activeImportId = null;
@@ -37,15 +39,13 @@ class DailyScheduleCsvImport extends Component
 
     public string $existingAssignmentPolicy = 'replace_existing';
 
-    public string $reason = '';
-
     public bool $confirmApply = false;
 
-    public string $cancelReason = '';
-
-    public function mount(int $scheduleBatchId): void
+    public function mount(int $scheduleBatchId, string $workerSearch = '', string $organizationalUnitId = ''): void
     {
         $this->scheduleBatchId = $scheduleBatchId;
+        $this->workerSearch = $workerSearch;
+        $this->organizationalUnitId = $organizationalUnitId;
     }
 
     public function openPanel(): void
@@ -72,10 +72,8 @@ class DailyScheduleCsvImport extends Component
         $this->validate([
             'file' => ['required', 'file', 'max:10240'],
             'existingAssignmentPolicy' => ['required', 'in:preserve_existing,replace_existing'],
-            'reason' => ['required', 'string', 'min:5', 'max:2000'],
         ], [
             'file.required' => 'Selecciona un archivo CSV.',
-            'reason.required' => 'Indica el motivo de la importacion.',
         ]);
 
         if (! $this->file instanceof TemporaryUploadedFile || mb_strtolower($this->file->getClientOriginalExtension()) !== 'csv') {
@@ -91,7 +89,6 @@ class DailyScheduleCsvImport extends Component
                 'storage_path' => $stored['path'],
                 'original_filename' => $stored['original_filename'],
                 'existing_assignment_policy' => $this->existingAssignmentPolicy,
-                'reason' => $this->reason,
             ]);
 
             $validation = $validateImport->handle(auth()->user(), $result->importBatch);
@@ -99,7 +96,6 @@ class DailyScheduleCsvImport extends Component
             $this->file = null;
             $this->confirmApply = false;
             $this->resetPage('csvRowsPage');
-            $this->resetPage('csvImportsPage');
             session()->flash('csvImportMessage', 'Archivo validado. Revisa la vista previa antes de aplicar.');
         } catch (Throwable $exception) {
             if ($stored !== null && ! isset($result)) {
@@ -108,15 +104,6 @@ class DailyScheduleCsvImport extends Component
 
             throw $exception;
         }
-    }
-
-    public function selectImport(int $importBatchId): void
-    {
-        $import = $this->importForCurrentBatch($importBatchId);
-        Gate::authorize('update', $import->scheduleBatch);
-        $this->activeImportId = $import->id;
-        $this->confirmApply = false;
-        $this->resetPage('csvRowsPage');
     }
 
     public function validateImport(ValidateDailyScheduleCsvImportAction $validateImport): void
@@ -154,42 +141,28 @@ class DailyScheduleCsvImport extends Component
         }
     }
 
-    public function cancelImport(CancelDailyScheduleCsvImportAction $cancelImport): void
-    {
-        $import = $this->activeImport();
-        Gate::authorize('update', $import->scheduleBatch);
-
-        $this->validate([
-            'cancelReason' => ['required', 'string', 'min:5', 'max:1000'],
-        ], [
-            'cancelReason.required' => 'Indica el motivo de cancelacion.',
-        ]);
-
-        $cancelImport->handle(auth()->user(), $import, $this->cancelReason);
-        $this->cancelReason = '';
-        $this->confirmApply = false;
-        session()->flash('csvImportMessage', 'Importacion cancelada.');
-    }
-
-    public function render(ListDailyScheduleCsvImportsAction $listImports): View
+    public function render(): View
     {
         $company = $this->company();
         $batch = $this->batch();
         Gate::authorize('view', $batch);
 
-        $imports = $listImports->handle($company, $batch);
-        $activeImport = $this->resolveActiveImport($imports->first()?->id);
+        $activeImport = $this->activeImportId ? $this->importForCurrentBatch($this->activeImportId) : null;
         $rows = $activeImport
             ? $activeImport->rows()->with(['employmentRelationship.worker', 'existingDailyScheduleAssignment'])->paginate(10, ['*'], 'csvRowsPage')
             : null;
 
         return view('livewire.scheduling.daily-schedule-csv-import', [
             'batch' => $batch,
-            'imports' => $imports,
             'activeImport' => $activeImport,
             'rows' => $rows,
             'summary' => $activeImport ? $this->summaryFor($activeImport) : [],
             'canUpdate' => Gate::allows('update', $batch),
+            'templateUrl' => route('scheduling.daily.csv.template', array_filter([
+                'schedule_batch_id' => $batch->id,
+                'worker_search' => $this->workerSearch,
+                'organizational_unit_id' => $this->organizationalUnitId,
+            ], fn ($value): bool => filled($value))),
         ]);
     }
 
@@ -274,16 +247,6 @@ class DailyScheduleCsvImport extends Component
         }
 
         return $this->importForCurrentBatch($this->activeImportId);
-    }
-
-    private function resolveActiveImport(?int $fallbackImportId): ?ImportBatch
-    {
-        $id = $this->activeImportId ?: $fallbackImportId;
-        if (! $id) {
-            return null;
-        }
-
-        return $this->importForCurrentBatch($id);
     }
 
     private function importForCurrentBatch(int $importBatchId): ImportBatch

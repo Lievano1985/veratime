@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\ImportBatch;
 use App\Models\ScheduleBatch;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
@@ -26,7 +27,7 @@ class CreateDailyScheduleCsvImportAction
         $disk = (string) ($data['storage_disk'] ?? 'local');
         $path = trim((string) ($data['storage_path'] ?? ''));
         $filename = trim((string) ($data['original_filename'] ?? basename($path)));
-        $reason = trim(preg_replace('/\s+/', ' ', (string) ($data['reason'] ?? '')) ?? '');
+        $reason = trim(preg_replace('/\s+/', ' ', (string) ($data['reason'] ?? 'Carga CSV desde programacion diaria.')) ?? '');
         $policy = (string) ($data['existing_assignment_policy'] ?? 'replace_existing');
         $idempotencyKey = blank($data['idempotency_key'] ?? null) ? null : trim((string) $data['idempotency_key']);
 
@@ -36,10 +37,6 @@ class CreateDailyScheduleCsvImportAction
 
         if (! str_ends_with(mb_strtolower($filename), '.csv')) {
             throw new InvalidArgumentException('El archivo debe tener extension .csv.');
-        }
-
-        if ($reason === '') {
-            throw new InvalidArgumentException('La importacion requiere un motivo.');
         }
 
         if (! in_array($policy, ['preserve_existing', 'replace_existing'], true)) {
@@ -71,28 +68,54 @@ class CreateDailyScheduleCsvImportAction
         hash_update_stream($hash, $stream);
         fclose($stream);
 
-        $import = new ImportBatch([
-            'import_type' => 'daily_schedule',
-            'target_type' => 'schedule_batch',
-            'target_id' => $targetBatch->id,
-            'status' => 'uploaded',
-            'existing_assignment_policy' => $policy,
-            'original_filename' => $filename,
-            'storage_disk' => $disk,
-            'storage_path' => $path,
-            'file_sha256' => hash_final($hash),
-            'file_size_bytes' => $size,
-            'encoding' => 'UTF-8',
-            'delimiter' => ',',
-            'header_schema_version' => 1,
-            'idempotency_key' => $idempotencyKey,
-            'reason' => $reason,
-            'metadata' => ['created_from' => 'domain_action'],
-        ]);
-        $import->company()->associate($company);
-        $import->creator()->associate($actor);
-        $import->save();
+        $fileSha256 = hash_final($hash);
 
-        return new CreateDailyScheduleCsvImportResult($import->refresh());
+        return DB::transaction(function () use ($actor, $company, $targetBatch, $policy, $filename, $disk, $path, $size, $idempotencyKey, $reason, $fileSha256): CreateDailyScheduleCsvImportResult {
+            $this->deletePreviousImports($company, $targetBatch);
+
+            $import = new ImportBatch([
+                'import_type' => 'daily_schedule',
+                'target_type' => 'schedule_batch',
+                'target_id' => $targetBatch->id,
+                'status' => 'uploaded',
+                'existing_assignment_policy' => $policy,
+                'original_filename' => $filename,
+                'storage_disk' => $disk,
+                'storage_path' => $path,
+                'file_sha256' => $fileSha256,
+                'file_size_bytes' => $size,
+                'encoding' => 'UTF-8',
+                'delimiter' => ',',
+                'header_schema_version' => 1,
+                'idempotency_key' => $idempotencyKey,
+                'reason' => $reason,
+                'metadata' => ['created_from' => 'domain_action'],
+            ]);
+            $import->company()->associate($company);
+            $import->creator()->associate($actor);
+            $import->save();
+
+            return new CreateDailyScheduleCsvImportResult($import->refresh());
+        });
+    }
+
+    private function deletePreviousImports(Company $company, ScheduleBatch $targetBatch): void
+    {
+        ImportBatch::query()
+            ->where('company_id', $company->id)
+            ->where('import_type', 'daily_schedule')
+            ->where('target_type', 'schedule_batch')
+            ->where('target_id', $targetBatch->id)
+            ->lockForUpdate()
+            ->get()
+            ->each(function (ImportBatch $import): void {
+                $import->rows()->delete();
+
+                if ($import->storage_path && Storage::disk($import->storage_disk)->exists($import->storage_path)) {
+                    Storage::disk($import->storage_disk)->delete($import->storage_path);
+                }
+
+                $import->delete();
+            });
     }
 }

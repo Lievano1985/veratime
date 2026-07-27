@@ -28,7 +28,7 @@ class VeraTimeDailyScheduleCsvScenarioSeeder extends Seeder
             ->where('company_id', $company->id)
             ->whereDate('period_start', self::PERIOD_START)
             ->whereDate('period_end', self::PERIOD_END)
-            ->where('version', 1)
+            ->whereNull('version')
             ->where('status', 'draft')
             ->firstOrFail();
 
@@ -47,7 +47,7 @@ class VeraTimeDailyScheduleCsvScenarioSeeder extends Seeder
             ->where('company_id', $company->id)
             ->whereDate('period_start', self::PERIOD_START)
             ->whereDate('period_end', self::PERIOD_END)
-            ->where('version', 1)
+            ->whereNull('version')
             ->where('status', 'draft')
             ->exists();
     }

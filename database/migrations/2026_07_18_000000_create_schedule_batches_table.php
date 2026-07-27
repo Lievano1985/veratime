@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignIdFor(Center::class)->constrained()->restrictOnDelete()->cascadeOnUpdate();
             $table->date('period_start');
             $table->date('period_end');
-            $table->unsignedInteger('version')->default(1);
+            $table->unsignedInteger('version')->nullable();
             $table->string('status')->default('draft');
             $table->foreignId('previous_batch_id')->nullable()->constrained('schedule_batches')->restrictOnDelete()->cascadeOnUpdate();
             $table->string('creation_source')->default('manual');

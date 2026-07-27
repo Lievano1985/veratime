@@ -19,7 +19,7 @@ class ScheduleBatchFactory extends Factory
             'center_id' => Center::factory(),
             'period_start' => '2026-08-01',
             'period_end' => '2026-08-15',
-            'version' => 1,
+            'version' => null,
             'status' => 'draft',
             'creation_source' => 'manual',
             'notes' => null,

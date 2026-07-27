@@ -15,8 +15,11 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified', 'current.company'])
     ->name('dashboard');
 
-Route::middleware(['auth', 'current.company'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Volt::route('companies', 'companies.index')->name('companies.index');
+});
+
+Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('centers', 'centers.index')->name('centers.index');
     Volt::route('workers', 'workers.index')->name('workers.index');
     Volt::route('schedules', 'schedules.index')->name('schedules.index');

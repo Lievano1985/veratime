@@ -32,7 +32,10 @@ class CreateCorrectiveScheduleBatchAction
             Center::query()->whereKey($published->center_id)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('createCorrection', $published);
 
-            if ($published->company_id !== $company->id || $published->status !== 'published' || $published->previous_batch_id !== null && $published->version < 2) {
+            if ($published->company_id !== $company->id
+                || $published->status !== 'published'
+                || $published->version === null
+                || ($published->previous_batch_id !== null && $published->version < 2)) {
                 throw new InvalidScheduleCorrectionSourceException('Solo una version publicada vigente puede iniciar una correccion.');
             }
 
@@ -54,7 +57,7 @@ class CreateCorrectiveScheduleBatchAction
             $draft = new ScheduleBatch([
                 'period_start' => $published->period_start->toDateString(),
                 'period_end' => $published->period_end->toDateString(),
-                'version' => ((int) $published->version) + 1,
+                'version' => null,
                 'status' => 'draft',
                 'creation_source' => 'mixed',
                 'notes' => $published->notes,

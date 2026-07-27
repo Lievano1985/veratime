@@ -53,6 +53,10 @@ class PublishCorrectiveScheduleBatchAction
                 throw new ScheduleCorrectionHasNoChangesException();
             }
 
+            $corrective->forceFill([
+                'version' => ((int) $previous->version) + 1,
+            ])->save();
+
             $snapshot = $this->snapshotBuilder->handle($corrective);
             $this->assertSnapshot($snapshot);
             $publishedAt = now();

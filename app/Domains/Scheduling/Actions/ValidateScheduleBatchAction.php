@@ -45,27 +45,20 @@ class ValidateScheduleBatchAction
         return $source;
     }
 
-    public function validatePreviousBatch(
-        Company $company,
-        Center $center,
-        string $periodStart,
-        string $periodEnd,
-        ?ScheduleBatch $previousBatch,
-        int $version,
-    ): void {
-        if (! $previousBatch) {
-            return;
-        }
+    public function ensureNoOpenDraft(Company $company, Center $center, string $periodStart, string $periodEnd): void
+    {
+        $exists = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->whereDate('period_start', $periodStart)
+            ->whereDate('period_end', $periodEnd)
+            ->where('status', 'draft')
+            ->whereNull('previous_batch_id')
+            ->lockForUpdate()
+            ->exists();
 
-        if ($previousBatch->company_id !== $company->id
-            || $previousBatch->center_id !== $center->id
-            || $previousBatch->period_start->toDateString() !== $periodStart
-            || $previousBatch->period_end->toDateString() !== $periodEnd) {
-            throw new InvalidArgumentException('El lote anterior no corresponde al mismo centro y periodo.');
-        }
-
-        if ($previousBatch->version >= $version) {
-            throw new InvalidArgumentException('La version del lote debe ser posterior al lote anterior.');
+        if ($exists) {
+            throw new InvalidArgumentException('Ya existe un borrador abierto para este centro y periodo.');
         }
     }
 

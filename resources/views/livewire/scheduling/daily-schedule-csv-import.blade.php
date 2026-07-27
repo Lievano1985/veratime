@@ -1,20 +1,22 @@
-<section class="space-y-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm dark:border-sky-900 dark:bg-sky-950">
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-            <p class="font-semibold text-sky-950 dark:text-sky-100">Importacion CSV</p>
-            <p class="text-sky-800 dark:text-sky-200">Carga programacion diaria en un lote borrador. La vista previa no modifica el calendario hasta que confirmes aplicar.</p>
+<section class="contents text-sm">
+    @if (! $showPanel)
+        <flux:button size="xs" variant="ghost" wire:click="openPanel">Importar CSV</flux:button>
+    @else
+        <div class="basis-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/70">
+            <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="font-medium text-zinc-900 dark:text-zinc-100">Importacion CSV</p>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">Descarga plantilla o importa programacion para este borrador.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ $templateUrl }}" class="inline-flex items-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:border-sky-400 hover:text-sky-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+                        Descargar plantilla
+                    </a>
+                    <flux:button size="xs" variant="ghost" wire:click="closePanel">Cerrar</flux:button>
+                </div>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('scheduling.daily.csv.template') }}" class="inline-flex items-center rounded-md border border-sky-300 bg-white px-3 py-2 text-xs font-medium text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
-                Descargar plantilla
-            </a>
-            @if (! $showPanel)
-                <flux:button size="sm" variant="primary" wire:click="openPanel">Importar CSV</flux:button>
-            @else
-                <flux:button size="sm" variant="ghost" wire:click="closePanel">Cerrar importacion</flux:button>
-            @endif
-        </div>
-    </div>
+    @endif
 
     @if (session('csvImportMessage'))
         <p class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{{ session('csvImportMessage') }}</p>
@@ -25,7 +27,7 @@
     @enderror
 
     @if ($showPanel)
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div class="basis-full">
             <div class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <div>
                     <p class="font-medium">Nuevo archivo</p>
@@ -53,36 +55,11 @@
                         <input type="text" value="{{ $batch->center?->name }} | {{ $batch->period_start->toDateString() }} a {{ $batch->period_end->toDateString() }}" disabled class="block w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
                     </label>
 
-                    <label class="space-y-1 md:col-span-2">
-                        <span class="block text-xs font-medium text-zinc-700 dark:text-zinc-300">Motivo</span>
-                        <textarea wire:model="reason" rows="3" class="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" placeholder="Ejemplo: Ajuste por archivo operativo autorizado para el periodo."></textarea>
-                        @error('reason')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
-                    </label>
                 </div>
 
                 <flux:button size="sm" variant="primary" wire:click="uploadAndValidate" wire:loading.attr="disabled">
                     Cargar y validar
                 </flux:button>
-            </div>
-
-            <div class="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                <p class="font-medium">Historial de importaciones</p>
-                <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                    @forelse ($imports as $import)
-                        <button type="button" wire:click="selectImport({{ $import->id }})" class="w-full py-3 text-left text-sm">
-                            <span class="block font-medium {{ $activeImport?->id === $import->id ? 'text-sky-700 dark:text-sky-300' : '' }}">
-                                {{ $import->original_filename }} - {{ $this->statusLabel($import->status) }}
-                            </span>
-                            <span class="block text-xs text-zinc-500">
-                                {{ $import->total_rows }} filas | {{ $import->invalid_rows }} con error | {{ $import->warning_rows }} con advertencia
-                            </span>
-                            <span class="block text-xs text-zinc-400">Creada por {{ $import->creator?->name ?? 'Usuario' }} el {{ $import->created_at?->format('Y-m-d H:i') }}</span>
-                        </button>
-                    @empty
-                        <p class="py-3 text-zinc-500">No hay importaciones para este lote.</p>
-                    @endforelse
-                </div>
-                {{ $imports->links(data: ['scrollTo' => false]) }}
             </div>
         </div>
 
@@ -167,26 +144,17 @@
                 @endif
 
                 @if ($canUpdate && in_array($activeImport->status, ['validated', 'invalid', 'uploaded'], true))
-                    <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 lg:grid-cols-2">
-                        <div>
-                            <p class="font-medium">Aplicar importacion</p>
-                            <p class="text-xs text-zinc-500">Solo se puede aplicar una importacion validada sin errores. La Action vuelve a comparar el hash antes de modificar el calendario.</p>
-                            <label class="mt-3 flex items-center gap-2">
-                                <input type="checkbox" wire:model="confirmApply" class="rounded border-zinc-300">
-                                <span>Confirmo que revise la vista previa.</span>
-                            </label>
-                            @error('confirmApply')<p class="mt-2 text-xs text-red-600">{{ $message }}</p>@enderror
-                            <flux:button class="mt-3" size="sm" variant="primary" wire:click="applyImport" wire:confirm="Aplicar esta importacion modificara el lote borrador.">
-                                Aplicar al borrador
-                            </flux:button>
-                        </div>
-                        <div>
-                            <p class="font-medium">Cancelar importacion</p>
-                            <p class="text-xs text-zinc-500">Cancela esta carga sin borrar evidencia del historial.</p>
-                            <textarea wire:model="cancelReason" rows="2" class="mt-3 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" placeholder="Motivo de cancelacion"></textarea>
-                            @error('cancelReason')<p class="mt-2 text-xs text-red-600">{{ $message }}</p>@enderror
-                            <flux:button class="mt-3" size="sm" variant="ghost" wire:click="cancelImport">Cancelar importacion</flux:button>
-                        </div>
+                    <div class="rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+                        <p class="font-medium">Aplicar importacion</p>
+                        <p class="text-xs text-zinc-500">Solo se puede aplicar una importacion validada sin errores. La Action vuelve a comparar el hash antes de modificar el calendario.</p>
+                        <label class="mt-3 flex items-center gap-2">
+                            <input type="checkbox" wire:model="confirmApply" class="rounded border-zinc-300">
+                            <span>Confirmo que revise la vista previa.</span>
+                        </label>
+                        @error('confirmApply')<p class="mt-2 text-xs text-red-600">{{ $message }}</p>@enderror
+                        <flux:button class="mt-3" size="sm" variant="primary" wire:click="applyImport">
+                            Aplicar al borrador
+                        </flux:button>
                     </div>
                 @endif
             </div>

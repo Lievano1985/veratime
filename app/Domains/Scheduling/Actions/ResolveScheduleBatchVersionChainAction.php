@@ -28,7 +28,7 @@ class ResolveScheduleBatchVersionChainAction
             $siblings = ScheduleBatch::query()->where('previous_batch_id', $current->id)->orderBy('version')->get();
             $versions->push($current);
 
-            if ((int) $current->version !== $expectedVersion++) {
+            if ($current->version !== null && (int) $current->version !== $expectedVersion++) {
                 $errors[] = 'La cadena de versiones contiene saltos.';
             }
 

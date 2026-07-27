@@ -65,9 +65,20 @@ class User extends Authenticatable // implements MustVerifyEmail
             ->where('companies.status', 'active');
     }
 
+    public function companiesWithActiveMembership(): BelongsToMany
+    {
+        return $this->companies()
+            ->wherePivot('status', 'active');
+    }
+
     public function belongsToCompany(Company $company): bool
     {
         return $this->activeCompanies()->whereKey($company->id)->exists();
+    }
+
+    public function hasActiveMembershipInCompany(Company $company): bool
+    {
+        return $this->companiesWithActiveMembership()->whereKey($company->id)->exists();
     }
 
     public function defaultCompany(): ?Company
@@ -81,6 +92,19 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function roleKeyForCompany(Company $company): ?string
     {
         $company = $this->activeCompanies()
+            ->whereKey($company->id)
+            ->first();
+
+        if (! $company?->pivot?->role_id) {
+            return null;
+        }
+
+        return Role::query()->whereKey($company->pivot->role_id)->value('key');
+    }
+
+    public function roleKeyForCompanyMembership(Company $company): ?string
+    {
+        $company = $this->companiesWithActiveMembership()
             ->whereKey($company->id)
             ->first();
 

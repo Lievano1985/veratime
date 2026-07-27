@@ -6,6 +6,11 @@ class DailyScheduleCsvSchema
 {
     public const VERSION = 1;
 
+    public const HORIZONTAL_PREFIX_HEADERS = [
+        'codigo_empleado',
+        'nombre_trabajador',
+    ];
+
     public const HEADERS = [
         'clave_empleado',
         'fecha',
@@ -35,5 +40,14 @@ class DailyScheduleCsvSchema
     public static function headers(): array
     {
         return self::HEADERS;
+    }
+
+    /**
+     * @param list<string> $dates
+     * @return list<string>
+     */
+    public static function horizontalHeaders(array $dates): array
+    {
+        return [...self::HORIZONTAL_PREFIX_HEADERS, ...$dates];
     }
 }

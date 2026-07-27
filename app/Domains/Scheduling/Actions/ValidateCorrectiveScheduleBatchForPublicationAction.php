@@ -40,8 +40,8 @@ class ValidateCorrectiveScheduleBatchForPublicationAction
             $result->addError('Solo una correccion en borrador puede publicarse.');
         }
 
-        if ($corrective->version <= 1 || ! $corrective->previous_batch_id) {
-            $result->addError('La correccion debe tener una version posterior y una version anterior.');
+        if (! $corrective->previous_batch_id) {
+            $result->addError('La correccion debe tener una version anterior.');
         }
 
         if (blank($corrective->correction_reason)) {
@@ -64,10 +64,6 @@ class ValidateCorrectiveScheduleBatchForPublicationAction
 
         if ($previous->status !== 'published') {
             $result->addError('La version anterior ya fue sustituida.');
-        }
-
-        if ((int) $corrective->version !== ((int) $previous->version) + 1) {
-            $result->addError('La version correctiva no es consecutiva.');
         }
 
         $snapshot = $this->verifySnapshot->handle($company, $previous);

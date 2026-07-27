@@ -611,7 +611,7 @@ new class extends Component {
 
         return match ($profile->profile_type) {
             'pattern' => $profile->pattern_mode === 'weekly'
-                ? 'Por patron - semanal'
+                ? 'Por patron semanal'
                 : 'Por patron - ciclo de '.$profile->cycleRules->count().' dias',
             'calendar' => 'Por calendario',
             'flexible' => 'Flexible',
@@ -626,7 +626,7 @@ new class extends Component {
             'pattern' => $profile->pattern_mode === 'weekly'
                 ? $profile->weeklyRules->count().' dias semanales'
                 : 'Ciclo de '.$profile->cycleRules->count().' dias',
-            'calendar' => 'Programacion por fecha pendiente',
+            'calendar' => 'Dias pendientes por calendario',
             'flexible' => $profile->flexibleRules->where('day_type', 'work')->count().' dias laborales',
             'on_call' => $profile->onCallRules->where('day_type', 'on_call')->count().' dias disponibles',
             default => 'Sin reglas',
@@ -636,8 +636,8 @@ new class extends Component {
     private function profileDetailSubtitle(ScheduleProfile $profile): string
     {
         return match ($profile->profile_type) {
-            'pattern' => $profile->pattern_mode === 'weekly' ? 'Reglas semanales del perfil por patron.' : 'Ciclo repetitivo. La fecha inicial de asignacion representa el Dia 1.',
-            'calendar' => 'Perfil por calendario sin reglas semanales.',
+            'pattern' => $profile->pattern_mode === 'weekly' ? 'Reglas semanales reutilizables. Al generar programacion diaria para otra semana, estas reglas se aplican nuevamente segun la fecha.' : 'Ciclo repetitivo. La fecha inicial de asignacion representa el Dia 1.',
+            'calendar' => 'Perfil por calendario: no se repite automaticamente; deja los dias pendientes para definirlos por fecha.',
             'flexible' => 'Minutos requeridos y ventanas por dia. No representa un turno fijo.',
             'on_call' => 'Disponibilidad bajo demanda; no cuenta automaticamente como tiempo trabajado.',
             default => 'Perfil de horario.',
@@ -759,7 +759,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Perfiles de horario</flux:heading>
-            <flux:subheading>Configura perfiles por patron, calendario, flexible o bajo demanda. Los perfiles generan borradores futuros; no publican dias.</flux:subheading>
+            <flux:subheading>Configura reglas reutilizables. Un perfil por patron se repite cada semana al generar nuevos periodos de programacion diaria.</flux:subheading>
         </div>
 
         @if ($canManageProfiles)
@@ -876,13 +876,13 @@ new class extends Component {
                     @endforeach
                 </div>
             @else
-                <p class="text-sm text-zinc-600 dark:text-zinc-300">Este perfil se captura por calendario. La programacion se definira por periodo, importacion o API en bloques posteriores.</p>
+                <p class="text-sm text-zinc-600 dark:text-zinc-300">Este perfil se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.</p>
             @endif
         </section>
     @endif
 
     @if ($canManageProfiles)
-        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar perfil de horario' : 'Nuevo perfil de horario' }}" subheading="Configura el perfil; la publicacion diaria se implementara despues.">
+        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar perfil de horario' : 'Nuevo perfil de horario' }}" subheading="Define la regla que se usara al generar la programacion diaria de cada periodo.">
             <form wire:submit="save" class="space-y-6 p-6">
                 <div class="grid gap-4 md:grid-cols-4">
                     <flux:input label="Codigo" wire:model="form.code" required />
@@ -902,6 +902,9 @@ new class extends Component {
                 <flux:textarea label="Descripcion" wire:model="form.description" rows="2" />
 
                 @if (($form['profile_type'] ?? 'pattern') === 'pattern')
+                <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                    Este patron se reutiliza al generar programacion diaria para nuevas semanas. Si cambias la regla, solo afectara los lotes futuros que vuelvas a generar; los lotes ya publicados conservan su version.
+                </div>
                     <flux:select label="Modalidad del patron" wire:model.live="form.pattern_mode">
                         <flux:select.option value="weekly">Patron semanal</flux:select.option>
                         <flux:select.option value="cycle">Ciclo repetitivo</flux:select.option>
@@ -1125,7 +1128,7 @@ new class extends Component {
                     </section>
                 @else
                     <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                        Este perfil se captura por calendario. La programacion se definira por periodo, importacion o API en bloques posteriores.
+                        Este perfil se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.
                     </div>
                 @endif
 

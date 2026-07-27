@@ -10,19 +10,19 @@ class CompanyPolicy
 {
     public function create(User $user): bool
     {
-        return $user->activeCompanies()
+        return $user->companiesWithActiveMembership()
             ->get()
-            ->contains(fn (Company $company) => in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true));
+            ->contains(fn (Company $company) => in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true));
     }
 
     public function view(User $user, Company $company): bool
     {
-        return $user->belongsToCompany($company);
+        return $user->hasActiveMembershipInCompany($company);
     }
 
     public function update(User $user, Company $company): bool
     {
-        return $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
+        return $user->hasActiveMembershipInCompany($company)
+            && in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true);
     }
 }

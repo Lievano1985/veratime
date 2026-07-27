@@ -3,6 +3,7 @@
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Scheduling\Actions\BulkReplaceDraftDailyScheduleAssignmentsAction;
 use App\Domains\Scheduling\Actions\BuildDailyScheduleSegmentsFromShiftTemplateAction;
+use App\Domains\Scheduling\Actions\CancelDraftScheduleBatchAction;
 use App\Domains\Scheduling\Actions\CompareScheduleBatchVersionsAction;
 use App\Domains\Scheduling\Actions\CreateCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -43,6 +45,7 @@ new class extends Component {
     public array $filters = [];
     public array $batchForm = [];
     public array $correctionForm = [];
+    public array $cancelDraftForm = [];
     public array $dayForm = [];
     public array $bulkForm = [];
     public array $validationPanel = [];
@@ -56,8 +59,10 @@ new class extends Component {
     public ?string $weekStart = null;
     public bool $showCreatePanel = false;
     public bool $showCorrectionPanel = false;
+    public bool $showCancelDraftPanel = false;
     public bool $showDayPanel = false;
     public bool $showBulkPanel = false;
+    public bool $showAdvancedFilters = false;
     public bool $confirmBulk = false;
     public bool $confirmPublish = false;
 
@@ -67,7 +72,7 @@ new class extends Component {
             'center_id' => '',
             'period_start' => '',
             'period_end' => '',
-            'status' => 'draft',
+            'status' => 'active_work',
             'worker_search' => '',
             'organizational_unit_id' => '',
             'day_type' => 'all',
@@ -75,6 +80,7 @@ new class extends Component {
         ];
         $this->batchForm = $this->emptyBatchForm();
         $this->correctionForm = ['correction_reason' => ''];
+        $this->cancelDraftForm = ['reason' => ''];
         $this->dayForm = $this->emptyDayForm();
         $this->bulkForm = $this->emptyBulkForm();
         $this->validationPanel = [];
@@ -96,6 +102,14 @@ new class extends Component {
         }
     }
 
+    #[On('daily-schedule-import-applied')]
+    public function refreshAfterCsvImport(): void
+    {
+        $this->validationPanel = [];
+        $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+    }
+
     public function openCreatePanel(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -112,6 +126,16 @@ new class extends Component {
         Gate::authorize('createCorrection', $batch);
         $this->correctionForm = ['correction_reason' => ''];
         $this->showCorrectionPanel = true;
+        $this->resetValidation();
+    }
+
+    public function openCancelDraftPanel(CurrentCompany $currentCompany): void
+    {
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('deleteDraft', $batch);
+
+        $this->cancelDraftForm = ['reason' => ''];
+        $this->showCancelDraftPanel = true;
         $this->resetValidation();
     }
 
@@ -175,6 +199,18 @@ new class extends Component {
         $this->weekStart = $batch->period_start->toDateString();
         $this->validationPanel = [];
         $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+        $this->versionHistoryPanel = [];
+    }
+
+    public function closeCalendar(): void
+    {
+        $this->selectedBatchId = null;
+        $this->weekStart = null;
+        $this->validationPanel = [];
+        $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+        $this->versionHistoryPanel = [];
     }
 
     public function editBatchInfo(CurrentCompany $currentCompany, \App\Domains\Scheduling\Actions\UpdateDraftScheduleBatchAction $action): void
@@ -221,8 +257,8 @@ new class extends Component {
     {
         $batch = $this->selectedBatch($currentCompany, false);
         $current = CarbonImmutable::parse($this->weekStart ?: $batch->period_start->toDateString());
-        $next = $current->addDays(7);
-        $this->weekStart = $next->gt($batch->period_end) ? $batch->period_end->toDateString() : $next->toDateString();
+
+        $this->weekStart = $current->addDays(7)->toDateString();
     }
 
     public function openDayEditor(int $relationshipId, string $workDate, CurrentCompany $currentCompany): void
@@ -387,6 +423,34 @@ new class extends Component {
         Session::flash('status', "Programacion publicada. SHA-256: {$published->snapshotSha256}");
     }
 
+    public function cancelDraftBatch(CurrentCompany $currentCompany, CancelDraftScheduleBatchAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $batch = $this->selectedBatch($currentCompany, true);
+        Gate::authorize('deleteDraft', $batch);
+
+        $validated = $this->validate([
+            'cancelDraftForm.reason' => ['required', 'string', 'max:500'],
+        ])['cancelDraftForm'];
+
+        try {
+            $cancelled = $action->handle(auth()->user(), $company, $batch, $validated['reason']);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['cancelDraftForm.reason' => $exception->getMessage()]);
+        }
+
+        $this->selectedBatchId = null;
+        $this->showCancelDraftPanel = false;
+        $this->validationPanel = [];
+        $this->comparisonPanel = [];
+        $this->integrityPanel = [];
+        $this->versionHistoryPanel = [];
+        $this->confirmPublish = false;
+        $this->resetValidation('cancelDraftForm');
+
+        Session::flash('status', 'Borrador descartado. Se conserva como cancelado para trazabilidad.');
+    }
+
     public function compareWithPrevious(CurrentCompany $currentCompany, CompareScheduleBatchVersionsAction $action): void
     {
         $batch = $this->selectedBatch($currentCompany, false);
@@ -419,6 +483,26 @@ new class extends Component {
                 'superseded_by' => $version->superseded_by,
             ])->all(),
         ];
+    }
+
+    public function hideVersionHistory(): void
+    {
+        $this->versionHistoryPanel = [];
+    }
+
+    public function hideValidationPanel(): void
+    {
+        $this->validationPanel = [];
+    }
+
+    public function hideComparisonPanel(): void
+    {
+        $this->comparisonPanel = [];
+    }
+
+    public function hideIntegrityPanel(): void
+    {
+        $this->integrityPanel = [];
     }
 
     public function verifyIntegrity(CurrentCompany $currentCompany, VerifyPublishedScheduleBatchSnapshotAction $action): void
@@ -467,6 +551,7 @@ new class extends Component {
             'canPublishSelectedBatch' => $selectedBatch ? Gate::allows('publish', $selectedBatch) : false,
             'canCreateCorrection' => $selectedBatch ? Gate::allows('createCorrection', $selectedBatch) : false,
             'canPublishCorrection' => $selectedBatch ? Gate::allows('publishCorrection', $selectedBatch) : false,
+            'canDeleteDraftSelectedBatch' => $selectedBatch ? Gate::allows('deleteDraft', $selectedBatch) : false,
             'previewTemplate' => $this->previewTemplate($company),
             'bulkPreview' => $selectedBatch ? $this->bulkPreview($selectedBatch) : null,
         ];
@@ -532,7 +617,8 @@ new class extends Component {
                 'dailyAssignments as pending_days' => fn ($query) => $query->where('day_type', 'unassigned'),
             ])
             ->when($centerIds !== null, fn ($query) => $query->whereIn('center_id', $centerIds))
-            ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($status === 'active_work', fn ($query) => $query->whereIn('status', ['draft', 'published']))
+            ->when(! in_array($status, ['all', 'active_work'], true), fn ($query) => $query->where('status', $status))
             ->when($centerId !== '', fn ($query) => $query->where('center_id', (int) $centerId))
             ->when($periodStart !== '', fn ($query) => $query->whereDate('period_end', '>=', $periodStart))
             ->when($periodEnd !== '', fn ($query) => $query->whereDate('period_start', '<=', $periodEnd))
@@ -542,6 +628,7 @@ new class extends Component {
             ->when($unitId !== '', fn ($query) => $query->whereHas('dailyAssignments', fn ($assignmentQuery) => $assignmentQuery->where('organizational_unit_id', (int) $unitId)))
             ->when($dayType !== 'all', fn ($query) => $query->whereHas('dailyAssignments', fn ($assignmentQuery) => $assignmentQuery->where('day_type', $dayType)))
             ->when($pendingOnly, fn ($query) => $query->whereHas('dailyAssignments', fn ($assignmentQuery) => $assignmentQuery->where('day_type', 'unassigned')))
+            ->orderByRaw("case when status = 'draft' then 0 when status = 'published' then 1 else 2 end")
             ->orderByDesc('period_start')
             ->orderByDesc('id');
     }
@@ -609,7 +696,16 @@ new class extends Component {
                 $cells[] = ['date' => $date, 'assignment' => $assignment, 'outside_vigence' => false];
             }
 
-            $rows[] = ['relationship' => $relationship, 'cells' => $cells];
+            $unitName = collect($cells)
+                ->map(fn (array $cell) => $cell['assignment']?->organizationalUnit?->name)
+                ->filter()
+                ->first();
+
+            $rows[] = [
+                'relationship' => $relationship,
+                'organizational_unit_name' => $unitName,
+                'cells' => $cells,
+            ];
         }
 
         return $rows;
@@ -671,12 +767,16 @@ new class extends Component {
         if ($start->lt($batch->period_start)) {
             $start = CarbonImmutable::parse($batch->period_start->toDateString());
         }
-        $end = $start->addDays(6)->gt($batch->period_end) ? CarbonImmutable::parse($batch->period_end->toDateString()) : $start->addDays(6);
 
-        return collect(CarbonPeriod::create($start, $end))->map(fn ($date) => [
-            'date' => $date->toDateString(),
-            'label' => ucfirst($date->locale('es_MX')->isoFormat('ddd DD/MM')),
-        ])->values()->all();
+        return collect(range(0, 6))->map(function (int $offset) use ($start, $batch): array {
+            $date = $start->addDays($offset);
+
+            return [
+                'date' => $date->toDateString(),
+                'label' => ucfirst($date->locale('es_MX')->isoFormat('ddd DD/MM')),
+                'outside_period' => $date->lt($batch->period_start) || $date->gt($batch->period_end),
+            ];
+        })->values()->all();
     }
 
     private function batchSummary(ScheduleBatch $batch): array
@@ -1019,6 +1119,29 @@ new class extends Component {
         };
     }
 
+    private function calendarCellClasses(?DailyScheduleAssignment $assignment): string
+    {
+        return match ($assignment?->day_type) {
+            'shift' => 'border-sky-200 bg-sky-50 text-sky-950 hover:border-sky-400 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100 dark:hover:border-sky-600',
+            'rest' => 'border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:border-emerald-600',
+            'flexible' => 'border-violet-200 bg-violet-50 text-violet-950 hover:border-violet-400 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100 dark:hover:border-violet-600',
+            'on_call' => 'border-amber-200 bg-amber-50 text-amber-950 hover:border-amber-400 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100 dark:hover:border-amber-600',
+            'unassigned', null => 'border-rose-200 bg-rose-50 text-rose-950 hover:border-rose-400 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-100 dark:hover:border-rose-600',
+            default => 'border-zinc-200 bg-zinc-50 text-zinc-900 hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
+        };
+    }
+
+    private function calendarCellTextClasses(?DailyScheduleAssignment $assignment): string
+    {
+        return match ($assignment?->day_type) {
+            'shift' => 'text-sky-700 dark:text-sky-200',
+            'rest' => 'text-emerald-700 dark:text-emerald-200',
+            'flexible' => 'text-violet-700 dark:text-violet-200',
+            'on_call' => 'text-amber-700 dark:text-amber-200',
+            'unassigned', null => 'text-rose-700 dark:text-rose-200',
+            default => 'text-zinc-500 dark:text-zinc-400',
+        };
+    }
     private function sourceLabel(?string $source): string
     {
         return match ($source) {
@@ -1130,17 +1253,16 @@ new class extends Component {
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{{ session('status') }}</div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="grid gap-4 lg:grid-cols-4">
+    <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto] lg:items-end">
             <flux:select label="Centro de trabajo" wire:model.live="filters.center_id">
                 <flux:select.option value="">Todos</flux:select.option>
                 @foreach ($centers as $center)
                     <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:input type="date" label="Desde" wire:model.live="filters.period_start" />
-            <flux:input type="date" label="Hasta" wire:model.live="filters.period_end" />
             <flux:select label="Estado" wire:model.live="filters.status">
+                <flux:select.option value="active_work">Borradores y publicados</flux:select.option>
                 <flux:select.option value="draft">Borrador</flux:select.option>
                 <flux:select.option value="published">Publicado</flux:select.option>
                 <flux:select.option value="superseded">Sustituido</flux:select.option>
@@ -1148,119 +1270,151 @@ new class extends Component {
                 <flux:select.option value="all">Todos</flux:select.option>
             </flux:select>
             <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="filters.worker_search" />
-            <flux:select label="Unidad organizacional" wire:model.live="filters.organizational_unit_id">
-                <flux:select.option value="">Todas</flux:select.option>
-                @foreach ($units as $unit)
-                    <flux:select.option value="{{ $unit->id }}">{{ $unit->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-            <flux:select label="Tipo de dia" wire:model.live="filters.day_type">
-                <flux:select.option value="all">Todos</flux:select.option>
-                <flux:select.option value="shift">Turno</flux:select.option>
-                <flux:select.option value="rest">Descanso</flux:select.option>
-                <flux:select.option value="flexible">Flexible</flux:select.option>
-                <flux:select.option value="on_call">Guardia</flux:select.option>
-                <flux:select.option value="unassigned">Pendiente</flux:select.option>
-            </flux:select>
-            <label class="flex items-end gap-2 pb-2 text-sm">
-                <input type="checkbox" wire:model.live="filters.pending_only" class="rounded border-zinc-300">
-                <span>Solo pendientes</span>
-            </label>
+            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
+                <span class="inline-flex items-center gap-1.5 leading-none">
+                    <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
+                    <span>Filtros</span>
+                </span>
+            </flux:button>
         </div>
+
+        @if ($showAdvancedFilters)
+            <div class="mt-3 grid gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800 lg:grid-cols-5 lg:items-end">
+                <flux:input type="date" label="Desde" wire:model.live="filters.period_start" />
+                <flux:input type="date" label="Hasta" wire:model.live="filters.period_end" />
+                <flux:select label="Unidad organizacional" wire:model.live="filters.organizational_unit_id">
+                    <flux:select.option value="">Todas</flux:select.option>
+                    @foreach ($units as $unit)
+                        <flux:select.option value="{{ $unit->id }}">{{ $unit->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:select label="Tipo de dia" wire:model.live="filters.day_type">
+                    <flux:select.option value="all">Todos</flux:select.option>
+                    <flux:select.option value="shift">Turno</flux:select.option>
+                    <flux:select.option value="rest">Descanso</flux:select.option>
+                    <flux:select.option value="flexible">Flexible</flux:select.option>
+                    <flux:select.option value="on_call">Guardia</flux:select.option>
+                    <flux:select.option value="unassigned">Pendiente</flux:select.option>
+                </flux:select>
+                <label class="flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 px-3 text-sm dark:border-zinc-700">
+                    <input type="checkbox" wire:model.live="filters.pending_only" class="rounded border-zinc-300">
+                    <span>Solo pendientes</span>
+                </label>
+            </div>
+        @endif
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                <tr>
-                    <th class="px-4 py-3">Centro</th>
-                    <th class="px-4 py-3">Periodo</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3">Resumen</th>
-                    <th class="px-4 py-3">Publicacion</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                @forelse ($batches as $batch)
+    <section class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="flex items-center justify-between border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
+            <p class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Lotes</p>
+            <p class="text-xs text-zinc-500">{{ $batches->total() }} encontrados</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px] divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+                <thead class="bg-zinc-50 text-left text-[11px] font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                     <tr>
-                        <td class="px-4 py-3">
-                            <span class="block font-medium">{{ $batch->center?->name }}</span>
-                            <span class="text-xs text-zinc-500">Origen: {{ $this->sourceLabel($batch->creation_source) }}</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="block">{{ $batch->period_start->toDateString() }} - {{ $batch->period_end->toDateString() }}</span>
-                            <span class="text-xs text-zinc-500">Version {{ $batch->version }}</span>
-                        </td>
-                        <td class="px-4 py-3">{{ $this->statusLabel($batch->status) }}</td>
-                        <td class="px-4 py-3">
-                            <span class="block">{{ $batch->total_days }} dias programados</span>
-                            <span class="text-xs text-zinc-500">{{ $batch->pending_days }} pendientes</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            @if ($batch->published_at)
-                                <span class="block">{{ $batch->published_at->format('Y-m-d H:i') }}</span>
-                                <span class="text-xs text-zinc-500">{{ $batch->publisher?->name ?? 'Usuario' }}</span>
-                            @else
-                                <span class="text-zinc-500">Sin publicar</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-2">
-                                <flux:button size="xs" variant="ghost" wire:click="selectBatch({{ $batch->id }})">{{ $batch->status === 'draft' ? 'Abrir calendario' : 'Consultar' }}</flux:button>
-                            </div>
-                        </td>
+                        <th class="px-3 py-2">Centro</th>
+                        <th class="px-3 py-2">Periodo</th>
+                        <th class="px-3 py-2">Estado</th>
+                        <th class="px-3 py-2">Version</th>
+                        <th class="px-3 py-2">Dias</th>
+                        <th class="px-3 py-2">Pendientes</th>
+                        <th class="px-3 py-2">Origen</th>
+                        <th class="px-3 py-2">Publicacion</th>
+                        <th class="px-3 py-2 text-right">Accion</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">No hay lotes con los filtros actuales.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @forelse ($batches as $batch)
+                        <tr class="{{ $selectedBatchId === $batch->id ? 'bg-sky-50 dark:bg-sky-950/30' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50' }}">
+                            <td class="px-3 py-2 font-medium">{{ $batch->center?->name }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap">{{ $batch->period_start->toDateString() }} - {{ $batch->period_end->toDateString() }}</td>
+                            <td class="px-3 py-2">
+                                <span class="rounded-full px-2 py-0.5 text-xs {{ $batch->status === 'draft' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' : ($batch->status === 'published' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200') }}">
+                                    {{ $this->statusLabel($batch->status) }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-zinc-600 dark:text-zinc-300">{{ $batch->version ? 'Version '.$batch->version : 'Sin version' }}</td>
+                            <td class="px-3 py-2">{{ $batch->total_days }}</td>
+                            <td class="px-3 py-2 {{ $batch->pending_days > 0 ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-zinc-500' }}">{{ $batch->pending_days }}</td>
+                            <td class="px-3 py-2 text-zinc-600 dark:text-zinc-300">{{ $this->sourceLabel($batch->creation_source) }}</td>
+                            <td class="px-3 py-2 text-zinc-600 dark:text-zinc-300">
+                                @if ($batch->published_at)
+                                    {{ $batch->published_at->format('d/m/Y H:i') }}
+                                @else
+                                    Sin publicar
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-right">
+                                <flux:button size="xs" variant="ghost" wire:click="selectBatch({{ $batch->id }})">{{ $batch->status === 'draft' ? 'Abrir' : 'Consultar' }}</flux:button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="px-3 py-5 text-center text-zinc-500">No hay lotes con los filtros actuales.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </section>
 
     {{ $batches->links() }}
 
     @if ($selectedBatch)
-        <section class="space-y-5 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div>
+        <section class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 dark:bg-zinc-950/40" style="background-color: #f5f5f5;">
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div class="min-w-0">
                     <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
                     <flux:subheading>
                         @if ($selectedBatch->previous_batch_id)
-                            Correccion de programacion - Version {{ $selectedBatch->version }} - {{ $this->statusLabel($selectedBatch->status) }}
+                            Correccion de programacion - {{ $selectedBatch->version ? 'Version '.$selectedBatch->version : 'Borrador correctivo' }} - {{ $this->statusLabel($selectedBatch->status) }}
                         @else
-                            Version {{ $selectedBatch->version }} - {{ $this->statusLabel($selectedBatch->status) }}
+                            {{ $selectedBatch->version ? 'Version '.$selectedBatch->version : 'Borrador sin version publicada' }} - {{ $this->statusLabel($selectedBatch->status) }}
                         @endif
                     </flux:subheading>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
                     @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
-                        <flux:button size="sm" variant="ghost" wire:click="generateMissing">Generar faltantes</flux:button>
-                        <flux:button size="sm" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar desde perfiles</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="generateMissing">Generar</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</flux:button>
                     @endif
                     @if ($canEditSelectedBatch)
-                        <flux:button size="sm" variant="ghost" wire:click="openBulkPanel">Cambio masivo</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="openBulkPanel">Masivo</flux:button>
                     @endif
-                    <flux:button size="sm" variant="ghost" wire:click="reviewBatch">Revisar antes de publicar</flux:button>
+                    <flux:button size="xs" variant="ghost" wire:click="reviewBatch">Revisar</flux:button>
                     @if ($selectedBatch->previous_batch_id)
-                        <flux:button size="sm" variant="ghost" wire:click="compareWithPrevious">Comparar con version anterior</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="compareWithPrevious">Comparar</flux:button>
                     @endif
-                    <flux:button size="sm" variant="ghost" wire:click="loadVersionHistory">Historial de versiones</flux:button>
+                    @if (in_array($selectedBatch->status, ['published', 'superseded'], true))
+                        <flux:button size="xs" variant="ghost" wire:click="loadVersionHistory">Historial</flux:button>
+                    @endif
+                    @if ($canEditSelectedBatch)
+                        <livewire:scheduling.daily-schedule-csv-import
+                            :schedule-batch-id="$selectedBatch->id"
+                            :worker-search="$filters['worker_search'] ?? ''"
+                            :organizational-unit-id="$filters['organizational_unit_id'] ?? ''"
+                            :key="'daily-csv-import-action-'.$selectedBatch->id.'-'.($filters['worker_search'] ?? '').'-'.($filters['organizational_unit_id'] ?? '')"
+                        />
+                    @endif
                     @if ($selectedBatch->status === 'published')
-                        <flux:button size="sm" variant="ghost" wire:click="verifyIntegrity">Verificar integridad</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="verifyIntegrity">Integridad</flux:button>
                     @endif
                     @if ($canCreateCorrection)
-                        <flux:button size="sm" variant="primary" wire:click="openCorrectionPanel">Crear correccion</flux:button>
+                        <flux:button size="xs" variant="primary" wire:click="openCorrectionPanel">Correccion</flux:button>
                     @endif
+                    @if ($canDeleteDraftSelectedBatch)
+                        <flux:button size="xs" variant="danger" wire:click="openCancelDraftPanel">Descartar</flux:button>
+                    @endif
+                    <flux:button size="xs" variant="ghost" wire:click="closeCalendar">Ocultar calendario</flux:button>
                 </div>
             </div>
 
-            @if ($selectedBatch->previous_batch_id)
-                <div class="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                    <p class="font-medium">Version {{ $selectedBatch->version }} - Borrador de correccion</p>
-                    <p>Corrige la version {{ $selectedBatch->previousBatch?->version }}. Motivo: {{ $selectedBatch->correction_reason }}</p>
+            @if ($selectedBatch->status === 'cancelled')
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <p class="font-medium">Lote cancelado</p>
+                    <p>Motivo: {{ $selectedBatch->cancellation_reason ?: 'Sin motivo registrado' }}</p>
+                    <p>Cancelado: {{ $selectedBatch->cancelled_at?->format('Y-m-d H:i') }} por {{ $selectedBatch->canceller?->name ?? 'Usuario' }}</p>
                 </div>
             @endif
 
@@ -1273,35 +1427,27 @@ new class extends Component {
                 </div>
             @endif
 
-            <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Trabajadores</p><p class="font-semibold">{{ $selectedSummary['workers'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Dias</p><p class="font-semibold">{{ $selectedSummary['days'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Turnos</p><p class="font-semibold">{{ $selectedSummary['shift'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Descansos</p><p class="font-semibold">{{ $selectedSummary['rest'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Flexibles</p><p class="font-semibold">{{ $selectedSummary['flexible'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Guardias</p><p class="font-semibold">{{ $selectedSummary['on_call'] }}</p></div>
-                <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Pendientes</p><p class="font-semibold">{{ $selectedSummary['unassigned'] }}</p></div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 rounded-md bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800">
+                <span><strong>{{ $selectedSummary['workers'] }}</strong> trabajadores</span>
+                <span><strong>{{ $selectedSummary['days'] }}</strong> dias</span>
+                <span><strong>{{ $selectedSummary['shift'] }}</strong> turnos</span>
+                <span><strong>{{ $selectedSummary['rest'] }}</strong> descansos</span>
+                <span><strong>{{ $selectedSummary['flexible'] }}</strong> flexibles</span>
+                <span><strong>{{ $selectedSummary['on_call'] }}</strong> guardias</span>
+                <span class="{{ $selectedSummary['unassigned'] > 0 ? 'font-medium text-amber-700 dark:text-amber-300' : '' }}"><strong>{{ $selectedSummary['unassigned'] }}</strong> pendientes</span>
             </div>
 
             @if ($selectedSummary['unassigned'] > 0)
                 <p class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">Existen {{ $selectedSummary['unassigned'] }} dias pendientes de definicion.</p>
             @endif
 
-            @if ($canEditSelectedBatch)
-                <livewire:scheduling.daily-schedule-csv-import :schedule-batch-id="$selectedBatch->id" :key="'daily-csv-import-'.$selectedBatch->id" />
-            @endif
-
-            @if ($selectedBatch->status === 'published')
-                <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-                    <p>Publicado: {{ $selectedBatch->published_at?->format('Y-m-d H:i') }} por {{ $selectedBatch->publisher?->name ?? 'Usuario' }}</p>
-                    <p class="break-all">SHA-256: {{ $selectedBatch->snapshot_sha256 }}</p>
-                </div>
-            @endif
-
             @if ($validationPanel !== [])
                 <div class="grid gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-3">
                     <div>
-                        <p class="font-medium">{{ $validationPanel['valid'] ? 'Listo para publicar' : 'Bloqueos para publicar' }}</p>
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="font-medium">{{ $validationPanel['valid'] ? 'Listo para publicar' : 'Bloqueos para publicar' }}</p>
+                            <flux:button size="xs" variant="ghost" wire:click="hideValidationPanel">Ocultar</flux:button>
+                        </div>
                         @forelse ($validationPanel['errors'] as $error)
                             <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $error }}</p>
                         @empty
@@ -1335,12 +1481,12 @@ new class extends Component {
                                 @if ($selectedBatch->previous_batch_id)
                                     Al publicar, la version anterior quedara marcada como Sustituida. Ambas versiones y sus evidencias se conservaran.
                                 @else
-                                    Despues de publicar, esta version no podra modificarse. Las correcciones posteriores se realizaran mediante una nueva version.
+                                    Despues de publicar, la programacion quedara versionada e inmutable. Las correcciones posteriores se realizaran mediante una nueva version.
                                 @endif
                             </p>
                             <label class="mt-3 flex items-center gap-2">
                                 <input type="checkbox" wire:model="confirmPublish" class="rounded border-zinc-300">
-                                <span>Confirmo publicar esta version.</span>
+                                <span>Confirmo publicar esta programacion.</span>
                             </label>
                             @error('confirmPublish')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                             @error('publication')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -1352,7 +1498,10 @@ new class extends Component {
 
             @if ($comparisonPanel !== [])
                 <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                    <p class="font-medium">Comparacion con version anterior</p>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-medium">Comparacion con version anterior</p>
+                        <flux:button size="xs" variant="ghost" wire:click="hideComparisonPanel">Ocultar</flux:button>
+                    </div>
                     <div class="mt-3 grid gap-3 text-sm md:grid-cols-4">
                         <p>Dias totales: {{ $comparisonPanel['total_days'] }}</p>
                         <p>Sin cambio: {{ $comparisonPanel['unchanged_days'] }}</p>
@@ -1375,20 +1524,20 @@ new class extends Component {
 
             @if ($versionHistoryPanel !== [])
                 <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                    <p class="font-medium">Historial de versiones</p>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-medium">Historial de versiones</p>
+                        <flux:button size="xs" variant="ghost" wire:click="hideVersionHistory">Ocultar</flux:button>
+                    </div>
                     @foreach ($versionHistoryPanel['errors'] as $error)
                         <p class="mt-1 text-sm text-red-600">{{ $error }}</p>
                     @endforeach
                     <div class="mt-3 grid gap-3 md:grid-cols-2">
                         @foreach ($versionHistoryPanel['versions'] as $version)
                             <button type="button" wire:click="selectBatch({{ $version['id'] }})" class="rounded-md border border-zinc-200 p-3 text-left text-sm hover:border-sky-400 dark:border-zinc-700">
-                                <span class="block font-medium">Version {{ $version['version'] }} - {{ $this->statusLabel($version['status']) }}</span>
+                                <span class="block font-medium">{{ $version['version'] ? 'Version '.$version['version'] : 'Borrador correctivo' }} - {{ $this->statusLabel($version['status']) }}</span>
                                 <span class="block text-xs text-zinc-500">Publicada: {{ $version['published_at'] ?? 'Sin publicar' }}</span>
                                 @if ($version['correction_reason'])
                                     <span class="block text-xs text-zinc-500">Motivo: {{ $version['correction_reason'] }}</span>
-                                @endif
-                                @if ($version['hash'])
-                                    <span class="block break-all text-xs text-zinc-400">Hash: {{ $version['hash'] }}</span>
                                 @endif
                             </button>
                         @endforeach
@@ -1398,7 +1547,10 @@ new class extends Component {
 
             @if ($integrityPanel !== [])
                 <div class="rounded-lg border {{ $integrityPanel['valid'] ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-900' }} p-4 text-sm dark:bg-zinc-900">
-                    <p class="font-medium">{{ $integrityPanel['valid'] ? 'Integridad verificada' : 'No fue posible verificar la integridad' }}</p>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-medium">{{ $integrityPanel['valid'] ? 'Integridad verificada' : 'No fue posible verificar la integridad' }}</p>
+                        <flux:button size="xs" variant="ghost" wire:click="hideIntegrityPanel">Ocultar</flux:button>
+                    </div>
                     <p class="break-all">Hash actual: {{ $integrityPanel['actual_hash'] }}</p>
                     @foreach ($integrityPanel['errors'] as $error)
                         <p>{{ $error }}</p>
@@ -1412,32 +1564,46 @@ new class extends Component {
                 <flux:button size="sm" variant="ghost" wire:click="nextWeek">Semana siguiente</flux:button>
             </div>
 
-            <div class="hidden overflow-x-auto lg:block">
-                <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+            <div class="rounded-lg p-3 dark:bg-zinc-950/40" style="background-color: #f5f5f5;">
+            <div class="hidden lg:block">
+                <table class="w-full table-fixed divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                    <colgroup>
+                        <col class="w-[18rem]">
+                        @foreach ($weekDates as $date)
+                            <col class="w-[calc((100%-18rem)/7)]">
+                        @endforeach
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="sticky left-0 bg-white px-3 py-2 text-left dark:bg-zinc-900">Trabajador</th>
+                            <th class="sticky left-0 bg-white px-2 py-2 text-left dark:bg-zinc-900">Trabajador</th>
                             @foreach ($weekDates as $date)
-                                <th class="px-3 py-2 text-left">{{ $date['label'] }}</th>
+                                <th @class([
+                                    'px-2 py-2 text-left text-xs font-medium',
+                                    'text-zinc-400' => $date['outside_period'] ?? false,
+                                    'text-zinc-600 dark:text-zinc-300' => ! ($date['outside_period'] ?? false),
+                                ])>{{ $date['label'] }}</th>
                             @endforeach
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @forelse ($calendarRows as $row)
                             <tr>
-                                <td class="sticky left-0 bg-white px-3 py-3 dark:bg-zinc-900">
-                                    <span class="block font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
-                                    <span class="text-xs text-zinc-500">{{ $row['relationship']->position_name }} | {{ $row['relationship']->center?->name }}</span>
+                                <td class="sticky left-0 bg-white px-2 py-3 align-top dark:bg-zinc-900">
+                                    <span class="block truncate font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                                    <span class="block truncate text-xs text-zinc-500">{{ $row['relationship']->position_name }} | {{ $row['relationship']->center?->name }}</span>
+                                    <span class="block truncate text-xs text-zinc-500">{{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
                                 </td>
                                 @foreach ($row['cells'] as $cell)
-                                    <td class="min-w-44 px-3 py-3 align-top">
+                                    <td class="px-1.5 py-2 align-top">
                                         @if ($cell['outside_vigence'])
-                                            <span class="text-xs text-zinc-400">Fuera de vigencia</span>
+                                            <div class="min-h-20 rounded-md border border-dashed border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900/60">
+                                                Fuera de vigencia
+                                            </div>
                                         @else
-                                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="w-full rounded-md border border-zinc-200 p-3 text-left hover:border-sky-400 disabled:cursor-default disabled:hover:border-zinc-200 dark:border-zinc-700">
-                                                <span class="block font-medium">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
-                                                <span class="block text-xs text-zinc-500">{{ $this->assignmentSummary($cell['assignment']) }}</span>
-                                                <span class="block text-xs text-zinc-400">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
+                                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="min-h-20 w-full rounded-md border p-2 text-left transition disabled:cursor-default disabled:opacity-90 {{ $this->calendarCellClasses($cell['assignment']) }}">
+                                                <span class="block truncate font-semibold">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
+                                                <span class="mt-1 block line-clamp-2 text-xs {{ $this->calendarCellTextClasses($cell['assignment']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                                <span class="mt-1 block truncate text-[11px] opacity-70">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
                                             </button>
                                         @endif
                                     </td>
@@ -1454,14 +1620,16 @@ new class extends Component {
                 @foreach ($calendarRows as $row)
                     @foreach ($row['cells'] as $cell)
                         @if (! $cell['outside_vigence'])
-                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="rounded-md border border-zinc-200 p-4 text-left dark:border-zinc-700">
-                                <span class="block text-xs text-zinc-500">{{ $cell['date'] }}</span>
+                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="rounded-md border p-4 text-left transition {{ $this->calendarCellClasses($cell['assignment']) }}">
+                                <span class="block text-xs opacity-70">{{ $cell['date'] }}</span>
                                 <span class="block font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
-                                <span class="block text-sm">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                <span class="block text-xs opacity-70">{{ $row['relationship']->center?->name }} | {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
+                                <span class="block text-sm {{ $this->calendarCellTextClasses($cell['assignment']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
                             </button>
                         @endif
                     @endforeach
                 @endforeach
+            </div>
             </div>
         </section>
     @endif
@@ -1487,7 +1655,7 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showCorrectionPanel" title="Crear correccion" subheading="Se creara una nueva version editable sin modificar la publicacion vigente." maxWidth="max-w-2xl">
+    <x-side-panel wire:model="showCorrectionPanel" title="Crear correccion" subheading="Se creara un borrador correctivo sin modificar la publicacion vigente." maxWidth="max-w-2xl">
         <form wire:submit="createCorrection" class="space-y-5 p-6">
             @if ($selectedBatch)
                 <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
@@ -1496,11 +1664,30 @@ new class extends Component {
                     <p>Version actual: {{ $selectedBatch->version }}</p>
                 </div>
             @endif
-            <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara una nueva version editable. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
+            <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara un borrador correctivo. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
             <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
             <div class="flex justify-end gap-3">
                 <flux:button type="button" variant="ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</flux:button>
                 <flux:button type="submit" variant="primary">Crear correccion</flux:button>
+            </div>
+        </form>
+    </x-side-panel>
+
+    <x-side-panel wire:model="showCancelDraftPanel" title="Descartar borrador" subheading="El lote quedara cancelado y no podra editarse ni publicarse." maxWidth="max-w-xl">
+        <form wire:submit="cancelDraftBatch" class="space-y-5 p-6">
+            @if ($selectedBatch)
+                <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                    <p class="font-medium">Esta accion solo aplica a lotes en borrador.</p>
+                    <p>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                </div>
+            @endif
+
+            <flux:textarea label="Motivo" wire:model="cancelDraftForm.reason" required />
+            @error('cancelDraftForm.reason')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+
+            <div class="flex justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="$set('showCancelDraftPanel', false)">Conservar borrador</flux:button>
+                <flux:button type="submit" variant="danger">Descartar borrador</flux:button>
             </div>
         </form>
     </x-side-panel>

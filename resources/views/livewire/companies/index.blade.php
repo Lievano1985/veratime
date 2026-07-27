@@ -92,12 +92,7 @@ new class extends Component {
 
         if ($company->status !== 'active' && session('current_company_id') === $company->id) {
             session()->forget('current_company_id');
-            $this->editingCompanyId = null;
-            $this->editForm = [];
-
-            Session::flash('status', 'Empresa actualizada.');
-
-            return;
+            app(CurrentCompany::class)->clear();
         }
 
         $this->loadEditForm($company->id);
@@ -131,7 +126,7 @@ new class extends Component {
     {
         return [
             'companies' => auth()->user()
-                ->activeCompanies()
+                ->companiesWithActiveMembership()
                 ->orderBy('name')
                 ->get(),
             'currentCompany' => $currentCompany->get(),
@@ -139,6 +134,7 @@ new class extends Component {
             'canManageCurrentCompany' => $currentCompany->get()
                 ? Gate::allows('update', $currentCompany->get())
                 : false,
+            'canManageEditingCompany' => $this->canManageEditingCompany(),
         ];
     }
 
@@ -147,7 +143,7 @@ new class extends Component {
         abort_unless($companyId, 404);
 
         $company = auth()->user()
-            ->activeCompanies()
+            ->companiesWithActiveMembership()
             ->whereKey($companyId)
             ->firstOrFail();
 
@@ -168,6 +164,17 @@ new class extends Component {
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
         ];
+    }
+
+    private function canManageEditingCompany(): bool
+    {
+        if (! $this->editingCompanyId) {
+            return false;
+        }
+
+        $company = Company::query()->find($this->editingCompanyId);
+
+        return $company ? Gate::allows('update', $company) : false;
     }
 
     private function emptyCompanyForm(): array
@@ -207,7 +214,7 @@ new class extends Component {
             <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="mb-4">
                     <flux:heading>Empresas autorizadas</flux:heading>
-                    <flux:subheading>Solo se listan empresas activas donde tu relacion tambien esta activa.</flux:subheading>
+                    <flux:subheading>Se listan las empresas donde tu relacion esta activa; las inactivas no aparecen en el selector operativo.</flux:subheading>
                 </div>
 
                 <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
@@ -221,16 +228,16 @@ new class extends Component {
                             <span class="flex items-center gap-3">
                                 <span class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">{{ $company->status }}</span>
 
-                                @if ($canManageCurrentCompany)
+                                @can('update', $company)
                                     <flux:button type="button" size="sm" wire:click="loadEditForm({{ $company->id }})">Editar</flux:button>
-                                @endif
+                                @endcan
                             </span>
                         </div>
                     @endforeach
                 </div>
             </section>
 
-            @if ($editingCompanyId && $canManageCurrentCompany)
+            @if ($editingCompanyId && $canManageEditingCompany)
                 <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
                     <div class="mb-4">
                         <flux:heading>Datos basicos</flux:heading>

@@ -517,29 +517,29 @@ new class extends Component {
                                 <flux:select.option value="fixed">Horario fijo</flux:select.option>
                                 <flux:select.option value="duration">Duración</flux:select.option>
                             </flux:select>
-                            <flux:input label="Orden" type="number" min="1" wire:model="segments.{{ $index }}.sort_order" />
+                            <flux:input label="Orden" type="number" min="1" wire:model.live.debounce.250ms="segments.{{ $index }}.sort_order" />
                             <div class="flex items-end gap-4">
-                                <flux:checkbox label="Pagado" wire:model="segments.{{ $index }}.is_paid" :disabled="$segment['segment_type'] === 'work'" />
-                                <flux:checkbox label="Obligatorio" wire:model="segments.{{ $index }}.is_required" />
+                                <flux:checkbox label="Pagado" wire:model.live="segments.{{ $index }}.is_paid" :disabled="$segment['segment_type'] === 'work'" />
+                                <flux:checkbox label="Obligatorio" wire:model.live="segments.{{ $index }}.is_required" />
                             </div>
                         </div>
 
                         @if (($segment['timing_mode'] ?? 'fixed') === 'fixed')
                             <div class="mt-4 grid gap-4 md:grid-cols-4">
-                                <flux:input label="Hora inicial" type="time" wire:model="segments.{{ $index }}.start_local_time" />
-                                <flux:select label="Día inicial" wire:model="segments.{{ $index }}.start_day_offset">
+                                <flux:input label="Hora inicial" type="time" wire:model.live.debounce.250ms="segments.{{ $index }}.start_local_time" />
+                                <flux:select label="Día inicial" wire:model.live="segments.{{ $index }}.start_day_offset">
                                     <flux:select.option value="0">Mismo día</flux:select.option>
                                     <flux:select.option value="1">Día siguiente</flux:select.option>
                                 </flux:select>
-                                <flux:input label="Hora final" type="time" wire:model="segments.{{ $index }}.end_local_time" />
-                                <flux:select label="Día final" wire:model="segments.{{ $index }}.end_day_offset">
+                                <flux:input label="Hora final" type="time" wire:model.live.debounce.250ms="segments.{{ $index }}.end_local_time" />
+                                <flux:select label="Día final" wire:model.live="segments.{{ $index }}.end_day_offset">
                                     <flux:select.option value="0">Mismo día</flux:select.option>
                                     <flux:select.option value="1">Día siguiente</flux:select.option>
                                 </flux:select>
                             </div>
                         @else
                             <div class="mt-4 max-w-xs">
-                                <flux:input label="Duración en minutos" type="number" min="1" wire:model="segments.{{ $index }}.duration_minutes" />
+                                <flux:input label="Duración en minutos" type="number" min="1" wire:model.live.debounce.250ms="segments.{{ $index }}.duration_minutes" />
                             </div>
                         @endif
                     </div>

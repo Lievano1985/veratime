@@ -121,10 +121,6 @@ class ValidateScheduleBatchForPublicationAction
             $result->addError('Solo un lote en borrador puede publicarse.');
         }
 
-        if ((int) $batch->version !== 1) {
-            $result->addError('En F3A solo puede publicarse la version inicial del lote.');
-        }
-
         if ($batch->previous_batch_id !== null) {
             $result->addError('En F3A no se publican lotes correctivos.');
         }

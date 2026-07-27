@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Models\EmploymentUnitAssignment;
 use App\Models\Worker;
 use Livewire\Attributes\Modelable;
 use Livewire\Volt\Component;
@@ -15,8 +16,11 @@ new class extends Component {
     public string $mode = 'multiple';
     public string $heading = 'Trabajadores';
     public string $subheading ="";
+    public int $resultLimit = 50;
+    public bool $showPrimaryAssignmentStatus = false;
+    public string $assignmentDate = '';
 
-    private const RESULT_LIMIT = 8;
+    private const MAX_RESULT_LIMIT = 150;
 
     public function updatedSearch(): void
     {
@@ -70,16 +74,24 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
+        $workerResults = $this->workerQuery($company)
+            ->limit($this->normalizedResultLimit())
+            ->get();
+
         return [
             'centers' => $company->centers()
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->get(),
-            'workerResults' => $this->workerQuery($company)
-                ->limit(self::RESULT_LIMIT)
-                ->get(),
+            'workerResults' => $workerResults,
             'selectedWorkers' => $this->selectedWorkers($company),
+            'primaryAssignedWorkerIds' => $this->primaryAssignedWorkerIds($company, $workerResults),
         ];
+    }
+
+    private function normalizedResultLimit(): int
+    {
+        return max(1, min($this->resultLimit, self::MAX_RESULT_LIMIT));
     }
 
     private function workerQuery($company)
@@ -125,6 +137,34 @@ new class extends Component {
             ->with(['activeEmploymentRelationship.center'])
             ->orderBy('full_name')
             ->get();
+    }
+    private function primaryAssignedWorkerIds($company, $workers)
+    {
+        if (! $this->showPrimaryAssignmentStatus || $workers->isEmpty()) {
+            return collect();
+        }
+
+        $date = filled($this->assignmentDate) ? $this->assignmentDate : now()->toDateString();
+
+        return EmploymentUnitAssignment::query()
+            ->where('company_id', $company->id)
+            ->where('assignment_type', 'primary')
+            ->where('status', 'active')
+            ->whereDate('effective_from', '<=', $date)
+            ->where(function ($query) use ($date): void {
+                $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date);
+            })
+            ->whereHas('employmentRelationship', function ($query) use ($workers, $company): void {
+                $query->where('company_id', $company->id)
+                    ->whereIn('worker_id', $workers->pluck('id'));
+            })
+            ->with('employmentRelationship:id,worker_id')
+            ->get()
+            ->pluck('employmentRelationship.worker_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
     }
 
     private function currentCompanyOrFail(CurrentCompany $currentCompany)
@@ -212,18 +252,41 @@ new class extends Component {
                 <div class="mt-4 max-h-72 space-y-2 overflow-y-auto">
                     @forelse ($workerResults as $worker)
                         @php($checked = in_array($worker->id, array_map('intval', $selectedWorkerIds), true))
-                        <label class="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-3 text-sm transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-800">
+                        @php($hasPrimaryAssignment = $primaryAssignedWorkerIds->contains((int) $worker->id))
+                        <label @class([
+                            'flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition',
+                            'border-emerald-300 bg-emerald-50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100' => $hasPrimaryAssignment,
+                            'border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-800' => ! $hasPrimaryAssignment,
+                        ])>
                             <input
                                 type="checkbox"
                                 class="mt-1 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
                                 @checked($checked)
                                 wire:click="toggleWorker({{ $worker->id }})"
                             >
-                            <span>
-                                <span class="block font-medium text-zinc-900 dark:text-zinc-100">
-                                    {{ $worker->employee_code }} - {{ $worker->full_name }}
+                            <span class="min-w-0 flex-1">
+                                <span class="flex flex-wrap items-center gap-2 font-medium">
+                                    <span @class([
+                                        'text-emerald-950 dark:text-emerald-100' => $hasPrimaryAssignment,
+                                        'text-zinc-900 dark:text-zinc-100' => ! $hasPrimaryAssignment,
+                                    ])>
+                                        {{ $worker->employee_code }} - {{ $worker->full_name }}
+                                    </span>
+                                    @if ($hasPrimaryAssignment)
+                                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900 dark:text-emerald-100 dark:ring-emerald-700">
+                                            Ya asignado
+                                        </span>
+                                    @else
+                                        <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-800">
+                                            Sin unidad principal
+                                        </span>
+                                    @endif
                                 </span>
-                                <span class="block text-xs text-zinc-500 dark:text-zinc-400">
+                                <span @class([
+                                    'block text-xs',
+                                    'text-emerald-700 dark:text-emerald-200' => $hasPrimaryAssignment,
+                                    'text-zinc-500 dark:text-zinc-400' => ! $hasPrimaryAssignment,
+                                ])>
                                     {{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro activo' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto activo' }}
                                 </span>
                             </span>

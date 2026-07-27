@@ -70,7 +70,8 @@ class VeraTimeDailyScheduleScenarioSeeder extends Seeder
             ->where('center_id', $center->id)
             ->whereDate('period_start', self::PERIOD_START)
             ->whereDate('period_end', self::PERIOD_END)
-            ->where('version', 1)
+            ->whereNull('version')
+            ->where('status', 'draft')
             ->first();
 
         if ($batch) {
@@ -84,7 +85,6 @@ class VeraTimeDailyScheduleScenarioSeeder extends Seeder
         return app(CreateScheduleBatchAction::class)->handle($company, $center, [
             'period_start' => self::PERIOD_START,
             'period_end' => self::PERIOD_END,
-            'version' => 1,
             'creation_source' => 'profile',
             'notes' => 'Escenario demo local F2: generacion draft desde perfiles.',
         ], $actor);

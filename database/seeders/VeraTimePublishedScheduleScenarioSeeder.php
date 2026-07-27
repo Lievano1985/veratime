@@ -97,17 +97,32 @@ class VeraTimePublishedScheduleScenarioSeeder extends Seeder
             ->whereIn('company_id', $companyIds)
             ->whereDate('period_start', self::PERIOD_START)
             ->whereDate('period_end', self::PERIOD_END)
-            ->where('version', 1)
-            ->count() !== count($taxIds);
+            ->distinct('company_id')
+            ->count('company_id') !== count($taxIds);
     }
 
     private function batch(Company $company): ScheduleBatch
     {
+        $published = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->whereDate('period_start', self::PERIOD_START)
+            ->whereDate('period_end', self::PERIOD_END)
+            ->whereNotNull('version')
+            ->whereIn('status', ['published', 'superseded'])
+            ->orderByDesc('version')
+            ->first();
+
+        if ($published) {
+            return $published;
+        }
+
         return ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->whereDate('period_start', self::PERIOD_START)
             ->whereDate('period_end', self::PERIOD_END)
-            ->where('version', 1)
+            ->whereNull('version')
+            ->whereNull('previous_batch_id')
+            ->where('status', 'draft')
             ->firstOrFail();
     }
 }
