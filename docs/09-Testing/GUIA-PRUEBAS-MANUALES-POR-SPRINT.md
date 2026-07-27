@@ -1208,7 +1208,7 @@ F1 no agrega pantalla nueva para probar manualmente. La validacion principal es 
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Batch draft | Ejecutar pruebas F1. | Se crea batch por empresa, centro, periodo y version. |
+| Batch draft | Ejecutar pruebas F1. | Se crea batch por empresa, centro y periodo; queda sin version publicada mientras sea borrador. |
 | Dia shift | Ejecutar pruebas F1. | Se guarda asignacion diaria con segmentos congelados. |
 | Dia rest | Ejecutar pruebas F1. | Se guarda dia de descanso sin segmentos incompatibles. |
 | Flexible | Ejecutar pruebas F1. | Guarda minutos requeridos y ventana opcional sin crear turno fijo. |
@@ -1309,12 +1309,12 @@ Pruebas manuales:
 
 | Area | Paso | Resultado esperado |
 | --- | --- | --- |
-| Crear correccion | Entrar a `/scheduling/daily`, abrir un lote `Publicado` y elegir `Crear correccion`. | Solicita motivo general y crea version 2 en borrador. |
+| Crear correccion | Entrar a `/scheduling/daily`, abrir un lote `Publicado` y elegir `Crear correccion`. | Solicita motivo general y crea un borrador correctivo sin numero de version publicada. |
 | Clonacion | Abrir la version correctiva. | Muestra mismos trabajadores y fechas que la version publicada. |
 | Edicion | Cambiar un dia individual o con cambio masivo. | El cambio queda `Manual` y no modifica la version publicada. |
 | Comparacion | Usar `Comparar con version anterior`. | Muestra dias modificados, antes y despues. |
 | Validacion | Usar `Revisar antes de publicar`. | Bloquea si no hay cambios o existen pendientes. |
-| Publicacion | Confirmar publicacion correctiva. | Version anterior queda `Sustituido`; nueva version queda `Publicado`. |
+| Publicacion | Confirmar publicacion correctiva. | Version anterior queda `Sustituido`; la correccion recibe el siguiente numero de version y queda `Publicado`. |
 | Historial | Abrir `Historial de versiones`. | Muestra versiones cronologicas, hash, motivo y estado. |
 | Integridad | Verificar integridad en versiones publicadas/sustituidas. | Hash valido; una alteracion debe detectarse. |
 
@@ -1407,13 +1407,13 @@ Flujo manual:
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Abrir pantalla | Entrar a `/scheduling/daily`, abrir un lote `Borrador`. | Muestra bloque `Importacion CSV`. |
-| Plantilla | Elegir `Descargar plantilla`. | Descarga CSV version 1 con encabezados esperados. |
-| Carga valida | Cargar archivo CSV valido con motivo. | Muestra preview paginado sin errores bloqueantes. |
+| Abrir pantalla | Entrar a `/scheduling/daily`, abrir un lote `Borrador`. | Muestra accion compacta `Importar CSV` dentro del lote. |
+| Plantilla | Abrir `Importar CSV` y elegir `Descargar plantilla`. | Descarga CSV version 1 con trabajadores/dias del contexto del lote cuando aplica. |
+| Carga valida | Cargar archivo CSV valido. | Muestra preview paginado sin errores bloqueantes. |
 | Aplicar | Confirmar que se reviso la vista previa y aplicar. | Filas validas modifican el lote draft con `source_type = csv`. |
 | Errores | Cargar CSV con trabajador o turno inexistente. | Queda `Con errores` y no permite aplicar. |
 | Reporte de errores | Descargar errores. | Descarga CSV sin rutas privadas ni trazas tecnicas. |
-| Cancelar | Cancelar importacion con motivo. | La importacion queda cancelada sin borrar historial. |
+| Cerrar panel | Cerrar el panel de importacion. | Regresa al calendario sin dejar bloques abiertos innecesarios. |
 | Publicado | Abrir lote `Publicado`. | No aparece carga CSV editable. |
 | Supervisor | Entrar con supervisor. | No puede cargar, aplicar ni descargar importaciones fuera de su permiso. |
 | Otra empresa | Manipular IDs de importacion o lote. | Acceso bloqueado. |
@@ -1459,17 +1459,19 @@ Periodo demo:
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion diaria. | Carga `/scheduling/daily` y muestra lotes de la empresa activa. |
+| Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion diaria. | Carga `/scheduling/daily` y muestra lotes de la empresa activa en tabla compacta. |
+| Filtros | Usar filtros principales y abrir `+ Filtros`. | Los filtros avanzados aparecen solo cuando se despliegan y la pantalla mantiene espacio para el calendario. |
 | Crear lote vacio | Crear lote para un centro y periodo valido. | Queda en `Borrador`; no se publica ni genera automaticamente. |
 | Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador desde perfiles y se muestra resumen de generacion. |
 | Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
 | Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
-| Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia. |
+| Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
+| Ocultar calendario | Usar `Ocultar calendario`. | Regresa a la lista sin dejar abierto el lote. |
 | Edicion individual | Cambiar un dia a Turno, Descanso, Flexible, Guardia o Pendiente con motivo. | Guarda con `source_type = manual` usando Action de dominio. |
 | Cambio masivo | Seleccionar trabajadores y rango dentro del lote; confirmar motivo. | Aplica el cambio de forma atomica o revierte todo si falla. |
-| Revisar antes de publicar | Ejecutar la revision. | Muestra bloqueos, advertencias y resumen alineado con dominio. |
+| Revisar antes de publicar | Ejecutar la revision. | Muestra bloqueos, advertencias y resumen alineado con dominio; el panel puede ocultarse. |
 | Publicar | Confirmar publicacion de un lote completo. | Persiste `published_at`, `published_by`, SHA-256 y cambia a solo lectura. |
-| Verificar integridad | En un lote publicado, usar Verificar integridad. | Muestra integridad verificada si el snapshot coincide. |
+| Historial e integridad | En un lote publicado, abrir Historial o Integridad. | Los paneles aparecen solo al pedirlos y se pueden ocultar; el hash no queda como aviso permanente. |
 | Supervisor con alcance | Entrar con supervisor demo con alcance vigente. | Puede consultar segun alcance; no crea, genera, edita masivo ni publica. |
 | Otra empresa | Cambiar a otra empresa o manipular IDs. | No muestra ni opera lotes ajenos. |
 | Responsive | Reducir ancho de pantalla. | El calendario ofrece vista en lista usable, sin depender solo de tabla ancha. |

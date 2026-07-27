@@ -873,7 +873,7 @@ La publicacion sera inmutable. Una correccion generara una nueva version y la ve
 
 `daily_schedule_assignments` publicados y `daily_schedule_segments` seran la unica fuente operativa.
 
-En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo/version, asignaciones diarias, segmentos diarios, snapshot canonico con SHA-256 y resolucion de programacion publicada. En Bloque F2 se implementa la generacion de borradores desde perfiles con modos `missing_only` y `refresh_profile_generated`. En Bloque F3A se implementa la validacion integral y publicacion atomica de batches completos desde dominio. En Bloque F3B se implementa la interfaz `/scheduling/daily` para crear lotes, generar desde perfiles, editar borradores, validar, publicar y verificar integridad de publicaciones.
+En Bloque F1 se implementa el nucleo de datos y dominio: batches por empresa/centro/periodo, asignaciones diarias, segmentos diarios, version asignada al publicar, snapshot canonico con SHA-256 y resolucion de programacion publicada. En Bloque F2 se implementa la generacion de borradores desde perfiles con modos `missing_only` y `refresh_profile_generated`. En Bloque F3A se implementa la validacion integral y publicacion atomica de batches completos desde dominio. En Bloque F3B se implementa la interfaz `/scheduling/daily` para crear lotes, generar desde perfiles, editar borradores, validar, publicar y verificar integridad de publicaciones.
 
 La generacion F2 debe preservar dias manuales, CSV, API o system ajenos al generador; debe congelar unidad principal y timezone por fecha; `calendar` y ausencia de perfil generan `unassigned` con motivo explicito. No publica, no persiste snapshot de publicacion y no calcula jornada.
 
@@ -2106,7 +2106,7 @@ Ahí se definirán:
 ## Nota Bloque F4 - Correcciones versionadas de programacion diaria
 
 - Una programacion diaria publicada no se edita directamente.
-- Toda correccion crea una nueva version en borrador con motivo general obligatorio.
+- Toda correccion crea un borrador correctivo sin numero de version publicada y con motivo general obligatorio.
 - La nueva version conserva empresa, centro y periodo, y usa `previous_batch_id`.
 - La cobertura correctiva conserva las mismas combinaciones `employment_relationship_id` + `work_date`.
 - La comparacion debe detectar cambios funcionales e ignorar IDs y timestamps.

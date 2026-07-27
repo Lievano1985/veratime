@@ -102,11 +102,13 @@ EPIC-05:
   - usa `source_type = csv`.
   - reutiliza `ReplaceDraftDailyScheduleAssignmentAction`.
 - Interfaz CSV de programacion diaria en `/scheduling/daily`:
-  - descarga plantilla CSV version 1.
+  - accion compacta `Importar CSV` dentro del lote borrador.
+  - descarga plantilla CSV version 1 dentro del panel de importacion.
   - carga archivo CSV privado.
   - muestra vista previa paginada con errores y advertencias.
   - permite aplicar al lote borrador despues de confirmar la vista previa.
   - descarga reporte CSV de errores.
+  - no muestra historial persistente ni motivo visible de importacion en la UI.
   - no publica automaticamente.
 
 Nota de descansos obligatorios:
@@ -410,7 +412,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - `ValidateScheduleBatchForPublicationAction` valida cobertura completa por centro y periodo antes de publicar.
 - La cobertura usa `ResolveScheduleBatchExpectedRelationshipDatesAction`, compartida con F2, para resolver relaciones laborales activas y fechas vigentes.
-- Un batch solo publica si esta en `draft`, `version = 1`, `previous_batch_id = null`, pertenece a empresa/centro activos y no contiene dias `unassigned`.
+- Un batch inicial solo publica si esta en `draft`, no es correctivo (`previous_batch_id = null`), pertenece a empresa/centro activos y no contiene dias `unassigned`; el numero `version = 1` se asigna al publicar.
 - La validacion bloquea dias faltantes, dias fuera de vigencia, relaciones de otro centro/tenant, configuraciones incompatibles y conflictos con batches `published` por relacion laboral y fecha.
 - `PublishScheduleBatchAction` publica dentro de una transaccion, bloquea empresa, centro, batch, dias, segmentos y batches publicados intersectados del mismo centro.
 - Al publicar persiste `status = published`, `snapshot_schema_version`, `snapshot_canonical_json`, `snapshot_sha256`, `published_by` y `published_at`.
@@ -427,13 +429,15 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Ruta: `/scheduling/daily`.
 - Navegacion: Horarios -> Programacion diaria.
 - La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y periodo, crear lote vacio o crear y generar desde perfiles.
+- El listado usa filtros principales compactos, filtros avanzados colapsables y tabla de lotes de una fila por lote.
 - El listado filtra por centro, periodo, estado, trabajador, unidad organizacional, tipo de dia y solo pendientes.
-- El calendario muestra una semana dentro del periodo, con filas por relacion laboral/trabajador y alternativa movil en lista.
+- El calendario muestra una semana completa dentro del periodo, con filas por relacion laboral/trabajador, colores por tipo de dia y alternativa movil en lista.
+- El calendario y los paneles de revision, comparacion, historial e integridad se pueden ocultar para mantener limpia la vista.
 - Permite generar faltantes (`missing_only`) y actualizar desde perfiles (`refresh_profile_generated`) sin tocar cambios manuales ni fuentes externas.
 - Permite editar un dia en borrador como `shift`, `rest`, `flexible`, `on_call` o `unassigned` usando `ReplaceDraftDailyScheduleAssignmentAction`.
 - Permite cambio masivo basico con `BulkReplaceDraftDailyScheduleAssignmentsAction`; si falla un dia se revierte toda la operacion.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
-- La consulta de lotes publicados muestra hash SHA-256 y permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`.
+- La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
 - Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
 - F4 implementa correcciones versionadas en la misma pantalla; CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
@@ -441,11 +445,11 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
-- Una publicacion vigente puede crear una nueva version correctiva en borrador.
-- `correction_reason` es obligatorio para versiones mayores a 1.
+- Una publicacion vigente puede crear un borrador correctivo sin numero de version publicada.
+- `correction_reason` es obligatorio para borradores correctivos y versiones correctivas publicadas.
 - La correccion se clona desde `daily_schedule_assignments` y `daily_schedule_segments` congelados, sin consultar perfiles actuales.
 - La comparacion ignora IDs y timestamps y exige al menos un cambio funcional para publicar.
-- Al publicar, la version anterior pasa a `superseded` y la correctiva queda `published` dentro de una transaccion.
+- Al publicar, la version anterior pasa a `superseded`, la correctiva recibe el siguiente numero de version y queda `published` dentro de una transaccion.
 - `/scheduling/daily` muestra crear correccion, comparar con version anterior, publicar correccion e historial de versiones.
 - `VeraTimeCorrectedScheduleScenarioSeeder` prepara una correccion publicada y una correccion draft para pruebas manuales.
 - F5 CSV/XLSX, API WFM, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.

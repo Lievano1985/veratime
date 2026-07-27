@@ -59,7 +59,7 @@ Los alcances de supervisor se definen por centro completo o por unidad organizac
 | Version | Consecutivo por centro y periodo. |
 | Snapshot | JSON canonico congelado al publicar. |
 | Hash SHA-256 | Huella de integridad del snapshot publicado. |
-| Correccion | Nueva version borrador basada en una publicacion previa. |
+| Correccion | Borrador correctivo basado en una publicacion previa; recibe version solo al publicarse. |
 | Importacion CSV | Carga de archivo version 1 para modificar un lote borrador. |
 | `preserve_existing` | Politica CSV que conserva dias existentes y omite esas filas. |
 | `replace_existing` | Politica CSV que reemplaza dias existentes del borrador. |
@@ -257,41 +257,32 @@ Reglas:
 
 La importacion CSV se usa en `/scheduling/daily` sobre un lote `draft`.
 
-Flujo:
+Flujo actual:
 
-1. Descargar plantilla.
-2. Llenar CSV version 1.
-3. Seleccionar politica: `preserve_existing` o `replace_existing`.
-4. Capturar motivo general.
+1. Abrir el lote borrador.
+2. Elegir `Importar CSV`.
+3. Descargar plantilla desde el panel de importacion.
+4. Llenar la plantilla horizontal con codigo, nombre y fechas del lote.
 5. Cargar y validar.
 6. Revisar preview paginado.
 7. Descargar errores si existen.
-8. Aplicar con confirmacion.
-9. Cancelar si no se desea aplicar.
+8. Aplicar al lote borrador.
 
-Encabezados exactos, en este orden:
+Formato actual recomendado:
 
-```text
-clave_empleado,fecha,tipo_dia,codigo_turno,minutos_requeridos,inicio_ventana,fin_ventana,offset_inicio_ventana,offset_fin_ventana,inicio_disponibilidad,fin_disponibilidad,offset_inicio_disponibilidad,offset_fin_disponibilidad,maximo_minutos_trabajo,motivo
-```
+- Una fila por trabajador.
+- Columnas iniciales: codigo de empleado y nombre.
+- Dias del periodo como columnas horizontales.
+- Cada celda de dia recibe un codigo de turno o `DESCANSO`.
+- Celdas vacias o `-` se omiten.
+- El formato esta pensado para cargar turnos normales y descansos; flexible, guardia y pendiente siguen disponibles por UI.
 
-Tipos aceptados en CSV:
-
-- `turno`
-- `descanso`
-- `flexible`
-- `guardia`
-- `pendiente`
-
-Ejemplos con 15 columnas:
+Ejemplo:
 
 ```csv
-clave_empleado,fecha,tipo_dia,codigo_turno,minutos_requeridos,inicio_ventana,fin_ventana,offset_inicio_ventana,offset_fin_ventana,inicio_disponibilidad,fin_disponibilidad,offset_inicio_disponibilidad,offset_fin_disponibilidad,maximo_minutos_trabajo,motivo
-STR-001,2026-08-03,turno,OPEN-08-16,,,,,,,,,,,Turno de apertura
-STR-002,2026-08-03,descanso,,,,,,,,,,,,Descanso programado
-STR-003,2026-08-03,flexible,,420,09:00,18:00,0,0,,,,,,Flexible del dia
-STR-004,2026-08-03,guardia,,,,,,,08:00,20:00,0,0,240,Guardia bajo llamada
-STR-005,2026-08-03,pendiente,,,,,,,,,,,,Pendiente de definicion
+codigo_empleado,nombre,2026-08-03,2026-08-04,2026-08-05
+STR-001,Ana Demo,OPEN-08-16,OPEN-08-16,DESCANSO
+STR-002,Luis Demo,CLOSE-14-22,DESCANSO,CLOSE-14-22
 ```
 
 Reglas importantes:
@@ -301,6 +292,7 @@ Reglas importantes:
 - Las filas invalidas bloquean la aplicacion.
 - La vista previa puede quedar obsoleta; si cambia el calendario despues de validar, se debe revalidar.
 - El reporte de errores protege valores que empiezan con `=`, `+`, `-` o `@`.
+- La UI no muestra historial persistente ni motivo visible de importacion.
 - Una correccion en borrador puede recibir CSV sin modificar la version publicada anterior.
 
 ## 14. Errores comunes

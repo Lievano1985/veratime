@@ -1067,7 +1067,7 @@ Responsabilidades:
 | `GenerateDraftScheduleBatchFromProfilesAction` | Genera o refresca dias de un batch `draft` usando perfiles efectivos por relacion laboral y fecha. Modos: `missing_only` y `refresh_profile_generated`. Preserva dias manual/csv/api y otros system. |
 | `BuildDraftDailyScheduleFromResolvedProfileAction` | Convierte una regla resuelta en payload de `daily_schedule_assignment`: `shift`, `rest`, `flexible`, `on_call` o `unassigned`. |
 | `BuildDailyScheduleSegmentsFromShiftTemplateAction` | Copia segmentos de `shift_templates` y calcula UTC con timezone del centro. |
-| `CreateScheduleBatchAction` | Crea batches en borrador por empresa, centro, periodo y version, sin aceptar datos de publicacion desde entrada no confiable. |
+| `CreateScheduleBatchAction` | Crea batches en borrador por empresa, centro y periodo, sin version publicada ni datos de publicacion desde entrada no confiable. |
 | `ReplaceDraftDailyScheduleAssignmentAction` | Reemplaza de forma atomica la programacion de un dia dentro de un batch draft. |
 | `BulkReplaceDraftDailyScheduleAssignmentsAction` | Aplica cambios manuales basicos a varios trabajadores y fechas dentro de un batch `draft`; coordina transaccion y reutiliza `ReplaceDraftDailyScheduleAssignmentAction`. |
 | `RemoveDraftDailyScheduleAssignmentAction` | Elimina solo dias de borrador; no aplica a batches publicados. |

@@ -154,7 +154,7 @@ Cada prueba manual debe registrar:
 |---|---|---|---|---|---|---|---|
 | H-050 | Validacion con pendientes | `rh` | `/scheduling/daily` | Revisar lote con `unassigned` | Bloquea publicacion | Publicacion incompleta | S1 |
 | H-051 | Validacion correcta | `rh` | `/scheduling/daily` | Revisar lote completo | Listo para publicar | Falso bloqueo | S2 |
-| H-052 | Publicar | `rh` | `/scheduling/daily` | Confirmar publicar | Estado `Publicado`, hash visible | Evidencia incompleta | S1 |
+| H-052 | Publicar | `rh` | `/scheduling/daily` | Confirmar publicar | Estado `Publicado`; hash consultable desde integridad | Evidencia incompleta | S1 |
 | H-053 | Solo lectura | `rh` | `/scheduling/daily` | Intentar editar publicado | No permite editar | Modificacion de evidencia | S1 |
 | H-054 | Integridad | `rh` | `/scheduling/daily` | Verificar hash | Integridad verificada | Hash inconsistente | S1 |
 | H-055 | Resolver published | Tecnico | Prueba automatizada | Revisar resolver | Devuelve version publicada | Resolver incorrecto | S2 |
@@ -164,7 +164,7 @@ Cada prueba manual debe registrar:
 | ID | Objetivo | Rol | Ruta | Pasos | Resultado esperado | Riesgo | Severidad |
 |---|---|---|---|---|---|---|---|
 | H-060 | Crear v2 | `rh` | `/scheduling/daily` | Crear correccion con motivo | v2 draft clonada | Version corrupta | S1 |
-| H-061 | v1 vigente | `rh` | `/scheduling/daily` | Consultar mientras v2 draft | v1 sigue publicada | Resolver version mala | S1 |
+| H-061 | v1 vigente | `rh` | `/scheduling/daily` | Consultar mientras existe borrador correctivo | v1 sigue publicada | Resolver version mala | S1 |
 | H-062 | Modificar y comparar | `rh` | `/scheduling/daily` | Cambiar dia y comparar | Muestra diferencias | Comparacion mala | S2 |
 | H-063 | Publicar v2 | `rh` | `/scheduling/daily` | Publicar correccion | v1 `superseded`, v2 `published` | Versionado roto | S1 |
 | H-064 | Hashes | `rh` | `/scheduling/daily` | Revisar ambas versiones | Hashes se conservan | Evidencia perdida | S1 |
@@ -174,8 +174,8 @@ Cada prueba manual debe registrar:
 
 | ID | Objetivo | Rol | Ruta | Pasos | Resultado esperado | Riesgo | Severidad |
 |---|---|---|---|---|---|---|---|
-| H-070 | Descargar plantilla | `rh.store` | `/scheduling/daily` | Descargar plantilla | 15 encabezados version 1 | Contrato roto | S2 |
-| H-071 | CSV valido | `rh.store` | `/scheduling/daily` | Cargar CSV valido | Preview sin errores | Parser roto | S2 |
+| H-070 | Descargar plantilla | `rh.store` | `/scheduling/daily` | Abrir `Importar CSV` y descargar plantilla | Plantilla horizontal con trabajador y fechas del lote | Contrato roto | S2 |
+| H-071 | CSV valido | `rh.store` | `/scheduling/daily` | Cargar CSV valido con turnos y `DESCANSO` | Preview sin errores | Parser roto | S2 |
 | H-072 | CSV invalido | `rh.store` | `/scheduling/daily` | Cargar trabajador/turno invalido | Errores por fila, no aplica | Aplicacion parcial | S1 |
 | H-073 | Preserve | `rh.store` | `/scheduling/daily` | Usar `preserve_existing` | Omite existentes | Sobrescritura | S2 |
 | H-074 | Replace | `rh.store` | `/scheduling/daily` | Usar `replace_existing` | Reemplaza existentes | No aplica cambios | S2 |
@@ -183,7 +183,7 @@ Cada prueba manual debe registrar:
 | H-076 | Descargar errores | `rh.store` | `/scheduling/daily` | Descargar reporte | CSV sin rutas privadas | Exposicion info | S2 |
 | H-077 | Formula CSV | `rh.store` | `/scheduling/daily` | Usar valores `=`, `+`, `-`, `@` | Salen protegidos | Inyeccion CSV | S2 |
 | H-078 | Stale preview | `rh.store` | `/scheduling/daily` | Cambiar dia tras validar | Aplicacion bloqueada | Preview obsoleto | S1 |
-| H-079 | Cancelar | `rh.store` | `/scheduling/daily` | Cancelar con motivo | Estado cancelado | Historial incompleto | S3 |
+| H-079 | Cerrar panel | `rh.store` | `/scheduling/daily` | Cerrar panel de importacion | Regresa al calendario sin historial visible | UI saturada | S3 |
 | H-080 | Corrective draft | `rh.office` | `/scheduling/daily` | Importar sobre v2 draft | No modifica v1 publicada | Evidencia perdida | S1 |
 | H-081 | No publicar | `rh.store` | `/scheduling/daily` | Aplicar CSV | Lote sigue draft | Publicacion accidental | S1 |
 
@@ -259,7 +259,7 @@ Usar preferentemente `rh.office.demo@veratime.local` con contrasena `VeraDemo123
 17. Publicar correccion.
     - Esperado: v1 `Sustituido`, v2 `Publicado`.
 18. Con `rh.store.demo@veratime.local`, descargar plantilla CSV.
-    - Esperado: 15 encabezados.
+    - Esperado: plantilla horizontal con trabajadores y fechas del lote.
 19. Crear o abrir otro draft.
     - Esperado: lote editable.
 20. Cargar CSV.
