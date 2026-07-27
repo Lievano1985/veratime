@@ -256,6 +256,24 @@ class ShiftTemplateCatalogTest extends TestCase
         ]);
     }
 
+    public function test_shift_template_segment_preview_updates_while_editing_fields(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.shifts')
+            ->call('openCreatePanel')
+            ->assertSeeHtml('wire:model.live.debounce.250ms="segments.0.start_local_time"')
+            ->assertSeeHtml('wire:model.live.debounce.250ms="segments.0.end_local_time"')
+            ->assertSeeHtml('wire:model.live="segments.0.end_day_offset"')
+            ->set('segments.0.start_local_time', '08:00')
+            ->set('segments.0.end_local_time', '17:00')
+            ->assertSee('08:00')
+            ->assertSee('17:00')
+            ->assertSee('Trabajo programado bruto: 9 h');
+    }
     public function test_shift_templates_ui_blocks_guest_without_company_and_foreign_tenant(): void
     {
         $company = Company::factory()->create(['status' => 'active']);

@@ -35,9 +35,15 @@ class DailyScheduleCsvImportUiTest extends TestCase
 
         Volt::test('scheduling.daily')
             ->call('selectBatch', $batch->id)
-            ->assertSee('Importacion CSV')
             ->assertSee('Importar CSV')
-            ->assertSee('Descargar plantilla');
+            ->assertDontSee('Descargar plantilla')
+            ->assertDontSee('Historial de importaciones');
+
+        Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
+            ->call('openPanel')
+            ->assertSee('Importacion CSV')
+            ->assertSee('Descargar plantilla')
+            ->assertDontSee('Historial de importaciones');
     }
 
     public function test_manager_downloads_csv_template_with_version_one_headers(): void
@@ -50,6 +56,31 @@ class DailyScheduleCsvImportUiTest extends TestCase
         $this->get(route('scheduling.daily.csv.template'))
             ->assertOk()
             ->assertDownload('vera-time-programacion-diaria-v1.csv');
+    }
+
+    public function test_manager_downloads_contextual_csv_template_with_filtered_pending_days(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-STORE', 'rh.store.demo@veratime.local');
+        $batch = $this->draftBatch($company);
+        $unit = $company->organizationalUnits()->where('name', 'Piso de venta')->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        $response = $this->get(route('scheduling.daily.csv.template', [
+            'schedule_batch_id' => $batch->id,
+            'organizational_unit_id' => $unit->id,
+        ]))
+            ->assertOk()
+            ->assertDownload('vera-time-programacion-diaria-pendientes-v1.csv');
+
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('codigo_empleado,nombre_trabajador,2026-08-03,2026-08-04', $content);
+        $this->assertStringContainsString('STR-001,"Tienda Demo Ana"', $content);
+        $this->assertStringContainsString('Tienda Demo Ana', $content);
+        $this->assertStringContainsString('STR-002,"Tienda Demo Bruno"', $content);
+        $this->assertStringNotContainsString('STR-003', $content);
     }
 
     public function test_manager_uploads_valid_csv_reviews_preview_and_applies_to_draft_batch(): void
@@ -67,7 +98,6 @@ class DailyScheduleCsvImportUiTest extends TestCase
                 ['STR-001', '2026-08-03', 'descanso', '', '', '', '', '', '', '', '', '', '', '', 'Carga desde UI.'],
             ])))
             ->set('existingAssignmentPolicy', 'replace_existing')
-            ->set('reason', 'Carga CSV desde interfaz de pruebas.')
             ->call('uploadAndValidate')
             ->assertHasNoErrors()
             ->assertSee('Archivo validado')
@@ -102,6 +132,55 @@ class DailyScheduleCsvImportUiTest extends TestCase
         $this->assertSame('draft', $batch->fresh()->status);
     }
 
+    public function test_manager_uploads_horizontal_shift_template_and_applies_turns(): void
+    {
+        Storage::fake('local');
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-STORE', 'rh.store.demo@veratime.local');
+        $batch = $this->draftBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
+            ->call('openPanel')
+            ->set('file', UploadedFile::fake()->createWithContent('programacion-horizontal.csv', implode("\n", [
+                "codigo_empleado\tnombre_trabajador\t03/08/2026\t04/08/2026\t05/08/2026",
+                "STR-001\tTienda Demo Ana\tOPEN-08-16\tMID-11-19\tDESCANSO",
+                '',
+            ])))
+            ->set('existingAssignmentPolicy', 'replace_existing')
+            ->call('uploadAndValidate')
+            ->assertHasNoErrors()
+            ->assertSee('Archivo validado')
+            ->set('confirmApply', true)
+            ->call('applyImport')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(DailyScheduleAssignment::query()
+            ->where('company_id', $company->id)
+            ->where('schedule_batch_id', $batch->id)
+            ->where('source_type', 'csv')
+            ->whereDate('work_date', '2026-08-03')
+            ->whereHas('shiftTemplate', fn ($query) => $query->where('code', 'OPEN-08-16'))
+            ->exists());
+
+        $this->assertTrue(DailyScheduleAssignment::query()
+            ->where('company_id', $company->id)
+            ->where('schedule_batch_id', $batch->id)
+            ->where('source_type', 'csv')
+            ->whereDate('work_date', '2026-08-04')
+            ->whereHas('shiftTemplate', fn ($query) => $query->where('code', 'MID-11-19'))
+            ->exists());
+
+        $this->assertTrue(DailyScheduleAssignment::query()
+            ->where('company_id', $company->id)
+            ->where('schedule_batch_id', $batch->id)
+            ->where('source_type', 'csv')
+            ->where('day_type', 'rest')
+            ->whereDate('work_date', '2026-08-05')
+            ->exists());
+    }
+
     public function test_invalid_import_shows_errors_downloads_sanitized_error_report_and_does_not_modify_calendar(): void
     {
         Storage::fake('local');
@@ -120,7 +199,6 @@ class DailyScheduleCsvImportUiTest extends TestCase
                 ['-BAD', '2026-08-03', 'turno', 'OPEN-08-16', '', '', '', '', '', '', '', '', '', '', 'Fila invalida.'],
                 ['@BAD', '2026-08-03', 'turno', 'OPEN-08-16', '', '', '', '', '', '', '', '', '', '', 'Fila invalida.'],
             ])))
-            ->set('reason', 'Carga CSV con errores para pruebas.')
             ->call('uploadAndValidate')
             ->assertHasNoErrors()
             ->assertSee('Con errores')
@@ -150,12 +228,11 @@ class DailyScheduleCsvImportUiTest extends TestCase
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
 
-        Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
+        $component = Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
             ->call('openPanel')
             ->set('file', UploadedFile::fake()->createWithContent('stale.csv', $this->csv([
                 ['STR-001', '2026-08-03', 'descanso', '', '', '', '', '', '', '', '', '', '', '', 'Carga stale.'],
             ])))
-            ->set('reason', 'Carga CSV que quedara obsoleta.')
             ->call('uploadAndValidate')
             ->assertHasNoErrors();
 
@@ -173,11 +250,7 @@ class DailyScheduleCsvImportUiTest extends TestCase
             'source_reference' => ['schema_version' => 1, 'reason' => 'Cambio paralelo.'],
         ]);
 
-        $import = ImportBatch::query()->where('company_id', $company->id)->latest()->firstOrFail();
-
-        Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
-            ->call('openPanel')
-            ->call('selectImport', $import->id)
+        $component
             ->set('confirmApply', true)
             ->call('applyImport')
             ->assertHasErrors(['csvImport']);
@@ -197,7 +270,6 @@ class DailyScheduleCsvImportUiTest extends TestCase
             ->set('file', UploadedFile::fake()->createWithContent('doble.csv', $this->csv([
                 ['STR-001', '2026-08-03', 'descanso', '', '', '', '', '', '', '', '', '', '', '', 'Carga doble.'],
             ])))
-            ->set('reason', 'Carga CSV para prueba de doble aplicacion.')
             ->call('uploadAndValidate')
             ->set('confirmApply', true)
             ->call('applyImport')
@@ -232,7 +304,6 @@ class DailyScheduleCsvImportUiTest extends TestCase
             ->set('file', UploadedFile::fake()->createWithContent('correccion.csv', $this->csv([
                 ['OFF-001', '2026-08-03', 'descanso', '', '', '', '', '', '', '', '', '', '', '', 'Correccion desde CSV.'],
             ])))
-            ->set('reason', 'Carga CSV sobre borrador correctivo.')
             ->call('uploadAndValidate')
             ->set('confirmApply', true)
             ->call('applyImport')

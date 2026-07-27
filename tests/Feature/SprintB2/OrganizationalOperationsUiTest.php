@@ -187,6 +187,83 @@ class OrganizationalOperationsUiTest extends TestCase
         ]);
     }
 
+    public function test_assignments_ui_assigns_primary_unit_to_multiple_workers(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $secondWorker = Worker::factory()->for($company)->create(['status' => 'active']);
+        $secondRelationship = EmploymentRelationship::factory()->for($company)->for($secondWorker)->for($center)->create([
+            'started_at' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->set('primaryForm.worker_ids', [$worker->id, $secondWorker->id])
+            ->assertSee('ADM - Administracion')
+            ->set('primaryForm.organizational_unit_id', (string) $unit->id)
+            ->set('primaryForm.operation', 'assign')
+            ->set('primaryForm.effective_from', '2026-08-01')
+            ->call('savePrimary')
+            ->assertHasNoErrors()
+            ->assertSee('Unidad principal guardada para 2 trabajadores.');
+
+        foreach ([$relationship, $secondRelationship] as $activeRelationship) {
+            $this->assertDatabaseHas('employment_unit_assignments', [
+                'company_id' => $company->id,
+                'employment_relationship_id' => $activeRelationship->id,
+                'organizational_unit_id' => $unit->id,
+                'assignment_type' => 'primary',
+                'status' => 'active',
+            ]);
+        }
+    }
+
+    public function test_assignments_ui_default_operation_replaces_existing_primary_for_multiple_workers(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $secondWorker = Worker::factory()->for($company)->create(['status' => 'active']);
+        $secondRelationship = EmploymentRelationship::factory()->for($company)->for($secondWorker)->for($center)->create([
+            'started_at' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $first = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
+        $second = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('FLEX', 'Flexibles', 'department'));
+
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $first, ['effective_from' => '2026-08-01']);
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $secondRelationship, $first, ['effective_from' => '2026-08-01']);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->assertSet('primaryForm.operation', 'replace')
+            ->set('primaryForm.worker_ids', [$worker->id, $secondWorker->id])
+            ->set('primaryForm.organizational_unit_id', (string) $second->id)
+            ->set('primaryForm.effective_from', '2026-08-15')
+            ->set('primaryForm.reason', 'Cambio de unidad principal')
+            ->call('savePrimary')
+            ->assertHasNoErrors()
+            ->assertSee('Unidad principal guardada para 2 trabajadores.');
+
+        foreach ([$relationship, $secondRelationship] as $activeRelationship) {
+            $this->assertDatabaseHas('employment_unit_assignments', [
+                'company_id' => $company->id,
+                'employment_relationship_id' => $activeRelationship->id,
+                'organizational_unit_id' => $first->id,
+                'status' => 'replaced',
+            ]);
+            $this->assertDatabaseHas('employment_unit_assignments', [
+                'company_id' => $company->id,
+                'employment_relationship_id' => $activeRelationship->id,
+                'organizational_unit_id' => $second->id,
+                'status' => 'active',
+            ]);
+        }
+    }
+
     public function test_assignments_ui_creates_and_ends_temporary_support(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
@@ -221,6 +298,131 @@ class OrganizationalOperationsUiTest extends TestCase
         ]);
     }
 
+    public function test_assignments_ui_creates_temporary_support_for_multiple_workers(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $secondWorker = Worker::factory()->for($company)->create(['status' => 'active']);
+        $secondRelationship = EmploymentRelationship::factory()->for($company)->for($secondWorker)->for($center)->create([
+            'started_at' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $supportCenter = Center::factory()->for($company)->create();
+        $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $supportCenter, $this->unitData('SUP', 'Soporte', 'department'));
+        $admin = $this->userWithCompanyRole($company, RoleKey::RH);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->set('supportForm.worker_ids', [$worker->id, $secondWorker->id])
+            ->set('supportForm.support_center_id', (string) $supportCenter->id)
+            ->set('supportForm.organizational_unit_id', (string) $supportUnit->id)
+            ->set('supportForm.effective_from', '2026-08-11')
+            ->set('supportForm.effective_to', '2026-08-20')
+            ->set('supportForm.reason', 'Apoyo temporal multiple')
+            ->call('saveSupport')
+            ->assertHasNoErrors()
+            ->assertSee('Apoyo temporal guardado para 2 trabajadores.');
+
+        foreach ([$relationship, $secondRelationship] as $activeRelationship) {
+            $this->assertDatabaseHas('employment_unit_assignments', [
+                'company_id' => $company->id,
+                'employment_relationship_id' => $activeRelationship->id,
+                'organizational_unit_id' => $supportUnit->id,
+                'assignment_type' => 'temporary_support',
+                'status' => 'active',
+            ]);
+        }
+    }
+
+    public function test_assignment_worker_selector_can_show_all_active_workers_for_the_company(): void
+    {
+        [$company, $center] = $this->companyAndCenter();
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+
+        foreach (range(1, 15) as $index) {
+            $worker = Worker::factory()->for($company)->create([
+                'employee_code' => sprintf('ORG-%03d', $index),
+                'full_name' => sprintf('Trabajador Demo %02d', $index),
+                'status' => 'active',
+            ]);
+            EmploymentRelationship::factory()->for($company)->for($worker)->for($center)->create([
+                'started_at' => '2026-01-01',
+                'status' => 'active',
+            ]);
+        }
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('workers.multi-select', ['mode' => 'single', 'resultLimit' => 150])
+            ->set('open', true)
+            ->assertSee('ORG-001')
+            ->assertSee('ORG-008')
+            ->assertSee('ORG-015');
+    }
+
+    public function test_assignment_worker_selector_shows_primary_assignment_status(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $unassignedWorker = Worker::factory()->for($company)->create([
+            'employee_code' => 'ORG-999',
+            'full_name' => 'Trabajador Sin Unidad',
+            'status' => 'active',
+        ]);
+        EmploymentRelationship::factory()->for($company)->for($unassignedWorker)->for($center)->create([
+            'started_at' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
+
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, ['effective_from' => '2026-08-01']);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('workers.multi-select', [
+            'resultLimit' => 150,
+            'showPrimaryAssignmentStatus' => true,
+            'assignmentDate' => '2026-08-10',
+        ])
+            ->set('open', true)
+            ->assertSee($worker->employee_code)
+            ->assertSee($unassignedWorker->employee_code)
+            ->assertSee('Ya asignado')
+            ->assertSee('Sin unidad principal');
+    }
+    public function test_assignments_table_can_filter_by_organizational_unit(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $worker->update([
+            'employee_code' => 'UNIT-001',
+            'full_name' => 'Trabajador Unidad Uno',
+        ]);
+        $secondWorker = Worker::factory()->for($company)->create([
+            'employee_code' => 'UNIT-002',
+            'full_name' => 'Trabajador Unidad Dos',
+            'status' => 'active',
+        ]);
+        $secondRelationship = EmploymentRelationship::factory()->for($company)->for($secondWorker)->for($center)->create([
+            'started_at' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $firstUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('U-UNO', 'Unidad Uno', 'department'));
+        $secondUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('U-DOS', 'Unidad Dos', 'department'));
+
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $firstUnit, ['effective_from' => '2026-08-01']);
+        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $secondRelationship, $secondUnit, ['effective_from' => '2026-08-01']);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->assertSee('Trabajador Unidad Uno')
+            ->assertSee('Trabajador Unidad Dos')
+            ->set('filters.organizational_unit_id', (string) $firstUnit->id)
+            ->assertSee('Trabajador Unidad Uno')
+            ->assertSee('Unidad Uno')
+            ->assertDontSee('Trabajador Unidad Dos');
+    }
     public function test_assignments_ui_blocks_unit_from_other_company(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();

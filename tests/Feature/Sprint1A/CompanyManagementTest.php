@@ -107,6 +107,67 @@ class CompanyManagementTest extends TestCase
         $this->assertNull(session('current_company_id'));
     }
 
+    public function test_inactive_company_stays_available_in_company_crud_and_can_be_reactivated(): void
+    {
+        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $user = User::factory()->create();
+        $activeCompany = Company::factory()->create(['name' => 'Empresa activa']);
+        $inactiveCompany = Company::factory()->create([
+            'name' => 'Empresa inactiva visible',
+            'status' => 'inactive',
+        ]);
+
+        $user->companies()->attach($activeCompany, [
+            'role_id' => $adminRole->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+        $user->companies()->attach($inactiveCompany, [
+            'role_id' => $adminRole->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $activeCompany->id]);
+
+        Volt::test('companies.index')
+            ->assertSee('Empresa inactiva visible')
+            ->call('loadEditForm', $inactiveCompany->id)
+            ->set('editForm.name', 'Empresa reactivada')
+            ->set('editForm.legal_name', $inactiveCompany->legal_name)
+            ->set('editForm.tax_id', $inactiveCompany->tax_id)
+            ->set('editForm.timezone', $inactiveCompany->timezone)
+            ->set('editForm.status', 'active')
+            ->call('update');
+
+        $this->assertDatabaseHas('companies', [
+            'id' => $inactiveCompany->id,
+            'name' => 'Empresa reactivada',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_companies_crud_is_available_when_user_only_has_inactive_companies(): void
+    {
+        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $user = User::factory()->create();
+        $company = Company::factory()->create([
+            'name' => 'Empresa solo administrativa',
+            'status' => 'inactive',
+        ]);
+
+        $user->companies()->attach($company, [
+            'role_id' => $adminRole->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('companies.index'))
+            ->assertOk()
+            ->assertSee('Empresa solo administrativa');
+    }
+
     public function test_non_admin_cannot_create_or_update_company(): void
     {
         $role = Role::factory()->create(['key' => 'supervisor']);

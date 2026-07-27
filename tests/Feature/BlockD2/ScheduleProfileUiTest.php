@@ -65,6 +65,7 @@ class ScheduleProfileUiTest extends TestCase
             ->assertDontSee('Inactiva')
             ->assertDontSee('Externa')
             ->assertSee('Patron semanal')
+            ->assertSee('se repite cada semana')
             ->set('form.code', 'OPAT')
             ->set('form.name', 'Oficina por patron')
             ->set('weeklyRules.0.shift_template_id', (string) $template->id)
@@ -85,7 +86,7 @@ class ScheduleProfileUiTest extends TestCase
             ->set('form.code', 'OCAL')
             ->set('form.name', 'Operacion por calendario')
             ->set('form.profile_type', 'calendar')
-            ->assertSee('Este perfil se captura por calendario')
+            ->assertSee('No se repite automaticamente')
             ->call('save')
             ->assertHasNoErrors();
 

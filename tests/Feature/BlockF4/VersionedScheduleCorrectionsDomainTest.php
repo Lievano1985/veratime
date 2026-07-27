@@ -35,7 +35,7 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
 
         $result = app(CreateCorrectiveScheduleBatchAction::class)->handle($rh, $company, $published, 'Ajuste operativo validado.');
 
-        $this->assertSame(2, $result->correctiveBatch->version);
+        $this->assertNull($result->correctiveBatch->version);
         $this->assertSame($published->id, $result->correctiveBatch->previous_batch_id);
         $this->assertSame('mixed', $result->correctiveBatch->creation_source);
         $this->assertSame($published->dailyAssignments()->count(), $result->correctiveBatch->dailyAssignments()->count());
@@ -164,7 +164,7 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
 
         $this->assertTrue(ScheduleBatch::query()->where('company_id', $office->id)->where('version', 1)->where('status', 'superseded')->exists());
         $this->assertTrue(ScheduleBatch::query()->where('company_id', $office->id)->where('version', 2)->where('status', 'published')->exists());
-        $this->assertTrue(ScheduleBatch::query()->where('company_id', $cycle->id)->where('version', 2)->where('status', 'draft')->exists());
+        $this->assertTrue(ScheduleBatch::query()->where('company_id', $cycle->id)->whereNull('version')->where('status', 'draft')->exists());
         $this->assertSame(2, ScheduleBatch::query()->where('company_id', $office->id)->count());
         $this->assertFalse(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('alerts'));

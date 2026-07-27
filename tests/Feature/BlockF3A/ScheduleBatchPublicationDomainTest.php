@@ -91,7 +91,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertGreaterThan(0, $published['segments']->count());
     }
 
-    public function test_publication_requires_draft_version_one_no_previous_complete_and_without_unassigned_days(): void
+    public function test_publication_requires_initial_draft_complete_and_without_unassigned_days(): void
     {
         $this->seedDailyScenarios();
         $company = $this->company('VTSP-STORE');
@@ -115,9 +115,6 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertSame(1, $missing->assignmentsMissing);
 
         $cycle = $this->batch($this->company('VTSP-CYCLE'));
-        $cycle->forceFill(['version' => 2])->save();
-        $this->assertInvalid(fn () => app(PublishScheduleBatchAction::class)->handle($this->user('rh.cycle.demo@veratime.local'), $cycle->company, $cycle->refresh()));
-
         $flex = $this->batch($this->company('VTSP-FLEX'));
         $flex->forceFill(['previous_batch_id' => $cycle->id])->save();
         $this->assertInvalid(fn () => app(PublishScheduleBatchAction::class)->handle($this->user('rh.flex.demo@veratime.local'), $flex->company, $flex->refresh()));
@@ -161,7 +158,6 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $second = app(CreateScheduleBatchAction::class)->handle($company, $batch->center, [
             'period_start' => '2026-08-03',
             'period_end' => '2026-08-03',
-            'version' => 1,
             'creation_source' => 'profile',
         ], $actor);
         app(GenerateDraftScheduleBatchFromProfilesAction::class)->handle($actor, $company, $second);
@@ -285,7 +281,8 @@ class ScheduleBatchPublicationDomainTest extends TestCase
             ->where('company_id', $company->id)
             ->whereDate('period_start', '2026-08-03')
             ->whereDate('period_end', '2026-08-16')
-            ->where('version', 1)
+            ->whereNull('version')
+            ->where('status', 'draft')
             ->firstOrFail();
     }
 

@@ -57,6 +57,31 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertSee('Oficinas Corporativas');
     }
 
+    public function test_initial_batch_filter_shows_drafts_and_published_with_drafts_first(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $draft = $this->firstBatch($company);
+
+        $published = $draft->replicate(['snapshot_canonical_json', 'snapshot_sha256', 'published_at']);
+        $published->period_start = '2026-07-01';
+        $published->period_end = '2026-07-07';
+        $published->version = 1;
+        $published->status = 'published';
+        $published->published_by = $rh->id;
+        $published->published_at = now();
+        $published->snapshot_schema_version = 'daily_schedule_batch_v1';
+        $published->snapshot_canonical_json = '{"demo":true}';
+        $published->snapshot_sha256 = str_repeat('a', 64);
+        $published->save();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->assertSet('filters.status', 'active_work')
+            ->assertSeeInOrder(['2026-08-03 - 2026-08-16', '2026-07-01 - 2026-07-07']);
+    }
+
     public function test_it_creates_empty_batch_and_creates_batch_generated_from_profiles(): void
     {
         $this->seedDailyScenarios();
@@ -117,6 +142,24 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertHasErrors(['batchForm.center_id', 'batchForm.period_end']);
     }
 
+    public function test_next_week_keeps_full_week_sequence_even_after_period_end(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('nextWeek')
+            ->assertSet('weekStart', '2026-08-10')
+            ->call('nextWeek')
+            ->assertSet('weekStart', '2026-08-17')
+            ->assertSee('Lun. 17/08')
+            ->assertSee('Dom. 23/08')
+            ->assertSee('Fuera de vigencia');
+    }
     public function test_calendar_shows_day_types_and_manual_edit_preserves_profile_generated_days(): void
     {
         $this->seedDailyScenarios();
@@ -130,11 +173,14 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->call('selectBatch', $batch->id)
             ->assertSee('Oficina Demo Ana')
             ->assertSee('Turno')
+            ->assertSeeHtml('table-fixed')
+            ->assertSeeHtml('border-sky-200')
             ->call('openDayEditor', $relationship->id, '2026-08-03')
             ->set('dayForm.day_type', 'rest')
             ->set('dayForm.reason', 'Cambio manual para prueba UI')
             ->call('saveDay')
             ->assertHasNoErrors()
+            ->assertSeeHtml('border-emerald-200')
             ->call('refreshGenerated')
             ->assertSee('preservados');
 
@@ -236,6 +282,50 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertHasErrors(['publication']);
 
         $this->assertSame('draft', $batch->refresh()->status);
+    }
+
+    public function test_managers_can_discard_draft_batches(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $draft = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $draft->id)
+            ->assertSee('Descartar borrador')
+            ->call('openCancelDraftPanel')
+            ->call('cancelDraftBatch')
+            ->assertHasErrors(['cancelDraftForm.reason'])
+            ->set('cancelDraftForm.reason', 'Lote creado por error durante prueba manual')
+            ->call('cancelDraftBatch')
+            ->assertHasNoErrors()
+            ->assertSee('Borrador descartado')
+            ->assertSet('selectedBatchId', null);
+
+        $draft->refresh();
+        $this->assertSame('cancelled', $draft->status);
+        $this->assertSame($rh->id, $draft->cancelled_by);
+        $this->assertSame('Lote creado por error durante prueba manual', $draft->cancellation_reason);
+
+    }
+
+    public function test_published_batches_are_not_discardable_from_ui(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $published->id)
+            ->call('openCancelDraftPanel')
+            ->assertForbidden();
+
+        $this->assertSame('published', $published->refresh()->status);
     }
 
     public function test_published_batches_are_read_only_and_snapshot_tampering_is_detected(): void

@@ -40,7 +40,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
         $this->assertTrue(ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->where('previous_batch_id', $published->id)
-            ->where('version', 2)
+            ->whereNull('version')
             ->where('status', 'draft')
             ->exists());
     }
@@ -49,7 +49,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
     {
         Artisan::call('db:seed', ['--class' => VeraTimeCorrectedScheduleScenarioSeeder::class]);
         [$company, $rh] = $this->companyAndUser('VTSP-CYCLE', 'rh.cycle.demo@veratime.local');
-        $draft = ScheduleBatch::query()->where('company_id', $company->id)->where('version', 2)->where('status', 'draft')->firstOrFail();
+        $draft = ScheduleBatch::query()->where('company_id', $company->id)->whereNull('version')->where('status', 'draft')->firstOrFail();
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
 
@@ -78,6 +78,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
             ->assertSee('Publicado');
 
         $this->assertSame('published', $draft->fresh()->status);
+        $this->assertSame(2, $draft->fresh()->version);
         $this->assertSame('superseded', $draft->previousBatch->fresh()->status);
     }
 

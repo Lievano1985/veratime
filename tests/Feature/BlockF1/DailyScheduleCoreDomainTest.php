@@ -46,7 +46,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
 
-    public function test_batches_validate_center_period_version_previous_batch_and_draft_mutability(): void
+    public function test_batches_validate_center_period_open_draft_and_draft_mutability(): void
     {
         [$company, $center] = $this->companyAndCenter();
         $otherCompany = Company::factory()->create(['status' => 'active']);
@@ -54,23 +54,19 @@ class DailyScheduleCoreDomainTest extends TestCase
         $create = app(CreateScheduleBatchAction::class);
 
         $batch = $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']);
-        $this->assertSame(1, $batch->version);
+        $this->assertNull($batch->version);
         $this->assertSame('draft', $batch->status);
 
-        $second = $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15', 'previous_batch_id' => $batch->id]);
-        $this->assertSame(2, $second->version);
-        $this->assertSame($batch->id, $second->previous_batch_id);
+        $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']));
 
         $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-15', 'period_end' => '2026-08-01']));
         $this->assertInvalid(fn () => $create->handle($company, $otherCenter, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']));
-        $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-16', 'period_end' => '2026-08-31', 'previous_batch_id' => $batch->id]));
-        $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15', 'previous_batch_id' => $batch->id, 'version' => 1]));
 
-        $updated = app(UpdateDraftScheduleBatchAction::class)->handle($second, ['notes' => 'Ajuste interno']);
+        $updated = app(UpdateDraftScheduleBatchAction::class)->handle($batch, ['notes' => 'Ajuste interno']);
         $this->assertSame('Ajuste interno', $updated->notes);
 
-        $second->forceFill(['status' => 'published'])->save();
-        $this->assertInvalid(fn () => app(UpdateDraftScheduleBatchAction::class)->handle($second, ['notes' => 'No permitido']));
+        $batch->forceFill(['status' => 'published', 'version' => 1])->save();
+        $this->assertInvalid(fn () => app(UpdateDraftScheduleBatchAction::class)->handle($batch, ['notes' => 'No permitido']));
     }
 
     public function test_daily_assignments_support_shift_rest_flexible_on_call_and_unassigned_rules(): void
@@ -196,7 +192,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertDatabaseMissing('daily_schedule_assignments', ['id' => $assignment->id]);
 
         $published = $this->replaceDay($company, $batch, $relationship, ['work_date' => '2026-08-04', 'day_type' => 'rest']);
-        $batch->forceFill(['status' => 'published'])->save();
+        $batch->forceFill(['status' => 'published', 'version' => 1])->save();
         $this->assertInvalid(fn () => app(RemoveDraftDailyScheduleAssignmentAction::class)->handle($published));
         $this->assertInvalid(fn () => $this->replaceDay($company, $batch, $relationship, ['work_date' => '2026-08-04', 'day_type' => 'unassigned']));
     }
@@ -265,6 +261,7 @@ class DailyScheduleCoreDomainTest extends TestCase
 
         $snapshot = app(BuildScheduleBatchSnapshotAction::class)->handle($draft);
         $draft->forceFill([
+            'version' => 1,
             'status' => 'published',
             'snapshot_schema_version' => $snapshot['schema_version'],
             'snapshot_canonical_json' => $snapshot['canonical_json'],
@@ -302,17 +299,16 @@ class DailyScheduleCoreDomainTest extends TestCase
             'max_work_minutes' => 480,
         ]);
         $this->replaceDay($company, $batch, $relationship, ['work_date' => '2026-08-05', 'day_type' => 'rest']);
-        $batch->forceFill(['status' => 'published'])->save();
+        $batch->forceFill(['status' => 'published', 'version' => 1])->save();
         $this->assertSame('on_call', $resolver->handle($company, $relationship, '2026-08-04')['day_type']);
         $this->assertSame('rest', $resolver->handle($company, $relationship, '2026-08-05')['day_type']);
 
         $second = app(CreateScheduleBatchAction::class)->handle($company, $center, [
             'period_start' => '2026-08-01',
             'period_end' => '2026-08-15',
-            'previous_batch_id' => $batch->id,
         ]);
         $this->replaceDay($company, $second, $relationship, ['work_date' => '2026-08-03', 'day_type' => 'rest']);
-        $second->forceFill(['status' => 'published'])->save();
+        $second->forceFill(['status' => 'published', 'version' => 2])->save();
 
         $this->expectException(LogicException::class);
         $resolver->handle($company, $relationship, '2026-08-03');
@@ -397,6 +393,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->replaceDay($company, $batch, $relationship, $day);
         $snapshot = app(BuildScheduleBatchSnapshotAction::class)->handle($batch);
         $batch->forceFill([
+            'version' => 1,
             'status' => 'published',
             'snapshot_schema_version' => $snapshot['schema_version'],
             'snapshot_canonical_json' => $snapshot['canonical_json'],
