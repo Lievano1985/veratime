@@ -71,8 +71,6 @@ class CreateDailyScheduleCsvImportAction
         $fileSha256 = hash_final($hash);
 
         return DB::transaction(function () use ($actor, $company, $targetBatch, $policy, $filename, $disk, $path, $size, $idempotencyKey, $reason, $fileSha256): CreateDailyScheduleCsvImportResult {
-            $this->deletePreviousImports($company, $targetBatch);
-
             $import = new ImportBatch([
                 'import_type' => 'daily_schedule',
                 'target_type' => 'schedule_batch',
@@ -97,25 +95,5 @@ class CreateDailyScheduleCsvImportAction
 
             return new CreateDailyScheduleCsvImportResult($import->refresh());
         });
-    }
-
-    private function deletePreviousImports(Company $company, ScheduleBatch $targetBatch): void
-    {
-        ImportBatch::query()
-            ->where('company_id', $company->id)
-            ->where('import_type', 'daily_schedule')
-            ->where('target_type', 'schedule_batch')
-            ->where('target_id', $targetBatch->id)
-            ->lockForUpdate()
-            ->get()
-            ->each(function (ImportBatch $import): void {
-                $import->rows()->delete();
-
-                if ($import->storage_path && Storage::disk($import->storage_disk)->exists($import->storage_path)) {
-                    Storage::disk($import->storage_disk)->delete($import->storage_path);
-                }
-
-                $import->delete();
-            });
     }
 }
