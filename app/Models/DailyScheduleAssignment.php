@@ -76,4 +76,15 @@ class DailyScheduleAssignment extends Model
     {
         return $this->hasMany(DailyScheduleSegment::class)->orderBy('segment_order');
     }
+
+    public function isCoveredByEmploymentRelationship(): bool
+    {
+        return $this->employmentRelationship?->isEffectiveOn($this->work_date) ?? false;
+    }
+
+    public function shouldGenerateWorkDay(): bool
+    {
+        return in_array($this->day_type, ['shift', 'flexible', 'on_call'], true)
+            && $this->isCoveredByEmploymentRelationship();
+    }
 }

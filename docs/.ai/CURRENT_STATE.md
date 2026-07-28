@@ -1,7 +1,7 @@
 ---
 title: Estado actual compacto
 project: Vera Time
-updated: 2026-07-20
+updated: 2026-07-28
 ---
 
 # Estado actual compacto
@@ -52,8 +52,8 @@ Cerrados o candidatos ya validados antes de Sprint 2G:
 
 Sprint actual:
 
-- Bloque F5B implementado/candidato a cierre: interfaz de importacion CSV de programacion diaria sobre lotes draft.
-- Modulo de horarios en preparacion de revision integral documental.
+- Bloque F5B aprobado manualmente: interfaz de importacion CSV de programacion diaria sobre lotes draft.
+- Modulo de horarios F1-F5B aprobado manualmente sin hallazgos S1/S2 abiertos.
 
 ## Estado de epics
 
@@ -144,7 +144,7 @@ Nota de descansos obligatorios:
 
 ## Revision integral del modulo de horarios
 
-Estado: documentacion preparada, revision manual no ejecutada.
+Estado: revision manual ejecutada y aprobada el 2026-07-28.
 
 Documentos creados:
 
@@ -159,7 +159,17 @@ Objetivo:
 - validar rutas, permisos, multi-tenant, programacion diaria, snapshots, versiones y CSV;
 - registrar hallazgos manuales con severidad.
 
-No implica aprobacion manual del modulo. `work_days`, motor legal, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
+Resultado:
+
+- Horarios F1-F5B pasan flujo completo manual.
+- CSV valido/invalido funciona sin publicar automaticamente.
+- Correcciones versionadas conservan historial.
+- Supervisor no puede modificar ni publicar.
+- Responsive no bloquea uso real.
+- Empresas no activas no generan 404 en `/companies`.
+- No quedan fallos S1/S2 abiertos.
+
+`work_days`, motor legal, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
 
 ## Validacion Sprint 2F
 

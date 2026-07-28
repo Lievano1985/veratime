@@ -700,12 +700,19 @@ new class extends Component {
             $cells = [];
             foreach ($dates as $date) {
                 if (! in_array($date, $item['dates'], true)) {
-                    $cells[] = ['date' => $date, 'assignment' => null, 'outside_vigence' => true];
+                    $cells[] = ['date' => $date, 'assignment' => null, 'outside_vigence' => true, 'relationship_effective' => false, 'historical_only' => false];
                     continue;
                 }
 
                 $assignment = $assignments[$relationship->id.'|'.$date] ?? null;
-                $cells[] = ['date' => $date, 'assignment' => $assignment, 'outside_vigence' => false];
+                $relationshipEffective = $relationship->isEffectiveOn($date);
+                $cells[] = [
+                    'date' => $date,
+                    'assignment' => $assignment,
+                    'outside_vigence' => false,
+                    'relationship_effective' => $relationshipEffective,
+                    'historical_only' => ! $relationshipEffective && $assignment !== null,
+                ];
             }
 
             $unitName = collect($cells)
@@ -717,6 +724,7 @@ new class extends Component {
                 'relationship' => $relationship,
                 'organizational_unit_name' => $unitName,
                 'cells' => $cells,
+                'historical_only_dates' => collect($cells)->where('historical_only', true)->count(),
             ];
         }
 
@@ -980,16 +988,27 @@ new class extends Component {
 
     private function relationshipForBatch(ScheduleBatch $batch, int $relationshipId, string $workDate): EmploymentRelationship
     {
-        return EmploymentRelationship::query()
+        $query = EmploymentRelationship::query()
             ->where('company_id', $batch->company_id)
             ->where('center_id', $batch->center_id)
-            ->when($batch->previous_batch_id === null, fn ($query) => $query->where('status', 'active'))
-            ->whereDate('started_at', '<=', $workDate)
-            ->where(function ($query) use ($workDate): void {
-                $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $workDate);
-            })
-            ->whereKey($relationshipId)
-            ->firstOrFail();
+            ->whereKey($relationshipId);
+
+        if ($batch->previous_batch_id === null) {
+            $query
+                ->where('status', 'active')
+                ->whereDate('started_at', '<=', $workDate)
+                ->where(function ($query) use ($workDate): void {
+                    $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $workDate);
+                });
+        } else {
+            $query->whereHas('dailyScheduleAssignments', function ($query) use ($batch, $workDate): void {
+                $query
+                    ->where('schedule_batch_id', $batch->id)
+                    ->whereDate('work_date', $workDate);
+            });
+        }
+
+        return $query->firstOrFail();
     }
 
     private function datesBetween(string $from, string $to, ScheduleBatch $batch): array
@@ -1013,10 +1032,28 @@ new class extends Component {
             }
         }
 
-        $existing = $batch->dailyAssignments()
-            ->whereIn('employment_relationship_id', $ids)
-            ->whereIn('work_date', $dates)
-            ->get();
+        $existing = $batch->loadMissing('dailyAssignments')->dailyAssignments
+            ->filter(fn (DailyScheduleAssignment $assignment): bool => in_array((int) $assignment->employment_relationship_id, $ids, true)
+                && in_array($assignment->work_date->toDateString(), $dates, true));
+        $relationships = EmploymentRelationship::query()
+            ->where('company_id', $batch->company_id)
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
+        $historicalOnly = 0;
+        foreach ($ids as $id) {
+            $relationship = $relationships[(int) $id] ?? null;
+            if (! $relationship) {
+                continue;
+            }
+
+            foreach ($dates as $date) {
+                if (! $relationship->isEffectiveOn($date)
+                    && $existing->contains(fn (DailyScheduleAssignment $assignment): bool => (int) $assignment->employment_relationship_id === (int) $id && $assignment->work_date->toDateString() === $date)) {
+                    $historicalOnly++;
+                }
+            }
+        }
 
         return [
             'workers' => count($ids),
@@ -1024,6 +1061,7 @@ new class extends Component {
             'total' => count($ids) * count($dates),
             'manual' => $existing->where('source_type', 'manual')->count(),
             'generated' => $existing->where('source_type', 'profile')->count() + $existing->where('source_type', 'system')->count(),
+            'historical_only' => $historicalOnly,
         ];
     }
 
@@ -1173,8 +1211,12 @@ new class extends Component {
         };
     }
 
-    private function calendarCellClasses(?DailyScheduleAssignment $assignment): string
+    private function calendarCellClasses(?DailyScheduleAssignment $assignment, bool $historicalOnly = false): string
     {
+        if ($historicalOnly) {
+            return 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-200 dark:hover:border-zinc-600';
+        }
+
         return match ($assignment?->day_type) {
             'shift' => 'border-sky-200 bg-sky-50 text-sky-950 hover:border-sky-400 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-100 dark:hover:border-sky-600',
             'rest' => 'border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:border-emerald-600',
@@ -1185,8 +1227,12 @@ new class extends Component {
         };
     }
 
-    private function calendarCellTextClasses(?DailyScheduleAssignment $assignment): string
+    private function calendarCellTextClasses(?DailyScheduleAssignment $assignment, bool $historicalOnly = false): string
     {
+        if ($historicalOnly) {
+            return 'text-zinc-600 dark:text-zinc-300';
+        }
+
         return match ($assignment?->day_type) {
             'shift' => 'text-sky-700 dark:text-sky-200',
             'rest' => 'text-emerald-700 dark:text-emerald-200',
@@ -1654,9 +1700,14 @@ new class extends Component {
                                                 Fuera de vigencia
                                             </div>
                                         @else
-                                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="min-h-20 w-full rounded-md border p-2 text-left transition disabled:cursor-default disabled:opacity-90 {{ $this->calendarCellClasses($cell['assignment']) }}">
-                                                <span class="block truncate font-semibold">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
-                                                <span class="mt-1 block line-clamp-2 text-xs {{ $this->calendarCellTextClasses($cell['assignment']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="min-h-20 w-full rounded-md border p-2 text-left transition disabled:cursor-default disabled:opacity-90 {{ $this->calendarCellClasses($cell['assignment'], $cell['historical_only']) }}">
+                                                <span class="flex flex-wrap items-center gap-1">
+                                                    <span class="truncate font-semibold">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
+                                                    @if ($cell['historical_only'])
+                                                        <x-ui.badge>Baja historica</x-ui.badge>
+                                                    @endif
+                                                </span>
+                                                <span class="mt-1 block line-clamp-2 text-xs {{ $this->calendarCellTextClasses($cell['assignment'], $cell['historical_only']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
                                                 <span class="mt-1 block truncate text-[11px] opacity-70">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
                                             </button>
                                         @endif
@@ -1674,11 +1725,16 @@ new class extends Component {
                 @foreach ($calendarRows as $row)
                     @foreach ($row['cells'] as $cell)
                         @if (! $cell['outside_vigence'])
-                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="rounded-md border p-4 text-left transition {{ $this->calendarCellClasses($cell['assignment']) }}">
+                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="rounded-md border p-4 text-left transition {{ $this->calendarCellClasses($cell['assignment'], $cell['historical_only']) }}">
                                 <span class="block text-xs opacity-70">{{ $cell['date'] }}</span>
-                                <span class="block font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                                <span class="flex flex-wrap items-center gap-2 font-medium">
+                                    <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                                    @if ($cell['historical_only'])
+                                        <x-ui.badge>Baja historica</x-ui.badge>
+                                    @endif
+                                </span>
                                 <span class="block text-xs opacity-70">{{ $row['relationship']->center?->name }} | {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
-                                <span class="block text-sm {{ $this->calendarCellTextClasses($cell['assignment']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                <span class="block text-sm {{ $this->calendarCellTextClasses($cell['assignment'], $cell['historical_only']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
                             </button>
                         @endif
                     @endforeach
@@ -1781,7 +1837,12 @@ new class extends Component {
                 @foreach ($calendarRows as $row)
                     <label class="flex items-center gap-2 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
                         <input type="checkbox" value="{{ $row['relationship']->id }}" wire:model.live="bulkForm.employment_relationship_ids" class="rounded border-zinc-300">
-                        <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                        <span class="flex flex-wrap items-center gap-2">
+                            <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                            @if ($row['historical_only_dates'] > 0)
+                                <x-ui.badge>{{ $row['historical_only_dates'] }} baja historica</x-ui.badge>
+                            @endif
+                        </span>
                     </label>
                 @endforeach
             </div>

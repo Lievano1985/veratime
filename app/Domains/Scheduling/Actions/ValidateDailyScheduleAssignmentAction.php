@@ -28,8 +28,7 @@ class ValidateDailyScheduleAssignmentAction
             throw new InvalidArgumentException('La fecha de trabajo esta fuera del periodo del lote.');
         }
 
-        if ($relationship->started_at->toDateString() > $workDate
-            || ($relationship->ended_at && $relationship->ended_at->toDateString() < $workDate)) {
+        if (! $this->relationshipIsValidForWorkDate($batch, $relationship, $workDate)) {
             throw new InvalidArgumentException('La relacion laboral no esta vigente para la fecha programada.');
         }
 
@@ -77,6 +76,23 @@ class ValidateDailyScheduleAssignmentAction
         if ($batch->center_id !== $relationship->center_id) {
             throw new InvalidArgumentException('La relacion laboral no corresponde al centro del lote.');
         }
+    }
+
+    private function relationshipIsValidForWorkDate(ScheduleBatch $batch, EmploymentRelationship $relationship, string $workDate): bool
+    {
+        if ($relationship->isEffectiveOn($workDate)) {
+            return true;
+        }
+
+        if ($batch->previous_batch_id === null) {
+            return false;
+        }
+
+        return DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $batch->id)
+            ->where('employment_relationship_id', $relationship->id)
+            ->whereDate('work_date', $workDate)
+            ->exists();
     }
 
     private function resolveUnit(Company $company, ScheduleBatch $batch, mixed $unitId): ?OrganizationalUnit

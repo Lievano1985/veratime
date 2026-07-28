@@ -1,11 +1,29 @@
 ---
 title: Matriz de resultados de revision del modulo de horarios
 project: Vera Time
-status: Draft
-updated: 2026-07-20
+status: Approved
+updated: 2026-07-28
 ---
 
 # Matriz de resultados de revision del modulo de horarios
+
+## 0. Resultado de cierre
+
+Revision manual ejecutada y aprobada el 2026-07-28.
+
+Criterios aprobados:
+
+- Horarios F1-F5B pasan flujo completo manual.
+- CSV valido/invalido funciona sin publicar automaticamente.
+- Correcciones versionadas conservan historial.
+- Supervisor no puede modificar ni publicar.
+- Responsive no bloquea uso real.
+- Empresas no activas no generan 404 en `/companies`.
+- No aparecen fallos S1/S2.
+
+Hallazgo corregido durante la revision:
+
+- Los borradores correctivos conservan trabajadores dados de baja como historial y los marcan con badge `Baja historica`; esos dias quedan preparados para no generar jornadas calculables en `work_days`.
 
 ## 1. Estados permitidos
 
@@ -106,3 +124,4 @@ Usar S4 cuando exista:
 | ID | Fecha | Area | Descripcion | Severidad | Evidencia | Estado | Responsable |
 |---|---|---|---|---|---|---|---|
 | PEND-001 | Pendiente | Pendiente | Registrar aqui hallazgos de la revision manual. | S4 Menor | Pendiente | No ejecutado | Pendiente |
+| REV-001 | 2026-07-28 | Horarios F1-F5B | Revision manual aprobada sin S1/S2 abiertos. | No aplica | Confirmacion manual del usuario | Cerrado | Usuario/Codex |

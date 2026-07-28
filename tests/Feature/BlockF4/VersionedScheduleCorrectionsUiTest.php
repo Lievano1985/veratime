@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\BlockF4;
 
+use App\Domains\Scheduling\Actions\CreateCorrectiveScheduleBatchAction;
+use App\Domains\Workers\Actions\TerminateWorkerAction;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\ScheduleBatch;
 use App\Models\User;
 use Database\Seeders\VeraTimeCorrectedScheduleScenarioSeeder;
@@ -80,6 +83,92 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
         $this->assertSame('published', $draft->fresh()->status);
         $this->assertSame(2, $draft->fresh()->version);
         $this->assertSame('superseded', $draft->previousBatch->fresh()->status);
+    }
+
+    public function test_corrective_draft_allows_manual_edit_for_terminated_worker_from_published_history(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->publishedBatch($company);
+        $draft = app(CreateCorrectiveScheduleBatchAction::class)
+            ->handle($rh, $company, $published, 'Correccion historica con trabajador dado de baja.')
+            ->correctiveBatch;
+        $assignment = DailyScheduleAssignment::query()
+            ->with('employmentRelationship.worker')
+            ->where('schedule_batch_id', $draft->id)
+            ->where('day_type', 'shift')
+            ->firstOrFail();
+
+        app(TerminateWorkerAction::class)->handle(
+            $assignment->employmentRelationship->worker,
+            $assignment->work_date->copy()->subDay()->toDateString(),
+        );
+        $this->assertFalse($assignment->fresh()->load('employmentRelationship')->shouldGenerateWorkDay());
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'all')
+            ->call('selectBatch', $draft->id)
+            ->assertSee('Baja historica')
+            ->call('openDayEditor', $assignment->employment_relationship_id, $assignment->work_date->toDateString())
+            ->set('dayForm.day_type', 'rest')
+            ->set('dayForm.reason', 'Descanso autorizado en correccion historica.')
+            ->call('saveDay')
+            ->assertHasNoErrors()
+            ->assertSee('Dia actualizado.');
+
+        $this->assertDatabaseHas('daily_schedule_assignments', [
+            'id' => $assignment->id,
+            'schedule_batch_id' => $draft->id,
+            'employment_relationship_id' => $assignment->employment_relationship_id,
+            'day_type' => 'rest',
+        ]);
+    }
+
+    public function test_corrective_draft_allows_bulk_edit_for_terminated_worker_from_published_history(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->publishedBatch($company);
+        $draft = app(CreateCorrectiveScheduleBatchAction::class)
+            ->handle($rh, $company, $published, 'Correccion masiva con trabajador dado de baja.')
+            ->correctiveBatch;
+        $assignment = DailyScheduleAssignment::query()
+            ->with('employmentRelationship.worker')
+            ->where('schedule_batch_id', $draft->id)
+            ->where('day_type', 'shift')
+            ->firstOrFail();
+
+        app(TerminateWorkerAction::class)->handle(
+            $assignment->employmentRelationship->worker,
+            $assignment->work_date->copy()->subDay()->toDateString(),
+        );
+        $this->assertFalse($assignment->fresh()->load('employmentRelationship')->shouldGenerateWorkDay());
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'all')
+            ->call('selectBatch', $draft->id)
+            ->call('openBulkPanel')
+            ->set('bulkForm.employment_relationship_ids', [$assignment->employment_relationship_id])
+            ->set('bulkForm.date_from', $assignment->work_date->toDateString())
+            ->set('bulkForm.date_to', $assignment->work_date->toDateString())
+            ->set('bulkForm.day_type', 'rest')
+            ->set('bulkForm.reason', 'Descanso masivo autorizado en correccion historica.')
+            ->set('confirmBulk', true)
+            ->assertSee('baja historica')
+            ->call('applyBulk')
+            ->assertHasNoErrors()
+            ->assertSee('Cambio masivo aplicado a 1 dias.');
+
+        $this->assertDatabaseHas('daily_schedule_assignments', [
+            'id' => $assignment->id,
+            'schedule_batch_id' => $draft->id,
+            'employment_relationship_id' => $assignment->employment_relationship_id,
+            'day_type' => 'rest',
+        ]);
     }
 
     public function test_supervisor_cannot_create_or_publish_corrections(): void

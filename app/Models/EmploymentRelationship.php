@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\EmploymentRelationshipFactory;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -88,5 +90,13 @@ class EmploymentRelationship extends Model
     public function dailyScheduleAssignments(): HasMany
     {
         return $this->hasMany(DailyScheduleAssignment::class);
+    }
+
+    public function isEffectiveOn(string|\DateTimeInterface $date): bool
+    {
+        $workDate = CarbonImmutable::parse($date)->toDateString();
+
+        return $this->started_at->toDateString() <= $workDate
+            && (! $this->ended_at || $this->ended_at->toDateString() >= $workDate);
     }
 }
