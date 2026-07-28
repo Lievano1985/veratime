@@ -3,7 +3,9 @@
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\EmploymentUnitAssignment;
 use App\Models\LaborCondition;
+use App\Models\OrganizationalUnit;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Worker;
@@ -445,17 +447,33 @@ it('terminate closes active employment relationship with ended at', function ():
         'status' => 'active',
         'ended_at' => null,
     ]);
+    $unit = OrganizationalUnit::factory()->create([
+        'company_id' => $company->id,
+        'center_id' => $center->id,
+    ]);
+    $assignment = new EmploymentUnitAssignment([
+        'employment_relationship_id' => $relationship->id,
+        'organizational_unit_id' => $unit->id,
+        'assignment_type' => 'primary',
+        'effective_from' => now()->subMonth()->toDateString(),
+        'effective_to' => null,
+        'status' => 'active',
+    ]);
+    $assignment->company()->associate($company);
+    $assignment->save();
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('workers.index')
         ->call('terminate', $worker->id);
 
-    $this->assertDatabaseHas('employment_relationships', [
-        'id' => $relationship->id,
-        'status' => 'ended',
-        'ended_at' => now()->toDateString(),
-    ]);
+    $relationship->refresh();
+    $assignment->refresh();
+
+    $this->assertSame('ended', $relationship->status);
+    $this->assertSame(now()->toDateString(), $relationship->ended_at->toDateString());
+    $this->assertSame('inactive', $assignment->status);
+    $this->assertSame(now()->toDateString(), $assignment->effective_to->toDateString());
 });
 
 it('employment relationship is created with center from same company', function (): void {

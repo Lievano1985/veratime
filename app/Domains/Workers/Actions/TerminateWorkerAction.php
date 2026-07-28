@@ -3,6 +3,7 @@
 namespace App\Domains\Workers\Actions;
 
 use App\Models\Worker;
+use Illuminate\Support\Facades\DB;
 
 class TerminateWorkerAction
 {
@@ -10,18 +11,36 @@ class TerminateWorkerAction
     {
         $endedAt ??= now()->toDateString();
 
-        $worker->forceFill([
-            'status' => 'terminated',
-        ])->save();
+        return DB::transaction(function () use ($worker, $endedAt): Worker {
+            $worker->forceFill([
+                'status' => 'terminated',
+            ])->save();
 
-        $worker->employmentRelationships()
-            ->where('status', 'active')
-            ->update([
-                'status' => 'ended',
-                'ended_at' => $endedAt,
-                'updated_at' => now(),
-            ]);
+            $activeRelationships = $worker->employmentRelationships()
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->get();
 
-        return $worker->refresh();
+            foreach ($activeRelationships as $relationship) {
+                $relationship->employmentUnitAssignments()
+                    ->where('status', 'active')
+                    ->where(function ($query) use ($endedAt): void {
+                        $query->whereNull('effective_to')
+                            ->orWhereDate('effective_to', '>', $endedAt);
+                    })
+                    ->update([
+                        'status' => 'inactive',
+                        'effective_to' => $endedAt,
+                        'updated_at' => now(),
+                    ]);
+
+                $relationship->forceFill([
+                    'status' => 'ended',
+                    'ended_at' => $endedAt,
+                ])->save();
+            }
+
+            return $worker->refresh();
+        });
     }
 }
