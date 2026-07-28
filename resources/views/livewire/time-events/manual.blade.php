@@ -138,7 +138,7 @@ new class extends Component {
         </div>
     @endif
 
-    <form wire:submit="capture" class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 lg:grid-cols-2">
+    <form wire:submit="capture" class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 lg:grid-cols-2">
         <flux:select label="Trabajador" wire:model="workerId">
             <flux:select.option value="">Selecciona</flux:select.option>
             @foreach ($workers as $worker)
@@ -179,7 +179,7 @@ new class extends Component {
                         <th class="px-4 py-3">Estado</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($events as $event)
                         <tr>
                             <td class="px-4 py-3">{{ $event->occurred_local_date?->toDateString() }}</td>

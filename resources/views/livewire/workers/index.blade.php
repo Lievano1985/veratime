@@ -4,6 +4,7 @@ use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\Workers\Actions\BlockWorkerCredentialAction;
 use App\Domains\Workers\Actions\CreateOrReplaceLaborConditionAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
+use App\Domains\Workers\Actions\DeleteWorkerIfUnusedAction;
 use App\Domains\Workers\Actions\ResetWorkerCredentialPinAction;
 use App\Domains\Workers\Actions\SaveWorkerWithEmploymentRelationshipAction;
 use App\Domains\Workers\Actions\TerminateWorkerAction;
@@ -14,6 +15,7 @@ use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -146,6 +148,21 @@ new class extends Component {
         $this->credentialForm = $this->emptyCredentialForm();
 
         Session::flash('status', $worker ? 'Trabajador actualizado.' : 'Trabajador creado.');
+    }
+
+    public function delete(int $workerId, CurrentCompany $currentCompany, DeleteWorkerIfUnusedAction $action): void
+    {
+        $worker = $this->authorizedWorker($workerId, $currentCompany);
+
+        Gate::authorize('delete', $worker);
+
+        try {
+            $action->handle($worker);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['worker' => $exception->getMessage()]);
+        }
+
+        Session::flash('status', 'Trabajador eliminado.');
     }
 
     public function saveLaborCondition(
@@ -421,7 +438,7 @@ new class extends Component {
         </div>
 
         @if ($canManageWorkers)
-            <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
                 Nuevo trabajador
             </flux:button>
         @endif
@@ -433,7 +450,13 @@ new class extends Component {
         </div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+    @error('worker')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {{ $message }}
+        </div>
+    @enderror
+
+    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
         <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <flux:heading>Trabajadores de {{ $currentCompany->name }}</flux:heading>
@@ -470,7 +493,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($workers as $worker)
                         @php($relationship = $worker->activeEmploymentRelationship)
                         @php($condition = $relationship?->activeLaborCondition)
@@ -498,6 +521,9 @@ new class extends Component {
                                             Baja
                                         </flux:button>
                                     @endif
+                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este trabajador solo si no tiene horarios ni asistencias? Esta accion no se puede deshacer." wire:click="delete({{ $worker->id }})">
+                                        Eliminar
+                                    </flux:button>
                                 </div>
                             </td>
                         </tr>

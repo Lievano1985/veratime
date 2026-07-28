@@ -155,7 +155,7 @@ new class extends Component {
     @endif
 
     <section class="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <div class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+        <div class="space-y-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
             <div>
                 <flux:heading>Empresa activa</flux:heading>
                 <p class="text-sm text-zinc-600 dark:text-zinc-400">{{ $company->name }}</p>
@@ -249,7 +249,7 @@ new class extends Component {
                         <th class="px-4 py-3">Estado</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($events as $event)
                         <tr>
                             <td class="px-4 py-3">{{ $event->occurred_local_date?->toDateString() }}</td>

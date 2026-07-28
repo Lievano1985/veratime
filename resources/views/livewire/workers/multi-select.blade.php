@@ -16,7 +16,7 @@ new class extends Component {
     public string $mode = 'multiple';
     public string $heading = 'Trabajadores';
     public string $subheading ="";
-    public int $resultLimit = 50;
+    public int $resultLimit = 8;
     public bool $showPrimaryAssignmentStatus = false;
     public string $assignmentDate = '';
 
@@ -207,7 +207,7 @@ new class extends Component {
             <button
                 type="button"
                 wire:click="$toggle('open')"
-                class="h-10 min-w-0 flex-1 rounded-s-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 py-2 text-left text-sm font-medium leading-[1.375rem] text-zinc-700 hover:bg-zinc-50 focus:z-10 focus:border-zinc-400 focus:outline-none dark:border-white/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                class="h-10 min-w-0 flex-1 rounded-s-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 py-2 text-left text-sm font-medium leading-[1.375rem] text-zinc-700 hover:bg-zinc-50 focus:z-10 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-white/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
             >
                 {{ $mode === 'single' ? 'Buscar trabajador' : 'Buscar y seleccionar trabajadores' }}
             </button>
@@ -217,7 +217,7 @@ new class extends Component {
                 wire:click="$toggle('open')"
                 aria-label="{{ $open ? 'Cerrar selector de trabajadores' : 'Abrir selector de trabajadores' }}"
                 title="{{ $open ? 'Cerrar' : 'Abrir' }}"
-                class="h-10 shrink-0 rounded-e-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 text-sm font-medium leading-[1.375rem] text-zinc-600 hover:bg-[#00a2f0] hover:text-white focus:z-10 focus:border-zinc-400 focus:outline-none dark:border-white/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-[#00a2f0] dark:hover:text-white"
+                class="h-10 shrink-0 rounded-e-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 text-sm font-medium leading-[1.375rem] text-zinc-600 hover:bg-accent hover:text-white focus:z-10 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-white/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-accent dark:hover:text-white"
             >
                 @if ($open)
                     <svg class="h-4 w-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

@@ -29,6 +29,11 @@ class SchedulePolicy
         return $this->update($user, $schedule);
     }
 
+    public function delete(User $user, Schedule $schedule): bool
+    {
+        return $this->update($user, $schedule);
+    }
+
     private function canManageCompanySchedules(User $user, Company $company): bool
     {
         return $company->status === 'active'

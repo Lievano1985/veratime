@@ -45,6 +45,11 @@ class ShiftTemplatePolicy
         return $this->update($user, $template);
     }
 
+    public function delete(User $user, ShiftTemplate $template): bool
+    {
+        return $this->update($user, $template);
+    }
+
     public function reactivate(User $user, ShiftTemplate $template): bool
     {
         return $this->update($user, $template);

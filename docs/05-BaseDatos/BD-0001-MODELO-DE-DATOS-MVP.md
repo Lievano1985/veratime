@@ -1900,13 +1900,19 @@ index(trace_id)
 
 # 23. Reglas de integridad
 
-## 23.1 No eliminar físicamente
+## 23.1 Eliminacion fisica limitada
 
-No se eliminarán físicamente en operación ordinaria:
+La operacion ordinaria puede eliminar catalogos capturados por error solo cuando no tienen uso ni dependencias operativas. Esto aplica a registros como centros, unidades, trabajadores sin historial, horarios/turnos/perfiles sin asignaciones, asignaciones que no generaron horarios ni asistencias y descansos internos de empresa capturados por error.
 
-- `workers`
+La regla de producto es conservar la evidencia historica del tiempo, no acumular catalogos libres que ensucian la operacion diaria.
+
+No se eliminaran fisicamente en operacion ordinaria:
+
+- `workers` con jornadas, asignaciones, asistencias o relaciones historicas usadas
 - `employment_relationships`
 - `time_events`
+- `schedule_batches` publicados
+- `daily_schedule_assignments` generados o publicados
 - `work_day_calculations`
 - `alerts`
 - `incidents`
@@ -1916,7 +1922,7 @@ No se eliminarán físicamente en operación ordinaria:
 - `audit_logs`
 - `evidence_packages`
 
-Se usarán estados, anulación lógica o versionamiento.
+Para informacion usada por horario, cumplimiento, asistencia, evidencias, reportes o auditoria se usaran estados, anulacion logica o versionamiento.
 
 ## 23.2 No editar versiones firmadas
 

@@ -108,7 +108,7 @@
                                 <th class="px-3 py-2 text-left">Mensajes</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        <tbody class="divide-y divide-zinc-100 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-800 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                             @forelse ($rows as $row)
                                 <tr>
                                     <td class="px-3 py-2">{{ $row->row_number }}</td>

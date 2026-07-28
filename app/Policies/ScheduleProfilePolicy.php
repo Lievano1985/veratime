@@ -48,6 +48,11 @@ class ScheduleProfilePolicy
         return $this->update($user, $profile);
     }
 
+    public function delete(User $user, ScheduleProfile $profile): bool
+    {
+        return $this->update($user, $profile);
+    }
+
     public function reactivate(User $user, ScheduleProfile $profile): bool
     {
         return $this->update($user, $profile);

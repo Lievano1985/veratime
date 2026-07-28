@@ -248,7 +248,7 @@ new class extends Component {
             <flux:subheading>Asigna alcance explicito por centro completo o unidad organizacional.</flux:subheading>
         </div>
 
-        <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
             Nuevo alcance
         </flux:button>
     </div>
@@ -264,7 +264,7 @@ new class extends Component {
     </div>
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-2">
+        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-2">
             <flux:input label="Buscar supervisor" placeholder="Nombre o email" wire:model.live.debounce.350ms="filters.search" />
             <flux:select label="Estado" wire:model.live="filters.status">
                 <flux:select.option value="all">Todos</flux:select.option>
@@ -286,7 +286,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($scopes as $scope)
                         <tr>
                             <td class="px-4 py-3">

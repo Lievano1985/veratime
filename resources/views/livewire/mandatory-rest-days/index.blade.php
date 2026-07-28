@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\MandatoryRestDays\Actions\CreateMandatoryRestDayAction;
+use App\Domains\MandatoryRestDays\Actions\DeleteMandatoryRestDayIfUnusedAction;
 use App\Domains\MandatoryRestDays\Actions\InactivateMandatoryRestDayAction;
 use App\Domains\MandatoryRestDays\Actions\UpdateMandatoryRestDayAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
@@ -128,6 +129,26 @@ new class extends Component {
         Session::flash('status', 'Descanso obligatorio inactivado.');
     }
 
+    public function delete(int $restDayId, CurrentCompany $currentCompany, DeleteMandatoryRestDayIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $restDay = $this->editableRestDay($company, $restDayId);
+
+        Gate::authorize('delete', $restDay);
+
+        try {
+            $action->handle($company, $restDay);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['restDay' => $exception->getMessage()]);
+        }
+
+        if ($this->editingRestDayId === $restDay->id) {
+            $this->resetForm();
+        }
+
+        Session::flash('status', 'Descanso obligatorio eliminado.');
+    }
+
     public function resetForm(): void
     {
         $this->editingRestDayId = null;
@@ -253,7 +274,7 @@ new class extends Component {
             <flux:subheading>Administra fechas de descanso por tipo y alcance sin calcular jornadas.</flux:subheading>
         </div>
 
-        <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
             Crear descanso
         </flux:button>
     </div>
@@ -263,6 +284,12 @@ new class extends Component {
             {{ session('status') }}
         </div>
     @endif
+
+    @error('restDay')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {{ $message }}
+        </div>
+    @enderror
 
     <x-side-panel
         wire:model="showFormPanel"
@@ -362,7 +389,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($restDays as $restDay)
                         <tr>
                             <td class="px-4 py-3">{{ $restDay->date?->toDateString() }}</td>
@@ -381,6 +408,7 @@ new class extends Component {
                                         @if ($restDay->status === 'active')
                                             <flux:button type="button" size="sm" variant="ghost" wire:click="inactivate({{ $restDay->id }})">Inactivar</flux:button>
                                         @endif
+                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este descanso solo si fue capturado por error? Esta accion no se puede deshacer." wire:click="delete({{ $restDay->id }})">Eliminar</flux:button>
                                     </div>
                                 @else
                                     <span class="text-xs text-zinc-500">Sin permisos</span>

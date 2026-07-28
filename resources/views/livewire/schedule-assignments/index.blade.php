@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Schedules\Actions\AssignScheduleToWorkersAction;
+use App\Domains\Schedules\Actions\DeleteScheduleAssignmentIfUnusedAction;
 use App\Domains\Schedules\Actions\InactivateScheduleAssignmentAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Schedule;
@@ -153,6 +154,25 @@ new class extends Component {
         Session::flash('status', 'Asignación de horario inactivada.');
     }
 
+    public function delete(int $assignmentId, CurrentCompany $currentCompany, DeleteScheduleAssignmentIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $assignment = ScheduleAssignment::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($assignmentId);
+
+        Gate::authorize('delete', $assignment);
+
+        try {
+            $action->handle($company, $assignment);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['assignment' => $exception->getMessage()]);
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Asignacion de horario eliminada.');
+    }
+
     public function with(CurrentCompany $currentCompany): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -260,6 +280,12 @@ new class extends Component {
         </div>
     @endif
 
+    @error('assignment')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {{ $message }}
+        </div>
+    @enderror
+
     <x-side-panel
         wire:model="showFormPanel"
         title="Asignar o reemplazar horario"
@@ -302,7 +328,7 @@ new class extends Component {
             <flux:button type="button" variant="ghost" wire:click="clearFilters">Limpiar filtros</flux:button>
         </div>
 
-        <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-2 xl:grid-cols-4">
             <flux:input
                 label="Clave"
                 placeholder="Código de empleado"
@@ -374,7 +400,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($assignments as $assignment)
                         <tr>
                             <td class="px-4 py-3">
@@ -389,14 +415,19 @@ new class extends Component {
                                 {{ $assignment->effective_to?->toDateString() ?? 'Vigente' }}
                             </td>
                             <td class="px-4 py-3">{{ ucfirst($assignment->status) }}</td>
-                            <td class="px-4 py-3 text-right">
-                                @if ($assignment->status === 'active')
-                                    <flux:button type="button" size="sm" variant="ghost" wire:click="inactivate({{ $assignment->id }})">
-                                        Inactivar
+                            <td class="px-4 py-3">
+                                <div class="flex justify-end gap-2">
+                                    @if ($assignment->status === 'active')
+                                        <flux:button type="button" size="sm" variant="ghost" wire:click="inactivate({{ $assignment->id }})">
+                                            Inactivar
+                                        </flux:button>
+                                    @else
+                                        <span class="text-xs text-zinc-500">Historial</span>
+                                    @endif
+                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar esta asignacion solo si no tiene asistencias en su vigencia? Esta accion no se puede deshacer." wire:click="delete({{ $assignment->id }})">
+                                        Eliminar
                                     </flux:button>
-                                @else
-                                    <span class="text-xs text-zinc-500">Sin acción</span>
-                                @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

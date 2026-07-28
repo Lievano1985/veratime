@@ -29,6 +29,11 @@ class WorkerPolicy
         return $this->update($user, $worker);
     }
 
+    public function delete(User $user, Worker $worker): bool
+    {
+        return $this->update($user, $worker);
+    }
+
     private function canManageCompanyWorkers(User $user, Company $company): bool
     {
         return $company->status === 'active'

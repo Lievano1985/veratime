@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Schedules\Actions\CreateScheduleAction;
+use App\Domains\Schedules\Actions\DeleteScheduleIfUnusedAction;
 use App\Domains\Schedules\Actions\InactivateScheduleAction;
 use App\Domains\Schedules\Actions\SaveScheduleBreaksAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
@@ -198,6 +199,26 @@ new class extends Component {
         Session::flash('status', 'Horario inactivado.');
     }
 
+    public function delete(int $scheduleId, CurrentCompany $currentCompany, DeleteScheduleIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $schedule = $this->authorizedSchedule($scheduleId, $currentCompany);
+
+        Gate::authorize('delete', $schedule);
+
+        try {
+            $action->handle($company, $schedule);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['schedule' => $exception->getMessage()]);
+        }
+
+        if ($this->editingScheduleId === $schedule->id) {
+            $this->closeFormPanel();
+        }
+
+        Session::flash('status', 'Horario eliminado.');
+    }
+
     public function closeFormPanel(): void
     {
         $this->showFormPanel = false;
@@ -390,7 +411,7 @@ new class extends Component {
         </div>
 
         @if ($canManageSchedules)
-            <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
                 Nuevo horario
             </flux:button>
         @endif
@@ -402,7 +423,13 @@ new class extends Component {
         </div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+    @error('schedule')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {{ $message }}
+        </div>
+    @enderror
+
+    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
         <div class="mb-4">
             <flux:heading>Horarios de {{ $currentCompany->name }}</flux:heading>
             <flux:subheading>Solo se muestran horarios asociados a la empresa activa.</flux:subheading>
@@ -421,7 +448,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($schedules as $schedule)
                         <tr>
                             <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $schedule->code }}</td>
@@ -449,6 +476,9 @@ new class extends Component {
                                             Inactivar
                                         </flux:button>
                                     @endif
+                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este horario solo si no tiene asignaciones? Esta accion no se puede deshacer." wire:click="delete({{ $schedule->id }})">
+                                        Eliminar
+                                    </flux:button>
                                 </div>
                             </td>
                         </tr>
@@ -570,7 +600,7 @@ new class extends Component {
                                             <th class="px-4 py-3">Tipo</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                                    <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                                         @forelse ($selectedDay->breaks as $break)
                                             <tr>
                                                 <td class="px-4 py-3">{{ $break->name ?: 'Pausa' }}</td>
