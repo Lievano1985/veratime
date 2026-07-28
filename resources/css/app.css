@@ -11,6 +11,31 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
+    --color-vera-time-50: #eff7ff;
+    --color-vera-time-100: #dceeff;
+    --color-vera-time-200: #b9ddff;
+    --color-vera-time-300: #86c4ff;
+    --color-vera-time-400: #4aa5ff;
+    --color-vera-time-500: #1f84f2;
+    --color-vera-time-600: #1269d8;
+    --color-vera-time-700: #1055af;
+    --color-vera-time-800: #12498f;
+    --color-vera-time-900: #153e76;
+
+    --color-vera-accent-400: #2dd4c8;
+    --color-vera-accent-500: #18bdb5;
+    --color-vera-accent-600: #0f9c98;
+
+    --color-primary: var(--color-vera-time-600);
+    --color-primary-hover: var(--color-vera-time-700);
+    --color-primary-soft: var(--color-vera-time-50);
+    --color-primary-border: var(--color-vera-time-200);
+    --color-accent: var(--color-vera-accent-500);
+
+    --color-surface-muted: #f5f5f5;
+    --color-vera-sidebar: #2a3131;
+    --color-vera-sidebar-border: #202626;
+
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
     --color-zinc-200: #e5e5e5;
@@ -23,16 +48,14 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    --color-accent-content: var(--color-primary);
     --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent-content: var(--color-primary-soft);
+        --color-accent-foreground: var(--color-white);
     }
 }
 
@@ -58,7 +81,82 @@
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+    @apply border-primary outline-hidden ring-2 ring-primary ring-offset-2 ring-offset-white;
+}
+
+@layer components {
+    [data-flux-button][class*="bg-[var(--color-accent)]"] {
+        background: var(--color-primary) !important;
+        border-color: var(--color-primary) !important;
+        color: var(--color-white) !important;
+    }
+
+    [data-flux-button][class*="bg-[var(--color-accent)]"]:hover {
+        background: var(--color-primary-hover) !important;
+        border-color: var(--color-primary-hover) !important;
+    }
+
+    [data-flux-button]:focus-visible,
+    .vera-focus:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    .vera-app-sidebar {
+        background: var(--color-vera-sidebar) !important;
+        border-color: var(--color-vera-sidebar-border) !important;
+        color: var(--color-zinc-50);
+    }
+
+    .vera-app-sidebar a,
+    .vera-app-sidebar button {
+        color: var(--color-zinc-200) !important;
+    }
+
+    .vera-app-sidebar a:hover,
+    .vera-app-sidebar button:hover {
+        background: color-mix(in oklab, var(--color-white), transparent 90%) !important;
+        color: var(--color-white) !important;
+    }
+
+    .vera-app-sidebar a:not(.vera-sidebar-logo)[aria-current="page"],
+    .vera-app-sidebar a:not(.vera-sidebar-logo)[data-current],
+    .vera-app-sidebar button:not(.vera-sidebar-logo)[aria-current="page"],
+    .vera-app-sidebar button:not(.vera-sidebar-logo)[data-current] {
+        background: var(--color-primary-soft) !important;
+        color: var(--color-primary) !important;
+    }
+
+    .vera-app-sidebar .vera-sidebar-logo,
+    .vera-app-sidebar .vera-sidebar-logo:hover,
+    .vera-app-sidebar .vera-sidebar-logo[aria-current="page"],
+    .vera-app-sidebar .vera-sidebar-logo[data-current] {
+        background: transparent !important;
+        color: inherit !important;
+    }
+
+    .vera-app-sidebar svg {
+        color: currentColor !important;
+    }
+
+    .vera-app-sidebar label,
+    .vera-app-sidebar [class*="text-zinc-400"],
+    .vera-app-sidebar [class*="text-zinc-500"],
+    .vera-app-sidebar [class*="text-zinc-600"] {
+        color: var(--color-zinc-300) !important;
+    }
+
+    .vera-app-sidebar select,
+    .vera-app-sidebar input {
+        background-color: var(--color-white) !important;
+        color: var(--color-zinc-900) !important;
+        border-color: color-mix(in oklab, var(--color-white), transparent 82%) !important;
+    }
+
+    .vera-app-sidebar [data-flux-profile],
+    .vera-app-sidebar [data-flux-profile] button {
+        color: var(--color-zinc-50) !important;
+    }
 }
 
 /* \[:where(&)\]:size-4 {

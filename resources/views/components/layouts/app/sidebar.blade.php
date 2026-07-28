@@ -4,11 +4,11 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky stashable class="vera-app-sidebar border-r border-vera-sidebar-border bg-vera-sidebar text-zinc-100">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="mb-2 flex w-full justify-center" wire:navigate>
-                <x-app-logo class="size-8" href="#"></x-app-logo>
+            <a href="{{ route('dashboard') }}" class="vera-sidebar-logo mb-4 flex w-full justify-center rounded-lg px-2 py-2" wire:navigate>
+                <x-app-logo class="h-14 w-36" href="#"></x-app-logo>
             </a>
 
             <livewire:companies.company-switcher />

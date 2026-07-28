@@ -211,7 +211,7 @@ new class extends Component {
 
     <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div class="space-y-6">
-            <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <section class="rounded-lg border border-primary-border bg-primary-soft p-5 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="mb-4">
                     <flux:heading>Empresas autorizadas</flux:heading>
                     <flux:subheading>Se listan las empresas donde tu relacion esta activa; las inactivas no aparecen en el selector operativo.</flux:subheading>
@@ -226,7 +226,9 @@ new class extends Component {
                             </span>
 
                             <span class="flex items-center gap-3">
-                                <span class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">{{ $company->status }}</span>
+                                <x-ui.badge variant="{{ $company->status === 'active' ? 'success' : 'neutral' }}">
+                                    {{ $company->status }}
+                                </x-ui.badge>
 
                                 @can('update', $company)
                                     <flux:button type="button" size="sm" wire:click="loadEditForm({{ $company->id }})">Editar</flux:button>
@@ -252,12 +254,12 @@ new class extends Component {
 
                         <div>
                             <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
-                            <select wire:model="editForm.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            <x-ui.select wire:model="editForm.status">
                                 <option value="active">Activa</option>
                                 <option value="inactive">Inactiva</option>
                                 <option value="suspended">Suspendida</option>
                                 <option value="cancelled">Cancelada</option>
-                            </select>
+                            </x-ui.select>
                             @error('editForm.status')
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
@@ -280,12 +282,12 @@ new class extends Component {
                     <form wire:submit="updateSettings" class="space-y-4">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Periodo de cierre</label>
-                            <select wire:model="settingsForm.payroll_period_type" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            <x-ui.select wire:model="settingsForm.payroll_period_type">
                                 <option value="weekly">Semanal</option>
                                 <option value="biweekly">Quincenal</option>
                                 <option value="monthly">Mensual</option>
                                 <option value="custom">Personalizado</option>
-                            </select>
+                            </x-ui.select>
                             @error('settingsForm.payroll_period_type')
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
