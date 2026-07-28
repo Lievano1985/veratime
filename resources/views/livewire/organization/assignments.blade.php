@@ -397,6 +397,45 @@ new class extends Component {
             ->get();
     }
 
+    private function assignmentStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'active' => 'Vigente',
+            'inactive' => 'Finalizado',
+            'replaced' => 'Reemplazado',
+            default => ucfirst($status),
+        };
+    }
+
+    private function assignmentStatusBadgeVariant(string $status): string
+    {
+        return match ($status) {
+            'active' => 'success',
+            'inactive' => 'neutral',
+            'replaced' => 'warning',
+            default => 'neutral',
+        };
+    }
+
+    private function workerStatusLabel(?string $status): ?string
+    {
+        return match ($status) {
+            'terminated' => 'Dado de baja',
+            'inactive' => 'Inactivo',
+            'suspended' => 'Suspendido',
+            default => null,
+        };
+    }
+
+    private function workerStatusBadgeVariant(?string $status): string
+    {
+        return match ($status) {
+            'terminated' => 'danger',
+            'suspended' => 'warning',
+            default => 'neutral',
+        };
+    }
+
     private function selectedWorker($company, array $workerIds): ?Worker
     {
         $workerId = (int) collect($workerIds)->first();
@@ -558,13 +597,24 @@ new class extends Component {
                     @forelse ($assignments as $assignment)
                         <tr>
                             <td class="px-4 py-3">
-                                <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $assignment->employmentRelationship?->worker?->full_name }}</span>
+                                <span class="flex flex-wrap items-center gap-2 font-medium text-zinc-900 dark:text-zinc-100">
+                                    {{ $assignment->employmentRelationship?->worker?->full_name }}
+                                    @if ($this->workerStatusLabel($assignment->employmentRelationship?->worker?->status))
+                                        <x-ui.badge variant="{{ $this->workerStatusBadgeVariant($assignment->employmentRelationship?->worker?->status) }}">
+                                            {{ $this->workerStatusLabel($assignment->employmentRelationship?->worker?->status) }}
+                                        </x-ui.badge>
+                                    @endif
+                                </span>
                                 <span class="text-xs text-zinc-500">{{ $assignment->employmentRelationship?->worker?->employee_code }} - {{ $assignment->employmentRelationship?->center?->name }}</span>
                             </td>
                             <td class="px-4 py-3">{{ $assignment->assignment_type === 'primary' ? 'Principal' : 'Apoyo temporal' }}</td>
                             <td class="px-4 py-3">{{ $assignment->organizationalUnit?->name }} <span class="text-xs text-zinc-500">({{ $assignment->organizationalUnit?->center?->name }})</span></td>
                             <td class="px-4 py-3">{{ $assignment->effective_from?->toDateString() }} - {{ $assignment->effective_to?->toDateString() ?? 'Abierta' }}</td>
-                            <td class="px-4 py-3">{{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizado' : 'Reemplazado') }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $this->assignmentStatusBadgeVariant($assignment->status) }}">
+                                    {{ $this->assignmentStatusLabel($assignment->status) }}
+                                </x-ui.badge>
+                            </td>
                             <td class="px-4 py-3 text-right">
                                 @if ($assignment->assignment_type === 'temporary_support' && $assignment->status === 'active')
                                     <flux:button type="button" size="sm" variant="ghost" wire:click="openEndSupportPanel({{ $assignment->id }})">
