@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
+use App\Domains\Scheduling\Actions\DeleteScheduleProfileIfUnusedAction;
 use App\Domains\Scheduling\Actions\InactivateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\ReactivateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\ReplaceScheduleProfileCycleRulesAction;
@@ -305,6 +306,27 @@ new class extends Component {
         }
 
         Session::flash('status', 'Perfil inactivado.');
+    }
+
+    public function delete(int $profileId, CurrentCompany $currentCompany, DeleteScheduleProfileIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $profile = $this->authorizedProfile($profileId, $currentCompany, true);
+
+        Gate::authorize('delete', $profile);
+
+        try {
+            $action->handle($company, $profile);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['profile' => $exception->getMessage()]);
+        }
+
+        if ($this->viewingProfileId === $profile->id) {
+            $this->viewingProfileId = null;
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Perfil eliminado.');
     }
 
     public function reactivate(int $profileId, CurrentCompany $currentCompany, ReactivateScheduleProfileAction $action): void
@@ -763,7 +785,7 @@ new class extends Component {
         </div>
 
         @if ($canManageProfiles)
-            <flux:button wire:click="openCreatePanel" icon="plus">Nuevo perfil</flux:button>
+            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nuevo perfil</flux:button>
         @endif
     </div>
 
@@ -775,7 +797,7 @@ new class extends Component {
         <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
     @enderror
 
-    <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-3">
+    <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
         <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
         <flux:select label="Tipo" wire:model.live="filters.profile_type">
             <flux:select.option value="all">Todos</flux:select.option>
@@ -804,7 +826,7 @@ new class extends Component {
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                 @forelse ($profiles as $profile)
                     <tr>
                         <td class="px-4 py-3">
@@ -824,6 +846,7 @@ new class extends Component {
                                     @else
                                         <flux:button size="xs" variant="primary" wire:click="reactivate({{ $profile->id }})">Reactivar</flux:button>
                                     @endif
+                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $profile->id }})" wire:confirm="Eliminar este perfil solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
                                 @else
                                     <span class="text-xs text-zinc-500">Solo consulta</span>
                                 @endif

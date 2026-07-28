@@ -31,6 +31,11 @@ class OrganizationalUnitPolicy
         return $this->update($user, $unit);
     }
 
+    public function delete(User $user, OrganizationalUnit $unit): bool
+    {
+        return $this->update($user, $unit);
+    }
+
     private function canManageCompanyUnits(User $user, Company $company): bool
     {
         return $company->status === 'active'

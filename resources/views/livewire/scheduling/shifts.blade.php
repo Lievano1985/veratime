@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\DeleteShiftTemplateIfUnusedAction;
 use App\Domains\Scheduling\Actions\InactivateShiftTemplateAction;
 use App\Domains\Scheduling\Actions\ReactivateShiftTemplateAction;
 use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
@@ -180,6 +181,27 @@ new class extends Component {
         $action->handle($company, $template);
 
         Session::flash('status', 'Plantilla inactivada.');
+    }
+
+    public function delete(int $templateId, CurrentCompany $currentCompany, DeleteShiftTemplateIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $template = $this->authorizedTemplate($templateId, $currentCompany, true);
+
+        Gate::authorize('delete', $template);
+
+        try {
+            $action->handle($company, $template);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['shiftTemplate' => $exception->getMessage()]);
+        }
+
+        if ($this->viewingTemplateId === $template->id) {
+            $this->viewingTemplateId = null;
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Plantilla eliminada.');
     }
 
     public function reactivate(int $templateId, CurrentCompany $currentCompany, ReactivateShiftTemplateAction $action): void
@@ -366,7 +388,7 @@ new class extends Component {
         </div>
 
         @if ($canManageShiftTemplates)
-            <flux:button wire:click="openCreatePanel" icon="plus">Nueva plantilla</flux:button>
+            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nueva plantilla</flux:button>
         @endif
     </div>
 
@@ -374,7 +396,11 @@ new class extends Component {
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{{ session('status') }}</div>
     @endif
 
-    <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-2">
+    @error('shiftTemplate')
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-100">{{ $message }}</div>
+    @enderror
+
+    <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-2">
         <flux:input label="Buscar" placeholder="Código o nombre" wire:model.live.debounce.350ms="filters.search" />
         <flux:select label="Estado" wire:model.live="filters.status">
             <flux:select.option value="active">Activas</flux:select.option>
@@ -397,7 +423,7 @@ new class extends Component {
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                 @forelse ($shiftTemplates as $template)
                     @php($metrics = $template->metrics())
                     <tr>
@@ -427,6 +453,7 @@ new class extends Component {
                                     @else
                                         <flux:button size="xs" variant="primary" wire:click="reactivate({{ $template->id }})">Reactivar</flux:button>
                                     @endif
+                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $template->id }})" wire:confirm="Eliminar esta plantilla solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
                                 @else
                                     <span class="text-xs text-zinc-500">Solo consulta</span>
                                 @endif
@@ -494,7 +521,7 @@ new class extends Component {
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <flux:heading>Segmentos diarios</flux:heading>
-                    <flux:button type="button" size="sm" variant="primary" wire:click="addSegment">Agregar segmento</flux:button>
+                    <flux:button type="button" size="sm" icon="plus" variant="primary" wire:click="addSegment">Agregar segmento</flux:button>
                 </div>
 
                 @foreach ($segments as $index => $segment)

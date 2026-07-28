@@ -29,6 +29,11 @@ class ScheduleAssignmentPolicy
         return $this->update($user, $scheduleAssignment);
     }
 
+    public function delete(User $user, ScheduleAssignment $scheduleAssignment): bool
+    {
+        return $this->update($user, $scheduleAssignment);
+    }
+
     private function canManageCompanyScheduleAssignments(User $user, Company $company): bool
     {
         return $company->status === 'active'

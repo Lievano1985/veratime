@@ -1291,6 +1291,31 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 
 ---
 
+## Limpieza de catalogos sin uso
+
+### Objetivo
+
+Validar que Vera Time permita limpiar catalogos capturados por error sin eliminar horario, cumplimiento, asistencia, reportes, evidencias ni auditoria.
+
+### Casos manuales
+
+| Pantalla | Caso | Resultado esperado |
+|---|---|---|
+| Centros | Eliminar centro sin unidades, trabajadores, eventos, lotes ni asignaciones. | Se elimina y desaparece del listado. |
+| Centros | Eliminar centro con lote de horario o historial operativo. | Se bloquea y sugiere inactivar. |
+| Unidades | Eliminar unidad sin hijos, trabajadores, alcances ni horarios. | Se elimina y desaparece del listado. |
+| Unidades | Eliminar unidad usada por asignacion o horario diario. | Se bloquea y sugiere inactivar. |
+| Trabajadores | Eliminar trabajador sin horarios, asistencias ni asignaciones. | Se elimina junto con relacion/credencial libre. |
+| Trabajadores | Eliminar trabajador con asistencias, horarios o asignaciones. | Se bloquea y sugiere baja/inactivacion. |
+| Horarios legacy | Eliminar horario sin asignaciones ni condiciones laborales. | Se elimina. |
+| Asignaciones legacy | Eliminar asignacion sin asistencias en su vigencia. | Se elimina. |
+| Turnos | Eliminar plantilla sin reglas ni horarios diarios. | Se elimina junto con sus segmentos. |
+| Perfiles | Eliminar perfil sin asignaciones ni horarios generados. | Se elimina junto con reglas libres. |
+| Asignacion de perfiles | Eliminar asignacion que no genero horarios y no fue reemplazada. | Se elimina. |
+| Descansos obligatorios | Eliminar descanso interno de empresa capturado por error. | Se elimina si pertenece a la empresa activa. |
+
+---
+
 ## Bloque F4 - correcciones versionadas de programacion diaria
 
 Estado: implementado/candidato a cierre.

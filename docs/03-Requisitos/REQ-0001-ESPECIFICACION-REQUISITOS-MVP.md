@@ -789,6 +789,12 @@ Una baja laboral no eliminará jornadas, eventos, reportes ni evidencias.
 
 **Prioridad:** P0
 
+### RF-PER-004.1 — Limpieza de catalogos sin uso
+
+El sistema permitira eliminar catalogos capturados por error cuando no tengan asignaciones, horarios generados, asistencias, reportes, evidencias ni dependencias operativas. Si el registro ya participa en horario o cumplimiento, se bloqueara la eliminacion ordinaria y se ofrecera inactivacion, baja, finalizacion o versionamiento segun corresponda.
+
+**Prioridad:** P0
+
 ### RF-PER-005 — Acceso individual
 
 Cada persona trabajadora tendrá acceso únicamente a sus registros y solicitudes.

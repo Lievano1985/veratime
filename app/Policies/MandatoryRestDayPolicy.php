@@ -36,6 +36,11 @@ class MandatoryRestDayPolicy
         return $this->update($user, $mandatoryRestDay);
     }
 
+    public function delete(User $user, MandatoryRestDay $mandatoryRestDay): bool
+    {
+        return $this->update($user, $mandatoryRestDay);
+    }
+
     private function canManageMandatoryRestDays(User $user, Company $company): bool
     {
         return $this->canManageCompanyInternalRestDays($user, $company)

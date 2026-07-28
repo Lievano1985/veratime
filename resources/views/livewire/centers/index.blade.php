@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Companies\Actions\CreateCenterAction;
+use App\Domains\Companies\Actions\DeleteCenterIfUnusedAction;
 use App\Domains\Companies\Actions\InactivateCenterAction;
 use App\Domains\Companies\Actions\UpdateCenterAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
@@ -8,6 +9,7 @@ use App\Models\Center;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -119,6 +121,21 @@ new class extends Component {
         Session::flash('status', 'Centro inactivado.');
     }
 
+    public function delete(int $centerId, CurrentCompany $currentCompany, DeleteCenterIfUnusedAction $action): void
+    {
+        $center = $this->authorizedCenter($centerId, $currentCompany);
+
+        Gate::authorize('delete', $center);
+
+        try {
+            $action->handle($center);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['center' => $exception->getMessage()]);
+        }
+
+        Session::flash('status', 'Centro eliminado.');
+    }
+
     public function closeFormPanel(): void
     {
         $this->showFormPanel = false;
@@ -217,7 +234,7 @@ new class extends Component {
         </div>
 
         @if ($canManageCenters)
-            <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
                 Nuevo centro
             </flux:button>
         @endif
@@ -229,7 +246,13 @@ new class extends Component {
         </div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+    @error('center')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            {{ $message }}
+        </div>
+    @enderror
+
+    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
         <div class="mb-4">
             <flux:heading>Centros de {{ $currentCompany->name }}</flux:heading>
             <flux:subheading>Solo se muestran centros asociados a la empresa activa.</flux:subheading>
@@ -246,7 +269,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($centers as $center)
                         <tr>
                             <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $center->code }}</td>
@@ -268,6 +291,9 @@ new class extends Component {
                                             Inactivar
                                         </flux:button>
                                     @endif
+                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $center->id }})">
+                                        Eliminar
+                                    </flux:button>
                                 </div>
                             </td>
                         </tr>
@@ -351,4 +377,3 @@ new class extends Component {
         </x-side-panel>
     @endif
 </section>
-

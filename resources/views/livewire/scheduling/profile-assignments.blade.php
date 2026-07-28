@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
+use App\Domains\Scheduling\Actions\DeleteScheduleProfileAssignmentIfUnusedAction;
 use App\Domains\Scheduling\Actions\EndScheduleProfileAssignmentAction;
 use App\Domains\Scheduling\Actions\ReplaceScheduleProfileAssignmentAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleProfileForRelationshipAction;
@@ -29,6 +30,7 @@ new class extends Component {
     public bool $showAssignmentPanel = false;
     public bool $showReplacePanel = false;
     public bool $showEndPanel = false;
+    public bool $showAdvancedFilters = false;
     public ?int $selectedWorkerId = null;
     public ?int $resolveWorkerId = null;
     public ?int $selectedAssignmentId = null;
@@ -218,6 +220,24 @@ new class extends Component {
         $this->endForm = $this->emptyEndForm();
         $this->resetPage();
         Session::flash('status', 'Asignacion finalizada. Se volvera a utilizar la configuracion heredada.');
+    }
+
+    public function delete(int $assignmentId, CurrentCompany $currentCompany, DeleteScheduleProfileAssignmentIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $assignment = $this->authorizedAssignment($assignmentId, $currentCompany);
+        $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
+
+        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, now()->toDateString()]);
+
+        try {
+            $action->handle($company, $assignment);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['assignment' => $exception->getMessage()]);
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Asignacion eliminada.');
     }
 
     public function closePanels(): void
@@ -506,15 +526,40 @@ new class extends Component {
         <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{{ session('status') }}</div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
-            <div class="flex-1">
-                <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="resolveWorkerSearch" />
-            </div>
-            <div class="w-full lg:w-56">
-                <flux:input type="date" label="Fecha" wire:model.live="resolveForm.date" />
-            </div>
+    @error('assignment')
+        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
+    @enderror
+
+    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60">
+        <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(150px,.7fr)_minmax(220px,1.1fr)_auto] lg:items-end">
+            <flux:input label="Resolver trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="resolveWorkerSearch" />
+            <flux:input type="date" label="Fecha" wire:model.live="resolveForm.date" />
+            <flux:input label="Buscar asignaciones" placeholder="Perfil, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
+            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
+                <span class="inline-flex items-center gap-1.5 leading-none">
+                    <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
+                    <span>Filtros</span>
+                </span>
+            </flux:button>
         </div>
+
+        @if ($showAdvancedFilters)
+            <div class="mt-3 grid gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800 md:grid-cols-2 lg:max-w-2xl">
+                <flux:select label="Alcance" wire:model.live="filters.scope">
+                    <flux:select.option value="all">Todos</flux:select.option>
+                    <flux:select.option value="company">Empresa</flux:select.option>
+                    <flux:select.option value="center">Centro</flux:select.option>
+                    <flux:select.option value="organizational_unit">Unidad</flux:select.option>
+                    <flux:select.option value="employment_relationship">Relacion laboral</flux:select.option>
+                </flux:select>
+                <flux:select label="Estado" wire:model.live="filters.status">
+                    <flux:select.option value="active">Vigentes</flux:select.option>
+                    <flux:select.option value="inactive">Finalizadas</flux:select.option>
+                    <flux:select.option value="replaced">Reemplazadas</flux:select.option>
+                    <flux:select.option value="all">Todas</flux:select.option>
+                </flux:select>
+            </div>
+        @endif
 
         @if ($resolveWorkerSearch !== '')
             <div class="mt-3 grid gap-2 md:grid-cols-2">
@@ -561,23 +606,6 @@ new class extends Component {
         @endif
     </section>
 
-    <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-3">
-        <flux:input label="Buscar" placeholder="Perfil, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
-        <flux:select label="Alcance" wire:model.live="filters.scope">
-            <flux:select.option value="all">Todos</flux:select.option>
-            <flux:select.option value="company">Empresa</flux:select.option>
-            <flux:select.option value="center">Centro</flux:select.option>
-            <flux:select.option value="organizational_unit">Unidad</flux:select.option>
-            <flux:select.option value="employment_relationship">Relacion laboral</flux:select.option>
-        </flux:select>
-        <flux:select label="Estado" wire:model.live="filters.status">
-            <flux:select.option value="active">Vigentes</flux:select.option>
-            <flux:select.option value="inactive">Finalizadas</flux:select.option>
-            <flux:select.option value="replaced">Reemplazadas</flux:select.option>
-            <flux:select.option value="all">Todas</flux:select.option>
-        </flux:select>
-    </div>
-
     <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
         <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
             <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -590,7 +618,7 @@ new class extends Component {
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                 @forelse ($assignments as $assignment)
                     <tr>
                         <td class="px-4 py-3">
@@ -609,6 +637,7 @@ new class extends Component {
                                 @else
                                     <span class="text-xs text-zinc-500">Historial</span>
                                 @endif
+                                <flux:button size="xs" variant="danger" wire:click="delete({{ $assignment->id }})" wire:confirm="Eliminar esta asignacion solo si no genero horarios? Esta accion no se puede deshacer.">Eliminar</flux:button>
                             </div>
                         </td>
                     </tr>

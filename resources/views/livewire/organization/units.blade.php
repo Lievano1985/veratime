@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
+use App\Domains\Organization\Actions\DeleteOrganizationalUnitIfUnusedAction;
 use App\Domains\Organization\Actions\InactivateOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Organization\Actions\UpdateOrganizationalUnitAction;
@@ -133,6 +134,23 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function delete(int $unitId, CurrentCompany $currentCompany, DeleteOrganizationalUnitIfUnusedAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $unit = $this->authorizedUnit($unitId, $currentCompany);
+
+        Gate::authorize('delete', $unit);
+
+        try {
+            $action->handle($company, $unit);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['unit' => $exception->getMessage()]);
+        }
+
+        Session::flash('status', 'Unidad eliminada.');
+        $this->resetPage();
+    }
+
     public function closeFormPanel(): void
     {
         $this->showFormPanel = false;
@@ -259,7 +277,7 @@ new class extends Component {
         </div>
 
         @if ($canManageUnits)
-            <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
                 Nueva unidad
             </flux:button>
         @endif
@@ -278,7 +296,7 @@ new class extends Component {
     @enderror
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700 md:grid-cols-3">
+        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
             <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
 
             <flux:select label="Centro" wire:model.live="filters.center_id">
@@ -307,7 +325,7 @@ new class extends Component {
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($units as $unit)
                         <tr>
                             <td class="px-4 py-3">
@@ -341,6 +359,9 @@ new class extends Component {
                                                 Inactivar
                                             </flux:button>
                                         @endif
+                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar esta unidad solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $unit->id }})">
+                                            Eliminar
+                                        </flux:button>
                                     </div>
                                 @else
                                     <span class="text-xs text-zinc-500">Solo consulta</span>

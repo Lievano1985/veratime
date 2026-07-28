@@ -31,6 +31,7 @@ use App\Models\ShiftTemplate;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -93,12 +94,14 @@ new class extends Component {
     {
         if (str_starts_with((string) $property, 'filters.')) {
             $this->resetPage();
+            $this->resetPage('calendarPage');
         }
 
         if ($property === 'selectedBatchId') {
             $this->validationPanel = [];
             $this->integrityPanel = [];
             $this->comparisonPanel = [];
+            $this->resetPage('calendarPage');
         }
     }
 
@@ -153,6 +156,7 @@ new class extends Component {
             if ($exception->existingBatchId) {
                 $this->selectedBatchId = $exception->existingBatchId;
                 $this->weekStart = null;
+                $this->resetPage('calendarPage');
             }
             throw ValidationException::withMessages(['correctionForm.correction_reason' => $exception->getMessage()]);
         } catch (\InvalidArgumentException|\Illuminate\Auth\Access\AuthorizationException $exception) {
@@ -161,6 +165,7 @@ new class extends Component {
 
         $this->selectedBatchId = $result->correctiveBatch->id;
         $this->weekStart = $result->correctiveBatch->period_start->toDateString();
+        $this->resetPage('calendarPage');
         $this->showCorrectionPanel = false;
         Session::flash('status', "Correccion creada: {$result->assignmentsCloned} dias clonados.");
     }
@@ -169,6 +174,7 @@ new class extends Component {
     {
         $batch = $this->createBatch($currentCompany, $action);
         $this->selectedBatchId = $batch->id;
+        $this->resetPage('calendarPage');
         $this->showCreatePanel = false;
         Session::flash('status', 'Lote creado en borrador.');
     }
@@ -188,6 +194,7 @@ new class extends Component {
         }
 
         $this->selectedBatchId = $batch->id;
+        $this->resetPage('calendarPage');
         $this->showCreatePanel = false;
         Session::flash('status', $this->generationMessage($result));
     }
@@ -197,6 +204,7 @@ new class extends Component {
         $batch = $this->authorizedBatch($batchId, $currentCompany, false);
         $this->selectedBatchId = $batch->id;
         $this->weekStart = $batch->period_start->toDateString();
+        $this->resetPage('calendarPage');
         $this->validationPanel = [];
         $this->integrityPanel = [];
         $this->comparisonPanel = [];
@@ -207,6 +215,7 @@ new class extends Component {
     {
         $this->selectedBatchId = null;
         $this->weekStart = null;
+        $this->resetPage('calendarPage');
         $this->validationPanel = [];
         $this->integrityPanel = [];
         $this->comparisonPanel = [];
@@ -251,6 +260,7 @@ new class extends Component {
         $current = CarbonImmutable::parse($this->weekStart ?: $batch->period_start->toDateString());
         $previous = $current->subDays(7);
         $this->weekStart = $previous->lt($batch->period_start) ? $batch->period_start->toDateString() : $previous->toDateString();
+        $this->resetPage('calendarPage');
     }
 
     public function nextWeek(CurrentCompany $currentCompany): void
@@ -259,6 +269,7 @@ new class extends Component {
         $current = CarbonImmutable::parse($this->weekStart ?: $batch->period_start->toDateString());
 
         $this->weekStart = $current->addDays(7)->toDateString();
+        $this->resetPage('calendarPage');
     }
 
     public function openDayEditor(int $relationshipId, string $workDate, CurrentCompany $currentCompany): void
@@ -441,6 +452,7 @@ new class extends Component {
 
         $this->selectedBatchId = null;
         $this->showCancelDraftPanel = false;
+        $this->resetPage('calendarPage');
         $this->validationPanel = [];
         $this->comparisonPanel = [];
         $this->integrityPanel = [];
@@ -669,7 +681,7 @@ new class extends Component {
         return $batch;
     }
 
-    private function calendarRows($company, ScheduleBatch $batch): array
+    private function calendarRows($company, ScheduleBatch $batch): LengthAwarePaginator
     {
         $expected = app(ResolveScheduleBatchExpectedRelationshipDatesAction::class)->handle($company, $batch);
         $dates = collect($this->weekDates($batch))->map(fn ($date) => $date['date'])->all();
@@ -708,7 +720,21 @@ new class extends Component {
             ];
         }
 
-        return $rows;
+        $perPage = 8;
+        $total = count($rows);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min(max(1, (int) $this->getPage('calendarPage')), $lastPage);
+
+        return new LengthAwarePaginator(
+            collect($rows)->forPage($page, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'calendarPage',
+            ],
+        );
     }
 
     private function relationshipPassesCalendarFilters($company, ScheduleBatch $batch, EmploymentRelationship $relationship): bool
@@ -1245,7 +1271,7 @@ new class extends Component {
         </div>
 
         @if ($canCreateBatch)
-            <flux:button type="button" icon="plus" wire:click="openCreatePanel">Nuevo lote</flux:button>
+            <flux:button type="button" icon="plus" wire:click="openCreatePanel" variant="primary">Nuevo lote</flux:button>
         @endif
     </div>
 
@@ -1253,7 +1279,7 @@ new class extends Component {
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{{ session('status') }}</div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60">
         <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto] lg:items-end">
             <flux:select label="Centro de trabajo" wire:model.live="filters.center_id">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -1324,9 +1350,9 @@ new class extends Component {
                         <th class="px-3 py-2 text-right">Accion</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                <tbody class="divide-y divide-zinc-100 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-800 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($batches as $batch)
-                        <tr class="{{ $selectedBatchId === $batch->id ? 'bg-sky-50 dark:bg-sky-950/30' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50' }}">
+                        <tr class="{{ $selectedBatchId === $batch->id ? '!bg-sky-50 dark:!bg-sky-950/30' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800/70' }}">
                             <td class="px-3 py-2 font-medium">{{ $batch->center?->name }}</td>
                             <td class="px-3 py-2 whitespace-nowrap">{{ $batch->period_start->toDateString() }} - {{ $batch->period_end->toDateString() }}</td>
                             <td class="px-3 py-2">
@@ -1362,7 +1388,7 @@ new class extends Component {
     {{ $batches->links() }}
 
     @if ($selectedBatch)
-        <section class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 dark:bg-zinc-950/40" style="background-color: #f5f5f5;">
+        <section class="space-y-3 rounded-lg border border-zinc-200 bg-surface-muted p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
             <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div class="min-w-0">
                     <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
@@ -1384,7 +1410,7 @@ new class extends Component {
                     @endif
                     <flux:button size="xs" variant="ghost" wire:click="reviewBatch">Revisar</flux:button>
                     @if ($selectedBatch->previous_batch_id)
-                        <flux:button size="xs" variant="ghost" wire:click="compareWithPrevious">Comparar</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="compareWithPrevious">Comparar con version anterior</flux:button>
                     @endif
                     @if (in_array($selectedBatch->status, ['published', 'superseded'], true))
                         <flux:button size="xs" variant="ghost" wire:click="loadVersionHistory">Historial</flux:button>
@@ -1564,7 +1590,7 @@ new class extends Component {
                 <flux:button size="sm" variant="ghost" wire:click="nextWeek">Semana siguiente</flux:button>
             </div>
 
-            <div class="rounded-lg p-3 dark:bg-zinc-950/40" style="background-color: #f5f5f5;">
+            <div class="rounded-lg bg-surface-muted p-3 dark:bg-zinc-950/40">
             <div class="hidden lg:block">
                 <table class="w-full table-fixed divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                     <colgroup>
@@ -1585,10 +1611,10 @@ new class extends Component {
                             @endforeach
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    <tbody class="divide-y divide-zinc-100 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-800 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                         @forelse ($calendarRows as $row)
                             <tr>
-                                <td class="sticky left-0 bg-white px-2 py-3 align-top dark:bg-zinc-900">
+                                <td class="sticky left-0 bg-inherit px-2 py-3 align-top">
                                     <span class="block truncate font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
                                     <span class="block truncate text-xs text-zinc-500">{{ $row['relationship']->position_name }} | {{ $row['relationship']->center?->name }}</span>
                                     <span class="block truncate text-xs text-zinc-500">{{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
@@ -1630,6 +1656,15 @@ new class extends Component {
                     @endforeach
                 @endforeach
             </div>
+
+            @if ($calendarRows->hasPages() || $calendarRows->total() > 0)
+                <div class="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                    <div class="mb-2 text-xs text-zinc-500">
+                        Mostrando {{ $calendarRows->firstItem() }} a {{ $calendarRows->lastItem() }} de {{ $calendarRows->total() }} trabajadores
+                    </div>
+                    {{ $calendarRows->links(data: ['scrollTo' => false]) }}
+                </div>
+            @endif
             </div>
         </section>
     @endif

@@ -29,6 +29,11 @@ class CenterPolicy
         return $this->update($user, $center);
     }
 
+    public function delete(User $user, Center $center): bool
+    {
+        return $this->update($user, $center);
+    }
+
     private function canManageCompanyCenters(User $user, Company $company): bool
     {
         return $company->status === 'active'
