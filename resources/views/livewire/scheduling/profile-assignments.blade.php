@@ -628,7 +628,11 @@ new class extends Component {
                         <td class="px-4 py-3">{{ $this->scopeLabel($assignment->assignment_scope) }}</td>
                         <td class="px-4 py-3">{{ $this->assignmentTarget($assignment) }}</td>
                         <td class="px-4 py-3">{{ $assignment->effective_from?->toDateString() }} - {{ $assignment->effective_to?->toDateString() ?? 'Abierta' }}</td>
-                        <td class="px-4 py-3">{{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}</td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $assignment->status === 'active' ? 'success' : ($assignment->status === 'replaced' ? 'warning' : 'neutral') }}">
+                                {{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}
+                            </x-ui.badge>
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex justify-end gap-2">
                                 @if ($assignment->status === 'active')

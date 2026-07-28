@@ -333,9 +333,9 @@ new class extends Component {
                                 <span class="text-xs text-zinc-500">{{ $unit->type === 'department' ? 'Departamento' : ($unit->type === 'area' ? 'Area' : 'Equipo') }}</span>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                                <x-ui.badge variant="info">
                                     {{ $unit->type === 'department' ? 'Departamento' : ($unit->type === 'area' ? 'Area' : 'Equipo') }}
-                                </span>
+                                </x-ui.badge>
                             </td>
                             <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $unit->center?->name }}</td>
                             <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">
@@ -347,7 +347,11 @@ new class extends Component {
                                     Fuera del alcance
                                 @endif
                             </td>
-                            <td class="px-4 py-3">{{ $unit->status === 'active' ? 'Activa' : 'Inactiva' }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $unit->status === 'active' ? 'success' : 'neutral' }}">
+                                    {{ $unit->status === 'active' ? 'Activa' : 'Inactiva' }}
+                                </x-ui.badge>
+                            </td>
                             <td class="px-4 py-3">
                                 @if ($canManageUnits)
                                     <div class="flex justify-end gap-2">

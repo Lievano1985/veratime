@@ -414,7 +414,11 @@ new class extends Component {
                                 -
                                 {{ $assignment->effective_to?->toDateString() ?? 'Vigente' }}
                             </td>
-                            <td class="px-4 py-3">{{ ucfirst($assignment->status) }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $assignment->status === 'active' ? 'success' : ($assignment->status === 'replaced' ? 'warning' : 'neutral') }}">
+                                    {{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Inactiva' : 'Reemplazada') }}
+                                </x-ui.badge>
+                            </td>
                             <td class="px-4 py-3">
                                 <div class="flex justify-end gap-2">
                                     @if ($assignment->status === 'active')

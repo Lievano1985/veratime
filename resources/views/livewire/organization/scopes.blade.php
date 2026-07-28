@@ -303,7 +303,11 @@ new class extends Component {
                             </td>
                             <td class="px-4 py-3">{{ $scope->responsibility_type === 'responsible' ? 'Responsable' : 'Supervisor' }}</td>
                             <td class="px-4 py-3">{{ $scope->effective_from?->toDateString() }} - {{ $scope->effective_to?->toDateString() ?? 'Abierta' }}</td>
-                            <td class="px-4 py-3">{{ $scope->status === 'active' ? 'Vigente' : ($scope->status === 'inactive' ? 'Finalizado' : 'Reemplazado') }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $scope->status === 'active' ? 'success' : ($scope->status === 'replaced' ? 'warning' : 'neutral') }}">
+                                    {{ $scope->status === 'active' ? 'Vigente' : ($scope->status === 'inactive' ? 'Finalizado' : 'Reemplazado') }}
+                                </x-ui.badge>
+                            </td>
                             <td class="px-4 py-3 text-right">
                                 @if ($scope->status === 'active')
                                     <flux:button type="button" size="sm" variant="ghost" wire:click="openEndPanel({{ $scope->id }})">

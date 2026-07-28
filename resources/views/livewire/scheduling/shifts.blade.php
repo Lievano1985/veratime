@@ -439,10 +439,14 @@ new class extends Component {
                         <td class="px-4 py-3">
                             {{ $this->formatMinutes($metrics['total_span_minutes']) }}
                             @if ($metrics['crosses_midnight'])
-                                <span class="ml-1 rounded-full bg-sky-50 px-2 py-1 text-xs text-sky-700 dark:bg-sky-950 dark:text-sky-200">+1 día</span>
+                                <x-ui.badge variant="info" class="ml-1">+1 día</x-ui.badge>
                             @endif
                         </td>
-                        <td class="px-4 py-3">{{ $template->status === 'active' ? 'Activa' : 'Inactiva' }}</td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $template->status === 'active' ? 'success' : 'neutral' }}">
+                                {{ $template->status === 'active' ? 'Activa' : 'Inactiva' }}
+                            </x-ui.badge>
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex justify-end gap-2">
                                 <flux:button size="xs" variant="ghost" wire:click="showDetail({{ $template->id }})">Ver</flux:button>

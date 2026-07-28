@@ -1384,9 +1384,9 @@ new class extends Component {
                             <td class="px-3 py-2 font-medium">{{ $batch->center?->name }}</td>
                             <td class="px-3 py-2 whitespace-nowrap">{{ $batch->period_start->toDateString() }} - {{ $batch->period_end->toDateString() }}</td>
                             <td class="px-3 py-2">
-                                <span class="rounded-full px-2 py-0.5 text-xs {{ $batch->status === 'draft' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' : ($batch->status === 'published' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200') }}">
+                                <x-ui.badge variant="{{ $batch->status === 'draft' ? 'warning' : ($batch->status === 'published' ? 'success' : 'neutral') }}">
                                     {{ $this->statusLabel($batch->status) }}
-                                </span>
+                                </x-ui.badge>
                             </td>
                             <td class="px-3 py-2 text-zinc-600 dark:text-zinc-300">{{ $batch->version ? 'Version '.$batch->version : 'Sin version' }}</td>
                             <td class="px-3 py-2">{{ $batch->total_days }}</td>

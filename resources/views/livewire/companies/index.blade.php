@@ -240,7 +240,7 @@ new class extends Component {
             </section>
 
             @if ($editingCompanyId && $canManageEditingCompany)
-                <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+                <section class="rounded-lg border border-zinc-200 bg-zinc-50/60 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
                     <div class="mb-4">
                         <flux:heading>Datos basicos</flux:heading>
                         <flux:subheading>Editar informacion general y estado operativo de la empresa.</flux:subheading>

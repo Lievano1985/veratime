@@ -461,9 +461,9 @@ new class extends Component {
                                 {{ $schedule->effective_to?->toDateString() ?? 'Sin fin' }}
                             </td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full px-2 py-1 text-xs font-medium {{ $schedule->status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' }}">
+                                <x-ui.badge variant="{{ $schedule->status === 'active' ? 'success' : 'neutral' }}">
                                     {{ $schedule->status }}
-                                </span>
+                                </x-ui.badge>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex justify-end gap-2">

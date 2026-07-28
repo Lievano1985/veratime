@@ -457,7 +457,7 @@ new class extends Component {
     @enderror
 
     <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <flux:heading>Trabajadores de {{ $currentCompany->name }}</flux:heading>
                 <flux:subheading>Solo se muestran trabajadores asociados a la empresa activa.</flux:subheading>
@@ -468,76 +468,80 @@ new class extends Component {
 
                 <div>
                     <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
-                    <select wire:model.live="statusFilter" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                    <x-ui.select wire:model.live="statusFilter" class="h-10 border-primary-border dark:border-primary-border">
                         <option value="">Todos</option>
                         <option value="active">Activo</option>
                         <option value="inactive">Inactivo</option>
                         <option value="terminated">Baja</option>
                         <option value="suspended">Suspendido</option>
-                    </select>
+                    </x-ui.select>
                 </div>
             </div>
         </div>
-
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                    <tr>
-                        <th class="px-4 py-3">Codigo</th>
-                        <th class="px-4 py-3">Nombre</th>
-                        <th class="px-4 py-3">Centro actual</th>
-                        <th class="px-4 py-3">Puesto</th>
-                        <th class="px-4 py-3">Condicion</th>
-                        <th class="px-4 py-3">Credencial</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
-                    @forelse ($workers as $worker)
-                        @php($relationship = $worker->activeEmploymentRelationship)
-                        @php($condition = $relationship?->activeLaborCondition)
-                        @php($credential = $worker->credential)
-                        <tr>
-                            <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $worker->employee_code }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $worker->full_name }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->center?->name ?? 'Sin centro activo' }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->position_name ?: 'Sin puesto' }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $condition?->work_modality ?? 'Sin condicion' }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $credential?->status ?? 'Sin credencial' }}</td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium uppercase text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                    {{ $worker->status }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex justify-end gap-2">
-                                    <flux:button type="button" size="sm" wire:click="loadEditForm({{ $worker->id }})">
-                                        Editar
-                                    </flux:button>
-
-                                    @if ($worker->status !== 'terminated')
-                                        <flux:button type="button" size="sm" variant="danger" wire:click="terminate({{ $worker->id }})">
-                                            Baja
-                                        </flux:button>
-                                    @endif
-                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este trabajador solo si no tiene horarios ni asistencias? Esta accion no se puede deshacer." wire:click="delete({{ $worker->id }})">
-                                        Eliminar
-                                    </flux:button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                                Aun no hay trabajadores registrados para esta empresa.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
     </section>
+
+    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <tr>
+                    <th class="px-4 py-3">Codigo</th>
+                    <th class="px-4 py-3">Nombre</th>
+                    <th class="px-4 py-3">Centro actual</th>
+                    <th class="px-4 py-3">Puesto</th>
+                    <th class="px-4 py-3">Condicion</th>
+                    <th class="px-4 py-3">Credencial</th>
+                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                @forelse ($workers as $worker)
+                    @php($relationship = $worker->activeEmploymentRelationship)
+                    @php($condition = $relationship?->activeLaborCondition)
+                    @php($credential = $worker->credential)
+                    <tr>
+                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $worker->employee_code }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $worker->full_name }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->center?->name ?? 'Sin centro activo' }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->position_name ?: 'Sin puesto' }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $condition?->work_modality ?? 'Sin condicion' }}</td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $credential?->status === 'active' ? 'success' : ($credential?->status === 'reset_required' ? 'warning' : ($credential?->status === 'blocked' ? 'danger' : 'neutral')) }}">
+                                {{ $credential?->status === 'active' ? 'Activa' : ($credential?->status === 'reset_required' ? 'Requiere reinicio' : ($credential?->status === 'blocked' ? 'Bloqueada' : 'Sin credencial')) }}
+                            </x-ui.badge>
+                        </td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $worker->status === 'active' ? 'success' : ($worker->status === 'terminated' ? 'danger' : ($worker->status === 'suspended' ? 'warning' : 'neutral')) }}">
+                                {{ $worker->status }}
+                            </x-ui.badge>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex justify-end gap-2">
+                                <flux:button type="button" size="sm" wire:click="loadEditForm({{ $worker->id }})">
+                                    Editar
+                                </flux:button>
+
+                                @if ($worker->status !== 'terminated')
+                                    <flux:button type="button" size="sm" variant="danger" wire:click="terminate({{ $worker->id }})">
+                                        Baja
+                                    </flux:button>
+                                @endif
+                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este trabajador solo si no tiene horarios ni asistencias? Esta accion no se puede deshacer." wire:click="delete({{ $worker->id }})">
+                                    Eliminar
+                                </flux:button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                            Aun no hay trabajadores registrados para esta empresa.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     @if ($canManageWorkers)
         <x-side-panel

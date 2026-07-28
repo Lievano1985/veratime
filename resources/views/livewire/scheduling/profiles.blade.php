@@ -835,7 +835,11 @@ new class extends Component {
                         </td>
                         <td class="px-4 py-3">{{ $this->profileTypeLabel($profile) }}</td>
                         <td class="px-4 py-3">{{ $this->rulesSummary($profile) }}</td>
-                        <td class="px-4 py-3">{{ $profile->status === 'active' ? 'Activo' : 'Inactivo' }}</td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $profile->status === 'active' ? 'success' : 'neutral' }}">
+                                {{ $profile->status === 'active' ? 'Activo' : 'Inactivo' }}
+                            </x-ui.badge>
+                        </td>
                         <td class="px-4 py-3">
                             <div class="flex justify-end gap-2">
                                 <flux:button size="xs" variant="ghost" wire:click="showDetail({{ $profile->id }})">Ver</flux:button>

@@ -186,7 +186,11 @@ new class extends Component {
                             <td class="px-4 py-3">{{ $event->worker->full_name }}</td>
                             <td class="px-4 py-3">{{ $this->eventLabel($event->event_type) }}</td>
                             <td class="px-4 py-3">{{ $event->occurred_local_time }}</td>
-                            <td class="px-4 py-3">{{ $event->status }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $event->status === 'valid' ? 'success' : ($event->status === 'pending_review' ? 'warning' : ($event->status === 'voided' ? 'danger' : 'neutral')) }}">
+                                    {{ $event->status === 'valid' ? 'Valido' : ($event->status === 'pending_review' ? 'En revision' : ($event->status === 'voided' ? 'Anulado' : ucfirst($event->status))) }}
+                                </x-ui.badge>
+                            </td>
                         </tr>
                     @empty
                         <tr>

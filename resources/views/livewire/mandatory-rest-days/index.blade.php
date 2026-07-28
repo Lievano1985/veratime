@@ -400,7 +400,11 @@ new class extends Component {
                                 {{ $restDay->scope === 'subnational' ? $restDay->jurisdiction_code : ($restDay->company?->name ?? 'Sin empresa') }}
                             </td>
                             <td class="px-4 py-3">{{ $restDay->source_reference ?: 'Sin referencia' }}</td>
-                            <td class="px-4 py-3">{{ ucfirst($restDay->status) }}</td>
+                            <td class="px-4 py-3">
+                                <x-ui.badge variant="{{ $restDay->status === 'active' ? 'success' : 'neutral' }}">
+                                    {{ ucfirst($restDay->status) }}
+                                </x-ui.badge>
+                            </td>
                             <td class="px-4 py-3 text-right">
                                 @if (Gate::allows('update', $restDay))
                                     <div class="flex justify-end gap-2">

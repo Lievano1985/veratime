@@ -184,20 +184,20 @@ new class extends Component {
             <flux:subheading>{{ $subheading }}</flux:subheading>
         </div>
 
-        <span class="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+        <x-ui.badge>
             {{ $selectedWorkers->count() }} {{ $selectedWorkers->count() === 1 ? 'seleccionado' : 'seleccionados' }}
-        </span>
+        </x-ui.badge>
     </div>
 
     @if ($selectedWorkers->isNotEmpty())
         <div class="flex flex-wrap gap-2">
             @foreach ($selectedWorkers as $worker)
-                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-100 dark:ring-emerald-900">
+                <x-ui.badge variant="success" class="gap-2 px-3 py-1">
                     {{ $worker->employee_code }} - {{ $worker->full_name }}
                     <button type="button" wire:click="removeWorker({{ $worker->id }})" class="text-emerald-700 hover:text-emerald-950 dark:text-emerald-200">
                         Quitar
                     </button>
-                </span>
+                </x-ui.badge>
             @endforeach
         </div>
     @endif
@@ -273,13 +273,13 @@ new class extends Component {
                                         {{ $worker->employee_code }} - {{ $worker->full_name }}
                                     </span>
                                     @if ($hasPrimaryAssignment)
-                                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900 dark:text-emerald-100 dark:ring-emerald-700">
+                                        <x-ui.badge variant="success" class="text-[11px]">
                                             Ya asignado
-                                        </span>
+                                        </x-ui.badge>
                                     @else
-                                        <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-800">
+                                        <x-ui.badge variant="warning" class="text-[11px]">
                                             Sin unidad principal
-                                        </span>
+                                        </x-ui.badge>
                                     @endif
                                 </span>
                                 <span @class([

@@ -68,8 +68,12 @@
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="font-medium">Vista previa: {{ $activeImport->original_filename }}</p>
-                        <p class="text-xs text-zinc-500">
-                            Estado: {{ $this->statusLabel($activeImport->status) }} |
+                        <p class="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                            <span>Estado:</span>
+                            <x-ui.badge variant="{{ $activeImport->status === 'validated' || $activeImport->status === 'applied' ? 'success' : ($activeImport->status === 'invalid' ? 'danger' : ($activeImport->status === 'cancelled' ? 'neutral' : 'warning')) }}">
+                                {{ $this->statusLabel($activeImport->status) }}
+                            </x-ui.badge>
+                            <span>|</span>
                             Hash de validacion: {{ $activeImport->validation_sha256 ? \Illuminate\Support\Str::limit($activeImport->validation_sha256, 16, '') : 'No disponible' }}
                         </p>
                     </div>
@@ -117,7 +121,11 @@
                                     </td>
                                     <td class="px-3 py-2">{{ $row->work_date?->toDateString() ?? ($row->raw_data['fecha'] ?? '-') }}</td>
                                     <td class="px-3 py-2">{{ $this->dayTypeLabel($row->normalized_data['assignment']['day_type'] ?? null) }}</td>
-                                    <td class="px-3 py-2">{{ $this->rowActionLabel($row) }}</td>
+                                    <td class="px-3 py-2">
+                                        <x-ui.badge variant="{{ $row->status === 'invalid' ? 'danger' : ($row->status === 'warning' ? 'warning' : ($row->status === 'applied' ? 'success' : ($row->status === 'skipped' ? 'neutral' : 'info'))) }}">
+                                            {{ $this->rowActionLabel($row) }}
+                                        </x-ui.badge>
+                                    </td>
                                     <td class="px-3 py-2">
                                         @foreach (($row->errors ?? []) as $error)
                                             <p class="text-red-600 dark:text-red-400">{{ $error }}</p>

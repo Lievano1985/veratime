@@ -16,6 +16,7 @@ new class extends Component {
     public array $form = [];
     public bool $showFormPanel = false;
     public ?int $editingCenterId = null;
+    public string $search = '';
 
     public function mount(): void
     {
@@ -153,6 +154,15 @@ new class extends Component {
 
         return [
             'centers' => $company->centers()
+                ->when($this->search !== '', function ($query): void {
+                    $search = '%'.$this->search.'%';
+
+                    $query->where(function ($query) use ($search): void {
+                        $query
+                            ->where('code', 'like', $search)
+                            ->orWhere('name', 'like', $search);
+                    });
+                })
                 ->orderBy('name')
                 ->get(),
             'currentCompany' => $company,
@@ -253,61 +263,67 @@ new class extends Component {
     @enderror
 
     <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="mb-4">
-            <flux:heading>Centros de {{ $currentCompany->name }}</flux:heading>
-            <flux:subheading>Solo se muestran centros asociados a la empresa activa.</flux:subheading>
-        </div>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <flux:heading>Centros de {{ $currentCompany->name }}</flux:heading>
+                <flux:subheading>Solo se muestran centros asociados a la empresa activa.</flux:subheading>
+            </div>
 
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                    <tr>
-                        <th class="px-4 py-3">Codigo</th>
-                        <th class="px-4 py-3">Nombre</th>
-                        <th class="px-4 py-3">Zona horaria</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
-                    @forelse ($centers as $center)
-                        <tr>
-                            <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $center->code }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->name }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->timezone }}</td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium uppercase text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                    {{ $center->status }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex justify-end gap-2">
-                                    <flux:button type="button" size="sm" wire:click="loadEditForm({{ $center->id }})">
-                                        Editar
-                                    </flux:button>
-
-                                    @if ($center->status === 'active')
-                                        <flux:button type="button" size="sm" variant="danger" wire:click="inactivate({{ $center->id }})">
-                                            Inactivar
-                                        </flux:button>
-                                    @endif
-                                    <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $center->id }})">
-                                        Eliminar
-                                    </flux:button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                                Aun no hay centros registrados para esta empresa.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+            <div class="w-full lg:max-w-sm">
+                <flux:input wire:model.live.debounce.300ms="search" label="Buscar" placeholder="Codigo o nombre de centro" />
+            </div>
         </div>
     </section>
+
+    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <tr>
+                    <th class="px-4 py-3">Codigo</th>
+                    <th class="px-4 py-3">Nombre</th>
+                    <th class="px-4 py-3">Zona horaria</th>
+                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                @forelse ($centers as $center)
+                    <tr>
+                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $center->code }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->name }}</td>
+                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->timezone }}</td>
+                        <td class="px-4 py-3">
+                            <x-ui.badge variant="{{ $center->status === 'active' ? 'success' : 'neutral' }}">
+                                {{ $center->status }}
+                            </x-ui.badge>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex justify-end gap-2">
+                                <flux:button type="button" size="sm" wire:click="loadEditForm({{ $center->id }})">
+                                    Editar
+                                </flux:button>
+
+                                @if ($center->status === 'active')
+                                    <flux:button type="button" size="sm" variant="danger" wire:click="inactivate({{ $center->id }})">
+                                        Inactivar
+                                    </flux:button>
+                                @endif
+                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $center->id }})">
+                                    Eliminar
+                                </flux:button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                            Aun no hay centros registrados para esta empresa.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     @if ($canManageCenters)
         <x-side-panel
