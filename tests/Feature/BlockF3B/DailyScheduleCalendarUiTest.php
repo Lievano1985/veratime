@@ -353,6 +353,37 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertSee('No fue posible verificar la integridad');
     }
 
+    public function test_published_calendar_keeps_terminated_workers_from_historical_schedule(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->firstBatch($company);
+        $expectedWorkers = $published->dailyAssignments()
+            ->distinct('employment_relationship_id')
+            ->count('employment_relationship_id');
+        $relationship = $published->dailyAssignments()
+            ->with('employmentRelationship.worker')
+            ->orderBy('employment_relationship_id')
+            ->firstOrFail()
+            ->employmentRelationship;
+        $workerCode = $relationship->worker->employee_code;
+
+        $relationship->worker->forceFill(['status' => 'terminated'])->save();
+        $relationship->forceFill([
+            'status' => 'ended',
+            'ended_at' => '2026-07-01',
+        ])->save();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $published->id)
+            ->assertSee("{$expectedWorkers} trabajadores")
+            ->assertSee("de {$expectedWorkers} trabajadores")
+            ->assertSee($workerCode);
+    }
+
     public function test_supervisor_scope_is_read_only_and_other_company_is_blocked(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-08-03 09:00:00'));

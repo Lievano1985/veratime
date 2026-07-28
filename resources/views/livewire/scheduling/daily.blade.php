@@ -683,7 +683,7 @@ new class extends Component {
 
     private function calendarRows($company, ScheduleBatch $batch): LengthAwarePaginator
     {
-        $expected = app(ResolveScheduleBatchExpectedRelationshipDatesAction::class)->handle($company, $batch);
+        $expected = $this->calendarRelationshipDates($company, $batch);
         $dates = collect($this->weekDates($batch))->map(fn ($date) => $date['date'])->all();
         $assignments = $batch->dailyAssignments
             ->filter(fn (DailyScheduleAssignment $assignment) => in_array($assignment->work_date->toDateString(), $dates, true))
@@ -735,6 +735,34 @@ new class extends Component {
                 'pageName' => 'calendarPage',
             ],
         );
+    }
+
+    private function calendarRelationshipDates($company, ScheduleBatch $batch)
+    {
+        if (in_array($batch->status, ['published', 'superseded'], true) || $batch->previous_batch_id !== null) {
+            return $batch->dailyAssignments
+                ->loadMissing(['employmentRelationship.worker', 'employmentRelationship.center'])
+                ->groupBy('employment_relationship_id')
+                ->map(function ($assignments): array {
+                    /** @var DailyScheduleAssignment $first */
+                    $first = $assignments->first();
+
+                    return [
+                        'relationship' => $first->employmentRelationship,
+                        'dates' => $assignments
+                            ->map(fn (DailyScheduleAssignment $assignment): string => $assignment->work_date->toDateString())
+                            ->unique()
+                            ->sort()
+                            ->values()
+                            ->all(),
+                    ];
+                })
+                ->filter(fn (array $item): bool => $item['relationship'] !== null && $item['dates'] !== [])
+                ->sortBy(fn (array $item): string => sprintf('%010d-%010d', $item['relationship']->worker_id, $item['relationship']->id))
+                ->values();
+        }
+
+        return app(ResolveScheduleBatchExpectedRelationshipDatesAction::class)->handle($company, $batch);
     }
 
     private function relationshipPassesCalendarFilters($company, ScheduleBatch $batch, EmploymentRelationship $relationship): bool
