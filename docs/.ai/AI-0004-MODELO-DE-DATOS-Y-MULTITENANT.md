@@ -137,6 +137,18 @@ Usar estados, vigencias o soft delete solo cuando sea correcto.
 
 ---
 
+## 4.1.1 Regla de evidencia operativa
+
+Aplicar `docs/12-Decisiones/ADR-0004-REGLA-DE-EVIDENCIA-OPERATIVA.md`.
+
+La evidencia protegida es el resultado operativo: horarios diarios publicados, snapshots, correcciones versionadas, eventos de asistencia y futuros `work_days`, calculos, cierres, conformidad, reportes y expedientes.
+
+Catalogos, relaciones laborales, asignaciones organizacionales, perfiles y asignaciones de perfiles son datos intermedios mientras no hayan generado evidencia protegida.
+
+No recalcular ni sobrescribir horarios publicados por cambios posteriores en esos datos. Si la fecha ya esta publicada, cambiar el resultado exige correccion versionada de programacion diaria.
+
+---
+
 ## 4.2 Índices mínimos
 
 Agregar índices por:
@@ -202,6 +214,13 @@ replaced
 ignored
 ```
 
+Implementacion Bloque 5:
+
+- `time_events.received_at` es la hora explicita de recepcion/captura tecnica.
+- La anulacion logica usa `status = voided`, `voided_at`, `voided_by_user_id` y `void_reason`.
+- Los eventos anulados no se eliminan fisicamente y no participan en resoluciones futuras.
+- Los eventos validos se ordenan por hora del hecho (`occurred_at_utc`) y desempates estables, no por insercion.
+
 ## 6.2 Alertas
 
 ```text
@@ -262,5 +281,3 @@ Codex debe agregar pruebas para:
 3. Exportación Empresa A no incluye datos Empresa B.
 4. Job de Empresa A no procesa Empresa B.
 5. Archivo de Empresa A no se descarga desde Empresa B.
-
-

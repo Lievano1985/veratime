@@ -50,7 +50,7 @@ class CompanyPolicyTest extends TestCase
         $this->assertFalse($user->can('update', $company));
     }
 
-    public function test_inactive_company_cannot_be_viewed_or_updated(): void
+    public function test_inactive_company_with_active_membership_can_be_viewed_and_updated(): void
     {
         $role = Role::factory()->create(['key' => 'admin']);
         $user = User::factory()->create();
@@ -61,7 +61,7 @@ class CompanyPolicyTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->assertFalse($user->can('view', $company));
-        $this->assertFalse($user->can('update', $company));
+        $this->assertTrue($user->can('view', $company));
+        $this->assertTrue($user->can('update', $company));
     }
 }

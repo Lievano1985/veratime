@@ -59,6 +59,9 @@ No define todavía diseño visual final, colores, componentes HTML ni código.
 10. **Evitar edición destructiva.**
     La interfaz debe guiar a correcciones versionadas, no a sobrescribir datos históricos.
 
+11. **Explicar el efecto operativo.**
+    Cuando el usuario corrija relaciones laborales, areas, perfiles o catalogos, la pantalla debe indicar si el cambio afecta solo futuras publicaciones, si no cambia horarios ya publicados o si requiere una correccion versionada del horario.
+
 ---
 
 ## 3. Roles considerados
@@ -834,7 +837,9 @@ Kiosco valida worker_credentials, usa Hash::check, no conserva NIP, no expone pi
 Kiosco no permite fecha/hora explicita y crea time_events con source kiosk.
 Captura manual crea time_events con source admin_manual, motivo obligatorio y usuario capturista.
 Captura manual conserva occurred_local_date, occurred_local_time H:i:s, timezone y received_at.
-No implementa anulacion logica, eventos tardios/fuera de orden como flujo avanzado, calculos, alertas, incidencias, reportes ni API de negocio.
+Bloque 5 implementa anulacion logica en /time-events/manual con motivo obligatorio, actor y fecha de anulacion.
+Los eventos tardios/fuera de orden conservan occurred_at y received_at para reconstruccion futura.
+No implementa calculos, `work_days`, alertas, incidencias, reportes ni API de negocio.
 ```
 
 Incluye:
@@ -863,7 +868,7 @@ Acciones:
 - Ver evento.
 - Captura manual justificada.
 - Solicitar correccion, pendiente de flujo posterior.
-- Anulacion logica con permiso, pendiente para BL-0506.
+- Anulacion logica con permiso para owner, admin y rh.
 
 ---
 

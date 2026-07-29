@@ -41,6 +41,28 @@ El MVP de Vera Time deberá concentrarse en entregar una plataforma operativa, v
 
 El alcance se divide en capacidades indispensables. Cada capacidad debe aportar valor directo al cumplimiento, a la operación diaria o a la evidencia documental.
 
+### 2.0 Regla de evidencia operativa
+
+Vera Time protege el resultado operativo final, no cada paso intermedio usado para construirlo.
+
+Se considera evidencia protegida:
+
+- horarios diarios publicados, snapshots y hashes;
+- correcciones versionadas de horarios publicados;
+- eventos de asistencia y sus anulaciones logicas;
+- futuros `work_days`, calculos, alertas, incidencias, cierres, conformidad, reportes y expedientes.
+
+Se consideran datos intermedios los catalogos, relaciones laborales, asignaciones organizacionales, plantillas, perfiles y asignaciones de perfiles mientras no hayan generado evidencia protegida.
+
+Requisitos derivados:
+
+- un cambio en catalogos, relaciones, areas o perfiles no debe modificar horarios ya publicados;
+- para cambiar una fecha publicada se debe usar correccion versionada de programacion diaria;
+- los datos intermedios capturados por error deben poder corregirse o eliminarse si no tienen uso en evidencia protegida;
+- si ya existe evidencia protegida, la correccion debe aplicar hacia adelante o guiar al usuario hacia la correccion del resultado;
+- `work_days` debe generarse desde horarios publicados aunque no existan eventos;
+- eventos validos sin horario publicado deben identificarse como jornada no programada.
+
 ### 2.1 Plataforma SaaS multi-tenant
 
 **Incluye:**
@@ -2138,3 +2160,13 @@ Ahí se definirán:
 - Los archivos se almacenan con ruta interna aleatoria; la ruta privada no se expone al usuario.
 - Supervisores, usuarios de otra empresa y lotes publicados no pueden usar la importacion CSV.
 - F5B no implementa XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.
+
+## Nota Bloque 5 - Ciclo de eventos de tiempo
+
+- `time_events` conserva hora real del hecho en UTC/local, timezone, `received_at`, fuente, usuario/canal y metadata.
+- `received_at` es el campo explicito de recepcion/captura tecnica para eventos tardios o fuera de orden.
+- La anulacion logica no elimina el evento; marca `status = voided` y registra motivo, actor y fecha/hora.
+- Los resolvers excluyen anulados y ordenan eventos validos por hora del hecho con desempates estables.
+- `/time-events/manual` permite anular eventos recientes de la empresa a `owner`, `admin` y `rh`.
+- Bloque 5 no implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
+- Siguiente bloque pendiente: `work_days`.

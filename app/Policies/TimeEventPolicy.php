@@ -24,6 +24,12 @@ class TimeEventPolicy
         return $this->canAccessTimeEvents($user, $company);
     }
 
+    public function void(User $user, TimeEvent $timeEvent): bool
+    {
+        return $this->canAccessTimeEvents($user, $timeEvent->company)
+            && ! $timeEvent->isVoided();
+    }
+
     private function canAccessTimeEvents(User $user, Company $company): bool
     {
         return $company->status === 'active'

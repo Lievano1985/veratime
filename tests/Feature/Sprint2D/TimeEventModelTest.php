@@ -1,6 +1,9 @@
 <?php
 
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
+use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
+use App\Domains\TimeRecords\Actions\ResolveValidTimeEventsForWorkDateAction;
+use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -8,6 +11,8 @@ use App\Models\Role;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
+use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -320,6 +325,148 @@ it('policy blocks inactive company unauthorized roles and horizontal access', fu
     expect(Gate::forUser($owner)->allows('view', $event->refresh()))->toBeFalse();
 });
 
+it('voids a time event logically with required reason actor timestamp and resulting status', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload([
+        'source' => 'web',
+        'metadata' => ['terminal' => 'front-desk'],
+    ]), $relationship, $center, $sourceUser);
+    $actor = timeEventUserWithCompany($company, 'rh');
+    $voidedAt = CarbonImmutable::parse('2026-08-14 20:00:00', 'UTC');
+
+    $voided = app(VoidTimeEventAction::class)->handle($event, $actor, 'Registro duplicado por error operativo', $voidedAt);
+
+    expect($voided->id)->toBe($event->id)
+        ->and($voided->status)->toBe('voided')
+        ->and($voided->void_reason)->toBe('Registro duplicado por error operativo')
+        ->and($voided->voided_by_user_id)->toBe($actor->id)
+        ->and($voided->voided_at->utc()->format('Y-m-d H:i:s'))->toBe('2026-08-14 20:00:00')
+        ->and($voided->event_type)->toBe($event->event_type)
+        ->and($voided->occurred_at_utc->equalTo($event->occurred_at_utc))->toBeTrue()
+        ->and($voided->source)->toBe('web')
+        ->and($voided->metadata['terminal'])->toBe('front-desk')
+        ->and($voided->metadata['void']['actor_user_id'])->toBe($actor->id)
+        ->and($voided->metadata['void']['resulting_status'])->toBe('voided')
+        ->and($voided->metadata['void']['previous_status'])->toBe('valid');
+
+    $this->assertDatabaseCount('time_events', 1);
+});
+
+it('blocks a second logical void for the same time event', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    $actor = timeEventUserWithCompany($company, 'admin');
+    $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload(), $relationship, $center, $sourceUser);
+
+    app(VoidTimeEventAction::class)->handle($event, $actor, 'Primera anulacion valida');
+
+    expect(fn () => app(VoidTimeEventAction::class)->handle($event->refresh(), $actor, 'Segunda anulacion'))
+        ->toThrow(AuthorizationException::class);
+});
+
+it('excludes voided events from valid event resolution and current state', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    $actor = timeEventUserWithCompany($company, 'owner');
+    $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload([
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-08-14',
+        'occurred_local_time' => '08:00:00',
+    ]), $relationship, $center, $sourceUser);
+
+    app(VoidTimeEventAction::class)->handle($event, $actor, 'Entrada registrada dos veces');
+
+    $validEvents = app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-08-14');
+    $state = app(ResolveCurrentTimeRecordStateAction::class)->handle(
+        $company,
+        $worker,
+        CarbonImmutable::parse('2026-08-14 15:00:00', 'UTC'),
+        $center,
+    );
+
+    expect($validEvents)->toHaveCount(0)
+        ->and($state['state'])->toBe('sin_entrada')
+        ->and($state['last_event'])->toBeNull();
+});
+
+it('keeps late event occurrence and received timestamps as different evidence points', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+
+    $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload([
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-08-14',
+        'occurred_local_time' => '08:00:00',
+        'received_at' => '2026-08-14 18:35:00',
+        'source' => 'admin_manual',
+        'metadata' => ['reason' => 'Registro tardio justificado'],
+    ]), $relationship, $center, $sourceUser);
+
+    expect($event->occurred_at_utc->utc()->format('Y-m-d H:i:s'))->toBe('2026-08-14 14:00:00')
+        ->and($event->received_at->utc()->format('Y-m-d H:i:s'))->toBe('2026-08-14 18:35:00')
+        ->and($event->received_at->greaterThan($event->occurred_at_utc))->toBeTrue()
+        ->and($event->metadata['reason'])->toBe('Registro tardio justificado');
+});
+
+it('resolves out of order events by occurrence time instead of insertion order', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    $action = app(CreateTimeEventAction::class);
+
+    $action->handle($company, $worker, timeEventPayload([
+        'event_type' => 'clock_out',
+        'occurred_local_date' => '2026-08-14',
+        'occurred_local_time' => '17:00:00',
+        'received_at' => '2026-08-14 23:01:00',
+        'idempotency_key' => 'late-clock-out',
+    ]), $relationship, $center, $sourceUser);
+    $action->handle($company, $worker, timeEventPayload([
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-08-14',
+        'occurred_local_time' => '08:00:00',
+        'received_at' => '2026-08-14 23:02:00',
+        'idempotency_key' => 'late-clock-in',
+    ]), $relationship, $center, $sourceUser);
+
+    $events = app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-08-14');
+
+    expect($events->pluck('event_type')->all())->toBe(['clock_in', 'clock_out']);
+});
+
+it('uses deterministic event type precedence when occurrence and received timestamps tie', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    $action = app(CreateTimeEventAction::class);
+
+    foreach (['clock_out', 'break_end', 'break_start', 'clock_in'] as $eventType) {
+        $action->handle($company, $worker, timeEventPayload([
+            'event_type' => $eventType,
+            'occurred_local_date' => '2026-08-14',
+            'occurred_local_time' => '08:00:00',
+            'received_at' => '2026-08-14 14:00:00',
+            'idempotency_key' => 'tie-'.$eventType,
+        ]), $relationship, $center, $sourceUser);
+    }
+
+    $events = app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-08-14');
+
+    expect($events->pluck('event_type')->all())->toBe(['clock_in', 'break_start', 'break_end', 'clock_out']);
+});
+
+it('void permissions allow owner admin and rh but block supervisor foreign and inactive memberships', function (): void {
+    [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
+    [$otherCompany] = timeEventFixture();
+    $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload(), $relationship, $center, $sourceUser);
+    $owner = timeEventUserWithCompany($company, 'owner');
+    $admin = timeEventUserWithCompany($company, 'admin');
+    $rh = timeEventUserWithCompany($company, 'rh');
+    $supervisor = timeEventUserWithCompany($company, 'supervisor');
+    $foreignOwner = timeEventUserWithCompany($otherCompany, 'owner');
+    $inactiveMember = timeEventUserWithCompany($company, 'owner', membershipStatus: 'inactive');
+
+    expect(Gate::forUser($owner)->allows('void', $event))->toBeTrue()
+        ->and(Gate::forUser($admin)->allows('void', $event))->toBeTrue()
+        ->and(Gate::forUser($rh)->allows('void', $event))->toBeTrue()
+        ->and(Gate::forUser($supervisor)->allows('void', $event))->toBeFalse()
+        ->and(Gate::forUser($foreignOwner)->allows('void', $event))->toBeFalse()
+        ->and(Gate::forUser($inactiveMember)->allows('void', $event))->toBeFalse();
+});
+
 it('sprint 2d creates only time events and no future operational modules', function (): void {
     expect(Schema::hasTable('time_events'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeFalse()
@@ -363,7 +510,7 @@ function timeEventFixture(array $centerAttributes = []): array
     return [$company, $worker, $relationship, $center, $sourceUser];
 }
 
-function timeEventUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function timeEventUserWithCompany(Company $company, string $roleKey = 'owner', string $membershipStatus = 'active'): User
 {
     $role = Role::query()->firstOrCreate(
         ['key' => $roleKey],
@@ -373,7 +520,7 @@ function timeEventUserWithCompany(Company $company, string $roleKey = 'owner'): 
 
     $user->companies()->attach($company, [
         'role_id' => $role->id,
-        'status' => 'active',
+        'status' => $membershipStatus,
         'is_default' => true,
     ]);
 
