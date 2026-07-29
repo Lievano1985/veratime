@@ -1033,6 +1033,38 @@ php artisan test tests/Feature/Sprint1C/WorkerManagementTest.php --stop-on-failu
 
 ---
 
+## Bloque C - Asignaciones organizacionales y pendientes UI
+
+**Estado:** Iniciado/candidato a validacion. No incluye perfiles, `work_days`, calculos, reportes ni API.
+
+### Pruebas manuales
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Correccion retroactiva de unidad | En `/organization/assignments`, reemplazar unidad principal usando una fecha igual o anterior a la asignacion vigente y capturar motivo. | Corrige la asignacion vigente sobre el mismo registro y no crea historial adicional. |
+| Reemplazo futuro | Reemplazar unidad principal con fecha posterior a la asignacion vigente. | Cierra la anterior como `Reemplazado` y crea nueva asignacion `Vigente`. |
+| Publicacion congelada | Corregir una asignacion organizacional usada para generar/publicar un horario. | El horario publicado conserva su unidad congelada; el cambio aplica al dato organizacional/futuras publicaciones. |
+| Eventos paginados | En `/time-events/manual`, crear o consultar mas de 10 eventos. | La tabla muestra paginacion y permite llegar a eventos que antes quedaban ocultos. |
+| Filtros de eventos | Filtrar `/time-events/manual` por fuente o estado. | La tabla muestra solo los eventos que coinciden y mantiene paginacion. |
+| Reset formulario trabajador | En `/workers`, editar un trabajador, escribir motivo o NIP temporal, cancelar y abrir nuevo trabajador. | Los campos quedan limpios, sin valores arrastrados. |
+
+### Pruebas automatizadas
+
+```bash
+php artisan test tests/Feature/SprintB2/OrganizationalOperationsUiTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2F/ManualTimeEventCaptureTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint1C/WorkerManagementTest.php --stop-on-failure
+```
+
+### No incluido
+
+- Correccion de asignaciones de perfiles.
+- Cambios a horarios publicados desde asignaciones organizacionales.
+- `work_days`.
+- Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes o API.
+
+---
+
 ## UX-01 - Localizacion al espanol de Mexico
 
 **Estado:** En revision. No corresponde a un sprint funcional nuevo.

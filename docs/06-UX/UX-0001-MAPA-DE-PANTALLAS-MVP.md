@@ -64,6 +64,8 @@ No define todavía diseño visual final, colores, componentes HTML ni código.
 
 Bloque B aplica este principio en `/workers`: al editar centro, puesto o fecha de ingreso se muestra `Motivo del cambio laboral`; si no hay evidencia protegida, la correccion guarda la misma relacion laboral; si ya hay horario publicado o asistencia, la pantalla debe bloquear la sobrescritura y explicar que el resultado historico requiere correccion versionada de horario.
 
+Bloque C aplica este principio en `/organization/assignments` y `/time-events/manual`: reemplazos retroactivos de unidad se muestran como correccion administrativa con motivo, eventos de jornada se consultan con paginacion/filtros y el formulario de trabajadores debe limpiar todos sus valores al cambiar de flujo.
+
 ---
 
 ## 3. Roles considerados

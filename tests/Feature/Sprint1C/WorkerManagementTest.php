@@ -344,6 +344,39 @@ it('editing worker basics without relationship changes does not create a new rel
     expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
 });
 
+it('worker edit form resets inputs when closing and opening create panel', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $user = workerUserWithCompany($company);
+    $worker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'employee_code' => 'RESET-1',
+        'full_name' => 'Trabajador Reset',
+    ]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $center->id,
+        'position_name' => 'Auxiliar',
+        'started_at' => '2026-07-01',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.index')
+        ->call('loadEditForm', $worker->id)
+        ->set('form.relationship_change_reason', 'Motivo temporal')
+        ->set('credentialForm.temporal_pin', '1234')
+        ->call('closeFormPanel')
+        ->call('openCreatePanel')
+        ->assertSet('editingWorkerId', null)
+        ->assertSet('form.employee_code', '')
+        ->assertSet('form.full_name', '')
+        ->assertSet('form.relationship_change_reason', '')
+        ->assertSet('credentialForm.temporal_pin', '');
+});
+
 it('requires reason when relationship data changes', function (): void {
     $company = Company::factory()->create();
     $center = Center::factory()->create(['company_id' => $company->id]);

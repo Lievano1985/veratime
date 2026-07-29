@@ -164,6 +164,36 @@ it('manual livewire creates event and lists only active company manual captures'
     ]);
 });
 
+it('manual livewire paginates events and filters by source and status', function (): void {
+    [$company, $worker, $relationship, $center] = sprint2fManualFixture();
+    $user = sprint2fManualUserWithCompany($company, 'rh');
+
+    foreach (range(1, 12) as $index) {
+        TimeEvent::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $worker->id,
+            'employment_relationship_id' => $relationship->id,
+            'center_id' => $center->id,
+            'event_type' => 'clock_in',
+            'occurred_at_utc' => CarbonImmutable::parse("2026-08-16 08:{$index}:00", 'UTC'),
+            'occurred_local_date' => '2026-08-16',
+            'occurred_local_time' => sprintf('08:%02d:00', $index),
+            'source' => $index <= 6 ? 'web' : 'kiosk',
+            'status' => $index % 2 === 0 ? 'voided' : 'valid',
+            'metadata' => [],
+        ]);
+    }
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->assertViewHas('events', fn ($events) => $events->total() === 12 && $events->perPage() === 10)
+        ->set('sourceFilter', 'kiosk')
+        ->assertViewHas('events', fn ($events) => $events->total() === 6)
+        ->set('statusFilter', 'valid')
+        ->assertViewHas('events', fn ($events) => $events->total() === 3);
+});
+
 it('manual livewire voids a visible company event with required reason', function (): void {
     [$company, $worker, $relationship, $center] = sprint2fManualFixture();
     $user = sprint2fManualUserWithCompany($company, 'rh');

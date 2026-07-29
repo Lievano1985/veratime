@@ -10,6 +10,7 @@ use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\OrganizationalUnit;
 use App\Models\Worker;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -50,6 +51,7 @@ new class extends Component {
 
         if ($property === 'primaryForm.worker_ids') {
             $this->primaryForm['organizational_unit_id'] = '';
+            $this->syncPrimaryEffectiveFromWithSelectedRelationships();
             $this->resetValidation(['primaryForm.worker_ids', 'primaryForm.organizational_unit_id']);
         }
 
@@ -339,18 +341,10 @@ new class extends Component {
             return null;
         }
 
-        $date = filled($this->primaryForm['effective_from'] ?? null)
-            ? (string) $this->primaryForm['effective_from']
-            : now()->toDateString();
-
         $relationships = EmploymentRelationship::query()
             ->where('company_id', $company->id)
             ->whereIn('worker_id', $workerIds)
             ->where('status', 'active')
-            ->whereDate('started_at', '<=', $date)
-            ->where(function ($query) use ($date): void {
-                $query->whereNull('ended_at')->orWhereDate('ended_at', '>=', $date);
-            })
             ->get(['worker_id', 'center_id']);
 
         $centerIds = $relationships
@@ -363,6 +357,35 @@ new class extends Component {
         }
 
         return $centerIds->all();
+    }
+
+    private function syncPrimaryEffectiveFromWithSelectedRelationships(): void
+    {
+        $workerIds = collect($this->primaryForm['worker_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($workerIds->isEmpty()) {
+            return;
+        }
+
+        $latestRelationshipStart = EmploymentRelationship::query()
+            ->whereIn('worker_id', $workerIds)
+            ->where('status', 'active')
+            ->max('started_at');
+
+        if ($latestRelationshipStart) {
+            $relationshipStart = CarbonImmutable::parse($latestRelationshipStart)->startOfDay();
+            $currentFrom = filled($this->primaryForm['effective_from'] ?? null)
+                ? CarbonImmutable::parse($this->primaryForm['effective_from'])->startOfDay()
+                : null;
+
+            if (! $currentFrom || $currentFrom->lt($relationshipStart)) {
+                $this->primaryForm['effective_from'] = $relationshipStart->toDateString();
+            }
+        }
     }
 
     private function primaryUnitHelp($company): ?string
@@ -383,7 +406,7 @@ new class extends Component {
             return 'Selecciona trabajadores con relacion laboral vigente en el mismo centro para asignar una unidad principal.';
         }
 
-        return 'Solo se muestran unidades activas del centro de los trabajadores seleccionados.';
+        return 'Solo se muestran unidades activas del centro actual de los trabajadores seleccionados. La fecha se valida al guardar contra la relacion laboral.';
     }
 
     private function supportUnitOptions($company)
@@ -461,7 +484,13 @@ new class extends Component {
             })
             ->latest('started_at');
 
-        return $fail ? $query->firstOrFail() : $query->first();
+        $relationship = $query->first();
+
+        if (! $relationship && $fail) {
+            throw new \InvalidArgumentException('No hay una relacion laboral vigente para el trabajador en la fecha seleccionada.');
+        }
+
+        return $relationship;
     }
 
     private function authorizedAssignment(int $assignmentId, CurrentCompany $currentCompany): EmploymentUnitAssignment

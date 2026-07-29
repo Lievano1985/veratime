@@ -33,7 +33,9 @@ class ReplacePrimaryOrganizationalUnitAction
 
             foreach ($active as $assignment) {
                 if ($assignment->effective_from->gte($from)) {
-                    throw new InvalidArgumentException('La nueva unidad principal debe iniciar despues de la vigente.');
+                    $this->correctAssignmentInPlace($assignment, $unit, $data, $from, $to);
+
+                    return $assignment->refresh();
                 }
 
                 if ($assignment->effective_to && $assignment->effective_to->lt($from)) {
@@ -56,5 +58,44 @@ class ReplacePrimaryOrganizationalUnitAction
 
             return $new->refresh();
         });
+    }
+
+    private function correctAssignmentInPlace(
+        EmploymentUnitAssignment $assignment,
+        OrganizationalUnit $unit,
+        array $data,
+        CarbonImmutable $from,
+        ?CarbonImmutable $to,
+    ): void {
+        if (blank($data['reason'] ?? null)) {
+            throw new InvalidArgumentException('Indica el motivo para corregir la asignacion organizacional.');
+        }
+
+        $metadata = $assignment->metadata ?? [];
+        $metadata['administrative_corrections'] ??= [];
+        $metadata['administrative_corrections'][] = [
+            'reason' => $data['reason'],
+            'actor_user_id' => $data['created_by'] ?? null,
+            'corrected_at' => now()->toISOString(),
+            'previous' => [
+                'organizational_unit_id' => $assignment->organizational_unit_id,
+                'effective_from' => $assignment->effective_from?->toDateString(),
+                'effective_to' => $assignment->effective_to?->toDateString(),
+            ],
+            'new' => [
+                'organizational_unit_id' => $unit->id,
+                'effective_from' => $from->toDateString(),
+                'effective_to' => $to?->toDateString(),
+            ],
+            'note' => 'Administrative correction only; published schedules remain unchanged.',
+        ];
+
+        $assignment->forceFill([
+            'organizational_unit_id' => $unit->id,
+            'effective_from' => $from->toDateString(),
+            'effective_to' => $to?->toDateString(),
+            'reason' => $data['reason'],
+            'metadata' => $metadata,
+        ])->save();
     }
 }
