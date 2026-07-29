@@ -1908,7 +1908,22 @@ index(trace_id)
 
 # 23. Reglas de integridad
 
-## 23.1 Eliminacion fisica limitada
+## 23.1 Regla de evidencia operativa
+
+La regla transversal queda definida en `docs/12-Decisiones/ADR-0004-REGLA-DE-EVIDENCIA-OPERATIVA.md`.
+
+Vera Time protege el resultado operativo, no cada dato intermedio usado para generarlo. Por eso:
+
+- un batch publicado y sus dias/segmentos no se recalculan por cambios posteriores en trabajadores, relaciones laborales, unidades, plantillas, perfiles o asignaciones;
+- una fecha publicada solo cambia mediante correccion versionada de programacion diaria;
+- los `time_events` no se borran fisicamente y solo salen de resoluciones futuras por anulacion logica;
+- los futuros `work_days` se generaran desde horarios publicados aunque no existan eventos;
+- los futuros `work_days` marcaran eventos validos sin horario publicado como jornada no programada;
+- catalogos, relaciones laborales, asignaciones organizacionales, perfiles y asignaciones de perfiles pueden corregirse o eliminarse solo cuando no exista uso en evidencia protegida.
+
+Si un dato intermedio ya genero evidencia protegida, su correccion debe aplicar hacia adelante o debe redirigir a una correccion versionada del resultado publicado.
+
+## 23.2 Eliminacion fisica limitada
 
 La operacion ordinaria puede eliminar catalogos capturados por error solo cuando no tienen uso ni dependencias operativas. Esto aplica a registros como centros, unidades, trabajadores sin historial, horarios/turnos/perfiles sin asignaciones, asignaciones que no generaron horarios ni asistencias y descansos internos de empresa capturados por error.
 
@@ -1932,7 +1947,7 @@ No se eliminaran fisicamente en operacion ordinaria:
 
 Para informacion usada por horario, cumplimiento, asistencia, evidencias, reportes o auditoria se usaran estados, anulacion logica o versionamiento.
 
-## 23.2 No editar versiones firmadas
+## 23.3 No editar versiones firmadas
 
 Una versión de reporte con conformidad o no conformidad no se modifica.
 
@@ -1946,7 +1961,7 @@ period_report_versions v2
 → nueva revisión
 ```
 
-## 23.3 No solapar vigencias
+## 23.4 No solapar vigencias
 
 No deben solaparse vigencias activas para:
 
@@ -1955,13 +1970,13 @@ No deben solaparse vigencias activas para:
 - Reglas legales.
 - Parámetros legales por empresa.
 
-## 23.4 Reglas legales aplicadas
+## 23.5 Reglas legales aplicadas
 
 Cada cálculo debe guardar snapshot de reglas aplicadas.
 
 No basta con consultar la regla actual al momento de ver un reporte histórico.
 
-## 23.5 Fuente obligatoria
+## 23.6 Fuente obligatoria
 
 Registros creados desde canales relevantes deberán conservar:
 
@@ -1971,7 +1986,7 @@ external_id o idempotency_key cuando aplique
 trace_id cuando aplique
 ```
 
-## 23.6 Consistencia API-web
+## 23.7 Consistencia API-web
 
 Un registro creado por API debe cumplir las mismas relaciones y validaciones que un registro creado por interfaz.
 

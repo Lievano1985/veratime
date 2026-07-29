@@ -949,6 +949,48 @@ Usar una empresa activa con usuario `owner`, `admin` o `rh`, trabajadores activo
 
 ---
 
+## Bloque A - Regla de evidencia operativa
+
+**Estado:** Documentado/candidato a cierre. No cambia codigo operativo.
+
+Objetivo:
+
+Validar que el criterio de producto quede claro antes de modificar relaciones laborales, asignaciones organizacionales, perfiles y `work_days`: Vera Time protege el resultado final publicado o registrado, no cada dato intermedio usado para construirlo.
+
+### Casos de validacion documental
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Relacion laboral sin evidencia | Revisar el criterio para una relacion laboral capturada con fecha o centro incorrecto antes de publicar horarios o registrar asistencia. | Debe permitirse correccion administrativa futura con motivo y actor. |
+| Relacion laboral con horario publicado | Revisar el criterio para una relacion laboral usada en un batch publicado. | El horario publicado no se modifica desde trabajadores; cualquier cambio de fecha publicada requiere correccion versionada. |
+| Asignacion organizacional con perfil de empresa | Revisar una empresa con perfil asignado a toda la empresa y una unidad organizacional incorrecta. | La UI futura debe aclarar que la unidad no define ese perfil; el cambio afecta contexto operativo, filtros y futuras publicaciones, no horarios ya publicados. |
+| Asignacion organizacional con perfil por unidad | Revisar una unidad que si participa en la resolucion de perfil antes de publicar. | La correccion debe afectar borradores o publicaciones futuras; si ya hay publicacion, se conserva el resultado publicado. |
+| Asignacion de perfil posterior a publicacion | Revisar un perfil o asignacion de perfil modificado despues de publicar. | La publicacion existente queda intacta; para cambiar el resultado se usa correccion versionada. |
+| Evento de asistencia | Revisar un evento capturado por web, kiosco o captura manual. | No debe existir borrado fisico operativo; si fue error se anula logicamente con motivo, actor y fecha. |
+| work_days sin eventos | Revisar el criterio del futuro `work_days` para una fecha con horario publicado y sin checadas. | Debe existir jornada esperada desde el horario publicado aunque no haya eventos. |
+| work_days sin horario | Revisar el criterio del futuro `work_days` para eventos validos sin horario publicado. | Debe identificarse como jornada no programada, sin inventar horario desde perfiles actuales. |
+
+### Pruebas automatizadas relacionadas
+
+Estos comandos no prueban codigo nuevo de Bloque A, pero protegen los comportamientos ya implementados que sostienen la regla:
+
+```bash
+php artisan test tests/Feature/BlockF4/VersionedScheduleCorrectionsDomainTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2D/TimeEventModelTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2F/ManualTimeEventCaptureTest.php --stop-on-failure
+```
+
+### No incluido
+
+- Cambios de UI en trabajadores.
+- Cambios de UI en asignaciones organizacionales.
+- Cambios de UI en asignaciones de perfiles.
+- Nuevas migraciones.
+- `work_days`.
+- Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes o API.
+
+---
+
 ## UX-01 - Localizacion al espanol de Mexico
 
 **Estado:** En revision. No corresponde a un sprint funcional nuevo.

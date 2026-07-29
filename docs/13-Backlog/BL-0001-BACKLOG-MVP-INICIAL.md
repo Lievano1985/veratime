@@ -450,6 +450,7 @@ Sprint 2C agrega mandatory_rest_days por fecha con type/scope separados: legal_m
 Sprint 2D agrega time_events como modelo interno de eventos fuente.
 Sprint 2E agrega registro web basico en /time-clock para entrada, salida e inicio/fin de pausa, usando time_events y sin calculos de jornada.
 Bloque 5 agrega anulacion logica no destructiva, conserva `received_at` como hora de recepcion y prepara resolucion de eventos validos por relacion laboral y fecha para `work_days`.
+Bloque A documenta en `docs/12-Decisiones/ADR-0004-REGLA-DE-EVIDENCIA-OPERATIVA.md` que la evidencia protegida es el resultado operativo: horarios diarios publicados, snapshots, correcciones versionadas, eventos de asistencia y futuros `work_days`, calculos, cierres, conformidad, reportes y expedientes. Catalogos, relaciones laborales, asignaciones organizacionales, perfiles y asignaciones de perfiles son datos intermedios mientras no hayan generado evidencia protegida. Cambios posteriores en esos datos no deben recalcular ni sobrescribir horarios ya publicados; para modificar una fecha publicada se usa correccion versionada. `work_days` debe nacer desde horarios publicados aunque no existan eventos y debe detectar eventos validos sin horario como jornada no programada.
 EPIC-05 queda completo a nivel web/kiosco/manual para eventos fuente, sin API de negocio.
 No se implementaron motor legal ni calculos.
 ```

@@ -59,6 +59,9 @@ No define todavía diseño visual final, colores, componentes HTML ni código.
 10. **Evitar edición destructiva.**
     La interfaz debe guiar a correcciones versionadas, no a sobrescribir datos históricos.
 
+11. **Explicar el efecto operativo.**
+    Cuando el usuario corrija relaciones laborales, areas, perfiles o catalogos, la pantalla debe indicar si el cambio afecta solo futuras publicaciones, si no cambia horarios ya publicados o si requiere una correccion versionada del horario.
+
 ---
 
 ## 3. Roles considerados

@@ -1,7 +1,7 @@
 ---
 title: Estado actual compacto
 project: Vera Time
-updated: 2026-07-28
+updated: 2026-07-29
 ---
 
 # Estado actual compacto
@@ -185,6 +185,18 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 - `supervisor`, otra empresa y membresias inactivas no pueden anular.
 - No se implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
 - Siguiente bloque pendiente: `work_days`.
+
+## Bloque A - regla de evidencia operativa
+
+Estado: documentado/candidato a cierre.
+
+- Decision registrada en `docs/12-Decisiones/ADR-0004-REGLA-DE-EVIDENCIA-OPERATIVA.md`.
+- La evidencia protegida es el resultado operativo: horario diario publicado, snapshots, correcciones versionadas, eventos de asistencia y futuros `work_days`, calculos, cierres, conformidad, reportes y expedientes.
+- Catalogos, relaciones laborales, asignaciones organizacionales, perfiles y asignaciones de perfiles son datos intermedios mientras no hayan generado evidencia protegida.
+- Un cambio posterior en catalogos, relaciones, areas o perfiles no debe recalcular ni sobrescribir horarios ya publicados.
+- Para modificar una fecha ya publicada se debe usar correccion versionada de programacion diaria.
+- `work_days` debe generarse desde horarios publicados aunque no existan eventos y debe identificar eventos validos sin horario como jornada no programada.
+- Bloque A no cambia codigo ni comportamiento operativo; fija el criterio para relaciones laborales, asignaciones organizacionales, asignaciones de perfiles y `work_days`.
 
 ## Validacion Sprint 2F
 

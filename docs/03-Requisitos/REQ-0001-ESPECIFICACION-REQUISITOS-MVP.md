@@ -41,6 +41,28 @@ El MVP de Vera Time deberá concentrarse en entregar una plataforma operativa, v
 
 El alcance se divide en capacidades indispensables. Cada capacidad debe aportar valor directo al cumplimiento, a la operación diaria o a la evidencia documental.
 
+### 2.0 Regla de evidencia operativa
+
+Vera Time protege el resultado operativo final, no cada paso intermedio usado para construirlo.
+
+Se considera evidencia protegida:
+
+- horarios diarios publicados, snapshots y hashes;
+- correcciones versionadas de horarios publicados;
+- eventos de asistencia y sus anulaciones logicas;
+- futuros `work_days`, calculos, alertas, incidencias, cierres, conformidad, reportes y expedientes.
+
+Se consideran datos intermedios los catalogos, relaciones laborales, asignaciones organizacionales, plantillas, perfiles y asignaciones de perfiles mientras no hayan generado evidencia protegida.
+
+Requisitos derivados:
+
+- un cambio en catalogos, relaciones, areas o perfiles no debe modificar horarios ya publicados;
+- para cambiar una fecha publicada se debe usar correccion versionada de programacion diaria;
+- los datos intermedios capturados por error deben poder corregirse o eliminarse si no tienen uso en evidencia protegida;
+- si ya existe evidencia protegida, la correccion debe aplicar hacia adelante o guiar al usuario hacia la correccion del resultado;
+- `work_days` debe generarse desde horarios publicados aunque no existan eventos;
+- eventos validos sin horario publicado deben identificarse como jornada no programada.
+
 ### 2.1 Plataforma SaaS multi-tenant
 
 **Incluye:**
