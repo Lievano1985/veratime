@@ -1923,6 +1923,14 @@ Vera Time protege el resultado operativo, no cada dato intermedio usado para gen
 
 Si un dato intermedio ya genero evidencia protegida, su correccion debe aplicar hacia adelante o debe redirigir a una correccion versionada del resultado publicado.
 
+Bloque B aplica esta regla a `employment_relationships`:
+
+- la evidencia protegida se detecta por `daily_schedule_assignments` ligados a batches `published`, `superseded` o `cancelled`, y por `time_events` de la relacion;
+- sin evidencia protegida, la relacion puede corregir `center_id`, `position_name` y `started_at` sobre el mismo registro;
+- la correccion queda en `metadata.administrative_corrections` con motivo, actor, fecha, valores anteriores y valores nuevos;
+- con evidencia protegida, no se sobrescriben los campos historicos desde trabajadores;
+- una nueva vigencia solo puede iniciar despues de la ultima fecha con evidencia protegida.
+
 ## 23.2 Eliminacion fisica limitada
 
 La operacion ordinaria puede eliminar catalogos capturados por error solo cuando no tienen uso ni dependencias operativas. Esto aplica a registros como centros, unidades, trabajadores sin historial, horarios/turnos/perfiles sin asignaciones, asignaciones que no generaron horarios ni asistencias y descansos internos de empresa capturados por error.

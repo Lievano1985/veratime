@@ -2,11 +2,14 @@
 
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\LaborCondition;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
+use App\Models\ScheduleBatch;
+use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
@@ -157,7 +160,7 @@ it('user can update own worker', function (): void {
         'employee_code' => 'OLD',
         'full_name' => 'Anterior',
     ]);
-    EmploymentRelationship::factory()->create([
+    $relationship = EmploymentRelationship::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $center->id,
@@ -187,7 +190,7 @@ it('user can update own worker', function (): void {
     expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
 });
 
-it('changing center creates a new employment relationship and closes the previous one', function (): void {
+it('corrects center on the same employment relationship when there is no protected evidence', function (): void {
     $company = Company::factory()->create();
     $center = Center::factory()->create(['company_id' => $company->id]);
     $newCenter = Center::factory()->create(['company_id' => $company->id]);
@@ -208,31 +211,27 @@ it('changing center creates a new employment relationship and closes the previou
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $newCenter->id)
         ->set('form.position_name', 'Auxiliar')
-        ->set('form.started_at', '2026-07-10')
+        ->set('form.started_at', '2026-06-15')
+        ->set('form.relationship_change_reason', 'Centro capturado incorrectamente en alta.')
         ->call('save');
 
     $this->assertDatabaseHas('employment_relationships', [
         'id' => $relationship->id,
-        'center_id' => $center->id,
-        'position_name' => 'Auxiliar',
-        'started_at' => '2026-07-01 00:00:00',
-        'status' => 'ended',
-        'ended_at' => '2026-07-09 00:00:00',
-    ]);
-
-    $this->assertDatabaseHas('employment_relationships', [
-        'company_id' => $company->id,
-        'worker_id' => $worker->id,
         'center_id' => $newCenter->id,
         'position_name' => 'Auxiliar',
-        'started_at' => '2026-07-10 00:00:00',
+        'started_at' => '2026-06-15 00:00:00',
         'status' => 'active',
+        'ended_at' => null,
     ]);
 
-    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(2);
+    $relationship->refresh();
+
+    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1)
+        ->and($relationship->metadata['administrative_corrections'][0]['reason'])->toBe('Centro capturado incorrectamente en alta.')
+        ->and($relationship->metadata['administrative_corrections'][0]['previous']['center_id'])->toBe($center->id);
 });
 
-it('changing position creates a new employment relationship and preserves the previous one', function (): void {
+it('corrects position on the same employment relationship when there is no protected evidence', function (): void {
     $company = Company::factory()->create();
     $center = Center::factory()->create(['company_id' => $company->id]);
     $user = workerUserWithCompany($company);
@@ -252,31 +251,23 @@ it('changing position creates a new employment relationship and preserves the pr
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $center->id)
         ->set('form.position_name', 'Supervisor')
-        ->set('form.started_at', '2026-07-15')
+        ->set('form.started_at', '2026-07-01')
+        ->set('form.relationship_change_reason', 'Puesto capturado incorrectamente.')
         ->call('save');
 
     $this->assertDatabaseHas('employment_relationships', [
         'id' => $relationship->id,
         'center_id' => $center->id,
-        'position_name' => 'Auxiliar',
-        'started_at' => '2026-07-01 00:00:00',
-        'status' => 'ended',
-        'ended_at' => '2026-07-14 00:00:00',
-    ]);
-
-    $this->assertDatabaseHas('employment_relationships', [
-        'company_id' => $company->id,
-        'worker_id' => $worker->id,
-        'center_id' => $center->id,
         'position_name' => 'Supervisor',
-        'started_at' => '2026-07-15 00:00:00',
+        'started_at' => '2026-07-01 00:00:00',
         'status' => 'active',
+        'ended_at' => null,
     ]);
 
-    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(2);
+    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
 });
 
-it('changing started at creates a new employment relationship and preserves the previous one', function (): void {
+it('corrects started at on the same employment relationship when there is no protected evidence', function (): void {
     $company = Company::factory()->create();
     $center = Center::factory()->create(['company_id' => $company->id]);
     $user = workerUserWithCompany($company);
@@ -296,28 +287,20 @@ it('changing started at creates a new employment relationship and preserves the 
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $center->id)
         ->set('form.position_name', 'Auxiliar')
-        ->set('form.started_at', '2026-07-20')
+        ->set('form.started_at', '2026-06-20')
+        ->set('form.relationship_change_reason', 'Fecha de ingreso capturada incorrectamente.')
         ->call('save');
 
     $this->assertDatabaseHas('employment_relationships', [
         'id' => $relationship->id,
         'center_id' => $center->id,
         'position_name' => 'Auxiliar',
-        'started_at' => '2026-07-01 00:00:00',
-        'status' => 'ended',
-        'ended_at' => '2026-07-19 00:00:00',
-    ]);
-
-    $this->assertDatabaseHas('employment_relationships', [
-        'company_id' => $company->id,
-        'worker_id' => $worker->id,
-        'center_id' => $center->id,
-        'position_name' => 'Auxiliar',
-        'started_at' => '2026-07-20 00:00:00',
+        'started_at' => '2026-06-20 00:00:00',
         'status' => 'active',
+        'ended_at' => null,
     ]);
 
-    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(2);
+    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
 });
 
 it('editing worker basics without relationship changes does not create a new relationship', function (): void {
@@ -361,7 +344,7 @@ it('editing worker basics without relationship changes does not create a new rel
     expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
 });
 
-it('does not allow a replacement relationship to overlap or start before the active one', function (): void {
+it('requires reason when relationship data changes', function (): void {
     $company = Company::factory()->create();
     $center = Center::factory()->create(['company_id' => $company->id]);
     $newCenter = Center::factory()->create(['company_id' => $company->id]);
@@ -381,11 +364,118 @@ it('does not allow a replacement relationship to overlap or start before the act
     Volt::test('workers.index')
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $newCenter->id)
-        ->set('form.started_at', '2026-07-10')
+        ->set('form.started_at', '2026-06-10')
         ->call('save')
-        ->assertHasErrors(['form.started_at']);
+        ->assertHasErrors(['form.relationship_change_reason']);
 
     expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
+});
+
+it('blocks administrative correction when relationship already has protected published schedule evidence', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $newCenter = Center::factory()->create(['company_id' => $company->id]);
+    $user = workerUserWithCompany($company);
+    $worker = Worker::factory()->create(['company_id' => $company->id]);
+    $relationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $center->id,
+        'position_name' => 'Auxiliar',
+        'started_at' => '2026-07-01',
+        'status' => 'active',
+    ]);
+    $batch = ScheduleBatch::factory()->create([
+        'company_id' => $company->id,
+        'center_id' => $center->id,
+        'period_start' => '2026-07-01',
+        'period_end' => '2026-07-15',
+        'status' => 'published',
+        'version' => 1,
+        'published_at' => now(),
+    ]);
+    DailyScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'schedule_batch_id' => $batch->id,
+        'employment_relationship_id' => $relationship->id,
+        'work_date' => '2026-07-10',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.index')
+        ->call('loadEditForm', $worker->id)
+        ->set('form.center_id', (string) $newCenter->id)
+        ->set('form.position_name', 'Auxiliar')
+        ->set('form.started_at', '2026-06-15')
+        ->set('form.relationship_change_reason', 'Centro y fecha capturados mal.')
+        ->call('save')
+        ->assertHasErrors(['form.relationship_change_reason']);
+
+    $this->assertDatabaseHas('employment_relationships', [
+        'id' => $relationship->id,
+        'center_id' => $center->id,
+        'started_at' => '2026-07-01 00:00:00',
+        'status' => 'active',
+        'ended_at' => null,
+    ]);
+
+    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(1);
+});
+
+it('allows a new future relationship only after protected evidence dates', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $newCenter = Center::factory()->create(['company_id' => $company->id]);
+    $user = workerUserWithCompany($company);
+    $worker = Worker::factory()->create(['company_id' => $company->id]);
+    $relationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $center->id,
+        'position_name' => 'Auxiliar',
+        'started_at' => '2026-07-01',
+        'status' => 'active',
+    ]);
+    TimeEvent::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id,
+        'center_id' => $center->id,
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-07-10',
+        'status' => 'valid',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('workers.index')
+        ->call('loadEditForm', $worker->id)
+        ->set('form.center_id', (string) $newCenter->id)
+        ->set('form.position_name', 'Supervisor')
+        ->set('form.started_at', '2026-07-20')
+        ->set('form.relationship_change_reason', 'Cambio operativo futuro.')
+        ->call('save');
+
+    $this->assertDatabaseHas('employment_relationships', [
+        'id' => $relationship->id,
+        'center_id' => $center->id,
+        'position_name' => 'Auxiliar',
+        'started_at' => '2026-07-01 00:00:00',
+        'status' => 'ended',
+        'ended_at' => '2026-07-19 00:00:00',
+    ]);
+
+    $this->assertDatabaseHas('employment_relationships', [
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $newCenter->id,
+        'position_name' => 'Supervisor',
+        'started_at' => '2026-07-20 00:00:00',
+        'status' => 'active',
+    ]);
+
+    expect(EmploymentRelationship::query()->where('worker_id', $worker->id)->count())->toBe(2);
 });
 
 it('user cannot update worker from another company', function (): void {
@@ -414,7 +504,7 @@ it('terminate is non destructive and keeps worker record', function (): void {
         'company_id' => $company->id,
         'status' => 'active',
     ]);
-    EmploymentRelationship::factory()->create([
+    $relationship = EmploymentRelationship::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $center->id,
@@ -567,7 +657,7 @@ it('unauthorized role cannot create edit or terminate workers', function (): voi
     $center = Center::factory()->create(['company_id' => $company->id]);
     $user = workerUserWithCompany($company, 'supervisor');
     $worker = Worker::factory()->create(['company_id' => $company->id]);
-    EmploymentRelationship::factory()->create([
+    $relationship = EmploymentRelationship::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $center->id,
@@ -626,7 +716,7 @@ it('manipulated company id does not move existing worker to another company', fu
         'company_id' => $company->id,
         'employee_code' => 'OWN-W',
     ]);
-    EmploymentRelationship::factory()->create([
+    $relationship = EmploymentRelationship::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $center->id,
@@ -641,7 +731,7 @@ it('manipulated company id does not move existing worker to another company', fu
         ->set('form.employee_code', 'OWN-W2')
         ->set('form.full_name', 'Trabajador propio')
         ->set('form.center_id', (string) $center->id)
-        ->set('form.started_at', '2026-07-01')
+        ->set('form.started_at', $relationship->started_at->toDateString())
         ->set('form.status', 'active')
         ->call('save');
 
