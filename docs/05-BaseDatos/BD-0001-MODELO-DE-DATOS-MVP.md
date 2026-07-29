@@ -775,7 +775,7 @@ index(company_id, center_id)
 
 ## 10.2 `time_events`
 
-Eventos fuente de jornada. Sprint 2D implementa el modelo interno. Sprint 2E agrega registro web basico para entrada, salida e inicio/fin de pausa usando `time_events`. Sprint 2F agrega kiosco basico y captura manual justificada. No hay calculos, `work_days`, alertas, incidencias ni reportes.
+Eventos fuente de jornada. Sprint 2D implementa el modelo interno. Sprint 2E agrega registro web basico para entrada, salida e inicio/fin de pausa usando `time_events`. Sprint 2F agrega kiosco basico y captura manual justificada. Bloque 5 agrega anulacion logica y soporte de eventos tardios/fuera de orden para reconstruccion futura. No hay calculos, `work_days`, alertas, incidencias ni reportes.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -796,6 +796,9 @@ Eventos fuente de jornada. Sprint 2D implementa el modelo interno. Sprint 2E agr
 | `external_id` | string nullable | ID externo |
 | `idempotency_key` | string nullable | Llave de idempotencia |
 | `status` | string | `valid`, `pending_review`, `voided`, `replaced`, `ignored` |
+| `voided_at` | dateTime nullable | Fecha/hora UTC de anulacion logica |
+| `voided_by_user_id` | bigint nullable fk | Usuario que anulo el evento |
+| `void_reason` | string nullable | Motivo obligatorio cuando `status = voided` |
 | `metadata` | JSON nullable | Payload auxiliar compatible con MySQL/MariaDB |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
@@ -808,6 +811,7 @@ index(company_id, worker_id, occurred_at_utc)
 index(company_id, worker_id, occurred_local_date)
 index(company_id, center_id, occurred_local_date)
 index(company_id, status)
+index(company_id, voided_at)
 unique(company_id, source, external_id) // MySQL/MariaDB permite multiples NULL
 unique(company_id, idempotency_key) // MySQL/MariaDB permite multiples NULL
 ```
@@ -820,7 +824,10 @@ Reglas:
 - `device_id` queda nullable y sin FK hasta que exista el modulo `devices`.
 - La idempotencia se valida en `CreateTimeEventAction` para no depender solo de indices unique con valores NULL.
 - `occurred_local_time` se expone en el modelo como hora local operativa en formato `H:i:s`.
-- Estados `voided`, `replaced` e `ignored` existen como valores posibles, pero sus flujos deben implementarse en Actions especificas cuando llegue `BL-0506`.
+- `status = voided` se asigna solo por `VoidTimeEventAction`; conserva el evento original, fuente, hora del hecho y evidencia.
+- La anulacion registra `void_reason`, `voided_by_user_id`, `voided_at` y metadata de auditoria con estado anterior/resultante.
+- `received_at` es el campo explicito de recepcion/captura tecnica para eventos tardios o fuera de orden; no se agrega `captured_at`.
+- `ResolveValidTimeEventsForWorkDateAction` excluye anulados y ordena por `occurred_at_utc` con desempate estable para preparar `work_days`.
 - Cuando lleguen API/CSV, deben reutilizar `CreateTimeEventAction` sin duplicar normalizacion de timezone ni reglas de idempotencia.
 - Sprint 2E valida una secuencia operativa minima para registro web: entrada, salida, inicio de pausa y fin de pausa. No calcula jornada, no crea `work_days`, no genera alertas ni incidencias.
 - En Sprint 2E, los eventos web se crean con source `web`, hora actual del sistema segun zona horaria aplicable y sin aceptar fecha u hora explicita desde la interfaz.
@@ -828,6 +835,7 @@ Reglas:
 - Kiosco no acepta fecha/hora explicita; usa hora actual del sistema y no guarda NIP en metadata.
 - Captura manual si acepta fecha/hora explicita y motivo obligatorio; queda como `pending_review` por regla de `CreateTimeEventAction` para `admin_manual`.
 - El registro web debe usar `RegisterWebTimeEventAction`, que orquesta `CreateTimeEventAction` para conservar normalizacion de timezone, fuente `web`, estado `valid`, `received_at` y metadata minima no sensible.
+- Bloque 5 no crea `work_days`, `work_day_calculations`, motor legal, alertas, incidencias ni reportes.
 ## 10.3 `kiosk_sessions`
 
 Sesiones de kiosco cuando se necesite trazabilidad adicional.

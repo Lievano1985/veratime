@@ -2,6 +2,7 @@
 
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
 use App\Models\TimeEvent;
 use App\Models\Worker;
 use Carbon\CarbonImmutable;
@@ -21,6 +22,10 @@ new class extends Component {
     public string $occurredLocalTime = '';
 
     public string $reason = '';
+
+    public ?int $voidingEventId = null;
+
+    public string $voidReason = '';
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -80,6 +85,55 @@ new class extends Component {
         Session::flash('status', 'Captura manual guardada para revision.');
     }
 
+    public function startVoid(int $eventId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        $event = TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($eventId);
+
+        Gate::authorize('void', $event);
+
+        $this->voidingEventId = $event->id;
+        $this->voidReason = '';
+    }
+
+    public function cancelVoid(): void
+    {
+        $this->voidingEventId = null;
+        $this->voidReason = '';
+    }
+
+    public function voidEvent(CurrentCompany $currentCompany, VoidTimeEventAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        $validated = $this->validate([
+            'voidingEventId' => [
+                'required',
+                'integer',
+                Rule::exists('time_events', 'id')->where('company_id', $company->id),
+            ],
+            'voidReason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $event = TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->findOrFail((int) $validated['voidingEventId']);
+
+        try {
+            $action->handle($event, auth()->user(), $validated['voidReason']);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'voidReason' => $exception->getMessage(),
+            ]);
+        }
+
+        $this->cancelVoid();
+        Session::flash('status', 'Evento de jornada anulado.');
+    }
+
     public function with(CurrentCompany $currentCompany): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -92,8 +146,7 @@ new class extends Component {
             ->get();
 
         $events = $company->timeEvents()
-            ->with('worker')
-            ->where('source', 'admin_manual')
+            ->with(['worker', 'voidedBy'])
             ->latest('occurred_at_utc')
             ->limit(10)
             ->get();
@@ -122,6 +175,28 @@ new class extends Component {
             'break_start' => 'Inicio de pausa',
             'break_end' => 'Fin de pausa',
             default => $eventType,
+        };
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'valid' => 'Valido',
+            'pending_review' => 'En revision',
+            'voided' => 'Anulado',
+            'replaced' => 'Reemplazado',
+            'ignored' => 'Ignorado',
+            default => ucfirst($status),
+        };
+    }
+
+    private function statusVariant(string $status): string
+    {
+        return match ($status) {
+            'valid' => 'success',
+            'pending_review' => 'warning',
+            'voided' => 'danger',
+            default => 'neutral',
         };
     }
 }; ?>
@@ -166,7 +241,7 @@ new class extends Component {
     </form>
 
     <section class="space-y-4">
-        <flux:heading>Ultimas capturas manuales</flux:heading>
+        <flux:heading>Ultimos eventos de jornada</flux:heading>
 
         <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
             <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
@@ -176,7 +251,10 @@ new class extends Component {
                         <th class="px-4 py-3">Trabajador</th>
                         <th class="px-4 py-3">Tipo</th>
                         <th class="px-4 py-3">Hora local</th>
+                        <th class="px-4 py-3">Fuente</th>
                         <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3">Anulacion</th>
+                        <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
@@ -186,15 +264,46 @@ new class extends Component {
                             <td class="px-4 py-3">{{ $event->worker->full_name }}</td>
                             <td class="px-4 py-3">{{ $this->eventLabel($event->event_type) }}</td>
                             <td class="px-4 py-3">{{ $event->occurred_local_time }}</td>
+                            <td class="px-4 py-3">{{ $event->source }}</td>
                             <td class="px-4 py-3">
-                                <x-ui.badge variant="{{ $event->status === 'valid' ? 'success' : ($event->status === 'pending_review' ? 'warning' : ($event->status === 'voided' ? 'danger' : 'neutral')) }}">
-                                    {{ $event->status === 'valid' ? 'Valido' : ($event->status === 'pending_review' ? 'En revision' : ($event->status === 'voided' ? 'Anulado' : ucfirst($event->status))) }}
+                                <x-ui.badge variant="{{ $this->statusVariant($event->status) }}">
+                                    {{ $this->statusLabel($event->status) }}
                                 </x-ui.badge>
                             </td>
+                            <td class="px-4 py-3">
+                                @if ($event->voided_at)
+                                    <div class="space-y-1">
+                                        <p class="font-medium">{{ $event->voided_at->utc()->format('Y-m-d H:i') }} UTC</p>
+                                        <p class="text-xs text-zinc-500">{{ $event->voidedBy?->name ?? 'Usuario no disponible' }}</p>
+                                    </div>
+                                @else
+                                    <span class="text-zinc-500">No aplica</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                @if ($event->status !== 'voided')
+                                    <flux:button type="button" size="xs" variant="ghost" wire:click="startVoid({{ $event->id }})">Anular</flux:button>
+                                @else
+                                    <span class="text-xs text-zinc-500">Sin acciones</span>
+                                @endif
+                            </td>
                         </tr>
+                        @if ($voidingEventId === $event->id)
+                            <tr>
+                                <td colspan="8" class="bg-amber-50 px-4 py-4 dark:bg-amber-950/30">
+                                    <form wire:submit="voidEvent" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                                        <flux:textarea label="Motivo de anulacion" wire:model="voidReason" rows="2" />
+                                        <div class="flex gap-2">
+                                            <flux:button type="submit" variant="primary">Confirmar anulacion</flux:button>
+                                            <flux:button type="button" variant="ghost" wire:click="cancelVoid">Cancelar</flux:button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endif
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-zinc-500">Sin capturas manuales.</td>
+                            <td colspan="8" class="px-4 py-8 text-center text-zinc-500">Sin eventos de jornada.</td>
                         </tr>
                     @endforelse
                 </tbody>

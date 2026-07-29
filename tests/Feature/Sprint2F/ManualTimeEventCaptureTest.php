@@ -164,6 +164,44 @@ it('manual livewire creates event and lists only active company manual captures'
     ]);
 });
 
+it('manual livewire voids a visible company event with required reason', function (): void {
+    [$company, $worker, $relationship, $center] = sprint2fManualFixture();
+    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $event = TimeEvent::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id,
+        'center_id' => $center->id,
+        'event_type' => 'clock_in',
+        'occurred_at_utc' => '2026-08-16 14:00:00',
+        'occurred_local_date' => '2026-08-16',
+        'occurred_local_time' => '08:00:00',
+        'timezone' => 'America/Mexico_City',
+        'received_at' => '2026-08-16 14:01:00',
+        'source' => 'web',
+        'status' => 'valid',
+        'metadata' => [],
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->call('startVoid', $event->id)
+        ->set('voidReason', 'Registro duplicado validado por RH')
+        ->call('voidEvent')
+        ->assertHasNoErrors()
+        ->assertSee('Evento de jornada anulado.')
+        ->assertSee('Anulado');
+
+    $this->assertDatabaseHas('time_events', [
+        'id' => $event->id,
+        'company_id' => $company->id,
+        'status' => 'voided',
+        'voided_by_user_id' => $user->id,
+        'void_reason' => 'Registro duplicado validado por RH',
+    ]);
+});
+
 it('manual capture preserves existing events and does not void replace or delete', function (): void {
     [$company, $worker] = sprint2fManualFixture();
     $user = sprint2fManualUserWithCompany($company, 'rh');

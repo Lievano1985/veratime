@@ -67,8 +67,8 @@ EPIC-05:
 - BL-0503 cerrado.
 - BL-0504 implementado / candidato a cierre.
 - BL-0505 implementado / candidato a cierre.
-- BL-0506 pendiente.
-- BL-0507 pendiente.
+- BL-0506 implementado / candidato a cierre.
+- BL-0507 implementado / candidato a cierre.
 
 ## Implementado
 
@@ -83,6 +83,8 @@ EPIC-05:
 - Asignaciones.
 - Descansos obligatorios.
 - time_events.
+- Anulacion logica de time_events.
+- Eventos tardios / fuera de orden preparados para reconstruccion.
 - /time-clock.
 - /kiosk.
 - Captura manual justificada.
@@ -129,8 +131,6 @@ Nota de descansos obligatorios:
 
 ## No implementado
 
-- Anulacion logica.
-- Eventos tardios / fuera de orden.
 - Motor legal.
 - work_days.
 - work_day_calculations.
@@ -170,6 +170,21 @@ Resultado:
 - No quedan fallos S1/S2 abiertos.
 
 `work_days`, motor legal, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
+
+## Bloque 5 - eventos de tiempo completos
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final y revision manual si aplica.
+
+- `time_events` conserva `occurred_at_utc`, fecha/hora local, timezone, `received_at`, fuente, usuario/canal y metadata.
+- `received_at` es el campo explicito de recepcion/captura tecnica; no se agrega `captured_at`.
+- La anulacion logica usa `status = voided`, `voided_at`, `voided_by_user_id` y `void_reason`.
+- La anulacion exige motivo obligatorio, actor autorizado y bloquea segunda anulacion.
+- `ResolveValidTimeEventsForWorkDateAction` prepara la consulta futura de `work_days` por relacion laboral y fecha.
+- Los resolvers excluyen eventos anulados, ordenan por `occurred_at_utc` y usan desempate estable por `received_at`, tipo de evento, fuente e identificadores externos/idempotencia.
+- `/time-events/manual` muestra eventos recientes de la empresa y permite anular con motivo a `owner`, `admin` y `rh`.
+- `supervisor`, otra empresa y membresias inactivas no pueden anular.
+- No se implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
+- Siguiente bloque pendiente: `work_days`.
 
 ## Validacion Sprint 2F
 

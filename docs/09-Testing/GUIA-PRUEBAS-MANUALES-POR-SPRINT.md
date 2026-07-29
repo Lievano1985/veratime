@@ -918,6 +918,37 @@ Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar panta
 | Sprint 2D | No existe kiosco operativo |  |  |  |  |
 ---
 
+## Bloque 5 - Eventos de tiempo completos
+
+**Estado:** Implementado/candidato a cierre. No incluye `work_days`, motor legal, alertas, incidencias, reportes ni API.
+
+### Preparacion
+
+Usar una empresa activa con usuario `owner`, `admin` o `rh`, trabajadores activos y eventos de jornada existentes o capturados desde `/time-clock`, `/kiosk` o `/time-events/manual`.
+
+### Validacion manual
+
+| Caso | Ruta | Resultado esperado |
+|---|---|---|
+| Anular evento | `/time-events/manual` | Permite elegir Anular, exige motivo y cambia estado a `Anulado`. |
+| Motivo obligatorio | `/time-events/manual` | No permite confirmar anulacion sin motivo valido. |
+| Segunda anulacion | `/time-events/manual` | Un evento ya anulado muestra estado `Anulado` y no permite volver a anularlo. |
+| Trazabilidad | `/time-events/manual` | El evento conserva fecha/hora del hecho, fuente y trabajador; muestra actor y fecha de anulacion. |
+| Permisos | `/time-events/manual` | `owner`, `admin` y `rh` pueden anular; `supervisor` no accede ni anula. |
+| Multi-tenant | `/time-events/manual` | No aparecen eventos de otra empresa y no se puede anular un evento ajeno manipulando IDs. |
+| Evento tardio | Captura manual o prueba tecnica | `occurred_at` conserva la hora real del hecho y `received_at` conserva la recepcion. |
+| Evento fuera de orden | Prueba tecnica | Los eventos validos se resuelven por `occurred_at`, no por orden de captura. |
+
+### Confirmaciones
+
+- Los eventos anulados no se eliminan fisicamente.
+- Los eventos anulados no participan en resoluciones futuras de eventos validos.
+- `received_at` es el campo explicito de recepcion/captura tecnica.
+- No se crean tablas de `work_days`, `work_day_calculations`, `alerts`, `incidents` ni `reports`.
+- Siguiente bloque pendiente: `work_days`.
+
+---
+
 ## UX-01 - Localizacion al espanol de Mexico
 
 **Estado:** En revision. No corresponde a un sprint funcional nuevo.

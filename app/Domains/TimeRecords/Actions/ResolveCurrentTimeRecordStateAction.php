@@ -32,8 +32,13 @@ class ResolveCurrentTimeRecordStateAction
                     ->orWhere('occurred_local_date', 'like', $localNow->toDateString().'%');
             })
             ->where('status', 'valid')
+            ->whereNull('voided_at')
             ->orderBy('occurred_at_utc')
-            ->orderBy('id')
+            ->orderBy('received_at')
+            ->orderByRaw("case event_type when 'clock_in' then 1 when 'break_start' then 2 when 'break_end' then 3 when 'clock_out' then 4 else 9 end")
+            ->orderBy('source')
+            ->orderBy('external_id')
+            ->orderBy('idempotency_key')
             ->get();
 
         $state = 'sin_entrada';

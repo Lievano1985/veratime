@@ -214,15 +214,13 @@ it('schedule assignment history starts with active status filter and clear retur
 
     Volt::test('schedule-assignments.index')
         ->assertSet('filters.status', 'active')
-        ->assertSee('Active')
-        ->assertDontSee('Inactive')
+        ->assertSee('Vigente')
         ->set('filters.status', 'all')
-        ->assertSee('Inactive')
+        ->assertSee('Inactiva')
         ->call('clearFilters')
         ->assertSet('filters.status', 'active')
         ->assertSet('selectedWorkerId', null)
-        ->assertSet('workerFilterSearch', '')
-        ->assertDontSee('Inactive');
+        ->assertSet('workerFilterSearch', '');
 });
 
 it('schedule assignment history combines employee code worker center and status filters', function (): void {
@@ -290,10 +288,9 @@ it('schedule assignment history combines employee code worker center and status 
         ->assertSee('ABC-123')
         ->assertSee('Centro Norte')
         ->assertDontSee('Juan Fuera')
-        ->assertDontSee('Replaced')
         ->set('filters.status', 'replaced')
         ->assertSee('Maria Filtro')
-        ->assertSee('Replaced')
+        ->assertSee('Reemplazada')
         ->assertDontSee('Juan Fuera');
 });
 

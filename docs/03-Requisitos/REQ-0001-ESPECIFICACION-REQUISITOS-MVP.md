@@ -2138,3 +2138,13 @@ Ahí se definirán:
 - Los archivos se almacenan con ruta interna aleatoria; la ruta privada no se expone al usuario.
 - Supervisores, usuarios de otra empresa y lotes publicados no pueden usar la importacion CSV.
 - F5B no implementa XLSX, API WFM, jobs asincronos, publicacion automatica, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad ni reportes.
+
+## Nota Bloque 5 - Ciclo de eventos de tiempo
+
+- `time_events` conserva hora real del hecho en UTC/local, timezone, `received_at`, fuente, usuario/canal y metadata.
+- `received_at` es el campo explicito de recepcion/captura tecnica para eventos tardios o fuera de orden.
+- La anulacion logica no elimina el evento; marca `status = voided` y registra motivo, actor y fecha/hora.
+- Los resolvers excluyen anulados y ordenan eventos validos por hora del hecho con desempates estables.
+- `/time-events/manual` permite anular eventos recientes de la empresa a `owner`, `admin` y `rh`.
+- Bloque 5 no implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
+- Siguiente bloque pendiente: `work_days`.

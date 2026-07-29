@@ -439,18 +439,18 @@ Sprint 2F quedo implementado y candidato a cierre para:
 - BL-0504 Modo kiosco operativo
 - BL-0505 Captura manual justificada
 
-Sprint 2F validado con arquitectura aprobada con observaciones corregidas y QA aprobado con S3 no bloqueantes.
-
-No se marcaron como implementadas:
+Bloque 5 quedo implementado y candidato a cierre para:
 - BL-0506 Anulacion logica
 - BL-0507 Eventos fuera de orden/tardios
+
+Sprint 2F validado con arquitectura aprobada con observaciones corregidas y QA aprobado con S3 no bloqueantes.
 
 Sprint 2B agrega schedule_assignments con historial no destructivo, restrictOnDelete, reemplazo por vigencia e inactivacion sin borrado.
 Sprint 2C agrega mandatory_rest_days por fecha con type/scope separados: legal_mandatory o electoral para alcance national/subnational, y company_internal solo para alcance company. Usa country_code MX durante el MVP, usa jurisdiction_code, no usa center_id, separa source_reference visible de capture_source tecnico, conserva inactivacion no destructiva y no agrega calculos de jornada.
 Sprint 2D agrega time_events como modelo interno de eventos fuente.
 Sprint 2E agrega registro web basico en /time-clock para entrada, salida e inicio/fin de pausa, usando time_events y sin calculos de jornada.
-Quedan pendientes anulacion logica y eventos fuera de orden/tardios.
-EPIC-05 no queda completa todavia; BL-0501 a BL-0505 estan candidatas a cierre, y BL-0506/BL-0507 siguen pendientes.
+Bloque 5 agrega anulacion logica no destructiva, conserva `received_at` como hora de recepcion y prepara resolucion de eventos validos por relacion laboral y fecha para `work_days`.
+EPIC-05 queda completo a nivel web/kiosco/manual para eventos fuente, sin API de negocio.
 No se implementaron motor legal ni calculos.
 ```
 

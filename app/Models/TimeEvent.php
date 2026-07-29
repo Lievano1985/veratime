@@ -52,6 +52,8 @@ class TimeEvent extends Model
         'external_id',
         'idempotency_key',
         'status',
+        'voided_at',
+        'void_reason',
         'metadata',
     ];
 
@@ -61,6 +63,7 @@ class TimeEvent extends Model
             'occurred_at_utc' => 'immutable_datetime',
             'occurred_local_date' => 'date',
             'received_at' => 'immutable_datetime',
+            'voided_at' => 'immutable_datetime',
             'metadata' => 'array',
         ];
     }
@@ -95,5 +98,15 @@ class TimeEvent extends Model
     public function sourceUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'source_user_id');
+    }
+
+    public function voidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by_user_id');
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->status === 'voided' || $this->voided_at !== null;
     }
 }

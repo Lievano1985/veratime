@@ -202,6 +202,13 @@ replaced
 ignored
 ```
 
+Implementacion Bloque 5:
+
+- `time_events.received_at` es la hora explicita de recepcion/captura tecnica.
+- La anulacion logica usa `status = voided`, `voided_at`, `voided_by_user_id` y `void_reason`.
+- Los eventos anulados no se eliminan fisicamente y no participan en resoluciones futuras.
+- Los eventos validos se ordenan por hora del hecho (`occurred_at_utc`) y desempates estables, no por insercion.
+
 ## 6.2 Alertas
 
 ```text
@@ -262,5 +269,3 @@ Codex debe agregar pruebas para:
 3. Exportación Empresa A no incluye datos Empresa B.
 4. Job de Empresa A no procesa Empresa B.
 5. Archivo de Empresa A no se descarga desde Empresa B.
-
-
