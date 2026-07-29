@@ -185,6 +185,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 - `supervisor`, otra empresa y membresias inactivas no pueden anular.
 - No se implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
 - Siguiente bloque pendiente: `work_days`.
+- Pendiente UI siguiente bloque: `/time-events/manual` lista solo 10 eventos recientes; agregar paginacion y filtros por fuente/estado para que eventos web/kiosco/anulados no queden ocultos por capturas manuales recientes.
 
 ## Bloque A - regla de evidencia operativa
 
@@ -197,6 +198,23 @@ Estado: documentado/candidato a cierre.
 - Para modificar una fecha ya publicada se debe usar correccion versionada de programacion diaria.
 - `work_days` debe generarse desde horarios publicados aunque no existan eventos y debe identificar eventos validos sin horario como jornada no programada.
 - Bloque A no cambia codigo ni comportamiento operativo; fija el criterio para relaciones laborales, asignaciones organizacionales, asignaciones de perfiles y `work_days`.
+
+## Bloque B - correccion de relaciones laborales
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final y prueba manual si aplica.
+
+- Rama de trabajo: `feature/employment-relationship-corrections`.
+- `AssessEmploymentRelationshipEvidenceAction` detecta evidencia protegida por relacion laboral:
+  - programacion diaria en batches `published`, `superseded` o `cancelled`;
+  - eventos `time_events` asociados a la relacion.
+- En trabajadores, cambiar centro, puesto o fecha de ingreso de una relacion sin evidencia protegida corrige la misma relacion laboral.
+- La correccion administrativa exige motivo obligatorio y registra metadata con motivo, actor, fecha, valores anteriores y valores nuevos.
+- Si la relacion ya tiene evidencia protegida, no se sobrescriben centro, puesto ni fecha historica desde trabajadores.
+- Cuando existe evidencia protegida, solo se permite crear una nueva vigencia hacia adelante si la fecha nueva no corta horarios publicados ni asistencias existentes.
+- La UI de trabajadores muestra `Motivo del cambio laboral` al editar; Livewire solo orquesta Actions.
+- Pendiente UI siguiente bloque: revisar reseteo completo del formulario de edicion de trabajadores, porque algunos inputs pueden conservar valores al cambiar/cerrar formularios.
+- Bloque B no implementa `work_days`, motor legal, calculos, alertas, incidencias, reportes, API ni cambios de asignaciones organizacionales o perfiles.
+- Siguientes bloques recomendados: asignaciones organizacionales y asignaciones de perfiles alineadas con la misma regla de evidencia.
 
 ## Validacion Sprint 2F
 

@@ -944,6 +944,7 @@ Usar una empresa activa con usuario `owner`, `admin` o `rh`, trabajadores activo
 - Los eventos anulados no se eliminan fisicamente.
 - Los eventos anulados no participan en resoluciones futuras de eventos validos.
 - `received_at` es el campo explicito de recepcion/captura tecnica.
+- Pendiente siguiente bloque: agregar paginacion y filtros por fuente/estado en `/time-events/manual`, porque el listado actual muestra solo los 10 eventos mas recientes.
 - No se crean tablas de `work_days`, `work_day_calculations`, `alerts`, `incidents` ni `reports`.
 - Siguiente bloque pendiente: `work_days`.
 
@@ -986,6 +987,47 @@ php artisan test tests/Feature/Sprint2F/ManualTimeEventCaptureTest.php --stop-on
 - Cambios de UI en asignaciones organizacionales.
 - Cambios de UI en asignaciones de perfiles.
 - Nuevas migraciones.
+- `work_days`.
+- Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes o API.
+
+---
+
+## Bloque B - Correccion de relaciones laborales
+
+**Estado:** Implementado/candidato a cierre. No incluye asignaciones organizacionales, perfiles, `work_days`, calculos, reportes ni API.
+
+### Preparacion
+
+Usar `/workers` con un usuario `owner`, `admin` o `rh` de una empresa activa.
+
+### Pruebas manuales
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Correccion sin evidencia | Editar un trabajador cuya relacion no tenga horarios publicados ni eventos; cambiar centro, puesto o fecha de ingreso; capturar motivo. | Guarda sobre la misma relacion laboral, no crea una relacion nueva y muestra `Trabajador actualizado.` |
+| Motivo obligatorio | Cambiar centro, puesto o fecha de ingreso sin llenar `Motivo del cambio laboral`. | Bloquea el guardado y pide motivo. |
+| Retroceder fecha sin evidencia | Cambiar fecha de ingreso a una fecha anterior en relacion sin evidencia y capturar motivo. | Guarda la fecha anterior en la misma relacion. |
+| Relacion con horario publicado | Editar un trabajador cuya relacion ya tenga programacion diaria publicada; intentar cambiar centro o fecha hacia atras. | Bloquea la sobrescritura y explica que debe usarse correccion versionada del horario publicado. |
+| Relacion con asistencia | Editar un trabajador con eventos `time_events`; intentar cambiar datos historicos hacia atras. | Bloquea la sobrescritura de la relacion historica. |
+| Nueva vigencia futura | En relacion con evidencia, cambiar centro o puesto con una fecha posterior a la ultima fecha con horario/asistencia y motivo. | Cierra la relacion anterior el dia previo y crea una nueva relacion activa. |
+| Vigencia que corta evidencia | En relacion con evidencia, usar una fecha nueva que deje horarios/asistencias fuera de la relacion anterior. | Bloquea el cambio y conserva la relacion original. |
+| Multi-tenant y permisos | Intentar operar como supervisor, empresa inactiva o con centro ajeno. | Bloquea por permisos o validacion de empresa/centro. |
+
+Pendiente UI siguiente bloque:
+
+- Revisar que al cerrar, cancelar, guardar o cambiar de trabajador en el panel de edicion se limpien todos los inputs del formulario y no queden valores arrastrados.
+
+### Pruebas automatizadas
+
+```bash
+php artisan test tests/Feature/Sprint1C/WorkerManagementTest.php --stop-on-failure
+```
+
+### No incluido
+
+- Correccion de asignaciones organizacionales.
+- Correccion de asignaciones de perfiles.
+- Cambios a horarios publicados desde trabajadores.
 - `work_days`.
 - Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes o API.
 

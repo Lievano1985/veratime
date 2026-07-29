@@ -66,6 +66,7 @@ new class extends Component {
             'position_name' => $relationship?->position_name ?? '',
             'started_at' => $relationship?->started_at?->format('Y-m-d') ?? now()->toDateString(),
             'status' => $worker->status,
+            'relationship_change_reason' => '',
         ];
         $this->conditionForm = [
             'work_modality' => $condition?->work_modality ?? 'onsite',
@@ -120,6 +121,7 @@ new class extends Component {
             'form.position_name' => ['nullable', 'string', 'max:255'],
             'form.started_at' => ['required', 'date'],
             'form.status' => ['required', Rule::in(['active', 'inactive', 'terminated', 'suspended'])],
+            'form.relationship_change_reason' => ['nullable', 'string', 'max:500'],
         ])['form'];
 
         $center = $company->centers()
@@ -134,9 +136,10 @@ new class extends Component {
         }
 
         try {
-            $action->handle($company, $worker, $center, $validated);
+            $action->handle($company, $worker, $center, $validated, auth()->user());
         } catch (\InvalidArgumentException $exception) {
             $this->addError('form.started_at', $exception->getMessage());
+            $this->addError('form.relationship_change_reason', $exception->getMessage());
 
             return;
         }
@@ -400,6 +403,7 @@ new class extends Component {
             'position_name' => '',
             'started_at' => now()->toDateString(),
             'status' => 'active',
+            'relationship_change_reason' => '',
         ];
     }
 
@@ -580,6 +584,15 @@ new class extends Component {
 
                         <flux:input wire:model="form.position_name" label="Puesto" />
                         <flux:input wire:model="form.started_at" label="Fecha de ingreso" type="date" required />
+
+                        @if ($editingWorkerId)
+                            <flux:textarea
+                                wire:model="form.relationship_change_reason"
+                                label="Motivo del cambio laboral"
+                                placeholder="Obligatorio si cambias centro, puesto o fecha de ingreso."
+                                rows="3"
+                            />
+                        @endif
 
                         <div>
                             <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>

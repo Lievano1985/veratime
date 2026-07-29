@@ -63,6 +63,20 @@ Requisitos derivados:
 - `work_days` debe generarse desde horarios publicados aunque no existan eventos;
 - eventos validos sin horario publicado deben identificarse como jornada no programada.
 
+### 2.0.1 Bloque B - relaciones laborales
+
+La administracion de trabajadores debe permitir corregir centro, puesto y fecha de ingreso de la relacion laboral cuando todavia no existan horarios publicados ni eventos de asistencia asociados a esa relacion.
+
+La correccion debe:
+
+- conservar el mismo registro de relacion laboral;
+- exigir motivo;
+- registrar actor, fecha, valores anteriores y valores nuevos en metadata;
+- bloquear sobrescritura si la relacion ya tiene evidencia protegida;
+- permitir una nueva vigencia hacia adelante solo si no corta horarios publicados ni asistencias existentes.
+
+No se debe modificar el horario publicado desde la pantalla de trabajadores.
+
 ### 2.1 Plataforma SaaS multi-tenant
 
 **Incluye:**
