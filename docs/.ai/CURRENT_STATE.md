@@ -216,6 +216,17 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 - Bloque B no implementa `work_days`, motor legal, calculos, alertas, incidencias, reportes, API ni cambios de asignaciones organizacionales o perfiles.
 - Siguientes bloques recomendados: asignaciones organizacionales y asignaciones de perfiles alineadas con la misma regla de evidencia.
 
+## Bloque C - asignaciones organizacionales y pendientes UI
+
+Estado: iniciado en rama `feature/organizational-assignment-corrections`.
+
+- El reemplazo de unidad principal conserva historial cuando la nueva vigencia inicia despues de la vigente.
+- Si el reemplazo inicia en la misma fecha o antes de la vigente, se trata como correccion administrativa sobre el mismo registro con motivo, actor, fecha, valores anteriores y nuevos.
+- La correccion de asignacion organizacional no modifica programacion diaria publicada; los `daily_schedule_assignments` mantienen la unidad congelada al publicar.
+- Pendiente incluido en este bloque: `/time-events/manual` debe paginar eventos y filtrar por fuente/estado para no ocultar registros por el limite de 10.
+- Pendiente incluido en este bloque: el formulario de trabajadores debe resetear todos sus inputs al cerrar, guardar, cancelar o cambiar entre trabajador y alta nueva.
+- Bloque C no implementa `work_days`, motor legal, calculos, alertas, incidencias, reportes, API ni asignaciones de perfiles.
+
 ## Validacion Sprint 2F
 
 - Arquitectura aprobada con observaciones corregidas.

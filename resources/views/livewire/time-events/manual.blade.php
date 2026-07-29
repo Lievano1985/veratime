@@ -11,8 +11,11 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
+use Livewire\WithPagination;
 
 new class extends Component {
+    use WithPagination;
+
     public string $workerId = '';
 
     public string $eventType = 'clock_in';
@@ -26,6 +29,10 @@ new class extends Component {
     public ?int $voidingEventId = null;
 
     public string $voidReason = '';
+
+    public string $sourceFilter = '';
+
+    public string $statusFilter = '';
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -82,7 +89,18 @@ new class extends Component {
         }
 
         $this->reason = '';
+        $this->resetPage();
         Session::flash('status', 'Captura manual guardada para revision.');
+    }
+
+    public function updatedSourceFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
     }
 
     public function startVoid(int $eventId, CurrentCompany $currentCompany): void
@@ -131,6 +149,7 @@ new class extends Component {
         }
 
         $this->cancelVoid();
+        $this->resetPage();
         Session::flash('status', 'Evento de jornada anulado.');
     }
 
@@ -147,14 +166,17 @@ new class extends Component {
 
         $events = $company->timeEvents()
             ->with(['worker', 'voidedBy'])
+            ->when($this->sourceFilter !== '', fn ($query) => $query->where('source', $this->sourceFilter))
+            ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
             ->latest('occurred_at_utc')
-            ->limit(10)
-            ->get();
+            ->paginate(10);
 
         return [
             'company' => $company,
             'workers' => $workers,
             'events' => $events,
+            'eventSources' => TimeEvent::SOURCES,
+            'eventStatuses' => TimeEvent::STATUSES,
         ];
     }
 
@@ -241,7 +263,25 @@ new class extends Component {
     </form>
 
     <section class="space-y-4">
-        <flux:heading>Ultimos eventos de jornada</flux:heading>
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <flux:heading>Eventos de jornada</flux:heading>
+
+            <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
+                <flux:select label="Fuente" wire:model.live="sourceFilter">
+                    <flux:select.option value="">Todas</flux:select.option>
+                    @foreach ($eventSources as $source)
+                        <flux:select.option value="{{ $source }}">{{ $source }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                <flux:select label="Estado" wire:model.live="statusFilter">
+                    <flux:select.option value="">Todos</flux:select.option>
+                    @foreach ($eventStatuses as $status)
+                        <flux:select.option value="{{ $status }}">{{ $this->statusLabel($status) }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+        </div>
 
         <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
             <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
@@ -309,5 +349,7 @@ new class extends Component {
                 </tbody>
             </table>
         </div>
+
+        {{ $events->links() }}
     </section>
 </section>

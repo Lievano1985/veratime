@@ -1931,6 +1931,13 @@ Bloque B aplica esta regla a `employment_relationships`:
 - con evidencia protegida, no se sobrescriben los campos historicos desde trabajadores;
 - una nueva vigencia solo puede iniciar despues de la ultima fecha con evidencia protegida.
 
+Bloque C aplica esta regla a `employment_unit_assignments`:
+
+- un reemplazo con fecha igual o anterior a la asignacion principal vigente se considera correccion administrativa del mismo registro;
+- un reemplazo con fecha posterior conserva historial, cierra la asignacion anterior y crea una nueva vigente;
+- las correcciones administrativas se guardan en `metadata.administrative_corrections`;
+- la correccion organizacional no actualiza `daily_schedule_assignments` publicados, porque esos dias ya congelaron la unidad usada al publicar.
+
 ## 23.2 Eliminacion fisica limitada
 
 La operacion ordinaria puede eliminar catalogos capturados por error solo cuando no tienen uso ni dependencias operativas. Esto aplica a registros como centros, unidades, trabajadores sin historial, horarios/turnos/perfiles sin asignaciones, asignaciones que no generaron horarios ni asistencias y descansos internos de empresa capturados por error.

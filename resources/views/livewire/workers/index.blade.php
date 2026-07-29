@@ -41,14 +41,16 @@ new class extends Component {
         Gate::authorize('create', [Worker::class, $company]);
 
         $this->editingWorkerId = null;
-        $this->form = $this->emptyForm();
-        $this->conditionForm = $this->emptyConditionForm();
-        $this->credentialForm = $this->emptyCredentialForm();
+        $this->resetWorkerForms();
+        $this->resetValidation();
         $this->showFormPanel = true;
     }
 
     public function loadEditForm(int $workerId, CurrentCompany $currentCompany): void
     {
+        $this->resetWorkerForms();
+        $this->resetValidation();
+
         $worker = $this->authorizedWorker($workerId, $currentCompany);
         $relationship = $worker->activeEmploymentRelationship;
         $condition = $relationship?->activeLaborCondition;
@@ -146,9 +148,8 @@ new class extends Component {
 
         $this->showFormPanel = false;
         $this->editingWorkerId = null;
-        $this->form = $this->emptyForm();
-        $this->conditionForm = $this->emptyConditionForm();
-        $this->credentialForm = $this->emptyCredentialForm();
+        $this->resetWorkerForms();
+        $this->resetValidation();
 
         Session::flash('status', $worker ? 'Trabajador actualizado.' : 'Trabajador creado.');
     }
@@ -311,9 +312,18 @@ new class extends Component {
     {
         $this->showFormPanel = false;
         $this->editingWorkerId = null;
+        $this->resetWorkerForms();
         $this->resetValidation('form');
         $this->resetValidation('conditionForm');
         $this->resetValidation('credentialForm');
+    }
+
+    private function resetWorkerForms(): void
+    {
+        $this->form = $this->emptyForm();
+        $this->conditionForm = $this->emptyConditionForm();
+        $this->credentialForm = $this->emptyCredentialForm();
+        $this->clearCredentialTemporalPin();
     }
 
     public function with(CurrentCompany $currentCompany): array

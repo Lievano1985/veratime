@@ -7,11 +7,13 @@ use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\OperationalScopeAssignment;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
+use App\Models\ScheduleBatch;
 use App\Models\User;
 use App\Models\Worker;
 use App\Support\RoleKey;
@@ -264,6 +266,52 @@ class OrganizationalOperationsUiTest extends TestCase
         }
     }
 
+    public function test_assignments_ui_corrects_existing_primary_unit_without_changing_published_schedule_snapshot(): void
+    {
+        [$company, $center, $relationship, $worker] = $this->relationshipContext();
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $first = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
+        $second = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
+
+        $assignment = app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $first, [
+            'effective_from' => '2026-08-10',
+            'reason' => 'Alta inicial',
+        ]);
+        $batch = ScheduleBatch::factory()->for($company)->for($center)->create([
+            'period_start' => '2026-08-10',
+            'period_end' => '2026-08-16',
+            'status' => 'published',
+            'version' => 1,
+            'published_at' => now(),
+        ]);
+        $publishedDay = DailyScheduleAssignment::factory()->for($company)->for($batch)->for($relationship)->create([
+            'organizational_unit_id' => $first->id,
+            'work_date' => '2026-08-10',
+            'day_type' => 'rest',
+        ]);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->set('primaryForm.worker_ids', [$worker->id])
+            ->set('primaryForm.organizational_unit_id', (string) $second->id)
+            ->set('primaryForm.operation', 'replace')
+            ->set('primaryForm.effective_from', '2026-08-01')
+            ->set('primaryForm.reason', 'Unidad capturada incorrectamente')
+            ->call('savePrimary')
+            ->assertHasNoErrors();
+
+        $assignment->refresh();
+        $publishedDay->refresh();
+
+        $this->assertSame($second->id, $assignment->organizational_unit_id);
+        $this->assertSame('active', $assignment->status);
+        $this->assertSame('2026-08-01', $assignment->effective_from->toDateString());
+        $this->assertSame($first->id, $publishedDay->organizational_unit_id);
+        $this->assertDatabaseCount('employment_unit_assignments', 1);
+        $this->assertSame('Unidad capturada incorrectamente', $assignment->metadata['administrative_corrections'][0]['reason']);
+    }
+
     public function test_assignments_ui_creates_and_ends_temporary_support(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
@@ -390,6 +438,32 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertSee('Ya asignado')
             ->assertSee('Sin unidad principal');
     }
+
+    public function test_primary_unit_options_use_current_active_relationship_even_when_form_date_is_before_relationship_start(): void
+    {
+        [$company, $center] = $this->companyAndCenter();
+        $worker = Worker::factory()->for($company)->create(['status' => 'active']);
+        EmploymentRelationship::factory()->for($company)->for($worker)->for($center)->create([
+            'started_at' => '2026-08-01',
+            'status' => 'active',
+        ]);
+        $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('organization.assignments')
+            ->set('primaryForm.effective_from', '2026-07-29')
+            ->set('primaryForm.worker_ids', [$worker->id])
+            ->assertSee('OPS - Operaciones')
+            ->assertSet('primaryForm.effective_from', '2026-08-01')
+            ->set('primaryForm.organizational_unit_id', (string) $unit->id)
+            ->set('primaryForm.operation', 'replace')
+            ->set('primaryForm.reason', 'Fecha fuera de vigencia')
+            ->call('savePrimary')
+            ->assertHasNoErrors();
+    }
+
     public function test_assignments_table_can_filter_by_organizational_unit(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
