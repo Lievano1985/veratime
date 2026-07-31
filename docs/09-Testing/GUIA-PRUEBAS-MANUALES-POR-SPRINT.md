@@ -1436,7 +1436,7 @@ php artisan db:seed --class=VeraTimeDailyScheduleScenarioSeeder
 El periodo demo usado por F2 es:
 
 ```text
-2026-08-03 a 2026-08-16
+2026-08-03 a 2026-08-09
 ```
 
 ### Validaciones esperadas
@@ -1667,12 +1667,13 @@ Periodo demo:
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion diaria. | Carga `/scheduling/daily` y muestra lotes de la empresa activa en tabla compacta. |
+| Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion semanal. | Carga `/scheduling/daily` y muestra lotes de la empresa activa en tabla compacta. |
 | Filtros | Usar filtros principales y abrir `+ Filtros`. | Los filtros avanzados aparecen solo cuando se despliegan y la pantalla mantiene espacio para el calendario. |
 | Crear lote vacio | Crear lote para un centro usando cualquier fecha dentro de una semana. | Queda en `Borrador`, normalizado a lunes-domingo; no se publica ni genera automaticamente. |
 | Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador dentro de la semana natural; dias antes del alta/baja del trabajador quedan fuera de vigencia. |
 | Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
 | Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
+| Generar semana siguiente | Abrir un lote y usar `Generar semana siguiente`. | Si no existe, crea la siguiente semana natural en `draft`, genera desde modelos y no publica automaticamente. Si ya existe, abre la semana existente. |
 | Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
 | Semana lunes-domingo | Crear un lote eligiendo una fecha a media semana, por ejemplo miercoles. | El lote se guarda de lunes a domingo; los dias fuera de vigencia del trabajador aparecen bloqueados/desactivados. |
 | Ocultar calendario | Usar `Ocultar calendario`. | Regresa a la lista sin dejar abierto el lote. |

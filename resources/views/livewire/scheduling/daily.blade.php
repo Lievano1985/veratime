@@ -11,6 +11,7 @@ use App\Domains\Scheduling\Actions\DeleteCancelledScheduleBatchAction;
 use App\Domains\Scheduling\Actions\GenerateDraftScheduleBatchFromProfilesAction;
 use App\Domains\Scheduling\Actions\PublishCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\PublishScheduleBatchAction;
+use App\Domains\Scheduling\Actions\PrepareNextScheduleWeekAction;
 use App\Domains\Scheduling\Actions\ReplaceDraftDailyScheduleAssignmentAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleBatchVersionChainAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleBatchExpectedRelationshipDatesAction;
@@ -258,6 +259,35 @@ new class extends Component {
     public function refreshGenerated(CurrentCompany $currentCompany, GenerateDraftScheduleBatchFromProfilesAction $action): void
     {
         $this->generateFromProfiles($currentCompany, $action, GenerateDraftScheduleBatchFromProfilesAction::MODE_REFRESH_PROFILE_GENERATED);
+    }
+
+    public function prepareNextWeek(CurrentCompany $currentCompany, PrepareNextScheduleWeekAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('create', [ScheduleBatch::class, $company]);
+
+        try {
+            $result = $action->handle(auth()->user(), $company, $batch);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['generation' => $exception->getMessage()]);
+        }
+
+        $this->selectedBatchId = $result['batch']->id;
+        $this->weekStart = $this->calendarWeekStart($result['batch']->period_start->toDateString());
+        $this->validationPanel = [];
+        $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+        $this->versionHistoryPanel = [];
+        $this->resetPage('calendarPage');
+
+        if (! $result['created']) {
+            Session::flash('status', 'La semana siguiente ya existia; se abrio para revision.');
+
+            return;
+        }
+
+        Session::flash('status', 'Semana siguiente preparada. '.$this->generationMessage($result['generation_result']));
     }
 
     public function previousWeek(CurrentCompany $currentCompany): void
@@ -595,6 +625,11 @@ new class extends Component {
             'canPublishCorrection' => $selectedBatch ? Gate::allows('publishCorrection', $selectedBatch) : false,
             'canDeleteDraftSelectedBatch' => $selectedBatch ? Gate::allows('deleteDraft', $selectedBatch) : false,
             'canDeleteCancelledSelectedBatch' => $selectedBatch ? Gate::allows('deleteCancelled', $selectedBatch) : false,
+            'canPrepareNextWeek' => $selectedBatch
+                ? Gate::allows('create', [ScheduleBatch::class, $company])
+                    && $selectedBatch->previous_batch_id === null
+                    && $selectedBatch->status !== 'cancelled'
+                : false,
             'previewTemplate' => $this->previewTemplate($company),
             'bulkPreview' => $selectedBatch ? $this->bulkPreview($selectedBatch) : null,
         ];
@@ -1534,6 +1569,9 @@ new class extends Component {
                     @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
                         <flux:button size="xs" variant="ghost" wire:click="generateMissing">Generar</flux:button>
                         <flux:button size="xs" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</flux:button>
+                    @endif
+                    @if ($canPrepareNextWeek)
+                        <flux:button size="xs" variant="ghost" wire:click="prepareNextWeek" wire:confirm="Preparar la semana siguiente en borrador desde modelos? No se publicara automaticamente.">Generar semana siguiente</flux:button>
                     @endif
                     @if ($canEditSelectedBatch)
                         <flux:button size="xs" variant="ghost" wire:click="openBulkPanel">Masivo</flux:button>

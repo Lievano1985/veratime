@@ -116,6 +116,8 @@ No se mantienen alias operativos `fixed`, `variable` ni `rotating` para `schedul
 
 La programacion diaria se administra en semanas naturales completas. Si la UI o una Action recibe una fecha intermedia, el dominio normaliza el lote al lunes y domingo de esa semana. La vigencia de la relacion laboral no recorta el lote: solo determina que dias del trabajador quedan fuera de vigencia o son generables. Esta regla prepara `work_days`, horas extra semanales y futuras ventanas de nomina sin mezclar calculo semanal con periodo de pago.
 
+La preparacion de semanas futuras es controlada por el usuario. `PrepareNextScheduleWeekAction` toma el lote seleccionado, calcula la siguiente semana natural a partir del dia posterior a `period_end`, reutiliza modelos para crear un borrador y nunca publica automaticamente. Si ya existe un lote activo para esa semana y centro, la UI debe abrirlo o avisar en vez de duplicarlo.
+
 Una operacion empresarial completa crea un batch por centro.
 
 En Bloque F1 se implementa el nucleo de datos y dominio para crear batches en `draft`, reemplazar dias de borrador de forma atomica, construir snapshots canonicos y resolver programacion publicada. F1 no agrega pantalla, generacion desde perfiles ni publicacion operativa.

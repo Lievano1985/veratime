@@ -79,7 +79,7 @@ class DailyScheduleCalendarUiTest extends TestCase
 
         Volt::test('scheduling.daily')
             ->assertSet('filters.status', 'active_work')
-            ->assertSeeInOrder(['2026-08-03 - 2026-08-16', '2026-07-01 - 2026-07-07']);
+            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-07-01 - 2026-07-07']);
     }
 
     public function test_it_creates_empty_batch_and_creates_batch_generated_from_profiles(): void
@@ -123,6 +123,37 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->firstOrFail();
 
         $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
+    }
+
+    public function test_managers_can_prepare_next_week_from_selected_batch(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $current = $this->firstBatch($company);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $current->id)
+            ->assertSee('Generar semana siguiente')
+            ->call('prepareNextWeek')
+            ->assertHasNoErrors()
+            ->assertSee('Semana siguiente preparada')
+            ->assertSet('weekStart', CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString());
+
+        $expectedStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $expectedEnd = CarbonImmutable::parse($expectedStart)->addDays(6)->toDateString();
+
+        $next = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $current->center_id)
+            ->whereDate('period_start', $expectedStart)
+            ->whereDate('period_end', $expectedEnd)
+            ->where('status', 'draft')
+            ->where('creation_source', 'profile')
+            ->firstOrFail();
+
+        $this->assertGreaterThan(0, $next->dailyAssignments()->count());
     }
 
     public function test_period_and_tenant_validation_blocks_invalid_creation(): void
@@ -516,8 +547,9 @@ class DailyScheduleCalendarUiTest extends TestCase
     {
         return ScheduleBatch::query()
             ->where('company_id', $company->id)
-            ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->where('status', 'draft')
+            ->whereNull('previous_batch_id')
+            ->orderBy('period_start')
             ->firstOrFail();
     }
 

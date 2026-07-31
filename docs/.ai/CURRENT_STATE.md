@@ -519,14 +519,15 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - El seeder publica Oficina por Patron, Ciclo Rotativo, Horario Flexible y Bajo Demanda; deja Tienda por Calendario y Sin Perfil en `draft` por dias `unassigned`.
 - No se implementan versiones correctivas, supersede automatico, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias ni reportes.
 
-## Bloque F3B - interfaz de programacion diaria
+## Bloque F3B - interfaz de programacion semanal
 
 Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - Ruta: `/scheduling/daily`.
-- Navegacion: Horarios -> Programacion diaria.
+- Navegacion: Horarios -> Programacion semanal.
 - La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y semana natural lunes-domingo, crear lote vacio o crear y generar desde perfiles.
 - La fecha elegida para un lote se normaliza al lunes-domingo de esa semana; la vigencia de la relacion laboral solo marca dias fuera de vigencia o generables dentro de la semana.
+- `PrepareNextScheduleWeekAction` permite preparar la semana siguiente desde el lote seleccionado: si ya existe una semana activa la abre; si no existe, crea un `draft`, genera desde modelos y nunca publica automaticamente.
 - El listado usa filtros principales compactos, filtros avanzados colapsables y tabla de lotes de una fila por lote.
 - El listado filtra por centro, periodo, estado, trabajador, unidad organizacional, tipo de dia y solo pendientes.
 - El calendario muestra una semana completa dentro del periodo, con filas por relacion laboral/trabajador, colores por tipo de dia y alternativa movil en lista.
@@ -537,7 +538,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
 - Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
-- F4 implementa correcciones versionadas en la misma pantalla; CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+- F4 implementa correcciones versionadas en la misma pantalla; clonado multiple de semanas, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
 ## Bloque F4 - correcciones versionadas
 

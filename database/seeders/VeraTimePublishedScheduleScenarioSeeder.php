@@ -14,7 +14,7 @@ use InvalidArgumentException;
 class VeraTimePublishedScheduleScenarioSeeder extends Seeder
 {
     private const PERIOD_START = '2026-08-03';
-    private const PERIOD_END = '2026-08-16';
+    private const PERIOD_END = '2026-08-09';
 
     /**
      * @var array<string, string>
