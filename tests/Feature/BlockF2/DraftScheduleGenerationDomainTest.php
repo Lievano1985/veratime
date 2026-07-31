@@ -3,7 +3,6 @@
 namespace Tests\Feature\BlockF2;
 
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
-use App\Domains\Organization\Actions\AssignTemporarySupportAction;
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
 use App\Domains\Scheduling\Actions\BuildScheduleBatchSnapshotAction;
 use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
@@ -108,13 +107,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     {
         [$company, $center, $relationship] = $this->relationshipContext(timezone: 'America/Monterrey');
         $unit = $this->unit($company, $center, 'OPS');
-        $support = $this->unit($company, $center, 'SUP');
-        $this->primaryUnit($company, $relationship, $unit, '2026-08-01', '2026-08-04');
-        $this->primaryUnit($company, $relationship, $support, '2026-08-05');
-        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $unit, [
-            'effective_from' => '2026-08-05',
-            'source' => 'system',
-        ]);
+        $this->primaryUnit($company, $relationship, $unit, '2026-08-01');
 
         $template = $this->templateWithBreaks($company);
         $this->assignWeeklyCompanyProfile($company, $template, '2026-08-01');
@@ -135,7 +128,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assertFalse($monday->segments[2]->is_paid);
 
         $wednesday = DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-05')->firstOrFail();
-        $this->assertSame($support->id, $wednesday->organizational_unit_id);
+        $this->assertSame($unit->id, $wednesday->organizational_unit_id);
 
         $saturday = DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-08')->firstOrFail();
         $this->assertSame('rest', $saturday->day_type);

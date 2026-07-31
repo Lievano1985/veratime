@@ -25,6 +25,7 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 
 - La asignacion diaria publicada sera la unica fuente de verdad operativa.
 - Los perfiles de horario solo generan borradores.
+- La experiencia visible de horarios se organizara en tres caminos operativos: Horario fijo semanal, Programacion semanal y Rol rotativo / ciclo.
 - Un borrador no afecta registro, calculo, alertas, cierres ni reportes.
 - Los dias publicados conservan snapshot JSON canonico, version consecutiva por centro y periodo, autor, fecha de publicacion y hash SHA-256.
 - La publicacion es inmutable. Una correccion genera una nueva version y la version anterior queda `superseded`.
@@ -45,7 +46,7 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - Las unidades organizacionales son opcionales y pertenecen a un centro.
 - La jerarquia tecnica soporta `department`, `area` y `team` mediante `parent_id`.
 - La interfaz MVP visible se limitara a tres niveles: `department` -> `area` -> `team`.
-- Un trabajador puede tener una unidad principal vigente y apoyos temporales opcionales.
+- Un trabajador tiene una unidad principal activa actual para segmentacion. Los apoyos temporales quedan como legado fuera del flujo operativo visible.
 - Una empresa sin unidades puede operar normalmente por centro.
 - `owner`, `admin_empresa` y `rh` tienen alcance completo de empresa.
 - `supervisor` o responsable requiere alcance explicito por centro completo o una o varias unidades organizacionales.
@@ -71,6 +72,16 @@ Entidades propuestas:
 - `daily_schedule_segments`
 
 ## Perfiles
+
+### Modelo operativo visible
+
+La interfaz no debe obligar al usuario a decidir desde nombres tecnicos como `pattern`, `calendar` o `cycle`. La decision de producto para Vera Time queda:
+
+- Horario fijo semanal: plantilla semanal por empleado, puesto, unidad, centro o empresa. Se captura una vez y se repite semana tras semana hasta reemplazo o excepcion.
+- Programacion semanal: roster explicito lunes-domingo para operaciones variables como retail, restaurantes o call centers. Se captura, importa o ajusta por semana.
+- Rol rotativo / ciclo: secuencia de varios dias, catorcena, mes o patron operativo similar. El ciclo completo se captura una vez y se repite desde una fecha de inicio.
+
+Las opciones `flexible`, `on_call` y `calendar` siguen existiendo como soporte avanzado o como forma de dejar pendientes para programacion semanal, pero no son el primer lenguaje del usuario comun.
 
 ### Pattern
 
@@ -99,7 +110,9 @@ No se mantienen alias operativos `fixed`, `variable` ni `rotating` para `schedul
 
 ## Publicacion Diaria
 
-`schedule_batches` agrupa la programacion de una empresa, un centro obligatorio, un rango de fechas y una version.
+`schedule_batches` agrupa la programacion de una empresa, un centro obligatorio, una semana natural lunes-domingo y una version.
+
+La programacion diaria se administra en semanas naturales completas. Si la UI o una Action recibe una fecha intermedia, el dominio normaliza el lote al lunes y domingo de esa semana. La vigencia de la relacion laboral no recorta el lote: solo determina que dias del trabajador quedan fuera de vigencia o son generables. Esta regla prepara `work_days`, horas extra semanales y futuras ventanas de nomina sin mezclar calculo semanal con periodo de pago.
 
 Una operacion empresarial completa crea un batch por centro.
 
@@ -153,7 +166,7 @@ Las vistas Livewire, API, CSV, jobs y calculos futuros no deben reproducir regla
 - `ResolveDailyScheduleForRelationshipDateAction`
 - `BulkReplaceDraftDailyScheduleAssignmentsAction`
 
-En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal vigente, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F3A, `ResolveScheduleBatchExpectedRelationshipDatesAction` se reutiliza para validar cobertura antes de publicar. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
+En Bloque D1, `ResolveScheduleProfileForRelationshipAction` resuelve perfiles con prioridad: relacion laboral, unidad principal activa actual, centro y empresa. Los apoyos temporales (`temporary_support`) no modifican la herencia del perfil ni el alcance supervisor. En Bloque E1, `ResolveScheduleProfileRuleForDateAction` interpreta la regla de la asignacion efectiva para `weekly`, `cycle`, `calendar`, `flexible` y `on_call`. En Bloque F2, `GenerateDraftScheduleBatchFromProfilesAction` usa esos resolutores para crear o refrescar dias draft. En Bloque F3A, `ResolveScheduleBatchExpectedRelationshipDatesAction` se reutiliza para validar cobertura antes de publicar. En Bloque F1, `ResolveDailyScheduleForRelationshipDateAction` consulta exclusivamente batches publicados y devuelve ausencia controlada si no existe programacion diaria publicada.
 
 En Bloque F5A, la importacion CSV de programacion diaria se resuelve como dominio interno, sin UI ni API. El flujo registra `import_batches`, parsea CSV version 1, valida filas en `import_rows`, genera preview con huella, detecta cambios posteriores y aplica en transaccion usando `ReplaceDraftDailyScheduleAssignmentAction`. No publica automaticamente y no duplica reglas de asignacion diaria.
 

@@ -2096,6 +2096,19 @@ La carga se integra dentro de `/scheduling/daily` y aparece solo para lotes `dra
 
 ---
 
+## Nota Bloque D - UX de asignacion organizacional
+
+La pantalla `/organization/assignments` trata la asignacion organizacional como segmentacion actual, no como historial laboral paralelo.
+
+- La vigencia visible manda desde trabajador/relacion laboral: alta, baja y estado.
+- El formulario de unidad principal no solicita fechas.
+- Cambiar unidad principal corrige la segmentacion activa con motivo.
+- El flujo de apoyo temporal queda fuera de la UI.
+- La tabla muestra segmentacion actual y recuerda que la vigencia depende del trabajador.
+- Horarios publicados y asistencia conservan la trazabilidad fuerte; la segmentacion posterior no recalcula programacion publicada.
+
+---
+
 # 31. Siguiente documento
 
 Después de aprobar este mapa de pantallas, el siguiente documento recomendado es:

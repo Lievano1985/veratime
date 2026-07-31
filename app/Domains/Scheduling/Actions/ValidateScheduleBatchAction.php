@@ -6,6 +6,7 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\ScheduleBatch;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use InvalidArgumentException;
 
 class ValidateScheduleBatchAction
@@ -23,6 +24,16 @@ class ValidateScheduleBatchAction
         }
 
         return [$start, $end];
+    }
+
+    public function naturalWeekForDate(string $date): array
+    {
+        $start = CarbonImmutable::parse($date)->startOfWeek(CarbonInterface::MONDAY);
+
+        return [
+            $start->toDateString(),
+            $start->addDays(6)->toDateString(),
+        ];
     }
 
     public function validateCenter(Company $company, Center $center): void

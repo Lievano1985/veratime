@@ -18,10 +18,8 @@ class CreateScheduleBatchAction
     {
         return DB::transaction(function () use ($company, $center, $data, $createdBy): ScheduleBatch {
             $this->validator->validateCenter($company, $center);
-            [$periodStart, $periodEnd] = $this->validator->validatePeriod(
-                (string) ($data['period_start'] ?? ''),
-                (string) ($data['period_end'] ?? ''),
-            );
+            [$periodStart, $periodEnd] = $this->validator->naturalWeekForDate((string) ($data['period_start'] ?? ''));
+            [$periodStart, $periodEnd] = $this->validator->validatePeriod($periodStart, $periodEnd);
 
             $this->validator->ensureNoOpenDraft($company, $center, $periodStart, $periodEnd);
 

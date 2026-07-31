@@ -6,7 +6,6 @@ use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\OrganizationalUnit;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -18,45 +17,32 @@ class ReplacePrimaryOrganizationalUnitAction
 
     public function handle(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit, array $data): EmploymentUnitAssignment
     {
+        if (blank($data['effective_from'] ?? null)) {
+            $data['effective_from'] = $relationship->started_at?->toDateString() ?? now()->toDateString();
+        }
+
+        $data['effective_to'] = null;
+
         [$from, $to] = $this->assignAction->dates($data);
-        $this->assignAction->assertValid($company, $relationship, $unit, $from, $to);
+        $this->assignAction->assertValid($company, $relationship, $unit, $from, $to, $data);
 
         return DB::transaction(function () use ($company, $relationship, $unit, $data, $from, $to): EmploymentUnitAssignment {
-            $active = EmploymentUnitAssignment::query()
+            $assignment = EmploymentUnitAssignment::query()
                 ->where('company_id', $company->id)
                 ->where('employment_relationship_id', $relationship->id)
                 ->where('assignment_type', 'primary')
                 ->where('status', 'active')
                 ->lockForUpdate()
-                ->orderBy('effective_from')
-                ->get();
+                ->latest('updated_at')
+                ->first();
 
-            foreach ($active as $assignment) {
-                if ($assignment->effective_from->gte($from)) {
-                    $this->correctAssignmentInPlace($assignment, $unit, $data, $from, $to);
-
-                    return $assignment->refresh();
-                }
-
-                if ($assignment->effective_to && $assignment->effective_to->lt($from)) {
-                    continue;
-                }
-
-                $assignment->forceFill([
-                    'effective_to' => $from->subDay()->toDateString(),
-                    'status' => 'replaced',
-                ])->save();
+            if (! $assignment) {
+                return $this->assignAction->create($company, $relationship, $unit, 'primary', $data, $from, $to);
             }
 
-            $new = $this->assignAction->create($company, $relationship, $unit, 'primary', $data, $from, $to);
+            $this->correctAssignmentInPlace($assignment, $unit, $data);
 
-            foreach ($active as $assignment) {
-                if ($assignment->status === 'replaced') {
-                    $assignment->forceFill(['replaced_by_id' => $new->id])->save();
-                }
-            }
-
-            return $new->refresh();
+            return $assignment->refresh();
         });
     }
 
@@ -64,8 +50,6 @@ class ReplacePrimaryOrganizationalUnitAction
         EmploymentUnitAssignment $assignment,
         OrganizationalUnit $unit,
         array $data,
-        CarbonImmutable $from,
-        ?CarbonImmutable $to,
     ): void {
         if (blank($data['reason'] ?? null)) {
             throw new InvalidArgumentException('Indica el motivo para corregir la asignacion organizacional.');
@@ -84,16 +68,15 @@ class ReplacePrimaryOrganizationalUnitAction
             ],
             'new' => [
                 'organizational_unit_id' => $unit->id,
-                'effective_from' => $from->toDateString(),
-                'effective_to' => $to?->toDateString(),
+                'effective_from' => $assignment->effective_from?->toDateString(),
+                'effective_to' => null,
             ],
-            'note' => 'Administrative correction only; published schedules remain unchanged.',
+            'note' => 'Administrative segmentation correction only; worker validity and published schedules remain unchanged.',
         ];
 
         $assignment->forceFill([
             'organizational_unit_id' => $unit->id,
-            'effective_from' => $from->toDateString(),
-            'effective_to' => $to?->toDateString(),
+            'effective_to' => null,
             'reason' => $data['reason'],
             'metadata' => $metadata,
         ])->save();

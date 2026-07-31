@@ -23,11 +23,12 @@ class DeleteScheduleProfileIfUnusedAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedProfile->assignments()->exists()
-                || $this->hasGeneratedDailySchedules($company, $lockedProfile)) {
-                throw new InvalidArgumentException('No se puede eliminar el perfil porque ya tiene asignaciones u horarios generados. Puedes inactivarlo.');
+            if ($this->hasGeneratedDailySchedules($company, $lockedProfile)) {
+                throw new InvalidArgumentException('No se puede eliminar el perfil porque ya tiene horarios generados. Puedes inactivarlo.');
             }
 
+            $lockedProfile->assignments()->update(['replaced_by_id' => null]);
+            $lockedProfile->assignments()->delete();
             $lockedProfile->weeklyRules()->delete();
             $lockedProfile->cycleRules()->delete();
             $lockedProfile->flexibleRules()->delete();

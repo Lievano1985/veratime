@@ -1035,14 +1035,13 @@ php artisan test tests/Feature/Sprint1C/WorkerManagementTest.php --stop-on-failu
 
 ## Bloque C - Asignaciones organizacionales y pendientes UI
 
-**Estado:** Iniciado/candidato a validacion. No incluye perfiles, `work_days`, calculos, reportes ni API.
+**Estado:** Cerrado. No incluye perfiles, `work_days`, calculos, reportes ni API.
 
 ### Pruebas manuales
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Correccion retroactiva de unidad | En `/organization/assignments`, reemplazar unidad principal usando una fecha igual o anterior a la asignacion vigente y capturar motivo. | Corrige la asignacion vigente sobre el mismo registro y no crea historial adicional. |
-| Reemplazo futuro | Reemplazar unidad principal con fecha posterior a la asignacion vigente. | Cierra la anterior como `Reemplazado` y crea nueva asignacion `Vigente`. |
+| Correccion de unidad | En `/organization/assignments`, reemplazar unidad principal y capturar motivo. | Corrige la segmentacion activa sobre el mismo registro y no crea historial adicional. |
 | Publicacion congelada | Corregir una asignacion organizacional usada para generar/publicar un horario. | El horario publicado conserva su unidad congelada; el cambio aplica al dato organizacional/futuras publicaciones. |
 | Eventos paginados | En `/time-events/manual`, crear o consultar mas de 10 eventos. | La tabla muestra paginacion y permite llegar a eventos que antes quedaban ocultos. |
 | Filtros de eventos | Filtrar `/time-events/manual` por fuente o estado. | La tabla muestra solo los eventos que coinciden y mantiene paginacion. |
@@ -1062,6 +1061,43 @@ php artisan test tests/Feature/Sprint1C/WorkerManagementTest.php --stop-on-failu
 - Cambios a horarios publicados desde asignaciones organizacionales.
 - `work_days`.
 - Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes o API.
+
+---
+
+## Bloque D - Simplificacion de vigencia laboral y asignacion organizacional
+
+**Estado:** Implementado/candidato a validacion. No incluye `work_days`, motor legal, calculos, reportes ni API.
+
+### Pruebas manuales
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Sin fecha en asignacion | Abrir `/organization/assignments` y entrar a Cambiar unidad. | El formulario no muestra campos de fecha para asignacion organizacional. |
+| Cambio de unidad activa | Seleccionar trabajador activo, unidad del mismo centro, motivo y guardar. | Se actualiza la unidad principal actual sobre el mismo registro. |
+| Trabajador con fecha de ingreso futura | Seleccionar un trabajador activo cuya relacion empieza despues de hoy. | El combo de unidades se llena por su centro activo y no aparece error por fecha seleccionada. |
+| Trabajador dado de baja/inactivo | Intentar seleccionar o asignar trabajador no activo. | No aparece como seleccionable o queda bloqueado por relacion/estado laboral. |
+| Apoyo temporal fuera de UI | Revisar `/organization/assignments`. | No hay boton ni formulario para crear apoyo temporal. |
+| Perfil por unidad | Generar programacion draft desde perfiles para una relacion con unidad principal activa. | La unidad activa actual participa en la resolucion de perfil; apoyos temporales legados no cambian la herencia. |
+| Publicacion congelada | Cambiar unidad despues de publicar un horario. | El horario publicado conserva su unidad congelada y no se recalcula. |
+| Tab del navegador | Abrir varias vistas principales. | El tab muestra el nombre de la vista actual junto al nombre de la app. |
+| Scroll del menu | Reducir altura de la ventana hasta que el menu lateral tenga scroll. | El scrollbar del menu se ve delgado y discreto. |
+
+### Pruebas automatizadas
+
+```bash
+php artisan test tests/Feature/SprintB1/OrganizationalScopeTest.php --stop-on-failure
+php artisan test tests/Feature/SprintB2/OrganizationalOperationsUiTest.php --stop-on-failure
+php artisan test tests/Feature/BlockD1/ScheduleProfileDomainTest.php --stop-on-failure
+php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --stop-on-failure
+```
+
+### No incluido
+
+- `work_days`.
+- Motor legal, calculos, alertas e incidencias.
+- Usuarios y roles.
+- Sistema visual general.
+- Reportes, API o despliegue.
 
 ---
 
@@ -1633,11 +1669,12 @@ Periodo demo:
 |---|---|---|
 | Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion diaria. | Carga `/scheduling/daily` y muestra lotes de la empresa activa en tabla compacta. |
 | Filtros | Usar filtros principales y abrir `+ Filtros`. | Los filtros avanzados aparecen solo cuando se despliegan y la pantalla mantiene espacio para el calendario. |
-| Crear lote vacio | Crear lote para un centro y periodo valido. | Queda en `Borrador`; no se publica ni genera automaticamente. |
-| Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador desde perfiles y se muestra resumen de generacion. |
+| Crear lote vacio | Crear lote para un centro usando cualquier fecha dentro de una semana. | Queda en `Borrador`, normalizado a lunes-domingo; no se publica ni genera automaticamente. |
+| Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador dentro de la semana natural; dias antes del alta/baja del trabajador quedan fuera de vigencia. |
 | Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
 | Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
 | Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
+| Semana lunes-domingo | Crear un lote eligiendo una fecha a media semana, por ejemplo miercoles. | El lote se guarda de lunes a domingo; los dias fuera de vigencia del trabajador aparecen bloqueados/desactivados. |
 | Ocultar calendario | Usar `Ocultar calendario`. | Regresa a la lista sin dejar abierto el lote. |
 | Edicion individual | Cambiar un dia a Turno, Descanso, Flexible, Guardia o Pendiente con motivo. | Guarda con `source_type = manual` usando Action de dominio. |
 | Cambio masivo | Seleccionar trabajadores y rango dentro del lote; confirmar motivo. | Aplica el cambio de forma atomica o revierte todo si falla. |

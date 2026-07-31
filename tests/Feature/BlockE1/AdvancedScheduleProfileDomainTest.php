@@ -3,7 +3,6 @@
 namespace Tests\Feature\BlockE1;
 
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
-use App\Domains\Organization\Actions\AssignTemporarySupportAction;
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
@@ -16,6 +15,7 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
+use App\Models\EmploymentUnitAssignment;
 use App\Models\OrganizationalUnit;
 use App\Models\ScheduleProfile;
 use App\Models\ScheduleProfileAssignment;
@@ -240,14 +240,24 @@ class AdvancedScheduleProfileDomainTest extends TestCase
         app(AssignScheduleProfileAction::class)->handle($company, $companyProfile, ['assignment_scope' => 'company', 'effective_from' => '2026-08-01']);
         app(AssignScheduleProfileAction::class)->handle($company, $centerProfile, ['assignment_scope' => 'center', 'center_id' => $center->id, 'effective_from' => '2026-08-01']);
         app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, ['effective_from' => '2026-08-10']);
-        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $supportUnit, ['effective_from' => '2026-08-01', 'effective_to' => '2026-08-31']);
+        EmploymentUnitAssignment::query()->forceCreate([
+            'company_id' => $company->id,
+            'employment_relationship_id' => $relationship->id,
+            'organizational_unit_id' => $supportUnit->id,
+            'assignment_type' => 'temporary_support',
+            'effective_from' => '2026-08-01',
+            'effective_to' => '2026-08-31',
+            'status' => 'active',
+            'source' => 'system',
+            'metadata' => ['legacy' => true],
+        ]);
         app(AssignScheduleProfileAction::class)->handle($company, $unitProfile, ['assignment_scope' => 'organizational_unit', 'organizational_unit_id' => $unit->id, 'effective_from' => '2026-08-01']);
         app(AssignScheduleProfileAction::class)->handle($company, $directProfile, ['assignment_scope' => 'employment_relationship', 'employment_relationship_id' => $relationship->id, 'effective_from' => '2026-09-03']);
 
         $effective = app(ResolveScheduleProfileForRelationshipAction::class);
         $rule = app(ResolveScheduleProfileRuleForDateAction::class);
 
-        $this->assertSame('CENT', $effective->handle($company, $relationship, '2026-08-05')['schedule_profile']->code);
+        $this->assertSame('UNIT', $effective->handle($company, $relationship, '2026-08-05')['schedule_profile']->code);
         $this->assertSame('UNIT', $effective->handle($company, $relationship, '2026-08-15')['schedule_profile']->code);
         $unitAssignment = $effective->handle($company, $relationship, '2026-08-15')['assignment'];
         $this->assertSame(1, $rule->handle($unitAssignment, '2026-08-17')['cycle_day']);

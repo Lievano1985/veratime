@@ -155,22 +155,43 @@ it('deletes shift templates only when no profile rule or daily schedule referenc
     $this->assertModelExists($usedShift);
 });
 
-it('deletes schedule profiles only before assignments or generated schedules exist', function (): void {
+it('deletes schedule profiles with unused assignments and blocks generated schedules', function (): void {
     $company = catalogDeletionCompany();
     $unusedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id]);
-    $usedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id]);
+    $profileWithAssignment = ScheduleProfile::factory()->create(['company_id' => $company->id]);
+    $generatedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id]);
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $batch = catalogDeletionBatchFor($company, $center);
+    $relationship = catalogDeletionRelationship($company);
 
     ScheduleProfileAssignment::factory()->create([
         'company_id' => $company->id,
-        'schedule_profile_id' => $usedProfile->id,
+        'schedule_profile_id' => $profileWithAssignment->id,
+    ]);
+    $generatedAssignment = ScheduleProfileAssignment::factory()->create([
+        'company_id' => $company->id,
+        'schedule_profile_id' => $generatedProfile->id,
+    ]);
+    DailyScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'schedule_batch_id' => $batch->id,
+        'employment_relationship_id' => $relationship->id,
+        'source_type' => 'profile',
+        'source_reference' => [
+            'schedule_profile_id' => $generatedProfile->id,
+            'schedule_profile_assignment_id' => $generatedAssignment->id,
+        ],
     ]);
 
     app(DeleteScheduleProfileIfUnusedAction::class)->handle($company, $unusedProfile);
+    app(DeleteScheduleProfileIfUnusedAction::class)->handle($company, $profileWithAssignment);
 
     $this->assertModelMissing($unusedProfile);
-    expect(fn () => app(DeleteScheduleProfileIfUnusedAction::class)->handle($company, $usedProfile))
+    $this->assertModelMissing($profileWithAssignment);
+    $this->assertDatabaseMissing('schedule_profile_assignments', ['schedule_profile_id' => $profileWithAssignment->id]);
+    expect(fn () => app(DeleteScheduleProfileIfUnusedAction::class)->handle($company, $generatedProfile))
         ->toThrow(\InvalidArgumentException::class);
-    $this->assertModelExists($usedProfile);
+    $this->assertModelExists($generatedProfile);
 });
 
 it('deletes schedule profile assignments only before they generate daily schedules', function (): void {
@@ -311,11 +332,29 @@ it('deletes and blocks schedule profiles from the livewire screen using generate
     $company = catalogDeletionCompany();
     $user = catalogDeletionUserFor($company);
     $unusedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id, 'name' => 'Perfil libre']);
-    $usedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id, 'name' => 'Perfil usado']);
+    $profileWithAssignment = ScheduleProfile::factory()->create(['company_id' => $company->id, 'name' => 'Perfil con asignacion']);
+    $generatedProfile = ScheduleProfile::factory()->create(['company_id' => $company->id, 'name' => 'Perfil generado']);
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $batch = catalogDeletionBatchFor($company, $center);
+    $relationship = catalogDeletionRelationship($company);
 
     ScheduleProfileAssignment::factory()->create([
         'company_id' => $company->id,
-        'schedule_profile_id' => $usedProfile->id,
+        'schedule_profile_id' => $profileWithAssignment->id,
+    ]);
+    $generatedAssignment = ScheduleProfileAssignment::factory()->create([
+        'company_id' => $company->id,
+        'schedule_profile_id' => $generatedProfile->id,
+    ]);
+    DailyScheduleAssignment::factory()->create([
+        'company_id' => $company->id,
+        'schedule_batch_id' => $batch->id,
+        'employment_relationship_id' => $relationship->id,
+        'source_type' => 'profile',
+        'source_reference' => [
+            'schedule_profile_id' => $generatedProfile->id,
+            'schedule_profile_assignment_id' => $generatedAssignment->id,
+        ],
     ]);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
@@ -327,8 +366,15 @@ it('deletes and blocks schedule profiles from the livewire screen using generate
     $this->assertModelMissing($unusedProfile);
 
     Volt::test('scheduling.profiles')
-        ->call('delete', $usedProfile->id)
+        ->call('delete', $profileWithAssignment->id)
+        ->assertHasNoErrors();
+
+    $this->assertModelMissing($profileWithAssignment);
+    $this->assertDatabaseMissing('schedule_profile_assignments', ['schedule_profile_id' => $profileWithAssignment->id]);
+
+    Volt::test('scheduling.profiles')
+        ->call('delete', $generatedProfile->id)
         ->assertHasErrors(['profile']);
 
-    $this->assertModelExists($usedProfile);
+    $this->assertModelExists($generatedProfile);
 });

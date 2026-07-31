@@ -106,6 +106,25 @@ select:focus[data-flux-control] {
         background: var(--color-vera-sidebar) !important;
         border-color: var(--color-vera-sidebar-border) !important;
         color: var(--color-zinc-50);
+        scrollbar-color: color-mix(in oklab, var(--color-white), transparent 82%) transparent;
+        scrollbar-width: thin;
+    }
+
+    .vera-app-sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .vera-app-sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .vera-app-sidebar::-webkit-scrollbar-thumb {
+        background: color-mix(in oklab, var(--color-white), transparent 86%);
+        border-radius: 999px;
+    }
+
+    .vera-app-sidebar:hover::-webkit-scrollbar-thumb {
+        background: color-mix(in oklab, var(--color-white), transparent 74%);
     }
 
     .vera-app-sidebar a,

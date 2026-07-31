@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Domains\MandatoryRestDays\Actions\CreateMandatoryRestDayAction;
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
-use App\Domains\Organization\Actions\AssignTemporarySupportAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
@@ -442,7 +441,6 @@ class VeraTimeDemoSeeder extends Seeder
         $this->primaryUnit($company, $workers['carla']['relationship'], $units['accounting']);
         $this->primaryUnit($company, $workers['diego']['relationship'], $units['warehouse']);
 
-        $this->temporarySupport($company, $workers['carla']['relationship'], $units['warehouse']);
         $this->supervisorScope($company, $users['supervisor'], $units['production']);
     }
 
@@ -559,25 +557,6 @@ class VeraTimeDemoSeeder extends Seeder
             'effective_from' => '2026-08-01',
             'source' => 'system',
             'reason' => 'Asignacion demo local.',
-            'metadata' => ['demo' => true],
-        ]);
-    }
-
-    private function temporarySupport(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit): void
-    {
-        if ($relationship->employmentUnitAssignments()
-            ->where('assignment_type', 'temporary_support')
-            ->where('organizational_unit_id', $unit->id)
-            ->where('status', 'active')
-            ->exists()) {
-            return;
-        }
-
-        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $unit, [
-            'effective_from' => '2026-08-15',
-            'effective_to' => '2026-08-20',
-            'source' => 'system',
-            'reason' => 'Apoyo temporal demo.',
             'metadata' => ['demo' => true],
         ]);
     }

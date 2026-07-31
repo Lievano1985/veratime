@@ -14,12 +14,18 @@ class AssignPrimaryOrganizationalUnitAction
 {
     public function handle(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit, array $data): EmploymentUnitAssignment
     {
+        if (blank($data['effective_from'] ?? null)) {
+            $data['effective_from'] = $relationship->started_at?->toDateString() ?? now()->toDateString();
+        }
+
+        $data['effective_to'] = null;
+
         [$from, $to] = $this->dates($data);
-        $this->assertValid($company, $relationship, $unit, $from, $to);
+        $this->assertValid($company, $relationship, $unit, $from, $to, $data);
 
         return DB::transaction(function () use ($company, $relationship, $unit, $data, $from, $to): EmploymentUnitAssignment {
             if ($this->hasPrimaryOverlap($company, $relationship, $from, $to)) {
-                throw new InvalidArgumentException('La relacion laboral ya tiene una unidad principal vigente para este periodo.');
+                throw new InvalidArgumentException('La relacion laboral ya tiene una unidad principal activa.');
             }
 
             return $this->create($company, $relationship, $unit, 'primary', $data, $from, $to);
@@ -62,7 +68,7 @@ class AssignPrimaryOrganizationalUnitAction
         return [$from, $to];
     }
 
-    public function assertValid(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit, CarbonImmutable $from, ?CarbonImmutable $to): void
+    public function assertValid(Company $company, EmploymentRelationship $relationship, OrganizationalUnit $unit, CarbonImmutable $from, ?CarbonImmutable $to, array $data = []): void
     {
         if ($company->status !== 'active' || $relationship->company_id !== $company->id || $unit->company_id !== $company->id) {
             throw new InvalidArgumentException('La relacion laboral y la unidad deben pertenecer a la empresa activa.');
@@ -70,17 +76,6 @@ class AssignPrimaryOrganizationalUnitAction
 
         if ($relationship->status !== 'active' || $unit->status !== 'active') {
             throw new InvalidArgumentException('La relacion laboral y la unidad deben estar activas.');
-        }
-
-        if ($relationship->started_at && $from->lt(CarbonImmutable::parse($relationship->started_at)->startOfDay())) {
-            throw new InvalidArgumentException('La asignacion no puede iniciar antes de la relacion laboral.');
-        }
-
-        if ($relationship->ended_at) {
-            $endedAt = CarbonImmutable::parse($relationship->ended_at)->startOfDay();
-            if ($from->gt($endedAt) || ($to && $to->gt($endedAt))) {
-                throw new InvalidArgumentException('La relacion laboral no esta vigente para el periodo asignado.');
-            }
         }
 
         if ($unit->center_id !== $relationship->center_id) {
@@ -94,18 +89,12 @@ class AssignPrimaryOrganizationalUnitAction
 
     public function hasPrimaryOverlap(Company $company, EmploymentRelationship $relationship, CarbonImmutable $from, ?CarbonImmutable $to, ?int $exceptId = null): bool
     {
-        $periodEnd = $to?->toDateString() ?? '9999-12-31';
-
         return EmploymentUnitAssignment::query()
             ->where('company_id', $company->id)
             ->where('employment_relationship_id', $relationship->id)
             ->where('assignment_type', 'primary')
             ->where('status', 'active')
             ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
-            ->whereDate('effective_from', '<=', $periodEnd)
-            ->where(function ($query) use ($from): void {
-                $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $from->toDateString());
-            })
             ->lockForUpdate()
             ->exists();
     }

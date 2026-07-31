@@ -21,21 +21,13 @@ class ResolveEmploymentUnitsForDateAction
             ->with('organizationalUnit')
             ->where('company_id', $company->id)
             ->where('status', 'active')
-            ->whereDate('effective_from', '<=', $date)
-            ->where(function ($query) use ($date): void {
-                $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date);
-            })
             ->get();
 
         return [
             'date' => $date,
             'center' => $relationship->center,
             'primary' => $assignments->firstWhere('assignment_type', 'primary')?->organizationalUnit,
-            'temporary_supports' => $assignments
-                ->where('assignment_type', 'temporary_support')
-                ->pluck('organizationalUnit')
-                ->filter()
-                ->values(),
+            'temporary_supports' => collect(),
         ];
     }
 }

@@ -4,10 +4,8 @@ namespace Tests\Feature\SprintB1;
 
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
-use App\Domains\Organization\Actions\AssignTemporarySupportAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Organization\Actions\EndOperationalScopeAction;
-use App\Domains\Organization\Actions\EndTemporarySupportAction;
 use App\Domains\Organization\Actions\EnsureUserCanManageWorkerAction;
 use App\Domains\Organization\Actions\InactivateOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ReplaceOperationalScopeAction;
@@ -111,7 +109,7 @@ class OrganizationalScopeTest extends TestCase
         $this->assertSame('inactive', $unit->status);
     }
 
-    public function test_it_assigns_replaces_and_resolves_primary_units_without_destroying_history(): void
+    public function test_it_assigns_updates_and_resolves_primary_unit_as_current_segmentation(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $create = app(CreateOrganizationalUnitAction::class);
@@ -127,45 +125,53 @@ class OrganizationalScopeTest extends TestCase
             $this->assertTrue(true);
         }
 
-        $replacement = app(ReplacePrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $second, ['effective_from' => '2026-08-15']);
-        $this->assertSame('replaced', $assignment->refresh()->status);
-        $this->assertSame($replacement->id, $assignment->refresh()->replaced_by_id);
+        $replacement = app(ReplacePrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $second, [
+            'effective_from' => '2026-08-15',
+            'reason' => 'Cambio de segmentacion',
+        ]);
+        $this->assertSame($assignment->id, $replacement->id);
+        $this->assertSame('active', $assignment->refresh()->status);
+        $this->assertNull($assignment->refresh()->replaced_by_id);
+        $this->assertSame($second->id, $assignment->refresh()->organizational_unit_id);
 
         $resolved = app(ResolveEmploymentUnitsForDateAction::class)->handle($company, $relationship, '2026-08-20');
         $this->assertSame($second->id, $resolved['primary']->id);
         $this->assertSame($center->id, $resolved['center']->id);
     }
 
-    public function test_temporary_support_can_be_in_other_center_same_company_but_not_other_company(): void
+    public function test_legacy_temporary_support_is_not_resolved_as_current_segmentation(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $otherCenter = Center::factory()->for($company)->create();
         $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $otherCenter, $this->unitData('SUP', 'Apoyo', 'department'));
-        $support = app(AssignTemporarySupportAction::class)->handle($company, $relationship, $supportUnit, ['effective_from' => '2026-08-05', 'effective_to' => '2026-08-10']);
+        $support = EmploymentUnitAssignment::query()->forceCreate([
+            'company_id' => $company->id,
+            'employment_relationship_id' => $relationship->id,
+            'organizational_unit_id' => $supportUnit->id,
+            'assignment_type' => 'temporary_support',
+            'effective_from' => '2026-08-05',
+            'effective_to' => '2026-08-10',
+            'status' => 'active',
+        ]);
 
         $this->assertSame('temporary_support', $support->assignment_type);
-        $this->assertSame($supportUnit->id, app(ResolveEmploymentUnitsForDateAction::class)->handle($company, $relationship, '2026-08-06')['temporary_supports']->first()->id);
-
-        try {
-            app(AssignTemporarySupportAction::class)->handle($company, $relationship, $supportUnit, ['effective_from' => '2026-08-06', 'effective_to' => '2026-08-08']);
-            $this->fail('Expected duplicate support overlap to be blocked.');
-        } catch (InvalidArgumentException) {
-            $this->assertTrue(true);
-        }
-
-        $foreignCompany = Company::factory()->create();
-        $foreignUnit = OrganizationalUnit::factory()->forCompany($foreignCompany)->create();
-        $this->expectException(InvalidArgumentException::class);
-        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $foreignUnit, ['effective_from' => '2026-08-06']);
+        $this->assertTrue(app(ResolveEmploymentUnitsForDateAction::class)->handle($company, $relationship, '2026-08-06')['temporary_supports']->isEmpty());
     }
 
-    public function test_relationship_must_be_active_for_assignment_period(): void
+    public function test_relationship_status_controls_assignment_not_assignment_dates(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext(endedAt: '2026-08-10');
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
 
+        $assignment = app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, ['effective_from' => '2026-08-11']);
+        $this->assertSame('active', $assignment->status);
+
+        $relationship->forceFill(['status' => 'inactive'])->save();
+
         $this->expectException(InvalidArgumentException::class);
-        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, ['effective_from' => '2026-08-11']);
+        app(ReplacePrimaryOrganizationalUnitAction::class)->handle($company, $relationship->refresh(), $unit, [
+            'reason' => 'Relacion cerrada',
+        ]);
     }
 
     public function test_supervisor_scopes_resolve_by_center_department_area_and_team(): void
@@ -201,19 +207,25 @@ class OrganizationalScopeTest extends TestCase
         $this->assertNotContains($otherArea->id, $scope['organizational_unit_ids']);
     }
 
-    public function test_supervisor_can_manage_by_center_scope_and_support_only_during_vigence(): void
+    public function test_supervisor_scope_does_not_use_legacy_temporary_support(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $supportCenter = Center::factory()->for($company)->create();
         $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $supportCenter, $this->unitData('SUP', 'Soporte', 'department'));
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
-        app(AssignTemporarySupportAction::class)->handle($company, $relationship, $supportUnit, ['effective_from' => '2026-08-05', 'effective_to' => '2026-08-10']);
+        EmploymentUnitAssignment::query()->forceCreate([
+            'company_id' => $company->id,
+            'employment_relationship_id' => $relationship->id,
+            'organizational_unit_id' => $supportUnit->id,
+            'assignment_type' => 'temporary_support',
+            'effective_from' => '2026-08-05',
+            'effective_to' => '2026-08-10',
+            'status' => 'active',
+        ]);
         app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], unit: $supportUnit);
 
-        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-06');
-
         $this->expectException(AuthorizationException::class);
-        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-11');
+        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-06');
     }
 
     public function test_company_managers_can_manage_any_worker_and_inactive_contexts_are_blocked(): void
@@ -271,7 +283,7 @@ class OrganizationalScopeTest extends TestCase
         $this->assertDatabaseHas(OrganizationalUnit::class, ['code' => 'ADM', 'type' => 'department']);
         $this->assertDatabaseHas(OrganizationalUnit::class, ['code' => 'PROD-A', 'type' => 'team']);
         $this->assertDatabaseHas(EmploymentUnitAssignment::class, ['assignment_type' => 'primary', 'status' => 'active']);
-        $this->assertDatabaseHas(EmploymentUnitAssignment::class, ['assignment_type' => 'temporary_support', 'status' => 'active']);
+        $this->assertDatabaseMissing(EmploymentUnitAssignment::class, ['assignment_type' => 'temporary_support', 'status' => 'active']);
         $this->assertDatabaseHas(OperationalScopeAssignment::class, ['responsibility_type' => 'supervisor', 'status' => 'active']);
     }
 

@@ -151,7 +151,7 @@ class OrganizationalOperationsUiTest extends TestCase
         $this->assertSame('active', $department->refresh()->status);
     }
 
-    public function test_assignments_ui_assigns_and_replaces_primary_unit_preserving_history(): void
+    public function test_assignments_ui_assigns_and_updates_primary_unit_as_current_segmentation(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
@@ -164,29 +164,34 @@ class OrganizationalOperationsUiTest extends TestCase
             ->set('primaryForm.worker_ids', [$worker->id])
             ->set('primaryForm.organizational_unit_id', (string) $first->id)
             ->set('primaryForm.operation', 'assign')
-            ->set('primaryForm.effective_from', '2026-08-01')
             ->call('savePrimary');
 
         Volt::test('organization.assignments')
             ->set('primaryForm.worker_ids', [$worker->id])
             ->set('primaryForm.organizational_unit_id', (string) $second->id)
             ->set('primaryForm.operation', 'replace')
-            ->set('primaryForm.effective_from', '2026-08-15')
             ->set('primaryForm.reason', 'Cambio de area')
             ->call('savePrimary');
 
         $this->assertDatabaseHas('employment_unit_assignments', [
             'company_id' => $company->id,
             'employment_relationship_id' => $relationship->id,
-            'organizational_unit_id' => $first->id,
-            'status' => 'replaced',
-        ]);
-        $this->assertDatabaseHas('employment_unit_assignments', [
-            'company_id' => $company->id,
-            'employment_relationship_id' => $relationship->id,
             'organizational_unit_id' => $second->id,
             'status' => 'active',
         ]);
+        $this->assertDatabaseCount('employment_unit_assignments', 1);
+    }
+
+    public function test_app_layout_uses_current_view_name_in_browser_title(): void
+    {
+        [$company] = $this->companyAndCenter();
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('organization.assignments'))
+            ->assertOk()
+            ->assertSee('<title>Asignaciones organizacionales | '.config('app.name', 'Vera Time').'</title>', false);
     }
 
     public function test_assignments_ui_assigns_primary_unit_to_multiple_workers(): void
@@ -207,7 +212,6 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertSee('ADM - Administracion')
             ->set('primaryForm.organizational_unit_id', (string) $unit->id)
             ->set('primaryForm.operation', 'assign')
-            ->set('primaryForm.effective_from', '2026-08-01')
             ->call('savePrimary')
             ->assertHasNoErrors()
             ->assertSee('Unidad principal guardada para 2 trabajadores.');
@@ -244,7 +248,6 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertSet('primaryForm.operation', 'replace')
             ->set('primaryForm.worker_ids', [$worker->id, $secondWorker->id])
             ->set('primaryForm.organizational_unit_id', (string) $second->id)
-            ->set('primaryForm.effective_from', '2026-08-15')
             ->set('primaryForm.reason', 'Cambio de unidad principal')
             ->call('savePrimary')
             ->assertHasNoErrors()
@@ -254,16 +257,12 @@ class OrganizationalOperationsUiTest extends TestCase
             $this->assertDatabaseHas('employment_unit_assignments', [
                 'company_id' => $company->id,
                 'employment_relationship_id' => $activeRelationship->id,
-                'organizational_unit_id' => $first->id,
-                'status' => 'replaced',
-            ]);
-            $this->assertDatabaseHas('employment_unit_assignments', [
-                'company_id' => $company->id,
-                'employment_relationship_id' => $activeRelationship->id,
                 'organizational_unit_id' => $second->id,
                 'status' => 'active',
             ]);
         }
+
+        $this->assertDatabaseCount('employment_unit_assignments', 2);
     }
 
     public function test_assignments_ui_corrects_existing_primary_unit_without_changing_published_schedule_snapshot(): void
@@ -296,7 +295,6 @@ class OrganizationalOperationsUiTest extends TestCase
             ->set('primaryForm.worker_ids', [$worker->id])
             ->set('primaryForm.organizational_unit_id', (string) $second->id)
             ->set('primaryForm.operation', 'replace')
-            ->set('primaryForm.effective_from', '2026-08-01')
             ->set('primaryForm.reason', 'Unidad capturada incorrectamente')
             ->call('savePrimary')
             ->assertHasNoErrors();
@@ -306,80 +304,10 @@ class OrganizationalOperationsUiTest extends TestCase
 
         $this->assertSame($second->id, $assignment->organizational_unit_id);
         $this->assertSame('active', $assignment->status);
-        $this->assertSame('2026-08-01', $assignment->effective_from->toDateString());
+        $this->assertSame('2026-08-10', $assignment->effective_from->toDateString());
         $this->assertSame($first->id, $publishedDay->organizational_unit_id);
         $this->assertDatabaseCount('employment_unit_assignments', 1);
         $this->assertSame('Unidad capturada incorrectamente', $assignment->metadata['administrative_corrections'][0]['reason']);
-    }
-
-    public function test_assignments_ui_creates_and_ends_temporary_support(): void
-    {
-        [$company, $center, $relationship, $worker] = $this->relationshipContext();
-        $supportCenter = Center::factory()->for($company)->create();
-        $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $supportCenter, $this->unitData('SUP', 'Soporte', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::RH);
-
-        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
-
-        Volt::test('organization.assignments')
-            ->set('supportForm.worker_ids', [$worker->id])
-            ->set('supportForm.support_center_id', (string) $supportCenter->id)
-            ->set('supportForm.organizational_unit_id', (string) $supportUnit->id)
-            ->set('supportForm.effective_from', '2026-08-11')
-            ->set('supportForm.effective_to', '2026-08-20')
-            ->set('supportForm.reason', 'Apoyo temporal')
-            ->call('saveSupport');
-
-        $support = EmploymentUnitAssignment::query()->where('assignment_type', 'temporary_support')->firstOrFail();
-
-        Volt::test('organization.assignments')
-            ->call('openEndSupportPanel', $support->id)
-            ->set('endForm.effective_to', '2026-08-18')
-            ->set('endForm.reason', 'Fin de apoyo')
-            ->call('endSupport');
-
-        $this->assertDatabaseHas('employment_unit_assignments', [
-            'id' => $support->id,
-            'status' => 'inactive',
-            'effective_to' => '2026-08-18 00:00:00',
-            'reason' => 'Fin de apoyo',
-        ]);
-    }
-
-    public function test_assignments_ui_creates_temporary_support_for_multiple_workers(): void
-    {
-        [$company, $center, $relationship, $worker] = $this->relationshipContext();
-        $secondWorker = Worker::factory()->for($company)->create(['status' => 'active']);
-        $secondRelationship = EmploymentRelationship::factory()->for($company)->for($secondWorker)->for($center)->create([
-            'started_at' => '2026-01-01',
-            'status' => 'active',
-        ]);
-        $supportCenter = Center::factory()->for($company)->create();
-        $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $supportCenter, $this->unitData('SUP', 'Soporte', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::RH);
-
-        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
-
-        Volt::test('organization.assignments')
-            ->set('supportForm.worker_ids', [$worker->id, $secondWorker->id])
-            ->set('supportForm.support_center_id', (string) $supportCenter->id)
-            ->set('supportForm.organizational_unit_id', (string) $supportUnit->id)
-            ->set('supportForm.effective_from', '2026-08-11')
-            ->set('supportForm.effective_to', '2026-08-20')
-            ->set('supportForm.reason', 'Apoyo temporal multiple')
-            ->call('saveSupport')
-            ->assertHasNoErrors()
-            ->assertSee('Apoyo temporal guardado para 2 trabajadores.');
-
-        foreach ([$relationship, $secondRelationship] as $activeRelationship) {
-            $this->assertDatabaseHas('employment_unit_assignments', [
-                'company_id' => $company->id,
-                'employment_relationship_id' => $activeRelationship->id,
-                'organizational_unit_id' => $supportUnit->id,
-                'assignment_type' => 'temporary_support',
-                'status' => 'active',
-            ]);
-        }
     }
 
     public function test_assignment_worker_selector_can_show_all_active_workers_for_the_company(): void
@@ -439,7 +367,7 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertSee('Sin unidad principal');
     }
 
-    public function test_primary_unit_options_use_current_active_relationship_even_when_form_date_is_before_relationship_start(): void
+    public function test_primary_unit_options_use_active_relationship_without_assignment_date(): void
     {
         [$company, $center] = $this->companyAndCenter();
         $worker = Worker::factory()->for($company)->create(['status' => 'active']);
@@ -453,13 +381,11 @@ class OrganizationalOperationsUiTest extends TestCase
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('organization.assignments')
-            ->set('primaryForm.effective_from', '2026-07-29')
             ->set('primaryForm.worker_ids', [$worker->id])
             ->assertSee('OPS - Operaciones')
-            ->assertSet('primaryForm.effective_from', '2026-08-01')
             ->set('primaryForm.organizational_unit_id', (string) $unit->id)
             ->set('primaryForm.operation', 'replace')
-            ->set('primaryForm.reason', 'Fecha fuera de vigencia')
+            ->set('primaryForm.reason', 'Cambio de segmentacion')
             ->call('savePrimary')
             ->assertHasNoErrors();
     }
@@ -510,7 +436,6 @@ class OrganizationalOperationsUiTest extends TestCase
             ->set('primaryForm.worker_ids', [$worker->id])
             ->set('primaryForm.organizational_unit_id', (string) $foreignUnit->id)
             ->set('primaryForm.operation', 'assign')
-            ->set('primaryForm.effective_from', '2026-08-01')
             ->call('savePrimary')
             ->assertHasErrors(['primaryForm.organizational_unit_id']);
     }

@@ -289,7 +289,7 @@ new class extends Component {
         $this->onCallRules = $this->defaultOnCallRules();
         $this->resetPage();
 
-        Session::flash('status', $profile ? 'Perfil actualizado.' : 'Perfil creado.');
+        Session::flash('status', $profile ? 'Modelo actualizado.' : 'Modelo creado.');
     }
 
     public function inactivate(int $profileId, CurrentCompany $currentCompany, InactivateScheduleProfileAction $action): void
@@ -305,7 +305,7 @@ new class extends Component {
             throw ValidationException::withMessages(['profile' => $exception->getMessage()]);
         }
 
-        Session::flash('status', 'Perfil inactivado.');
+        Session::flash('status', 'Modelo inactivado.');
     }
 
     public function delete(int $profileId, CurrentCompany $currentCompany, DeleteScheduleProfileIfUnusedAction $action): void
@@ -326,7 +326,7 @@ new class extends Component {
         }
 
         $this->resetPage();
-        Session::flash('status', 'Perfil eliminado.');
+        Session::flash('status', 'Modelo eliminado.');
     }
 
     public function reactivate(int $profileId, CurrentCompany $currentCompany, ReactivateScheduleProfileAction $action): void
@@ -337,7 +337,7 @@ new class extends Component {
         Gate::authorize('reactivate', $profile);
         $action->handle($company, $profile);
 
-        Session::flash('status', 'Perfil reactivado.');
+        Session::flash('status', 'Modelo reactivado.');
     }
 
     public function closeFormPanel(): void
@@ -628,16 +628,16 @@ new class extends Component {
     private function profileTypeLabel(?ScheduleProfile $profile): string
     {
         if (! $profile) {
-            return 'Sin perfil';
+            return 'Sin modelo';
         }
 
         return match ($profile->profile_type) {
             'pattern' => $profile->pattern_mode === 'weekly'
-                ? 'Por patron semanal'
-                : 'Por patron - ciclo de '.$profile->cycleRules->count().' dias',
-            'calendar' => 'Por calendario',
-            'flexible' => 'Flexible',
-            'on_call' => 'Bajo demanda',
+                ? 'Horario fijo semanal'
+                : 'Rol rotativo - ciclo de '.$profile->cycleRules->count().' dias',
+            'calendar' => 'Programacion semanal manual',
+            'flexible' => 'Flexible avanzado',
+            'on_call' => 'Guardia avanzada',
             default => 'Tipo no reconocido',
         };
     }
@@ -658,11 +658,11 @@ new class extends Component {
     private function profileDetailSubtitle(ScheduleProfile $profile): string
     {
         return match ($profile->profile_type) {
-            'pattern' => $profile->pattern_mode === 'weekly' ? 'Reglas semanales reutilizables. Al generar programacion diaria para otra semana, estas reglas se aplican nuevamente segun la fecha.' : 'Ciclo repetitivo. La fecha inicial de asignacion representa el Dia 1.',
-            'calendar' => 'Perfil por calendario: no se repite automaticamente; deja los dias pendientes para definirlos por fecha.',
+            'pattern' => $profile->pattern_mode === 'weekly' ? 'Se repite cada semana. Las excepciones se corrigen en el lote semanal, sin tocar la base.' : 'Ciclo rotativo que se repite desde una fecha de inicio. La asignacion marca el Dia 1.',
+            'calendar' => 'No se repite automaticamente. Deja los dias pendientes para capturarlos en la programacion semanal.',
             'flexible' => 'Minutos requeridos y ventanas por dia. No representa un turno fijo.',
-            'on_call' => 'Disponibilidad bajo demanda; no cuenta automaticamente como tiempo trabajado.',
-            default => 'Perfil de horario.',
+            'on_call' => 'Disponibilidad o guardia avanzada; no cuenta automaticamente como tiempo trabajado.',
+            default => 'Modelo de horario.',
         };
     }
 
@@ -780,12 +780,12 @@ new class extends Component {
 <section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Perfiles de horario</flux:heading>
-            <flux:subheading>Configura reglas reutilizables. Un perfil por patron se repite cada semana al generar nuevos periodos de programacion diaria.</flux:subheading>
+            <flux:heading size="xl">Modelos de horario</flux:heading>
+            <flux:subheading>Elige como opera la empresa: horario fijo semanal, rol rotativo o captura semanal por demanda.</flux:subheading>
         </div>
 
         @if ($canManageProfiles)
-            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nuevo perfil</flux:button>
+            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nuevo modelo</flux:button>
         @endif
     </div>
 
@@ -799,12 +799,12 @@ new class extends Component {
 
     <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
         <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
-        <flux:select label="Tipo" wire:model.live="filters.profile_type">
+        <flux:select label="Modelo" wire:model.live="filters.profile_type">
             <flux:select.option value="all">Todos</flux:select.option>
-            <flux:select.option value="pattern">Por patron</flux:select.option>
-            <flux:select.option value="calendar">Por calendario</flux:select.option>
-            <flux:select.option value="flexible">Flexible</flux:select.option>
-            <flux:select.option value="on_call">Bajo demanda</flux:select.option>
+            <flux:select.option value="pattern">Fijo semanal / rotativo</flux:select.option>
+            <flux:select.option value="calendar">Programacion semanal manual</flux:select.option>
+            <flux:select.option value="flexible">Flexible avanzado</flux:select.option>
+            <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
         </flux:select>
         <flux:select label="Estado" wire:model.live="filters.status">
             <flux:select.option value="active">Activos</flux:select.option>
@@ -819,8 +819,8 @@ new class extends Component {
         <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
             <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <tr>
-                    <th class="px-4 py-3">Perfil</th>
-                    <th class="px-4 py-3">Tipo</th>
+                    <th class="px-4 py-3">Modelo</th>
+                    <th class="px-4 py-3">Forma</th>
                     <th class="px-4 py-3">Reglas</th>
                     <th class="px-4 py-3">Estado</th>
                     <th class="px-4 py-3 text-right">Acciones</th>
@@ -846,11 +846,11 @@ new class extends Component {
                                 @if ($canManageProfiles)
                                     <flux:button size="xs" variant="ghost" wire:click="loadEditForm({{ $profile->id }})">Editar</flux:button>
                                     @if ($profile->status === 'active')
-                                        <flux:button size="xs" variant="danger" wire:click="inactivate({{ $profile->id }})" wire:confirm="Inactivar este perfil?">Inactivar</flux:button>
+                                        <flux:button size="xs" variant="danger" wire:click="inactivate({{ $profile->id }})" wire:confirm="Inactivar este modelo?">Inactivar</flux:button>
                                     @else
                                         <flux:button size="xs" variant="primary" wire:click="reactivate({{ $profile->id }})">Reactivar</flux:button>
                                     @endif
-                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $profile->id }})" wire:confirm="Eliminar este perfil solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $profile->id }})" wire:confirm="Eliminar este modelo solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
                                 @else
                                     <span class="text-xs text-zinc-500">Solo consulta</span>
                                 @endif
@@ -859,7 +859,7 @@ new class extends Component {
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-zinc-500">No hay perfiles con los filtros actuales.</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-zinc-500">No hay modelos con los filtros actuales.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -903,22 +903,22 @@ new class extends Component {
                     @endforeach
                 </div>
             @else
-                <p class="text-sm text-zinc-600 dark:text-zinc-300">Este perfil se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.</p>
+                <p class="text-sm text-zinc-600 dark:text-zinc-300">Este modelo se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.</p>
             @endif
         </section>
     @endif
 
     @if ($canManageProfiles)
-        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar perfil de horario' : 'Nuevo perfil de horario' }}" subheading="Define la regla que se usara al generar la programacion diaria de cada periodo.">
+        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar modelo de horario' : 'Nuevo modelo de horario' }}" subheading="Define si este horario se repite cada semana, rota por ciclo o se capturara desde la programacion semanal.">
             <form wire:submit="save" class="space-y-6 p-6">
                 <div class="grid gap-4 md:grid-cols-4">
                     <flux:input label="Codigo" wire:model="form.code" required />
                     <flux:input label="Nombre" wire:model="form.name" required />
-                    <flux:select label="Metodo" wire:model.live="form.profile_type">
-                        <flux:select.option value="pattern">Por patron</flux:select.option>
-                        <flux:select.option value="calendar">Por calendario</flux:select.option>
-                        <flux:select.option value="flexible">Flexible</flux:select.option>
-                        <flux:select.option value="on_call">Bajo demanda</flux:select.option>
+                    <flux:select label="Forma de operar" wire:model.live="form.profile_type">
+                        <flux:select.option value="pattern">Horario fijo o rol rotativo</flux:select.option>
+                        <flux:select.option value="calendar">Programacion semanal manual</flux:select.option>
+                        <flux:select.option value="flexible">Horario flexible avanzado</flux:select.option>
+                        <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
                     </flux:select>
                     <flux:select label="Estado" wire:model="form.status">
                         <flux:select.option value="active">Activo</flux:select.option>
@@ -930,17 +930,17 @@ new class extends Component {
 
                 @if (($form['profile_type'] ?? 'pattern') === 'pattern')
                 <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                    Este patron se reutiliza al generar programacion diaria para nuevas semanas. Si cambias la regla, solo afectara los lotes futuros que vuelvas a generar; los lotes ya publicados conservan su version.
+                    Este modelo se reutiliza al generar nuevas semanas. Los horarios publicados conservan su version y las excepciones se corrigen en el lote semanal.
                 </div>
-                    <flux:select label="Modalidad del patron" wire:model.live="form.pattern_mode">
-                        <flux:select.option value="weekly">Patron semanal</flux:select.option>
-                        <flux:select.option value="cycle">Ciclo repetitivo</flux:select.option>
+                    <flux:select label="Tipo de modelo" wire:model.live="form.pattern_mode">
+                        <flux:select.option value="weekly">Horario fijo semanal</flux:select.option>
+                        <flux:select.option value="cycle">Rol rotativo / ciclo</flux:select.option>
                     </flux:select>
                 @endif
 
                 @if ($this->methodChanged())
                     <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                        Cambiar el metodo reemplazara la configuracion anterior de reglas de este perfil. Las asignaciones e historicos no se modifican.
+                        Cambiar la forma de operar reemplazara la configuracion anterior de reglas de este modelo. Las asignaciones e historicos no se modifican.
                         <label class="mt-3 flex items-center gap-2">
                             <input type="checkbox" wire:model="confirmMethodChange" class="rounded border-zinc-300">
                             <span>Confirmo que deseo reemplazar la configuracion del metodo anterior.</span>
@@ -961,7 +961,7 @@ new class extends Component {
                     @enderror
 
                     <section class="space-y-4">
-                        <flux:heading>Reglas semanales</flux:heading>
+                        <flux:heading>Semana base</flux:heading>
 
                         <div class="grid gap-3">
                             @foreach ($weeklyRules as $index => $rule)
@@ -987,7 +987,7 @@ new class extends Component {
                         </div>
 
                         <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
-                            <flux:heading>Vista previa semanal</flux:heading>
+                            <flux:heading>Vista previa de semana base</flux:heading>
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($weeklyPreview as $line)
                                     <p><span class="font-medium">{{ $line['day'] }}</span>: {{ $line['value'] }}</p>
@@ -1006,7 +1006,7 @@ new class extends Component {
                         </div>
 
                         <div class="flex items-center justify-between">
-                            <flux:heading>Ciclo repetitivo</flux:heading>
+                            <flux:heading>Rol rotativo / ciclo</flux:heading>
                             <flux:button type="button" size="sm" variant="ghost" wire:click="addCycleDay">Agregar dia</flux:button>
                         </div>
 
@@ -1155,7 +1155,7 @@ new class extends Component {
                     </section>
                 @else
                     <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                        Este perfil se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.
+                        Este modelo se usa cuando el horario cambia por demanda. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos en la programacion semanal o mediante importacion CSV.
                     </div>
                 @endif
 

@@ -102,8 +102,8 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->assertTrue(ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->where('center_id', $center->id)
-            ->whereDate('period_start', '2026-09-01')
-            ->whereDate('period_end', '2026-09-07')
+            ->whereDate('period_start', '2026-08-31')
+            ->whereDate('period_end', '2026-09-06')
             ->where('status', 'draft')
             ->where('creation_source', 'manual')
             ->exists());
@@ -119,7 +119,7 @@ class DailyScheduleCalendarUiTest extends TestCase
 
         $batch = ScheduleBatch::query()
             ->where('company_id', $company->id)
-            ->whereDate('period_start', '2026-09-08')
+            ->whereDate('period_start', '2026-09-07')
             ->firstOrFail();
 
         $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
@@ -139,7 +139,7 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->set('batchForm.period_start', '2026-09-15')
             ->set('batchForm.period_end', '2026-09-14')
             ->call('createEmptyBatch')
-            ->assertHasErrors(['batchForm.center_id', 'batchForm.period_end']);
+            ->assertHasErrors(['batchForm.center_id']);
     }
 
     public function test_next_week_keeps_full_week_sequence_even_after_period_end(): void
@@ -160,6 +160,39 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertSee('Dom. 23/08')
             ->assertSee('Fuera de vigencia');
     }
+
+    public function test_calendar_starts_on_monday_even_when_batch_period_starts_midweek(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $center = $company->centers()->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('openCreatePanel')
+            ->set('batchForm.center_id', (string) $center->id)
+            ->set('batchForm.period_start', '2026-07-29')
+            ->set('batchForm.period_end', '2026-08-04')
+            ->call('createAndGenerate')
+            ->assertHasNoErrors();
+
+        $batch = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->whereDate('period_start', '2026-07-27')
+            ->whereDate('period_end', '2026-08-02')
+            ->firstOrFail();
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->assertSet('weekStart', '2026-07-27')
+            ->assertSee('Lun. 27/07')
+            ->assertSee('Mar. 28/07')
+            ->assertSee('Dom. 02/08')
+            ->assertDontSee('Mar. 04/08')
+            ->assertSee('Fuera de vigencia');
+    }
+
     public function test_calendar_shows_day_types_and_manual_edit_preserves_profile_generated_days(): void
     {
         $this->seedDailyScenarios();
@@ -326,6 +359,39 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('published', $published->refresh()->status);
+    }
+
+    public function test_managers_can_permanently_delete_cancelled_batches_from_ui(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $cancelled = $this->firstBatch($company);
+        $cancelled->forceFill([
+            'status' => 'cancelled',
+            'cancelled_by' => $rh->id,
+            'cancelled_at' => now(),
+            'cancellation_reason' => 'Descartado previamente',
+        ])->save();
+        $assignmentIds = $cancelled->dailyAssignments()->pluck('id')->all();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'cancelled')
+            ->call('selectBatch', $cancelled->id)
+            ->assertSee('Lote cancelado')
+            ->assertSee('Descartado previamente')
+            ->assertSee('Eliminar definitivo')
+            ->call('deleteCancelledBatch')
+            ->assertHasNoErrors()
+            ->assertSee('Lote cancelado eliminado definitivamente.')
+            ->assertSet('selectedBatchId', null);
+
+        $this->assertDatabaseMissing('schedule_batches', ['id' => $cancelled->id]);
+        foreach ($assignmentIds as $assignmentId) {
+            $this->assertDatabaseMissing('daily_schedule_assignments', ['id' => $assignmentId]);
+            $this->assertDatabaseMissing('daily_schedule_segments', ['daily_schedule_assignment_id' => $assignmentId]);
+        }
     }
 
     public function test_published_batches_are_read_only_and_snapshot_tampering_is_detected(): void

@@ -144,16 +144,10 @@ new class extends Component {
             return collect();
         }
 
-        $date = filled($this->assignmentDate) ? $this->assignmentDate : now()->toDateString();
-
         return EmploymentUnitAssignment::query()
             ->where('company_id', $company->id)
             ->where('assignment_type', 'primary')
             ->where('status', 'active')
-            ->whereDate('effective_from', '<=', $date)
-            ->where(function ($query) use ($date): void {
-                $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date);
-            })
             ->whereHas('employmentRelationship', function ($query) use ($workers, $company): void {
                 $query->where('company_id', $company->id)
                     ->whereIn('worker_id', $workers->pluck('id'));

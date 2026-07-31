@@ -12,6 +12,7 @@ use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\ImportBatch;
 use App\Models\ScheduleBatch;
 use Illuminate\Contracts\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -95,7 +96,7 @@ class DailyScheduleCsvImport extends Component
             $this->activeImportId = $validation->importBatch->id;
             $this->file = null;
             $this->confirmApply = false;
-            $this->resetPage('csvRowsPage');
+            $this->resetPage('csvWorkersPage');
             session()->flash('csvImportMessage', 'Archivo validado. Revisa la vista previa antes de aplicar.');
         } catch (Throwable $exception) {
             if ($stored !== null && ! isset($result)) {
@@ -148,14 +149,16 @@ class DailyScheduleCsvImport extends Component
         Gate::authorize('view', $batch);
 
         $activeImport = $this->activeImportId ? $this->importForCurrentBatch($this->activeImportId) : null;
-        $rows = $activeImport
-            ? $activeImport->rows()->with(['employmentRelationship.worker', 'existingDailyScheduleAssignment'])->paginate(10, ['*'], 'csvRowsPage')
-            : null;
+        $preview = $activeImport ? $this->previewFor($activeImport) : [
+            'dates' => [],
+            'workers' => null,
+        ];
 
         return view('livewire.scheduling.daily-schedule-csv-import', [
             'batch' => $batch,
             'activeImport' => $activeImport,
-            'rows' => $rows,
+            'previewDates' => $preview['dates'],
+            'previewWorkers' => $preview['workers'],
             'summary' => $activeImport ? $this->summaryFor($activeImport) : [],
             'canUpdate' => Gate::allows('update', $batch),
             'templateUrl' => route('scheduling.daily.csv.template', array_filter([
@@ -304,5 +307,112 @@ class DailyScheduleCsvImport extends Component
         }
 
         return $summary;
+    }
+
+    /**
+     * @return array{dates: list<string>, workers: LengthAwarePaginator<int, array<string, mixed>>}
+     */
+    private function previewFor(ImportBatch $import): array
+    {
+        $rows = $import->rows()
+            ->with(['employmentRelationship.worker', 'existingDailyScheduleAssignment'])
+            ->orderBy('row_number')
+            ->get();
+
+        $dates = $rows
+            ->map(fn ($row): ?string => $row->work_date?->toDateString() ?? ($row->raw_data['fecha'] ?? null))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $workers = [];
+
+        foreach ($rows as $row) {
+            $relationship = $row->employmentRelationship;
+            $worker = $relationship?->worker;
+            $code = $worker?->employee_code ?? ($row->raw_data['clave_empleado'] ?? 'Sin resolver');
+            $name = $worker?->full_name ?? $this->nameFromRow($row);
+            $key = $relationship ? 'relationship-'.$relationship->id : 'code-'.$code;
+            $date = $row->work_date?->toDateString() ?? ($row->raw_data['fecha'] ?? null);
+
+            if (! $date) {
+                continue;
+            }
+
+            $workers[$key] ??= [
+                'code' => $code,
+                'name' => $name,
+                'cells' => [],
+            ];
+
+            $workers[$key]['cells'][$date] = [
+                'row_number' => $row->row_number,
+                'day_type' => $this->dayTypeLabel($row->normalized_data['assignment']['day_type'] ?? null),
+                'shift_code' => $row->raw_data['codigo_turno'] ?? null,
+                'action' => $this->rowActionLabel($row),
+                'variant' => $this->rowBadgeVariant($row),
+                'messages' => $this->rowMessages($row),
+            ];
+        }
+
+        $workers = collect($workers)
+            ->sortBy([['code', 'asc'], ['name', 'asc']])
+            ->values();
+
+        $pageName = 'csvWorkersPage';
+        $perPage = 8;
+        $page = LengthAwarePaginator::resolveCurrentPage($pageName);
+
+        return [
+            'dates' => $dates,
+            'workers' => new LengthAwarePaginator(
+                $workers->forPage($page, $perPage)->values(),
+                $workers->count(),
+                $perPage,
+                $page,
+                [
+                    'pageName' => $pageName,
+                    'path' => request()->url(),
+                    'query' => request()->query(),
+                ],
+            ),
+        ];
+    }
+
+    private function rowBadgeVariant($row): string
+    {
+        return $row->status === 'invalid'
+            ? 'danger'
+            : ($row->status === 'warning'
+                ? 'warning'
+                : ($row->status === 'applied'
+                    ? 'success'
+                    : ($row->status === 'skipped' ? 'neutral' : 'info')));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function rowMessages($row): array
+    {
+        $messages = [
+            ...($row->errors ?? []),
+            ...($row->warnings ?? []),
+        ];
+
+        return $messages;
+    }
+
+    private function nameFromRow($row): string
+    {
+        $reason = (string) ($row->raw_data['motivo'] ?? '');
+
+        if (preg_match('/Carga por plantilla horizontal:\s*(.+)\.?$/', $reason, $matches)) {
+            return rtrim(trim($matches[1]), '.');
+        }
+
+        return 'Sin resolver';
     }
 }

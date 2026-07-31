@@ -218,14 +218,30 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 
 ## Bloque C - asignaciones organizacionales y pendientes UI
 
-Estado: iniciado en rama `feature/organizational-assignment-corrections`.
+Estado: cerrado e integrado a `main`.
 
-- El reemplazo de unidad principal conserva historial cuando la nueva vigencia inicia despues de la vigente.
-- Si el reemplazo inicia en la misma fecha o antes de la vigente, se trata como correccion administrativa sobre el mismo registro con motivo, actor, fecha, valores anteriores y nuevos.
+- El reemplazo de unidad principal podia conservar historial por vigencia o corregir el mismo registro segun la fecha indicada.
 - La correccion de asignacion organizacional no modifica programacion diaria publicada; los `daily_schedule_assignments` mantienen la unidad congelada al publicar.
-- Pendiente incluido en este bloque: `/time-events/manual` debe paginar eventos y filtrar por fuente/estado para no ocultar registros por el limite de 10.
-- Pendiente incluido en este bloque: el formulario de trabajadores debe resetear todos sus inputs al cerrar, guardar, cancelar o cambiar entre trabajador y alta nueva.
+- `/time-events/manual` pagina eventos y filtra por fuente/estado para no ocultar registros por el limite anterior de 10.
+- El formulario de trabajadores resetea sus inputs al cerrar, guardar, cancelar o cambiar entre trabajador y alta nueva.
 - Bloque C no implementa `work_days`, motor legal, calculos, alertas, incidencias, reportes, API ni asignaciones de perfiles.
+
+## Bloque D - simplificacion de vigencia laboral y asignacion organizacional
+
+Estado: implementado/candidato a cierre en rama `feature/simplify-organization-assignment-validity`.
+
+- La vigencia operativa manda desde la relacion laboral/trabajador: alta, baja y estado laboral.
+- La asignacion organizacional deja de usar fechas visibles como regla operativa; solo segmenta trabajadores activos por unidad principal actual.
+- `AssignPrimaryOrganizationalUnitAction` mantiene una sola unidad principal activa por relacion laboral.
+- `ReplacePrimaryOrganizationalUnitAction` corrige la unidad principal activa sobre el mismo registro con motivo y metadata de auditoria; no abre vigencias nuevas por fecha.
+- `ResolveEmploymentUnitsForDateAction` devuelve la unidad principal activa sin filtrar por vigencia de asignacion.
+- Los apoyos temporales quedan fuera del flujo visible y no participan en resolucion de unidad, herencia de perfiles ni alcance supervisor.
+- El seeder demo ya no crea apoyos temporales activos.
+- El layout principal muestra el nombre de la vista actual en el tab del navegador.
+- El menu lateral usa scrollbar delgado y discreto.
+- La programacion diaria publicada conserva su unidad congelada y no se recalcula por cambios posteriores de segmentacion.
+- Bloque D no implementa `work_days`, motor legal, calculos, alertas, incidencias, reportes, API ni cambios de usuarios/roles.
+- Siguiente bloque recomendado: `work_days`.
 
 ## Validacion Sprint 2F
 
@@ -322,7 +338,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Tablas: `organizational_units`, `employment_unit_assignments`, `operational_scope_assignments`.
 - Jerarquia soportada: `department` -> `area` -> `team` dentro de un centro.
 - Las unidades son opcionales; una empresa puede operar solo con centros.
-- Trabajadores pueden tener una unidad principal vigente y apoyos temporales.
+- Trabajadores tienen una unidad principal activa actual para segmentacion; apoyos temporales quedan como legado fuera del flujo visible.
 - Supervisores solo tienen alcance mediante registros explicitos por centro o unidad.
 - `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito.
 - Las escrituras sobre `organizational_units`, `employment_unit_assignments` y `operational_scope_assignments` deben pasar por Actions de dominio.
@@ -369,8 +385,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `pattern_mode = cycle`, `flexible` y `on_call` quedan preparados conceptualmente en D1 y operativos a nivel dominio en E1.
 - Los turnos de perfiles por patron semanal usan `shift_templates` activos de la misma empresa.
 - Las asignaciones soportan alcance `company`, `center`, `organizational_unit` y `employment_relationship`.
-- La herencia se resuelve en este orden: relacion laboral -> unidad principal vigente -> centro -> empresa.
-- `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal vigente.
+- La herencia se resuelve en este orden: relacion laboral -> unidad principal activa actual -> centro -> empresa.
+- `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal activa actual.
 - `ResolveScheduleProfileForRelationshipAction` es el resolutor central de D1.
 - Supervisores no crean perfiles; solo pueden asignar directamente a relaciones laborales dentro de su alcance operativo.
 - No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, generacion diaria, publicacion operativa, API WFM ni CSV. El nucleo `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments` se implementa en Bloque F1.
@@ -378,6 +394,15 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 ## Bloque D2 - UI de perfiles y asignaciones
 
 Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+Actualizacion de modelo operativo visible:
+
+- La experiencia de horarios se reorganiza en tres caminos de producto:
+  - Horario fijo semanal: base `pattern` con `pattern_mode = weekly`.
+  - Programacion semanal: lotes lunes-domingo, edicion manual, CSV y publicacion.
+  - Rol rotativo / ciclo: base `pattern` con `pattern_mode = cycle`.
+- La navegacion visible cambia a "Modelos de horario", "Aplicacion de modelos" y "Programacion semanal" para reducir lenguaje tecnico.
+- `calendar`, `flexible` y `on_call` siguen disponibles como opciones avanzadas o soporte para captura semanal, sin cambiar tablas ni Actions.
 
 - Rutas:
   - `/scheduling/profiles`.
@@ -387,7 +412,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Los perfiles por calendario no crean reglas semanales y muestran nota neutral de captura futura por periodo, importacion o API.
 - `/scheduling/profile-assignments` permite asignar perfiles con vigencia a empresa, centro, unidad organizacional o relacion laboral.
 - La consulta de perfil efectivo usa `ResolveScheduleProfileForRelationshipAction` y muestra origen por relacion laboral, unidad, centro, empresa o sin perfil.
-- El sidebar muestra Horarios con catalogo de turnos, perfiles de horario, asignaciones de perfiles y descansos obligatorios.
+- El sidebar muestra Horarios con catalogo de turnos, modelos de horario, aplicacion de modelos, programacion semanal y descansos obligatorios.
 - Las rutas legacy `/schedules` y `/schedule-assignments` siguen existiendo, pero ya no aparecen en la navegacion normal.
 - Supervisores solo pueden asignar perfiles directamente a relaciones laborales dentro de su alcance operativo.
 - Existe seeder manual independiente `VeraTimeScheduleProfileScenarioSeeder` para probar aislamiento multi-tenant, perfiles `pattern` semanal, perfiles `calendar`, herencia empresa -> centro -> unidad -> relacion laboral y empresa sin perfil efectivo. Se ejecuta con `php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder`.
@@ -459,9 +484,9 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `missing_only` solo crea dias faltantes y es idempotente.
 - `refresh_profile_generated` reemplaza solo dias creados por el generador `schedule_profile_generation`.
 - Se conservan dias `manual`, `csv`, `api` y `system` de otros procesos.
-- La generacion resuelve perfil por relacion laboral y fecha: relacion laboral -> unidad principal -> centro -> empresa.
-- Los apoyos temporales no modifican el perfil heredado.
-- La unidad principal y timezone del centro se congelan por fecha en la asignacion diaria.
+- La generacion resuelve perfil por relacion laboral y fecha de perfil: relacion laboral -> unidad principal activa actual -> centro -> empresa.
+- Los apoyos temporales no modifican el perfil heredado y quedan fuera del flujo visible.
+- La unidad principal activa actual y timezone del centro se congelan en la asignacion diaria.
 - `pattern` semanal/ciclo genera `shift` o `rest`.
 - `calendar` genera `unassigned` con `reason = calendar_requires_daily_definition`.
 - `flexible` genera `flexible` o `rest`.
@@ -494,7 +519,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - Ruta: `/scheduling/daily`.
 - Navegacion: Horarios -> Programacion diaria.
-- La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y periodo, crear lote vacio o crear y generar desde perfiles.
+- La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y semana natural lunes-domingo, crear lote vacio o crear y generar desde perfiles.
+- La fecha elegida para un lote se normaliza al lunes-domingo de esa semana; la vigencia de la relacion laboral solo marca dias fuera de vigencia o generables dentro de la semana.
 - El listado usa filtros principales compactos, filtros avanzados colapsables y tabla de lotes de una fila por lote.
 - El listado filtra por centro, periodo, estado, trabajador, unidad organizacional, tipo de dia y solo pendientes.
 - El calendario muestra una semana completa dentro del periodo, con filas por relacion laboral/trabajador, colores por tipo de dia y alternativa movil en lista.

@@ -79,6 +79,12 @@ class ScheduleBatchPolicy
         return $this->update($user, $batch);
     }
 
+    public function deleteCancelled(User $user, ScheduleBatch $batch): bool
+    {
+        return $batch->status === 'cancelled'
+            && $this->canManageCompanyScheduling($user, $batch->company);
+    }
+
     private function canManageCompanyScheduling(User $user, Company $company): bool
     {
         return $company->status === 'active'

@@ -17,8 +17,9 @@ class UpdateDraftScheduleBatchAction
             $lockedBatch = ScheduleBatch::query()->lockForUpdate()->findOrFail($batch->id);
             $this->validator->assertDraft($lockedBatch);
 
-            $periodStart = (string) ($data['period_start'] ?? $lockedBatch->period_start->toDateString());
-            $periodEnd = (string) ($data['period_end'] ?? $lockedBatch->period_end->toDateString());
+            [$periodStart, $periodEnd] = $this->validator->naturalWeekForDate(
+                (string) ($data['period_start'] ?? $lockedBatch->period_start->toDateString()),
+            );
             [$periodStart, $periodEnd] = $this->validator->validatePeriod($periodStart, $periodEnd);
 
             $outsideNewPeriod = $lockedBatch->dailyAssignments()

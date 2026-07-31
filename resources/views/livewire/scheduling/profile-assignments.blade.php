@@ -130,7 +130,7 @@ new class extends Component {
         $this->assignmentForm = $this->emptyAssignmentForm();
         $this->selectedWorkerId = null;
         $this->resetPage();
-        Session::flash('status', 'Asignacion de perfil guardada.');
+        Session::flash('status', 'Modelo aplicado.');
     }
 
     public function openReplacePanel(int $assignmentId, CurrentCompany $currentCompany): void
@@ -181,7 +181,7 @@ new class extends Component {
         $this->selectedAssignmentId = null;
         $this->replaceForm = $this->emptyReplaceForm();
         $this->resetPage();
-        Session::flash('status', 'Asignacion reemplazada sin borrar historial.');
+        Session::flash('status', 'Aplicacion reemplazada sin borrar historial.');
     }
 
     public function openEndPanel(int $assignmentId, CurrentCompany $currentCompany): void
@@ -219,7 +219,7 @@ new class extends Component {
         $this->selectedAssignmentId = null;
         $this->endForm = $this->emptyEndForm();
         $this->resetPage();
-        Session::flash('status', 'Asignacion finalizada. Se volvera a utilizar la configuracion heredada.');
+        Session::flash('status', 'Aplicacion finalizada. Se volvera a utilizar la configuracion heredada.');
     }
 
     public function delete(int $assignmentId, CurrentCompany $currentCompany, DeleteScheduleProfileAssignmentIfUnusedAction $action): void
@@ -237,7 +237,7 @@ new class extends Component {
         }
 
         $this->resetPage();
-        Session::flash('status', 'Asignacion eliminada.');
+        Session::flash('status', 'Aplicacion eliminada.');
     }
 
     public function closePanels(): void
@@ -445,21 +445,21 @@ new class extends Component {
             'center' => 'Centro',
             'organizational_unit' => 'Unidad organizacional',
             'employment_relationship' => 'Relacion laboral',
-            default => 'Sin perfil',
+            default => 'Sin modelo',
         };
     }
 
     private function profileTypeLabel(?ScheduleProfile $profile): string
     {
         if (! $profile) {
-            return 'Sin perfil';
+            return 'Sin modelo';
         }
 
         return match ($profile->profile_type) {
-            'pattern' => $profile->pattern_mode === 'weekly' ? 'Por patron - patron semanal' : 'Por patron',
-            'calendar' => 'Por calendario',
-            'flexible' => 'Flexible',
-            'on_call' => 'Bajo demanda',
+            'pattern' => $profile->pattern_mode === 'weekly' ? 'Horario fijo semanal' : 'Rol rotativo / ciclo',
+            'calendar' => 'Programacion semanal manual',
+            'flexible' => 'Flexible avanzado',
+            'on_call' => 'Guardia avanzada',
             default => 'Tipo no reconocido',
         };
     }
@@ -511,13 +511,13 @@ new class extends Component {
 <section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-            <flux:heading size="xl">Asignaciones de perfiles</flux:heading>
-            <flux:subheading>Define vigencias por empresa, centro, unidad o relacion laboral. La herencia se resuelve fuera de la vista.</flux:subheading>
+            <flux:heading size="xl">Aplicacion de modelos</flux:heading>
+            <flux:subheading>Indica donde aplica cada modelo: empresa, centro, unidad o trabajador. El horario semanal se repite; el ciclo usa la fecha inicial como Dia 1.</flux:subheading>
         </div>
 
         @if ($canAssignCompanyScopes || $canAssignRelationshipScope)
             <flux:button type="button" variant="primary" wire:click="openAssignmentPanel" icon="plus">
-                Nueva asignacion
+                Aplicar modelo
             </flux:button>
         @endif
     </div>
@@ -534,7 +534,7 @@ new class extends Component {
         <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(150px,.7fr)_minmax(220px,1.1fr)_auto] lg:items-end">
             <flux:input label="Resolver trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="resolveWorkerSearch" />
             <flux:input type="date" label="Fecha" wire:model.live="resolveForm.date" />
-            <flux:input label="Buscar asignaciones" placeholder="Perfil, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
+            <flux:input label="Buscar aplicaciones" placeholder="Modelo, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
             <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
                 <span class="inline-flex items-center gap-1.5 leading-none">
                     <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
@@ -582,8 +582,8 @@ new class extends Component {
                         <p class="font-medium">{{ $resolveWorker->employee_code }} - {{ $resolveWorker->full_name }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Perfil efectivo</p>
-                        <p class="font-medium">{{ $resolvedProfile['schedule_profile']?->name ?? 'Sin perfil' }}</p>
+                        <p class="text-xs uppercase text-zinc-500">Modelo efectivo</p>
+                        <p class="font-medium">{{ $resolvedProfile['schedule_profile']?->name ?? 'Sin modelo' }}</p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-zinc-500">Origen</p>
@@ -610,7 +610,7 @@ new class extends Component {
         <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
             <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <tr>
-                    <th class="px-4 py-3">Perfil</th>
+                    <th class="px-4 py-3">Modelo</th>
                     <th class="px-4 py-3">Alcance</th>
                     <th class="px-4 py-3">Destino</th>
                     <th class="px-4 py-3">Vigencia</th>
@@ -647,7 +647,7 @@ new class extends Component {
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">No hay asignaciones de perfiles con los filtros actuales.</td>
+                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">No hay aplicaciones de modelos con los filtros actuales.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -656,7 +656,7 @@ new class extends Component {
 
     {{ $assignments->links() }}
 
-    <x-side-panel wire:model="showAssignmentPanel" title="Nueva asignacion de perfil" subheading="La fuente se guarda como manual desde servidor." maxWidth="max-w-3xl">
+    <x-side-panel wire:model="showAssignmentPanel" title="Aplicar modelo de horario" subheading="El modelo genera borradores semanales; los horarios publicados conservan su version." maxWidth="max-w-3xl">
         <form wire:submit="saveAssignment" class="space-y-5 p-6">
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:select label="Alcance" wire:model.live="assignmentForm.assignment_scope">
@@ -668,8 +668,8 @@ new class extends Component {
                     <flux:select.option value="employment_relationship">Relacion laboral</flux:select.option>
                 </flux:select>
 
-                <flux:select label="Perfil activo" wire:model="assignmentForm.schedule_profile_id">
-                    <flux:select.option value="">Selecciona perfil</flux:select.option>
+                <flux:select label="Modelo activo" wire:model="assignmentForm.schedule_profile_id">
+                    <flux:select.option value="">Selecciona modelo</flux:select.option>
                     @foreach ($profiles as $profile)
                         <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }}</flux:select.option>
                     @endforeach
@@ -753,8 +753,8 @@ new class extends Component {
 
     <x-side-panel wire:model="showReplacePanel" title="Reemplazar asignacion" subheading="La asignacion anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
         <form wire:submit="replaceAssignment" class="space-y-5 p-6">
-            <flux:select label="Nuevo perfil" wire:model="replaceForm.schedule_profile_id">
-                <flux:select.option value="">Selecciona perfil</flux:select.option>
+            <flux:select label="Nuevo modelo" wire:model="replaceForm.schedule_profile_id">
+                <flux:select.option value="">Selecciona modelo</flux:select.option>
                 @foreach ($profiles as $profile)
                     <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }}</flux:select.option>
                 @endforeach
