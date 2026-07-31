@@ -50,7 +50,7 @@ new class extends Component {
         $this->cycleRules = $this->defaultCycleRules();
         $this->flexibleRules = $this->defaultFlexibleRules();
         $this->onCallRules = $this->defaultOnCallRules();
-        $this->filters = ['search' => '', 'profile_type' => 'all', 'status' => 'active'];
+        $this->filters = ['search' => '', 'operating_model' => 'all', 'status' => 'active'];
     }
 
     public function updated($property): void
@@ -353,7 +353,7 @@ new class extends Component {
         Gate::authorize('viewAny', [ScheduleProfile::class, $company]);
 
         $search = trim((string) ($this->filters['search'] ?? ''));
-        $type = trim((string) ($this->filters['profile_type'] ?? 'all'));
+        $operatingModel = trim((string) ($this->filters['operating_model'] ?? 'all'));
         $status = trim((string) ($this->filters['status'] ?? 'active'));
         $canManage = Gate::allows('create', [ScheduleProfile::class, $company]);
 
@@ -373,7 +373,16 @@ new class extends Component {
                 ->with($relations)
                 ->when(! $canManage, fn ($query) => $query->where('status', 'active'))
                 ->when($status !== 'all', fn ($query) => $query->where('status', $status))
-                ->when($type !== 'all', fn ($query) => $query->where('profile_type', $type))
+                ->when($operatingModel !== 'all', function ($query) use ($operatingModel): void {
+                    match ($operatingModel) {
+                        'weekly' => $query->where('profile_type', 'pattern')->where('pattern_mode', 'weekly'),
+                        'cycle' => $query->where('profile_type', 'pattern')->where('pattern_mode', 'cycle'),
+                        'calendar' => $query->where('profile_type', 'calendar'),
+                        'flexible' => $query->where('profile_type', 'flexible'),
+                        'on_call' => $query->where('profile_type', 'on_call'),
+                        default => null,
+                    };
+                })
                 ->when($search !== '', function ($query) use ($search): void {
                     $query->where(fn ($searchQuery) => $searchQuery
                         ->where('code', 'like', "%{$search}%")
@@ -642,6 +651,24 @@ new class extends Component {
         };
     }
 
+    private function formOperatingModelSummary(): string
+    {
+        if ($this->formIsWeeklyPattern()) {
+            return 'Horario fijo semanal: se captura la semana base y se repite automaticamente en cada semana nueva.';
+        }
+
+        if ($this->formIsCyclePattern()) {
+            return 'Rol rotativo / ciclo: captura la secuencia completa; al aplicarlo, la fecha inicial sera el Dia 1.';
+        }
+
+        return match ($this->form['profile_type'] ?? 'pattern') {
+            'calendar' => 'Programacion semanal manual: deja dias pendientes para armar la semana por demanda o CSV.',
+            'flexible' => 'Flexible avanzado: define minutos esperados y ventana opcional, sin turno fijo.',
+            'on_call' => 'Guardia avanzada: define disponibilidad; el tiempo real dependera de activaciones futuras.',
+            default => 'Selecciona la forma de operar.',
+        };
+    }
+
     private function rulesSummary(ScheduleProfile $profile): string
     {
         return match ($profile->profile_type) {
@@ -799,9 +826,10 @@ new class extends Component {
 
     <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
         <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
-        <flux:select label="Modelo" wire:model.live="filters.profile_type">
+        <flux:select label="Camino" wire:model.live="filters.operating_model">
             <flux:select.option value="all">Todos</flux:select.option>
-            <flux:select.option value="pattern">Fijo semanal / rotativo</flux:select.option>
+            <flux:select.option value="weekly">Horario fijo semanal</flux:select.option>
+            <flux:select.option value="cycle">Rol rotativo / ciclo</flux:select.option>
             <flux:select.option value="calendar">Programacion semanal manual</flux:select.option>
             <flux:select.option value="flexible">Flexible avanzado</flux:select.option>
             <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
@@ -927,6 +955,10 @@ new class extends Component {
                 </div>
 
                 <flux:textarea label="Descripcion" wire:model="form.description" rows="2" />
+
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    {{ $this->formOperatingModelSummary() }}
+                </div>
 
                 @if (($form['profile_type'] ?? 'pattern') === 'pattern')
                 <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">

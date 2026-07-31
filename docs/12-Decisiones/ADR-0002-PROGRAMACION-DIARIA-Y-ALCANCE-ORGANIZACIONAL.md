@@ -83,6 +83,8 @@ La interfaz no debe obligar al usuario a decidir desde nombres tecnicos como `pa
 
 Las opciones `flexible`, `on_call` y `calendar` siguen existiendo como soporte avanzado o como forma de dejar pendientes para programacion semanal, pero no son el primer lenguaje del usuario comun.
 
+En la aplicacion visible, la fecha de aplicacion se interpreta segun el modelo: para horario fijo semanal es vigencia desde; para rol rotativo / ciclo es el Dia 1 del ciclo; para programacion semanal manual solo habilita el modelo para generar pendientes dentro de las semanas naturales.
+
 ### Pattern
 
 Representa perfiles por patron. Usa `pattern_mode` para distinguir la modalidad.

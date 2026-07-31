@@ -31,15 +31,14 @@ class AdvancedScheduleProfileUiTest extends TestCase
 
         Volt::test('scheduling.profiles')
             ->call('openCreatePanel')
-            ->assertSee('Por patron')
-            ->assertSee('Patron semanal')
-            ->assertSee('Ciclo repetitivo')
-            ->assertSee('Por calendario')
-            ->assertSee('Flexible')
-            ->assertSee('Bajo demanda')
-            ->assertDontSee('Fijo')
+            ->assertSee('Horario fijo o rol rotativo')
+            ->assertSee('Horario fijo semanal')
+            ->assertSee('Rol rotativo / ciclo')
+            ->assertSee('Programacion semanal manual')
+            ->assertSee('Horario flexible avanzado')
+            ->assertSee('Guardia avanzada')
             ->assertDontSee('Variable')
-            ->assertDontSee('Rotativo');
+            ->assertDontSee('Rotating');
     }
 
     public function test_creates_cycle_profile_and_manages_cycle_days(): void
@@ -205,7 +204,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
 
         Volt::test('scheduling.profiles')
             ->assertSee('Visible')
-            ->assertDontSee('Nuevo perfil')
+            ->assertDontSee('Nuevo modelo')
             ->call('showDetail', $visibleProfile->id)
             ->assertSee('Solo consulta')
             ->call('showDetail', $otherProfile->id)

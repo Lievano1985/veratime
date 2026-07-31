@@ -32,13 +32,13 @@ class DailyScheduleCalendarUiTest extends TestCase
 
         $this->get(route('scheduling.daily'))
             ->assertOk()
-            ->assertSee('Programacion diaria')
-            ->assertSee('Los perfiles representan la forma habitual de trabajo')
-            ->assertSee('Nuevo lote');
+            ->assertSee('Programacion semanal')
+            ->assertSee('Arma o ajusta la semana lunes-domingo')
+            ->assertSee('Nueva semana');
 
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Programacion diaria');
+            ->assertSee('Programacion semanal');
     }
 
     public function test_daily_batch_list_is_filtered_by_active_company_and_translates_enums(): void

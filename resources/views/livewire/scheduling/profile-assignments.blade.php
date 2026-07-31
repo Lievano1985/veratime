@@ -262,12 +262,15 @@ new class extends Component {
             : null;
 
         $canAssignCompanyScopes = Gate::allows('assign', [ScheduleProfile::class, $company, 'company', null, now()->toDateString()]);
+        $profiles = $company->scheduleProfiles()->where('status', 'active')->orderBy('name')->get();
 
         return [
             'company' => $company,
             'canAssignCompanyScopes' => $canAssignCompanyScopes,
             'canAssignRelationshipScope' => Gate::allows('viewAny', [ScheduleProfile::class, $company]),
-            'profiles' => $company->scheduleProfiles()->where('status', 'active')->orderBy('name')->get(),
+            'profiles' => $profiles,
+            'selectedAssignmentProfile' => $profiles->firstWhere('id', (int) ($this->assignmentForm['schedule_profile_id'] ?? 0)),
+            'selectedReplaceProfile' => $profiles->firstWhere('id', (int) ($this->replaceForm['schedule_profile_id'] ?? 0)),
             'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
             'units' => $this->unitOptions($company),
             'assignments' => $this->assignmentQuery($company)->paginate(12),
@@ -464,6 +467,48 @@ new class extends Component {
         };
     }
 
+    private function profileApplicationHint(?ScheduleProfile $profile): string
+    {
+        if (! $profile) {
+            return 'Selecciona un modelo para ver como se interpretara la fecha.';
+        }
+
+        if ($profile->profile_type === 'pattern' && $profile->pattern_mode === 'weekly') {
+            return 'Este horario se repite cada semana desde la fecha indicada. Solo aplica a trabajadores vigentes por dia.';
+        }
+
+        if ($profile->profile_type === 'pattern' && $profile->pattern_mode === 'cycle') {
+            return 'La fecha indicada sera el Dia 1 del ciclo. Desde ahi el rol se repite automaticamente.';
+        }
+
+        return match ($profile->profile_type) {
+            'calendar' => 'Este modelo deja dias pendientes para armar la programacion semanal por demanda o CSV.',
+            'flexible' => 'Este modelo genera jornadas flexibles esperadas, sin turno fijo.',
+            'on_call' => 'Este modelo genera disponibilidad de guardia; no cuenta tiempo trabajado automaticamente.',
+            default => 'Modelo de horario.',
+        };
+    }
+
+    private function assignmentDateLabel(?ScheduleProfile $profile): string
+    {
+        return $profile && $profile->profile_type === 'pattern' && $profile->pattern_mode === 'cycle'
+            ? 'Inicio del ciclo (Dia 1)'
+            : 'Vigente desde';
+    }
+
+    private function assignmentPeriodLabel(ScheduleProfileAssignment $assignment): string
+    {
+        $from = $assignment->effective_from?->toDateString();
+        $to = $assignment->effective_to?->toDateString() ?? 'Abierta';
+        $profile = $assignment->scheduleProfile;
+
+        if ($profile && $profile->profile_type === 'pattern' && $profile->pattern_mode === 'cycle') {
+            return 'Dia 1: '.$from.' - '.$to;
+        }
+
+        return $from.' - '.$to;
+    }
+
     private function assignmentTarget(ScheduleProfileAssignment $assignment): string
     {
         return match ($assignment->assignment_scope) {
@@ -627,7 +672,7 @@ new class extends Component {
                         </td>
                         <td class="px-4 py-3">{{ $this->scopeLabel($assignment->assignment_scope) }}</td>
                         <td class="px-4 py-3">{{ $this->assignmentTarget($assignment) }}</td>
-                        <td class="px-4 py-3">{{ $assignment->effective_from?->toDateString() }} - {{ $assignment->effective_to?->toDateString() ?? 'Abierta' }}</td>
+                        <td class="px-4 py-3">{{ $this->assignmentPeriodLabel($assignment) }}</td>
                         <td class="px-4 py-3">
                             <x-ui.badge variant="{{ $assignment->status === 'active' ? 'success' : ($assignment->status === 'replaced' ? 'warning' : 'neutral') }}">
                                 {{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}
@@ -641,7 +686,7 @@ new class extends Component {
                                 @else
                                     <span class="text-xs text-zinc-500">Historial</span>
                                 @endif
-                                <flux:button size="xs" variant="danger" wire:click="delete({{ $assignment->id }})" wire:confirm="Eliminar esta asignacion solo si no genero horarios? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                <flux:button size="xs" variant="danger" wire:click="delete({{ $assignment->id }})" wire:confirm="Eliminar esta aplicacion solo si no genero horarios? Esta accion no se puede deshacer.">Eliminar</flux:button>
                             </div>
                         </td>
                     </tr>
@@ -671,9 +716,13 @@ new class extends Component {
                 <flux:select label="Modelo activo" wire:model="assignmentForm.schedule_profile_id">
                     <flux:select.option value="">Selecciona modelo</flux:select.option>
                     @foreach ($profiles as $profile)
-                        <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }}</flux:select.option>
+                        <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
                     @endforeach
                 </flux:select>
+            </div>
+
+            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                {{ $this->profileApplicationHint($selectedAssignmentProfile) }}
             </div>
 
             @if (($assignmentForm['assignment_scope'] ?? 'company') === 'center')
@@ -735,7 +784,7 @@ new class extends Component {
             @endif
 
             <div class="grid gap-4 md:grid-cols-2">
-                <flux:input type="date" label="Vigente desde" wire:model="assignmentForm.effective_from" />
+                <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedAssignmentProfile) }}" wire:model="assignmentForm.effective_from" />
                 <flux:input type="date" label="Hasta opcional" wire:model="assignmentForm.effective_to" />
             </div>
             <flux:textarea label="Motivo" wire:model="assignmentForm.reason" />
@@ -751,15 +800,18 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showReplacePanel" title="Reemplazar asignacion" subheading="La asignacion anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
+    <x-side-panel wire:model="showReplacePanel" title="Reemplazar aplicacion" subheading="La aplicacion anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
         <form wire:submit="replaceAssignment" class="space-y-5 p-6">
             <flux:select label="Nuevo modelo" wire:model="replaceForm.schedule_profile_id">
                 <flux:select.option value="">Selecciona modelo</flux:select.option>
                 @foreach ($profiles as $profile)
-                    <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }}</flux:select.option>
+                    <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:input type="date" label="Nueva vigencia desde" wire:model="replaceForm.effective_from" />
+            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                {{ $this->profileApplicationHint($selectedReplaceProfile) }}
+            </div>
+            <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedReplaceProfile) }}" wire:model="replaceForm.effective_from" />
             <flux:input type="date" label="Hasta opcional" wire:model="replaceForm.effective_to" />
             <flux:textarea label="Motivo" wire:model="replaceForm.reason" required />
             @error('replaceForm.effective_from')

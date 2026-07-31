@@ -40,8 +40,8 @@ class ScheduleProfileUiTest extends TestCase
         $this->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Catálogo de turnos')
-            ->assertSee('Perfiles de horario')
-            ->assertSee('Asignaciones de perfiles')
+            ->assertSee('Modelos de horario')
+            ->assertSee('Aplicacion de modelos')
             ->assertSee('Descansos obligatorios')
             ->assertDontSee('Horarios legacy')
             ->assertDontSee('Asignación de Horarios legacy');
@@ -64,7 +64,7 @@ class ScheduleProfileUiTest extends TestCase
             ->assertSee('Apertura')
             ->assertDontSee('Inactiva')
             ->assertDontSee('Externa')
-            ->assertSee('Patron semanal')
+            ->assertSee('Horario fijo semanal')
             ->assertSee('se repite cada semana')
             ->set('form.code', 'OPAT')
             ->set('form.name', 'Oficina por patron')
@@ -167,7 +167,7 @@ class ScheduleProfileUiTest extends TestCase
             ->set('resolveForm.date', '2026-09-15')
             ->set('resolveWorkerSearch', $worker->full_name)
             ->call('selectResolveWorker', $worker->id)
-            ->assertSee('Perfil efectivo')
+            ->assertSee('Modelo efectivo')
             ->assertSee('Calendario')
             ->assertSee('Relacion laboral');
 

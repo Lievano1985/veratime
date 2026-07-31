@@ -403,6 +403,12 @@ Actualizacion de modelo operativo visible:
   - Rol rotativo / ciclo: base `pattern` con `pattern_mode = cycle`.
 - La navegacion visible cambia a "Modelos de horario", "Aplicacion de modelos" y "Programacion semanal" para reducir lenguaje tecnico.
 - `calendar`, `flexible` y `on_call` siguen disponibles como opciones avanzadas o soporte para captura semanal, sin cambiar tablas ni Actions.
+- Bloques 3/4 de la mejora operativa:
+  - `/scheduling/profiles` filtra por camino operativo visible: horario fijo semanal, rol rotativo/ciclo, programacion semanal manual, flexible avanzado y guardia avanzada.
+  - El formulario de modelo muestra una sintesis contextual de la forma seleccionada.
+  - `/scheduling/profile-assignments` muestra el tipo de modelo en los combos de seleccion.
+  - En ciclos, la fecha inicial se etiqueta como "Inicio del ciclo (Dia 1)" y la tabla muestra "Dia 1" en la vigencia.
+  - En modelos semanales, la fecha se mantiene como vigencia desde y el texto aclara que se repite por semana y aplica solo a trabajadores vigentes por dia.
 
 - Rutas:
   - `/scheduling/profiles`.
