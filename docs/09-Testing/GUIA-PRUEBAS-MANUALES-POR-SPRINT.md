@@ -1669,16 +1669,21 @@ Periodo demo:
 |---|---|---|
 | Navegacion | Entrar con `rh.office.demo@veratime.local` y abrir Horarios -> Programacion semanal. | Carga `/scheduling/daily` y muestra lotes de la empresa activa en tabla compacta. |
 | Filtros | Usar filtros principales y abrir `+ Filtros`. | Los filtros avanzados aparecen solo cuando se despliegan y la pantalla mantiene espacio para el calendario. |
+| Periodo del listado | Revisar la vista inicial y luego cambiar `Periodo` a `Historicas` o `Todas`. | La vista inicial muestra lotes actuales/futuros; los lotes pasados aparecen solo al pedirlos. |
 | Crear lote vacio | Crear lote para un centro usando cualquier fecha dentro de una semana. | Queda en `Borrador`, normalizado a lunes-domingo; no se publica ni genera automaticamente. |
 | Crear y generar | Crear lote y elegir generar desde perfiles. | Se crean dias en borrador dentro de la semana natural; dias antes del alta/baja del trabajador quedan fuera de vigencia. |
+| Crear varias semanas | En `Nueva programacion semanal`, elegir 2 a 4 semanas y crear/generar. | Se crean lotes semanales separados, consecutivos, en `draft`; se abre la ultima semana creada. |
 | Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
 | Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
-| Generar semana siguiente | Abrir un lote y usar `Generar semana siguiente`. | Si no existe, crea la siguiente semana natural en `draft`, genera desde modelos y no publica automaticamente. Si ya existe, abre la semana existente. |
-| Calendario | Abrir calendario del lote. | Muestra semana navegable con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
+| Preparar semanas futuras | Abrir un lote, usar `Preparar semanas` y elegir 1 a 4 semanas. | Crea solo las semanas faltantes en `draft`, salta semanas existentes, genera desde modelos y abre la ultima semana preparada. |
+| Calendario | Abrir calendario del lote. | Muestra la semana natural del lote con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
+| Navegar semanas | Usar `Semana anterior` o `Semana siguiente` desde un lote abierto. | Abre el lote semanal existente del mismo centro. Si la semana siguiente no existe, muestra mensaje para generarla o prepararla sin pintar fechas vacias. |
 | Semana lunes-domingo | Crear un lote eligiendo una fecha a media semana, por ejemplo miercoles. | El lote se guarda de lunes a domingo; los dias fuera de vigencia del trabajador aparecen bloqueados/desactivados. |
 | Ocultar calendario | Usar `Ocultar calendario`. | Regresa a la lista sin dejar abierto el lote. |
 | Edicion individual | Cambiar un dia a Turno, Descanso, Flexible, Guardia o Pendiente con motivo. | Guarda con `source_type = manual` usando Action de dominio. |
 | Cambio masivo | Seleccionar trabajadores y rango dentro del lote; confirmar motivo. | Aplica el cambio de forma atomica o revierte todo si falla. |
+| Borrar borrador | Abrir un lote `Borrador` y usar `Borrar`. | El lote se elimina definitivamente junto con sus dias/importaciones; no queda como cancelado. |
+| Publicado protegido | Abrir un lote `Publicado`. | No aparece accion para borrar; solo consulta, integridad o correccion segun permisos. |
 | Revisar antes de publicar | Ejecutar la revision. | Muestra bloqueos, advertencias y resumen alineado con dominio; el panel puede ocultarse. |
 | Publicar | Confirmar publicacion de un lote completo. | Persiste `published_at`, `published_by`, SHA-256 y cambia a solo lectura. |
 | Historial e integridad | En un lote publicado, abrir Historial o Integridad. | Los paneles aparecen solo al pedirlos y se pueden ocultar; el hash no queda como aviso permanente. |

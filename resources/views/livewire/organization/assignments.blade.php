@@ -2,7 +2,6 @@
 
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ReplacePrimaryOrganizationalUnitAction;
-use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
@@ -116,12 +115,10 @@ new class extends Component {
         $this->resetValidation();
     }
 
-    public function with(CurrentCompany $currentCompany, ResolveEmploymentUnitsForDateAction $resolver): array
+    public function with(CurrentCompany $currentCompany): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         Gate::authorize('viewAny', [EmploymentUnitAssignment::class, $company]);
-
-        $selectedPrimaryWorker = $this->selectedWorker($company, $this->primaryForm['worker_ids'] ?? []);
 
         return [
             'currentCompany' => $company,
@@ -130,7 +127,6 @@ new class extends Component {
             'assignments' => $this->assignmentQuery($company)->paginate(12),
             'primaryUnits' => $this->primaryUnitOptions($company),
             'primaryUnitHelp' => $this->primaryUnitHelp($company),
-            'selectedSummary' => $this->selectedSummary($company, $selectedPrimaryWorker, $resolver),
         ];
     }
 
@@ -167,24 +163,6 @@ new class extends Component {
             ->when($centerId !== '', fn ($query) => $query->where('center_id', (int) $centerId))
             ->orderBy('name')
             ->get();
-    }
-
-    private function selectedSummary($company, ?Worker $worker, ResolveEmploymentUnitsForDateAction $resolver): ?array
-    {
-        if (! $worker) {
-            return null;
-        }
-
-        $relationship = $this->activeRelationshipForWorker($company, $worker->id, fail: false);
-        if (! $relationship) {
-            return ['worker' => $worker, 'relationship' => null, 'resolved' => null];
-        }
-
-        return [
-            'worker' => $worker,
-            'relationship' => $relationship,
-            'resolved' => $resolver->handle($company, $relationship, now()->toDateString()),
-        ];
     }
 
     private function primaryUnitOptions($company)
@@ -288,17 +266,6 @@ new class extends Component {
         };
     }
 
-    private function selectedWorker($company, array $workerIds): ?Worker
-    {
-        $workerId = (int) collect($workerIds)->first();
-
-        if ($workerId <= 0) {
-            return null;
-        }
-
-        return $company->workers()->where('status', 'active')->whereKey($workerId)->first();
-    }
-
     private function activeRelationshipForWorker($company, int $workerId, bool $fail = true): ?EmploymentRelationship
     {
         $query = EmploymentRelationship::query()
@@ -354,26 +321,6 @@ new class extends Component {
         <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
             {{ session('status') }}
         </div>
-    @endif
-
-    @if ($selectedSummary)
-        <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:heading>Trabajador seleccionado</flux:heading>
-            <div class="mt-3 grid gap-4 md:grid-cols-3">
-                <div>
-                    <p class="text-xs uppercase text-zinc-500">Trabajador</p>
-                    <p class="font-medium">{{ $selectedSummary['worker']->employee_code }} - {{ $selectedSummary['worker']->full_name }}</p>
-                </div>
-                <div>
-                    <p class="text-xs uppercase text-zinc-500">Centro</p>
-                    <p class="font-medium">{{ $selectedSummary['relationship']?->center?->name ?? 'Sin relacion vigente' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs uppercase text-zinc-500">Unidad principal vigente</p>
-                    <p class="font-medium">{{ $selectedSummary['resolved']['primary']?->name ?? 'Sin unidad principal' }}</p>
-                </div>
-            </div>
-        </section>
     @endif
 
     <section class="space-y-4">

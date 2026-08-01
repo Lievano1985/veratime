@@ -3,11 +3,11 @@
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Scheduling\Actions\BulkReplaceDraftDailyScheduleAssignmentsAction;
 use App\Domains\Scheduling\Actions\BuildDailyScheduleSegmentsFromShiftTemplateAction;
-use App\Domains\Scheduling\Actions\CancelDraftScheduleBatchAction;
 use App\Domains\Scheduling\Actions\CompareScheduleBatchVersionsAction;
 use App\Domains\Scheduling\Actions\CreateCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
 use App\Domains\Scheduling\Actions\DeleteCancelledScheduleBatchAction;
+use App\Domains\Scheduling\Actions\DeleteDraftScheduleBatchAction;
 use App\Domains\Scheduling\Actions\GenerateDraftScheduleBatchFromProfilesAction;
 use App\Domains\Scheduling\Actions\PublishCorrectiveScheduleBatchAction;
 use App\Domains\Scheduling\Actions\PublishScheduleBatchAction;
@@ -49,9 +49,9 @@ new class extends Component {
     public array $filters = [];
     public array $batchForm = [];
     public array $correctionForm = [];
-    public array $cancelDraftForm = [];
     public array $dayForm = [];
     public array $bulkForm = [];
+    public array $prepareWeeksForm = [];
     public array $validationPanel = [];
     public array $integrityPanel = [];
     public array $comparisonPanel = [];
@@ -63,9 +63,9 @@ new class extends Component {
     public ?string $weekStart = null;
     public bool $showCreatePanel = false;
     public bool $showCorrectionPanel = false;
-    public bool $showCancelDraftPanel = false;
     public bool $showDayPanel = false;
     public bool $showBulkPanel = false;
+    public bool $showPrepareWeeksPanel = false;
     public bool $showAdvancedFilters = false;
     public bool $confirmBulk = false;
     public bool $confirmPublish = false;
@@ -77,6 +77,7 @@ new class extends Component {
             'period_start' => '',
             'period_end' => '',
             'status' => 'active_work',
+            'period_scope' => 'current_future',
             'worker_search' => '',
             'organizational_unit_id' => '',
             'day_type' => 'all',
@@ -84,9 +85,9 @@ new class extends Component {
         ];
         $this->batchForm = $this->emptyBatchForm();
         $this->correctionForm = ['correction_reason' => ''];
-        $this->cancelDraftForm = ['reason' => ''];
         $this->dayForm = $this->emptyDayForm();
         $this->bulkForm = $this->emptyBulkForm();
+        $this->prepareWeeksForm = $this->emptyPrepareWeeksForm();
         $this->validationPanel = [];
         $this->integrityPanel = [];
         $this->comparisonPanel = [];
@@ -139,16 +140,6 @@ new class extends Component {
         $this->resetValidation();
     }
 
-    public function openCancelDraftPanel(CurrentCompany $currentCompany): void
-    {
-        $batch = $this->selectedBatch($currentCompany, false);
-        Gate::authorize('deleteDraft', $batch);
-
-        $this->cancelDraftForm = ['reason' => ''];
-        $this->showCancelDraftPanel = true;
-        $this->resetValidation();
-    }
-
     public function createCorrection(CurrentCompany $currentCompany, CreateCorrectiveScheduleBatchAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -179,11 +170,13 @@ new class extends Component {
 
     public function createEmptyBatch(CurrentCompany $currentCompany, CreateScheduleBatchAction $action): void
     {
-        $batch = $this->createBatch($currentCompany, $action);
+        $batches = $this->createBatches($currentCompany, $action);
+        $batch = $batches[array_key_last($batches)];
         $this->selectedBatchId = $batch->id;
+        $this->weekStart = $this->calendarWeekStart($batch->period_start->toDateString());
         $this->resetPage('calendarPage');
         $this->showCreatePanel = false;
-        Session::flash('status', 'Lote creado en borrador.');
+        Session::flash('status', count($batches) === 1 ? 'Semana creada en borrador.' : count($batches).' semanas creadas en borrador.');
     }
 
     public function createAndGenerate(
@@ -192,18 +185,25 @@ new class extends Component {
         GenerateDraftScheduleBatchFromProfilesAction $generateAction,
     ): void {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $batch = $this->createBatch($currentCompany, $createAction);
+        $batches = $this->createBatches($currentCompany, $createAction);
+        $lastResult = null;
 
-        try {
-            $result = $generateAction->handle(auth()->user(), $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY);
-        } catch (\InvalidArgumentException $exception) {
-            throw ValidationException::withMessages(['batchForm.center_id' => $exception->getMessage()]);
+        foreach ($batches as $batch) {
+            try {
+                $lastResult = $generateAction->handle(auth()->user(), $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY);
+            } catch (\InvalidArgumentException $exception) {
+                throw ValidationException::withMessages(['batchForm.center_id' => $exception->getMessage()]);
+            }
         }
 
+        $batch = $batches[array_key_last($batches)];
         $this->selectedBatchId = $batch->id;
+        $this->weekStart = $this->calendarWeekStart($batch->period_start->toDateString());
         $this->resetPage('calendarPage');
         $this->showCreatePanel = false;
-        Session::flash('status', $this->generationMessage($result));
+        Session::flash('status', count($batches) === 1
+            ? $this->generationMessage($lastResult)
+            : count($batches).' semanas creadas y generadas desde modelos. Se abrio la ultima para revision.');
     }
 
     public function selectBatch(int $batchId, CurrentCompany $currentCompany): void
@@ -261,52 +261,98 @@ new class extends Component {
         $this->generateFromProfiles($currentCompany, $action, GenerateDraftScheduleBatchFromProfilesAction::MODE_REFRESH_PROFILE_GENERATED);
     }
 
+    public function openPrepareWeeksPanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $batch = $this->selectedBatch($currentCompany, false);
+        Gate::authorize('create', [ScheduleBatch::class, $company]);
+
+        if ($batch->previous_batch_id !== null || $batch->status === 'cancelled') {
+            throw ValidationException::withMessages(['generation' => 'Este lote no permite preparar semanas futuras.']);
+        }
+
+        $this->prepareWeeksForm = $this->emptyPrepareWeeksForm();
+        $this->showPrepareWeeksPanel = true;
+        $this->resetValidation();
+    }
+
     public function prepareNextWeek(CurrentCompany $currentCompany, PrepareNextScheduleWeekAction $action): void
+    {
+        $this->prepareWeeks($currentCompany, $action, 1);
+    }
+
+    public function prepareFutureWeeks(CurrentCompany $currentCompany, PrepareNextScheduleWeekAction $action): void
+    {
+        $validated = $this->validate([
+            'prepareWeeksForm.weeks' => ['required', 'integer', 'min:1', 'max:4'],
+        ])['prepareWeeksForm'];
+
+        $this->prepareWeeks($currentCompany, $action, (int) $validated['weeks']);
+        $this->showPrepareWeeksPanel = false;
+    }
+
+    private function prepareWeeks(CurrentCompany $currentCompany, PrepareNextScheduleWeekAction $action, int $weeks): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $batch = $this->selectedBatch($currentCompany, false);
         Gate::authorize('create', [ScheduleBatch::class, $company]);
 
         try {
-            $result = $action->handle(auth()->user(), $company, $batch);
+            $result = $action->prepareWeeks(auth()->user(), $company, $batch, $weeks);
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['generation' => $exception->getMessage()]);
         }
 
-        $this->selectedBatchId = $result['batch']->id;
-        $this->weekStart = $this->calendarWeekStart($result['batch']->period_start->toDateString());
+        $finalBatch = $result['final_batch'];
+        $this->selectedBatchId = $finalBatch->id;
+        $this->weekStart = $this->calendarWeekStart($finalBatch->period_start->toDateString());
         $this->validationPanel = [];
         $this->integrityPanel = [];
         $this->comparisonPanel = [];
         $this->versionHistoryPanel = [];
         $this->resetPage('calendarPage');
 
-        if (! $result['created']) {
-            Session::flash('status', 'La semana siguiente ya existia; se abrio para revision.');
+        if ($result['created_count'] === 0) {
+            Session::flash('status', $weeks === 1
+                ? 'La semana siguiente ya existia; se abrio para revision.'
+                : "Las {$weeks} semanas solicitadas ya existian; se abrio la ultima para revision.");
 
             return;
         }
 
-        Session::flash('status', 'Semana siguiente preparada. '.$this->generationMessage($result['generation_result']));
+        Session::flash('status', $weeks === 1
+            ? 'Semana siguiente preparada. '.$this->generationMessage($result['results'][0]['generation_result'])
+            : "Semanas preparadas: {$result['created_count']} creadas, {$result['existing_count']} ya existian. Se abrio la ultima semana para revision.");
     }
 
     public function previousWeek(CurrentCompany $currentCompany): void
     {
         $batch = $this->selectedBatch($currentCompany, false);
-        $current = CarbonImmutable::parse($this->weekStart ?: $batch->period_start->toDateString());
-        $previous = $current->subDays(7);
-        $firstWeekStart = CarbonImmutable::parse($batch->period_start->toDateString())->startOfWeek(CarbonInterface::MONDAY);
-        $this->weekStart = $previous->lt($firstWeekStart) ? $firstWeekStart->toDateString() : $previous->toDateString();
-        $this->resetPage('calendarPage');
+        $previous = $this->adjacentBatch($currentCompany, $batch, 'previous');
+
+        if (! $previous) {
+            Session::flash('status', 'No existe una semana anterior para este centro.');
+
+            return;
+        }
+
+        $this->openBatchForCalendar($previous);
+        Session::flash('status', 'Semana anterior abierta.');
     }
 
     public function nextWeek(CurrentCompany $currentCompany): void
     {
         $batch = $this->selectedBatch($currentCompany, false);
-        $current = CarbonImmutable::parse($this->weekStart ?: $batch->period_start->toDateString());
+        $next = $this->adjacentBatch($currentCompany, $batch, 'next');
 
-        $this->weekStart = $current->addDays(7)->toDateString();
-        $this->resetPage('calendarPage');
+        if (! $next) {
+            Session::flash('status', 'No existe la semana siguiente. Puedes usar Preparar semanas.');
+
+            return;
+        }
+
+        $this->openBatchForCalendar($next);
+        Session::flash('status', 'Semana siguiente abierta.');
     }
 
     public function openDayEditor(int $relationshipId, string $workDate, CurrentCompany $currentCompany): void
@@ -363,6 +409,15 @@ new class extends Component {
         $this->bulkForm = $this->emptyBulkForm($batch);
         $this->confirmBulk = false;
         $this->showBulkPanel = true;
+    }
+
+    public function removeBulkRelationship(int $relationshipId): void
+    {
+        $this->bulkForm['employment_relationship_ids'] = collect($this->bulkForm['employment_relationship_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === $relationshipId)
+            ->values()
+            ->all();
     }
 
     public function applyBulk(CurrentCompany $currentCompany, BulkReplaceDraftDailyScheduleAssignmentsAction $action): void
@@ -471,33 +526,27 @@ new class extends Component {
         Session::flash('status', "Programacion publicada. SHA-256: {$published->snapshotSha256}");
     }
 
-    public function cancelDraftBatch(CurrentCompany $currentCompany, CancelDraftScheduleBatchAction $action): void
+    public function deleteDraftBatch(CurrentCompany $currentCompany, DeleteDraftScheduleBatchAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $batch = $this->selectedBatch($currentCompany, true);
         Gate::authorize('deleteDraft', $batch);
 
-        $validated = $this->validate([
-            'cancelDraftForm.reason' => ['required', 'string', 'max:500'],
-        ])['cancelDraftForm'];
-
         try {
-            $cancelled = $action->handle(auth()->user(), $company, $batch, $validated['reason']);
+            $action->handle(auth()->user(), $company, $batch);
         } catch (\InvalidArgumentException $exception) {
-            throw ValidationException::withMessages(['cancelDraftForm.reason' => $exception->getMessage()]);
+            throw ValidationException::withMessages(['deleteDraftBatch' => $exception->getMessage()]);
         }
 
         $this->selectedBatchId = null;
-        $this->showCancelDraftPanel = false;
         $this->resetPage('calendarPage');
         $this->validationPanel = [];
         $this->comparisonPanel = [];
         $this->integrityPanel = [];
         $this->versionHistoryPanel = [];
         $this->confirmPublish = false;
-        $this->resetValidation('cancelDraftForm');
 
-        Session::flash('status', 'Borrador descartado. Se conserva como cancelado para trazabilidad.');
+        Session::flash('status', 'Borrador eliminado definitivamente.');
     }
 
     public function deleteCancelledBatch(CurrentCompany $currentCompany, DeleteCancelledScheduleBatchAction $action): void
@@ -635,7 +684,10 @@ new class extends Component {
         ];
     }
 
-    private function createBatch(CurrentCompany $currentCompany, CreateScheduleBatchAction $action): ScheduleBatch
+    /**
+     * @return list<ScheduleBatch>
+     */
+    private function createBatches(CurrentCompany $currentCompany, CreateScheduleBatchAction $action): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         Gate::authorize('create', [ScheduleBatch::class, $company]);
@@ -643,21 +695,46 @@ new class extends Component {
         $validated = $this->validate([
             'batchForm.center_id' => ['required', 'integer', Rule::exists('centers', 'id')->where('company_id', $company->id)->where('status', 'active')],
             'batchForm.period_start' => ['required', 'date'],
+            'batchForm.weeks' => ['required', 'integer', 'min:1', 'max:4'],
             'batchForm.notes' => ['nullable', 'string', 'max:2000'],
         ])['batchForm'];
         [$validated['period_start'], $validated['period_end']] = $this->naturalWeekForDate($validated['period_start']);
         $center = $company->centers()->where('status', 'active')->whereKey((int) $validated['center_id'])->firstOrFail();
+        $weeks = (int) $validated['weeks'];
+        $batches = [];
+        $periodStarts = [];
 
-        try {
-            return $action->handle($company, $center, [
-                'period_start' => $validated['period_start'],
-                'period_end' => $validated['period_end'],
-                'creation_source' => 'manual',
-                'notes' => $validated['notes'] ?: null,
-            ], auth()->user());
-        } catch (\InvalidArgumentException $exception) {
-            throw ValidationException::withMessages(['batchForm.period_start' => $exception->getMessage()]);
+        for ($index = 0; $index < $weeks; $index++) {
+            $periodStarts[] = CarbonImmutable::parse($validated['period_start'])->addWeeks($index)->toDateString();
         }
+
+        $existingDraft = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->whereNull('previous_batch_id')
+            ->where('status', 'draft')
+            ->whereIn('period_start', $periodStarts)
+            ->first();
+
+        if ($existingDraft) {
+            throw ValidationException::withMessages([
+                'batchForm.period_start' => 'Ya existe un borrador abierto en una de las semanas solicitadas.',
+            ]);
+        }
+
+        foreach ($periodStarts as $periodStart) {
+            try {
+                $batches[] = $action->handle($company, $center, [
+                    'period_start' => $periodStart,
+                    'creation_source' => 'manual',
+                    'notes' => $validated['notes'] ?: null,
+                ], auth()->user());
+            } catch (\InvalidArgumentException $exception) {
+                throw ValidationException::withMessages(['batchForm.period_start' => $exception->getMessage()]);
+            }
+        }
+
+        return $batches;
     }
 
     private function generateFromProfiles(CurrentCompany $currentCompany, GenerateDraftScheduleBatchFromProfilesAction $action, string $mode): void
@@ -685,8 +762,10 @@ new class extends Component {
         $dayType = trim((string) ($this->filters['day_type'] ?? 'all'));
         $periodStart = trim((string) ($this->filters['period_start'] ?? ''));
         $periodEnd = trim((string) ($this->filters['period_end'] ?? ''));
+        $periodScope = trim((string) ($this->filters['period_scope'] ?? 'current_future'));
         $pendingOnly = (bool) ($this->filters['pending_only'] ?? false);
         $centerIds = $this->visibleCenterIds($company);
+        $today = CarbonImmutable::today()->toDateString();
 
         return $company->scheduleBatches()
             ->with(['center', 'publisher'])
@@ -700,6 +779,8 @@ new class extends Component {
             ->when($centerId !== '', fn ($query) => $query->where('center_id', (int) $centerId))
             ->when($periodStart !== '', fn ($query) => $query->whereDate('period_end', '>=', $periodStart))
             ->when($periodEnd !== '', fn ($query) => $query->whereDate('period_start', '<=', $periodEnd))
+            ->when($periodStart === '' && $periodEnd === '' && $periodScope === 'current_future', fn ($query) => $query->whereDate('period_end', '>=', $today))
+            ->when($periodStart === '' && $periodEnd === '' && $periodScope === 'past', fn ($query) => $query->whereDate('period_end', '<', $today))
             ->when($workerSearch !== '', fn ($query) => $query->whereHas('dailyAssignments.employmentRelationship.worker', fn ($workerQuery) => $workerQuery
                 ->where('employee_code', 'like', "%{$workerSearch}%")
                 ->orWhere('full_name', 'like', "%{$workerSearch}%")))
@@ -729,9 +810,55 @@ new class extends Component {
     private function selectedBatch(CurrentCompany $currentCompany, bool $forUpdate): ScheduleBatch
     {
         $batch = $this->authorizedBatch((int) $this->selectedBatchId, $currentCompany, $forUpdate);
-        $this->weekStart ??= $this->calendarWeekStart($batch->period_start->toDateString());
+        $this->weekStart = $this->calendarWeekStart($batch->period_start->toDateString());
 
         return $batch;
+    }
+
+    private function adjacentBatch(CurrentCompany $currentCompany, ScheduleBatch $batch, string $direction): ?ScheduleBatch
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $centerIds = $this->visibleCenterIds($company);
+
+        $query = $company->scheduleBatches()
+            ->with(['center', 'previousBatch', 'supersededByBatch', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker', 'dailyAssignments.organizationalUnit', 'dailyAssignments.shiftTemplate'])
+            ->where('center_id', $batch->center_id)
+            ->whereNull('previous_batch_id')
+            ->whereIn('status', ['draft', 'published', 'superseded']);
+
+        if ($centerIds !== null) {
+            $query->whereIn('center_id', $centerIds);
+        }
+
+        if ($direction === 'previous') {
+            $query
+                ->whereDate('period_end', '<', $batch->period_start->toDateString())
+                ->orderByDesc('period_end')
+                ->orderByDesc('id');
+        } else {
+            $query
+                ->whereDate('period_start', '>', $batch->period_end->toDateString())
+                ->orderBy('period_start')
+                ->orderBy('id');
+        }
+
+        $adjacent = $query->first();
+
+        return $adjacent && Gate::allows('view', $adjacent) ? $adjacent : null;
+    }
+
+    private function openBatchForCalendar(ScheduleBatch $batch): void
+    {
+        $this->selectedBatchId = $batch->id;
+        $this->weekStart = $this->calendarWeekStart($batch->period_start->toDateString());
+        $this->validationPanel = [];
+        $this->integrityPanel = [];
+        $this->comparisonPanel = [];
+        $this->versionHistoryPanel = [];
+        $this->showPrepareWeeksPanel = false;
+        $this->showDayPanel = false;
+        $this->showBulkPanel = false;
+        $this->resetPage('calendarPage');
     }
 
     private function authorizedBatch(int $batchId, CurrentCompany $currentCompany, bool $forUpdate): ScheduleBatch
@@ -891,7 +1018,7 @@ new class extends Component {
 
     private function weekDates(ScheduleBatch $batch): array
     {
-        $start = CarbonImmutable::parse($this->weekStart ?: $this->calendarWeekStart($batch->period_start->toDateString()));
+        $start = CarbonImmutable::parse($this->calendarWeekStart($batch->period_start->toDateString()));
 
         return collect(range(0, 6))->map(function (int $offset) use ($start, $batch): array {
             $date = $start->addDays($offset);
@@ -1193,6 +1320,7 @@ new class extends Component {
             'center_id' => '',
             'period_start' => $this->naturalWeekForDate(now()->toDateString())[0],
             'period_end' => $this->naturalWeekForDate(now()->toDateString())[1],
+            'weeks' => '1',
             'notes' => '',
         ];
     }
@@ -1234,6 +1362,13 @@ new class extends Component {
             'employment_relationship_ids' => [],
             'date_from' => $batch?->period_start?->toDateString() ?? now()->toDateString(),
             'date_to' => $batch?->period_start?->toDateString() ?? now()->toDateString(),
+        ];
+    }
+
+    private function emptyPrepareWeeksForm(): array
+    {
+        return [
+            'weeks' => '2',
         ];
     }
 
@@ -1432,23 +1567,36 @@ new class extends Component {
     @endif
 
     <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto] lg:items-end">
-            <flux:select label="Centro de trabajo" wire:model.live="filters.center_id">
-                <flux:select.option value="">Todos</flux:select.option>
-                @foreach ($centers as $center)
-                    <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-            <flux:select label="Estado" wire:model.live="filters.status">
-                <flux:select.option value="active_work">Borradores y publicados</flux:select.option>
-                <flux:select.option value="draft">Borrador</flux:select.option>
-                <flux:select.option value="published">Publicado</flux:select.option>
-                <flux:select.option value="superseded">Sustituido</flux:select.option>
-                <flux:select.option value="cancelled">Cancelado</flux:select.option>
-                <flux:select.option value="all">Todos</flux:select.option>
-            </flux:select>
-            <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="filters.worker_search" />
-            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5 xl:items-end">
+            <div class="min-w-0">
+                <flux:select label="Centro de trabajo" wire:model.live="filters.center_id">
+                    <flux:select.option value="">Todos</flux:select.option>
+                    @foreach ($centers as $center)
+                        <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+            <div class="min-w-0">
+                <flux:select label="Estado" wire:model.live="filters.status">
+                    <flux:select.option value="active_work">Borradores y publicados</flux:select.option>
+                    <flux:select.option value="draft">Borrador</flux:select.option>
+                    <flux:select.option value="published">Publicado</flux:select.option>
+                    <flux:select.option value="superseded">Sustituido</flux:select.option>
+                    <flux:select.option value="cancelled">Cancelado</flux:select.option>
+                    <flux:select.option value="all">Todos</flux:select.option>
+                </flux:select>
+            </div>
+            <div class="min-w-0">
+                <flux:select label="Periodo" wire:model.live="filters.period_scope">
+                    <flux:select.option value="current_future">Actuales y futuras</flux:select.option>
+                    <flux:select.option value="past">Historicas</flux:select.option>
+                    <flux:select.option value="all">Todas</flux:select.option>
+                </flux:select>
+            </div>
+            <div class="min-w-0">
+                <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="filters.worker_search" />
+            </div>
+            <flux:button class="w-full justify-center" type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
                 <span class="inline-flex items-center gap-1.5 leading-none">
                     <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
                     <span>Filtros</span>
@@ -1554,7 +1702,18 @@ new class extends Component {
             class="space-y-3 rounded-lg border border-zinc-200 bg-surface-muted p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
         >
             <div class="min-w-0">
-                <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 bg-zinc-100 px-4 py-2 text-sm font-medium leading-5 text-zinc-700 shadow-sm transition hover:bg-zinc-200 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 dark:hover:text-white dark:focus:ring-zinc-700/60"
+                        x-on:click="visible = false; setTimeout(() => $wire.closeCalendar(), 260)"
+                    >
+                        Cerrar
+                    </button>
+                </div>
                 <flux:subheading>
                     @if ($selectedBatch->previous_batch_id)
                         Correccion de programacion - {{ $selectedBatch->version ? 'Version '.$selectedBatch->version : 'Borrador correctivo' }} - {{ $this->statusLabel($selectedBatch->status) }}
@@ -1571,7 +1730,7 @@ new class extends Component {
                         <flux:button size="xs" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</flux:button>
                     @endif
                     @if ($canPrepareNextWeek)
-                        <flux:button size="xs" variant="ghost" wire:click="prepareNextWeek" wire:confirm="Preparar la semana siguiente en borrador desde modelos? No se publicara automaticamente.">Generar semana siguiente</flux:button>
+                        <flux:button size="xs" variant="ghost" wire:click="openPrepareWeeksPanel">Preparar semanas</flux:button>
                     @endif
                     @if ($canEditSelectedBatch)
                         <flux:button size="xs" variant="ghost" wire:click="openBulkPanel">Masivo</flux:button>
@@ -1598,14 +1757,14 @@ new class extends Component {
                         <flux:button size="xs" variant="primary" wire:click="openCorrectionPanel">Correccion</flux:button>
                     @endif
                     @if ($canDeleteDraftSelectedBatch)
-                        <flux:button size="xs" variant="danger" wire:click="openCancelDraftPanel">Descartar</flux:button>
+                        <flux:button size="xs" variant="danger" wire:confirm="Borrar definitivamente este borrador? Esta accion no se puede deshacer." wire:click="deleteDraftBatch">Borrar</flux:button>
                     @endif
                     @if ($canDeleteCancelledSelectedBatch)
                         <flux:button size="xs" variant="danger" wire:confirm="Eliminar definitivamente este lote cancelado? Esta accion no se puede deshacer." wire:click="deleteCancelledBatch">Eliminar definitivo</flux:button>
                     @endif
-                    <flux:button size="xs" variant="ghost" x-on:click="visible = false; setTimeout(() => $wire.closeCalendar(), 260)">Ocultar calendario</flux:button>
                 </div>
             </div>
+            @error('deleteDraftBatch')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
 
             @if ($selectedBatch->status === 'cancelled')
                 <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
@@ -1756,13 +1915,12 @@ new class extends Component {
                 </div>
             @endif
 
-            <div class="flex items-center justify-between">
-                <flux:button size="sm" variant="ghost" wire:click="previousWeek">Semana anterior</flux:button>
-                <p class="text-sm text-zinc-500">Vista semanal dentro del periodo</p>
-                <flux:button size="sm" variant="ghost" wire:click="nextWeek">Semana siguiente</flux:button>
-            </div>
-
             <div class="rounded-lg bg-surface-muted p-3 dark:bg-zinc-950/40">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <flux:button size="xs" variant="ghost" icon="chevron-left" wire:click="previousWeek">Semana anterior</flux:button>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                <flux:button size="xs" variant="ghost" icon-trailing="chevron-right" wire:click="nextWeek">Semana siguiente</flux:button>
+            </div>
             <div class="hidden lg:block">
                 <table class="w-full table-fixed divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                     <colgroup>
@@ -1859,15 +2017,54 @@ new class extends Component {
                     <flux:select.option value="{{ $center->id }}">{{ $center->name }} | {{ $center->timezone }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-3">
                 <flux:input type="date" label="Fecha de la semana" wire:model.live="batchForm.period_start" />
                 <flux:input type="text" label="Semana natural" value="{{ ($batchForm['period_start'] ?? '') && ($batchForm['period_end'] ?? '') ? ($batchForm['period_start'].' a '.$batchForm['period_end']) : '' }}" disabled />
+                <flux:select label="Semanas a crear" wire:model="batchForm.weeks">
+                    <flux:select.option value="1">1 semana</flux:select.option>
+                    <flux:select.option value="2">2 semanas</flux:select.option>
+                    <flux:select.option value="3">3 semanas</flux:select.option>
+                    <flux:select.option value="4">4 semanas</flux:select.option>
+                </flux:select>
+            </div>
+            <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                Cada semana se crea como lote independiente lunes-domingo. Se abrira la ultima semana creada para revision.
             </div>
             <flux:textarea label="Notas opcionales" wire:model="batchForm.notes" rows="3" />
             <div class="flex justify-end gap-3">
                 <flux:button type="button" variant="ghost" wire:click="$set('showCreatePanel', false)">Cancelar</flux:button>
                 <flux:button type="button" variant="ghost" wire:click="createEmptyBatch">Crear semana vacia</flux:button>
                 <flux:button type="button" variant="primary" wire:click="createAndGenerate">Crear y generar desde perfiles</flux:button>
+            </div>
+        </form>
+    </x-side-panel>
+
+    <x-side-panel wire:model="showPrepareWeeksPanel" title="Preparar semanas futuras" subheading="Crea borradores lunes-domingo desde modelos. No publica automaticamente." maxWidth="max-w-xl">
+        <form wire:submit="prepareFutureWeeks" class="space-y-5 p-6">
+            @if ($selectedBatch)
+                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                    <p>Centro: {{ $selectedBatch->center?->name }}</p>
+                    <p>Desde semana: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                </div>
+            @endif
+
+            <flux:select label="Semanas a preparar" wire:model="prepareWeeksForm.weeks">
+                <flux:select.option value="1">1 semana</flux:select.option>
+                <flux:select.option value="2">2 semanas</flux:select.option>
+                <flux:select.option value="3">3 semanas</flux:select.option>
+                <flux:select.option value="4">4 semanas</flux:select.option>
+            </flux:select>
+
+            <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                Se generaran solo borradores desde modelos. Las semanas ya existentes se abriran o saltaran sin duplicarse.
+            </div>
+
+            @error('prepareWeeksForm.weeks')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            @error('generation')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+
+            <div class="flex justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="$set('showPrepareWeeksPanel', false)">Cancelar</flux:button>
+                <flux:button type="submit" variant="primary">Preparar</flux:button>
             </div>
         </form>
     </x-side-panel>
@@ -1886,25 +2083,6 @@ new class extends Component {
             <div class="flex justify-end gap-3">
                 <flux:button type="button" variant="ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</flux:button>
                 <flux:button type="submit" variant="primary">Crear correccion</flux:button>
-            </div>
-        </form>
-    </x-side-panel>
-
-    <x-side-panel wire:model="showCancelDraftPanel" title="Descartar borrador" subheading="El lote quedara cancelado y no podra editarse ni publicarse." maxWidth="max-w-xl">
-        <form wire:submit="cancelDraftBatch" class="space-y-5 p-6">
-            @if ($selectedBatch)
-                <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                    <p class="font-medium">Esta accion solo aplica a lotes en borrador.</p>
-                    <p>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
-                </div>
-            @endif
-
-            <flux:textarea label="Motivo" wire:model="cancelDraftForm.reason" required />
-            @error('cancelDraftForm.reason')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-
-            <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showCancelDraftPanel', false)">Conservar borrador</flux:button>
-                <flux:button type="submit" variant="danger">Descartar borrador</flux:button>
             </div>
         </form>
     </x-side-panel>
@@ -1931,18 +2109,51 @@ new class extends Component {
 
     <x-side-panel wire:model="showBulkPanel" title="Cambio masivo" subheading="Aplica una configuracion a varios trabajadores y fechas dentro del lote." maxWidth="max-w-4xl">
         <form wire:submit="applyBulk" class="space-y-5 p-6">
-            <div class="grid gap-2 md:grid-cols-2">
-                @foreach ($calendarRows as $row)
-                    <label class="flex items-center gap-2 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
-                        <input type="checkbox" value="{{ $row['relationship']->id }}" wire:model.live="bulkForm.employment_relationship_ids" class="rounded border-zinc-300">
-                        <span class="flex flex-wrap items-center gap-2">
-                            <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
-                            @if ($row['historical_only_dates'] > 0)
-                                <x-ui.badge>{{ $row['historical_only_dates'] }} baja historica</x-ui.badge>
-                            @endif
-                        </span>
-                    </label>
-                @endforeach
+            @php($bulkSelectedIds = collect($bulkForm['employment_relationship_ids'] ?? [])->map(fn ($id) => (int) $id)->all())
+            <div class="space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <flux:heading>Trabajadores</flux:heading>
+                        <flux:subheading>Selecciona uno o varios trabajadores del calendario.</flux:subheading>
+                    </div>
+                    <x-ui.badge>
+                        {{ count($bulkSelectedIds) }} {{ count($bulkSelectedIds) === 1 ? 'seleccionado' : 'seleccionados' }}
+                    </x-ui.badge>
+                </div>
+
+                @if (count($bulkSelectedIds) > 0)
+                    <div class="max-h-24 overflow-y-auto pr-1">
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($calendarRows as $row)
+                                @if (in_array((int) $row['relationship']->id, $bulkSelectedIds, true))
+                                    <x-ui.badge variant="success" class="gap-2 px-3 py-1">
+                                        {{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}
+                                        <button type="button" wire:click="removeBulkRelationship({{ $row['relationship']->id }})" class="text-emerald-700 hover:text-emerald-950 dark:text-emerald-200">
+                                            Quitar
+                                        </button>
+                                    </x-ui.badge>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <div class="max-h-48 overflow-y-auto pr-1">
+                    <div class="grid gap-2 md:grid-cols-2">
+                        @foreach ($calendarRows as $row)
+                            <label class="flex items-center gap-2 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+                                <input type="checkbox" value="{{ $row['relationship']->id }}" wire:model.live="bulkForm.employment_relationship_ids" class="rounded border-zinc-300">
+                                <span class="flex flex-wrap items-center gap-2">
+                                    <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
+                                    @if ($row['historical_only_dates'] > 0)
+                                        <x-ui.badge>{{ $row['historical_only_dates'] }} baja historica</x-ui.badge>
+                                    @endif
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+                @error('bulkForm.employment_relationship_ids')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:input type="date" label="Desde" wire:model.live="bulkForm.date_from" />

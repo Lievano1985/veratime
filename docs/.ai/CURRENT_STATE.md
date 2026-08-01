@@ -525,20 +525,23 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - Ruta: `/scheduling/daily`.
 - Navegacion: Horarios -> Programacion semanal.
-- La pantalla permite a `owner`, `admin` y `rh` crear lotes `draft` por centro y semana natural lunes-domingo, crear lote vacio o crear y generar desde perfiles.
+- La pantalla permite a `owner`, `admin` y `rh` crear de 1 a 4 lotes `draft` por centro y semanas naturales lunes-domingo consecutivas, crear semanas vacias o crear y generar desde perfiles.
 - La fecha elegida para un lote se normaliza al lunes-domingo de esa semana; la vigencia de la relacion laboral solo marca dias fuera de vigencia o generables dentro de la semana.
-- `PrepareNextScheduleWeekAction` permite preparar la semana siguiente desde el lote seleccionado: si ya existe una semana activa la abre; si no existe, crea un `draft`, genera desde modelos y nunca publica automaticamente.
+- `PrepareNextScheduleWeekAction` permite preparar la semana siguiente o de 1 a 4 semanas futuras desde el lote seleccionado: si ya existe una semana activa la abre/salta; si no existe, crea un `draft`, genera desde modelos y nunca publica automaticamente.
 - El listado usa filtros principales compactos, filtros avanzados colapsables y tabla de lotes de una fila por lote.
+- Por defecto el listado muestra lotes actuales/futuros; los historicos siguen consultables cambiando el filtro `Periodo` a `Historicas` o `Todas`.
 - El listado filtra por centro, periodo, estado, trabajador, unidad organizacional, tipo de dia y solo pendientes.
-- El calendario muestra una semana completa dentro del periodo, con filas por relacion laboral/trabajador, colores por tipo de dia y alternativa movil en lista.
+- El calendario muestra la semana natural del lote seleccionado, con filas por relacion laboral/trabajador, colores por tipo de dia y alternativa movil en lista.
+- La navegacion `Semana anterior` / `Semana siguiente` abre lotes semanales existentes del mismo centro; si no existe el siguiente lote, la UI invita a usar `Preparar semanas` en vez de mostrar fechas vacias dentro del mismo lote.
 - El calendario y los paneles de revision, comparacion, historial e integridad se pueden ocultar para mantener limpia la vista.
 - Permite generar faltantes (`missing_only`) y actualizar desde perfiles (`refresh_profile_generated`) sin tocar cambios manuales ni fuentes externas.
 - Permite editar un dia en borrador como `shift`, `rest`, `flexible`, `on_call` o `unassigned` usando `ReplaceDraftDailyScheduleAssignmentAction`.
 - Permite cambio masivo basico con `BulkReplaceDraftDailyScheduleAssignmentsAction`; si falla un dia se revierte toda la operacion.
+- Los lotes `draft` se pueden borrar definitivamente desde la UI; no pasan por estado intermedio `cancelled`. Los lotes ya publicados siguen protegidos y solo se corrigen/versionan.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
 - Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
-- F4 implementa correcciones versionadas en la misma pantalla; clonado multiple de semanas, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+- F4 implementa correcciones versionadas en la misma pantalla; clonado de semanas desde una semana manual existente, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
 ## Bloque F4 - correcciones versionadas
 

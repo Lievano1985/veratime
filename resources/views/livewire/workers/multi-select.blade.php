@@ -32,6 +32,19 @@ new class extends Component {
         $this->open = true;
     }
 
+    public function updatedSelectedWorkerIds(): void
+    {
+        $selected = collect($this->selectedWorkerIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $this->selectedWorkerIds = $this->mode === 'single'
+            ? $selected->take(-1)->values()->all()
+            : $selected->all();
+    }
+
     public function toggleWorker(int $workerId, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -184,7 +197,8 @@ new class extends Component {
     </div>
 
     @if ($selectedWorkers->isNotEmpty())
-        <div class="flex flex-wrap gap-2">
+        <div class="max-h-24 overflow-y-auto pr-1">
+            <div class="flex flex-wrap gap-2">
             @foreach ($selectedWorkers as $worker)
                 <x-ui.badge variant="success" class="gap-2 px-3 py-1">
                     {{ $worker->employee_code }} - {{ $worker->full_name }}
@@ -193,6 +207,7 @@ new class extends Component {
                     </button>
                 </x-ui.badge>
             @endforeach
+            </div>
         </div>
     @endif
 
@@ -245,7 +260,6 @@ new class extends Component {
 
                 <div class="mt-4 max-h-72 space-y-2 overflow-y-auto">
                     @forelse ($workerResults as $worker)
-                        @php($checked = in_array($worker->id, array_map('intval', $selectedWorkerIds), true))
                         @php($hasPrimaryAssignment = $primaryAssignedWorkerIds->contains((int) $worker->id))
                         <label @class([
                             'flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition',
@@ -253,10 +267,10 @@ new class extends Component {
                             'border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-800' => ! $hasPrimaryAssignment,
                         ])>
                             <input
+                                value="{{ $worker->id }}"
+                                wire:model.live="selectedWorkerIds"
                                 type="checkbox"
                                 class="mt-1 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
-                                @checked($checked)
-                                wire:click="toggleWorker({{ $worker->id }})"
                             >
                             <span class="min-w-0 flex-1">
                                 <span class="flex flex-wrap items-center gap-2 font-medium">

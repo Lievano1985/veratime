@@ -24,6 +24,48 @@ class PrepareNextScheduleWeekAction
      */
     public function handle(User $actor, Company $company, ScheduleBatch $currentBatch): array
     {
+        return $this->prepareOne($actor, $company, $currentBatch);
+    }
+
+    /**
+     * @return array{results: list<array{batch: ScheduleBatch, created: bool, generation_result: ?GenerateDraftScheduleBatchFromProfilesResult}>, final_batch: ScheduleBatch, created_count: int, existing_count: int}
+     */
+    public function prepareWeeks(User $actor, Company $company, ScheduleBatch $currentBatch, int $weeks): array
+    {
+        if ($weeks < 1 || $weeks > 4) {
+            throw new InvalidArgumentException('Solo se pueden preparar de 1 a 4 semanas por operacion.');
+        }
+
+        $results = [];
+        $cursor = $currentBatch;
+        $createdCount = 0;
+        $existingCount = 0;
+
+        for ($index = 0; $index < $weeks; $index++) {
+            $result = $this->prepareOne($actor, $company, $cursor);
+            $results[] = $result;
+            $cursor = $result['batch'];
+
+            if ($result['created']) {
+                $createdCount++;
+            } else {
+                $existingCount++;
+            }
+        }
+
+        return [
+            'results' => $results,
+            'final_batch' => $cursor,
+            'created_count' => $createdCount,
+            'existing_count' => $existingCount,
+        ];
+    }
+
+    /**
+     * @return array{batch: ScheduleBatch, created: bool, generation_result: ?GenerateDraftScheduleBatchFromProfilesResult}
+     */
+    private function prepareOne(User $actor, Company $company, ScheduleBatch $currentBatch): array
+    {
         $currentBatch->loadMissing('center');
         $this->authorize($actor, $company, $currentBatch);
 

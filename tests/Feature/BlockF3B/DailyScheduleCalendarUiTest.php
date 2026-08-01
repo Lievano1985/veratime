@@ -57,7 +57,7 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertSee('Oficinas Corporativas');
     }
 
-    public function test_initial_batch_filter_shows_drafts_and_published_with_drafts_first(): void
+    public function test_initial_batch_filter_hides_past_batches_and_can_show_all_periods(): void
     {
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
@@ -79,6 +79,10 @@ class DailyScheduleCalendarUiTest extends TestCase
 
         Volt::test('scheduling.daily')
             ->assertSet('filters.status', 'active_work')
+            ->assertSet('filters.period_scope', 'current_future')
+            ->assertSee('2026-08-03 - 2026-08-09')
+            ->assertDontSee('2026-07-01 - 2026-07-07')
+            ->set('filters.period_scope', 'all')
             ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-07-01 - 2026-07-07']);
     }
 
@@ -125,6 +129,37 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
     }
 
+    public function test_create_panel_can_create_multiple_weekly_batches_from_models(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $center = $company->centers()->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('openCreatePanel')
+            ->assertSee('Semanas a crear')
+            ->set('batchForm.center_id', (string) $center->id)
+            ->set('batchForm.period_start', '2026-10-05')
+            ->set('batchForm.weeks', '3')
+            ->call('createAndGenerate')
+            ->assertHasNoErrors()
+            ->assertSee('3 semanas creadas y generadas desde modelos')
+            ->assertSet('weekStart', '2026-10-19');
+
+        foreach (['2026-10-05', '2026-10-12', '2026-10-19'] as $start) {
+            $batch = ScheduleBatch::query()
+                ->where('company_id', $company->id)
+                ->where('center_id', $center->id)
+                ->whereDate('period_start', $start)
+                ->where('status', 'draft')
+                ->firstOrFail();
+
+            $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
+        }
+    }
+
     public function test_managers_can_prepare_next_week_from_selected_batch(): void
     {
         $this->seedDailyScenarios();
@@ -135,8 +170,11 @@ class DailyScheduleCalendarUiTest extends TestCase
 
         Volt::test('scheduling.daily')
             ->call('selectBatch', $current->id)
-            ->assertSee('Generar semana siguiente')
-            ->call('prepareNextWeek')
+            ->assertDontSee('Generar semana siguiente')
+            ->assertSee('Preparar semanas')
+            ->call('openPrepareWeeksPanel')
+            ->set('prepareWeeksForm.weeks', '1')
+            ->call('prepareFutureWeeks')
             ->assertHasNoErrors()
             ->assertSee('Semana siguiente preparada')
             ->assertSet('weekStart', CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString());
@@ -156,6 +194,40 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->assertGreaterThan(0, $next->dailyAssignments()->count());
     }
 
+    public function test_managers_can_prepare_multiple_future_weeks_without_publishing(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $current = $this->firstBatch($company);
+        $firstStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $secondStart = CarbonImmutable::parse($firstStart)->addWeek()->toDateString();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $current->id)
+            ->call('openPrepareWeeksPanel')
+            ->assertSee('Preparar semanas futuras')
+            ->set('prepareWeeksForm.weeks', '2')
+            ->call('prepareFutureWeeks')
+            ->assertHasNoErrors()
+            ->assertSee('Semanas preparadas: 2 creadas')
+            ->assertSet('weekStart', $secondStart);
+
+        foreach ([$firstStart, $secondStart] as $start) {
+            $batch = ScheduleBatch::query()
+                ->where('company_id', $company->id)
+                ->where('center_id', $current->center_id)
+                ->whereDate('period_start', $start)
+                ->where('status', 'draft')
+                ->where('creation_source', 'profile')
+                ->firstOrFail();
+
+            $this->assertNull($batch->published_at);
+            $this->assertGreaterThan(0, $batch->dailyAssignments()->count());
+        }
+    }
+
     public function test_period_and_tenant_validation_blocks_invalid_creation(): void
     {
         $this->seedDailyScenarios();
@@ -173,7 +245,35 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertHasErrors(['batchForm.center_id']);
     }
 
-    public function test_next_week_keeps_full_week_sequence_even_after_period_end(): void
+    public function test_week_navigation_opens_adjacent_batches_instead_of_blank_calendar_weeks(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+        $nextStart = CarbonImmutable::parse($batch->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $nextEnd = CarbonImmutable::parse($nextStart)->addDays(6)->toDateString();
+        $nextBatch = app(CreateScheduleBatchAction::class)->handle($company, $batch->center, [
+            'period_start' => $nextStart,
+            'period_end' => $nextEnd,
+            'creation_source' => 'manual',
+        ], $rh);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->assertDontSee('Vista semanal dentro del periodo')
+            ->call('nextWeek')
+            ->assertSet('selectedBatchId', $nextBatch->id)
+            ->assertSet('weekStart', $nextStart)
+            ->assertSee('Semana siguiente abierta')
+            ->call('previousWeek')
+            ->assertSet('selectedBatchId', $batch->id)
+            ->assertSet('weekStart', $batch->period_start->toDateString())
+            ->assertSee('Semana anterior abierta');
+    }
+
+    public function test_week_navigation_invites_preparation_when_next_batch_does_not_exist(): void
     {
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
@@ -184,12 +284,9 @@ class DailyScheduleCalendarUiTest extends TestCase
         Volt::test('scheduling.daily')
             ->call('selectBatch', $batch->id)
             ->call('nextWeek')
-            ->assertSet('weekStart', '2026-08-10')
-            ->call('nextWeek')
-            ->assertSet('weekStart', '2026-08-17')
-            ->assertSee('Lun. 17/08')
-            ->assertSee('Dom. 23/08')
-            ->assertSee('Fuera de vigencia');
+            ->assertSet('selectedBatchId', $batch->id)
+            ->assertSet('weekStart', $batch->period_start->toDateString())
+            ->assertSee('No existe la semana siguiente');
     }
 
     public function test_calendar_starts_on_monday_even_when_batch_period_starts_midweek(): void
@@ -348,45 +445,47 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->assertSame('draft', $batch->refresh()->status);
     }
 
-    public function test_managers_can_discard_draft_batches(): void
+    public function test_managers_can_delete_draft_batches_directly(): void
     {
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
         $draft = $this->firstBatch($company);
+        $assignmentIds = $draft->dailyAssignments()->pluck('id')->all();
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('scheduling.daily')
             ->call('selectBatch', $draft->id)
-            ->assertSee('Descartar borrador')
-            ->call('openCancelDraftPanel')
-            ->call('cancelDraftBatch')
-            ->assertHasErrors(['cancelDraftForm.reason'])
-            ->set('cancelDraftForm.reason', 'Lote creado por error durante prueba manual')
-            ->call('cancelDraftBatch')
+            ->assertSee('Borrar')
+            ->assertDontSee('Descartar borrador')
+            ->call('deleteDraftBatch')
             ->assertHasNoErrors()
-            ->assertSee('Borrador descartado')
+            ->assertSee('Borrador eliminado definitivamente.')
             ->assertSet('selectedBatchId', null);
 
-        $draft->refresh();
-        $this->assertSame('cancelled', $draft->status);
-        $this->assertSame($rh->id, $draft->cancelled_by);
-        $this->assertSame('Lote creado por error durante prueba manual', $draft->cancellation_reason);
-
+        $this->assertDatabaseMissing('schedule_batches', ['id' => $draft->id]);
+        foreach ($assignmentIds as $assignmentId) {
+            $this->assertDatabaseMissing('daily_schedule_assignments', ['id' => $assignmentId]);
+            $this->assertDatabaseMissing('daily_schedule_segments', ['daily_schedule_assignment_id' => $assignmentId]);
+        }
     }
 
-    public function test_published_batches_are_not_discardable_from_ui(): void
+    public function test_published_batches_are_not_deletable_from_ui(): void
     {
         $this->seedPublishedScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
-        $published = $this->firstBatch($company);
+        $published = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'published')
+            ->whereNull('previous_batch_id')
+            ->firstOrFail();
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('scheduling.daily')
             ->set('filters.status', 'published')
             ->call('selectBatch', $published->id)
-            ->call('openCancelDraftPanel')
+            ->call('deleteDraftBatch')
             ->assertForbidden();
 
         $this->assertSame('published', $published->refresh()->status);

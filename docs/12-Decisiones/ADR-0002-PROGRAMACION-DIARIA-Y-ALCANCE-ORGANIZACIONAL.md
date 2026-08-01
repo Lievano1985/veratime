@@ -116,7 +116,13 @@ No se mantienen alias operativos `fixed`, `variable` ni `rotating` para `schedul
 
 La programacion diaria se administra en semanas naturales completas. Si la UI o una Action recibe una fecha intermedia, el dominio normaliza el lote al lunes y domingo de esa semana. La vigencia de la relacion laboral no recorta el lote: solo determina que dias del trabajador quedan fuera de vigencia o son generables. Esta regla prepara `work_days`, horas extra semanales y futuras ventanas de nomina sin mezclar calculo semanal con periodo de pago.
 
-La preparacion de semanas futuras es controlada por el usuario. `PrepareNextScheduleWeekAction` toma el lote seleccionado, calcula la siguiente semana natural a partir del dia posterior a `period_end`, reutiliza modelos para crear un borrador y nunca publica automaticamente. Si ya existe un lote activo para esa semana y centro, la UI debe abrirlo o avisar en vez de duplicarlo.
+La preparacion de semanas futuras es controlada por el usuario. `PrepareNextScheduleWeekAction` toma el lote seleccionado, calcula la siguiente semana natural a partir del dia posterior a `period_end`, permite preparar de 1 a 4 semanas, reutiliza modelos para crear borradores y nunca publica automaticamente. Si ya existe un lote activo para una semana y centro, la UI debe abrirlo o saltarlo en vez de duplicarlo.
+
+La navegacion visual de semanas opera sobre lotes existentes del mismo centro. La UI no desplaza el calendario fuera del rango del lote seleccionado; si el usuario pide la semana siguiente y no existe un lote, debe invitar a generarlo o prepararlo. Esto evita calendarios vacios o dias fuera de vigencia que aparenten pertenecer al lote actual.
+
+Para reducir acumulacion visual, el listado de programacion semanal filtra por defecto lotes actuales/futuros. Los lotes pasados no cambian de estado ni se eliminan; siguen disponibles mediante el filtro de periodo historico/todas hasta que exista una regla formal de cierre operativo.
+
+Los lotes `draft` no son evidencia operativa y pueden borrarse definitivamente desde la UI. El estado `cancelled` se conserva solo para compatibilidad con datos anteriores o escenarios ya existentes; el flujo normal no descarta primero un borrador antes de borrarlo. La trazabilidad obligatoria comienza al publicar y se mantiene mediante snapshot, version y correcciones.
 
 Una operacion empresarial completa crea un batch por centro.
 
