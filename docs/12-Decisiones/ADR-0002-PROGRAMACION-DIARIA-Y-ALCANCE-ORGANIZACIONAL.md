@@ -124,6 +124,8 @@ Para reducir acumulacion visual, el listado de programacion semanal filtra por d
 
 Los lotes `draft` no son evidencia operativa y pueden borrarse definitivamente desde la UI. El estado `cancelled` se conserva solo para compatibilidad con datos anteriores o escenarios ya existentes; el flujo normal no descarta primero un borrador antes de borrarlo. La trazabilidad obligatoria comienza al publicar y se mantiene mediante snapshot, version y correcciones.
 
+Una semana publicada puede clonarse a una semana natural destino como borrador normal o clonarse y publicarse directamente en una sola operacion de dominio. Esta operacion no modifica la publicacion origen ni crea una correccion versionada; solo reutiliza el resultado publicado como base operativa para otro periodo. Las fechas y segmentos UTC se desplazan por el offset de dias entre semanas, y las relaciones laborales que no esten vigentes en destino se omiten para evitar programacion futura sobre trabajadores dados de baja. En el flujo directo, si la publicacion no valida, la operacion se revierte para no dejar un borrador parcial.
+
 Una operacion empresarial completa crea un batch por centro.
 
 En Bloque F1 se implementa el nucleo de datos y dominio para crear batches en `draft`, reemplazar dias de borrador de forma atomica, construir snapshots canonicos y resolver programacion publicada. F1 no agrega pantalla, generacion desde perfiles ni publicacion operativa.

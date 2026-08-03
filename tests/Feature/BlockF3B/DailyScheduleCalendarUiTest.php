@@ -64,8 +64,8 @@ class DailyScheduleCalendarUiTest extends TestCase
         $draft = $this->firstBatch($company);
 
         $published = $draft->replicate(['snapshot_canonical_json', 'snapshot_sha256', 'published_at']);
-        $published->period_start = '2026-07-01';
-        $published->period_end = '2026-07-07';
+        $published->period_start = '2026-09-01';
+        $published->period_end = '2026-09-07';
         $published->version = 1;
         $published->status = 'published';
         $published->published_by = $rh->id;
@@ -81,9 +81,12 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertSet('filters.status', 'active_work')
             ->assertSet('filters.period_scope', 'current_future')
             ->assertSee('2026-08-03 - 2026-08-09')
-            ->assertDontSee('2026-07-01 - 2026-07-07')
+            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-09-01 - 2026-09-07'])
+            ->set('filters.period_scope', 'past')
+            ->assertDontSee('2026-09-01 - 2026-09-07')
+            ->assertDontSee('2026-08-03 - 2026-08-09')
             ->set('filters.period_scope', 'all')
-            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-07-01 - 2026-07-07']);
+            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-09-01 - 2026-09-07']);
     }
 
     public function test_it_creates_empty_batch_and_creates_batch_generated_from_profiles(): void
@@ -397,6 +400,29 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->count());
     }
 
+    public function test_bulk_worker_selector_maps_workers_to_batch_relationships(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+        $relationships = EmploymentRelationship::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $batch->center_id)
+            ->where('status', 'active')
+            ->with('worker')
+            ->orderBy('id')
+            ->limit(2)
+            ->get();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('openBulkPanel')
+            ->set('bulkWorkerIds', $relationships->pluck('worker_id')->all())
+            ->assertSet('bulkForm.employment_relationship_ids', $relationships->pluck('id')->all());
+    }
+
     public function test_review_publish_and_integrity_verification_work_from_ui(): void
     {
         $this->seedDailyScenarios();
@@ -489,6 +515,90 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('published', $published->refresh()->status);
+    }
+
+    public function test_managers_can_clone_published_week_to_new_draft(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'published')
+            ->whereNull('previous_batch_id')
+            ->with('dailyAssignments.segments')
+            ->firstOrFail();
+        $sourceAssignment = $published->dailyAssignments->sortBy('work_date')->first();
+        $targetStart = '2026-10-05';
+        $dayOffset = CarbonImmutable::parse($published->period_start)->diffInDays(CarbonImmutable::parse($targetStart), false);
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $published->id)
+            ->assertSee('Clonar semana')
+            ->call('openCloneWeekPanel')
+            ->set('cloneWeekForm.target_date', $targetStart)
+            ->call('clonePublishedWeek')
+            ->assertHasNoErrors()
+            ->assertSee('Semana clonada en borrador');
+
+        $draft = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $published->center_id)
+            ->where('status', 'draft')
+            ->whereNull('previous_batch_id')
+            ->whereDate('period_start', $targetStart)
+            ->whereDate('period_end', '2026-10-11')
+            ->firstOrFail();
+
+        $this->assertSame('mixed', $draft->creation_source);
+        $this->assertSame($published->dailyAssignments()->count(), $draft->dailyAssignments()->count());
+
+        $copy = DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $draft->id)
+            ->where('employment_relationship_id', $sourceAssignment->employment_relationship_id)
+            ->whereDate('work_date', CarbonImmutable::parse($sourceAssignment->work_date)->addDays((int) $dayOffset)->toDateString())
+            ->firstOrFail();
+
+        $this->assertSame('manual', $copy->source_type);
+        $this->assertSame('cloned_from_published_week', $copy->source_reference['reason']);
+        $this->assertSame($published->id, $copy->source_reference['source_batch_id']);
+    }
+
+    public function test_managers_can_clone_published_week_and_publish_directly(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'published')
+            ->whereNull('previous_batch_id')
+            ->firstOrFail();
+
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->set('filters.status', 'published')
+            ->call('selectBatch', $published->id)
+            ->call('openCloneWeekPanel')
+            ->set('cloneWeekForm.target_date', '2026-10-12')
+            ->call('clonePublishedWeekAndPublish')
+            ->assertHasNoErrors()
+            ->assertSee('Semana clonada y publicada');
+
+        $clone = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $published->center_id)
+            ->where('status', 'published')
+            ->whereNull('previous_batch_id')
+            ->whereDate('period_start', '2026-10-12')
+            ->whereDate('period_end', '2026-10-18')
+            ->firstOrFail();
+
+        $this->assertSame(1, $clone->version);
+        $this->assertNotNull($clone->published_at);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', (string) $clone->snapshot_sha256);
     }
 
     public function test_managers_can_permanently_delete_cancelled_batches_from_ui(): void

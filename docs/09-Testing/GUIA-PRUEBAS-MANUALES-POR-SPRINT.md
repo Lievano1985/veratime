@@ -1676,6 +1676,7 @@ Periodo demo:
 | Generar faltantes | En un lote `draft`, ejecutar Generar faltantes. | Solo completa dias sin programacion. |
 | Actualizar desde perfiles | Ejecutar Actualizar desde perfiles. | Actualiza dias generados por perfil y conserva dias manuales. |
 | Preparar semanas futuras | Abrir un lote, usar `Preparar semanas` y elegir 1 a 4 semanas. | Crea solo las semanas faltantes en `draft`, salta semanas existentes, genera desde modelos y abre la ultima semana preparada. |
+| Clonar semana publicada | Abrir un lote `Publicado`, usar `Clonar semana`, elegir una fecha destino sin lote existente y confirmar. | `Clonar a borrador` crea una nueva semana `draft`; `Clonar y publicar` crea y publica directamente con snapshot/hash. |
 | Calendario | Abrir calendario del lote. | Muestra la semana natural del lote con trabajador, clave, unidad, fecha y tipo de dia con colores por turno, descanso y pendiente. |
 | Navegar semanas | Usar `Semana anterior` o `Semana siguiente` desde un lote abierto. | Abre el lote semanal existente del mismo centro. Si la semana siguiente no existe, muestra mensaje para generarla o prepararla sin pintar fechas vacias. |
 | Semana lunes-domingo | Crear un lote eligiendo una fecha a media semana, por ejemplo miercoles. | El lote se guarda de lunes a domingo; los dias fuera de vigencia del trabajador aparecen bloqueados/desactivados. |

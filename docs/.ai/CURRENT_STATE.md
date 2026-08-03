@@ -535,13 +535,14 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La navegacion `Semana anterior` / `Semana siguiente` abre lotes semanales existentes del mismo centro; si no existe el siguiente lote, la UI invita a usar `Preparar semanas` en vez de mostrar fechas vacias dentro del mismo lote.
 - El calendario y los paneles de revision, comparacion, historial e integridad se pueden ocultar para mantener limpia la vista.
 - Permite generar faltantes (`missing_only`) y actualizar desde perfiles (`refresh_profile_generated`) sin tocar cambios manuales ni fuentes externas.
+- Permite clonar una semana publicada vigente a una nueva semana natural en `draft` mediante `ClonePublishedScheduleWeekToDraftAction`, o clonar y publicar directamente mediante `ClonePublishedScheduleWeekAndPublishAction`; los dias se desplazan al periodo destino y se omiten trabajadores sin relacion vigente.
 - Permite editar un dia en borrador como `shift`, `rest`, `flexible`, `on_call` o `unassigned` usando `ReplaceDraftDailyScheduleAssignmentAction`.
 - Permite cambio masivo basico con `BulkReplaceDraftDailyScheduleAssignmentsAction`; si falla un dia se revierte toda la operacion.
 - Los lotes `draft` se pueden borrar definitivamente desde la UI; no pasan por estado intermedio `cancelled`. Los lotes ya publicados siguen protegidos y solo se corrigen/versionan.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
 - Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
-- F4 implementa correcciones versionadas en la misma pantalla; clonado de semanas desde una semana manual existente, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+- F4 implementa correcciones versionadas en la misma pantalla; clonado de semanas desde una semana manual no publicada, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
 ## Bloque F4 - correcciones versionadas
 
