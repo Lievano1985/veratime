@@ -315,7 +315,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assertGreaterThan(0, DailyScheduleAssignment::query()->where('day_type', 'on_call')->count());
         $this->assertGreaterThan(0, DailyScheduleAssignment::query()->where('source_type', 'system')->where('day_type', 'unassigned')->count());
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertTrue(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
 

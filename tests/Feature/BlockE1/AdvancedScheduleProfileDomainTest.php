@@ -42,7 +42,7 @@ class AdvancedScheduleProfileDomainTest extends TestCase
         $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
         $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertTrue(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
 

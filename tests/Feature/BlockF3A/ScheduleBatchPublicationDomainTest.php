@@ -231,7 +231,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertSame(2, ScheduleBatch::query()->whereIn('company_id', $draftCompanies)->where('status', 'draft')->count());
         $this->assertSame(0, ScheduleBatch::query()->where('version', 2)->count());
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertTrue(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
 

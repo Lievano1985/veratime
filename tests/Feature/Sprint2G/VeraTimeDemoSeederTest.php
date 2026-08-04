@@ -69,7 +69,7 @@ it('does not create future Sprint 3 or calculation modules', function (): void {
     $this->seed(VeraTimeDemoSeeder::class);
 
     expect(Schema::hasTable('work_days'))->toBeTrue()
-        ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
+        ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse();

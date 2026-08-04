@@ -990,7 +990,7 @@ Implementacion base 2026-08-03:
 - Eventos anulados no participan.
 - El refresco operativo puede ejecutarse manualmente desde `/work-days`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
 - La hora automatica se configura en `company_settings.work_days_auto_refresh_time` y se evalua por timezone local de la empresa.
-- No se implementa `work_day_calculations`, motor legal, alertas, incidencias, cierres ni reportes.
+- `work_day_calculations` se implementa primero como calculo operativo base versionado; motor legal, alertas, incidencias, cierres y reportes siguen pendientes.
 
 ## 12.2 `work_day_calculations`
 
@@ -1022,6 +1022,21 @@ Versiones de cálculo de una jornada.
 | `explanation` | JSON | Explicación legible |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
+
+Reglas implementadas en el bloque base de calculo:
+
+- Cada recalculo crea una nueva version y marca la activa anterior como `superseded`.
+- `work_days.active_calculation_id` apunta a la version activa.
+- El calculo operativo usa eventos validos de `ResolveValidTimeEventsForWorkDateAction`; eventos anulados, rechazados o pendientes de revision no participan.
+- Los eventos se ordenan por `occurred_at_utc` con desempate estable del resolver, no por insercion.
+- Se calculan pares `clock_in`/`clock_out` y pausas completas `break_start`/`break_end`.
+- Si una fecha tiene una entrada abierta, el resolver incluye eventos validos de la madrugada siguiente hasta la primera salida y los conserva en la jornada de la fecha de entrada.
+- Una fecha sin entrada propia no genera jornada no programada separada cuando sus eventos pertenecen a la continuacion de la jornada anterior.
+- Al calcular, `work_days` actualiza el resumen visible de eventos validos con los eventos realmente usados por la version activa.
+- Las pausas completas se restan del total operativo; secuencias incompletas dejan la jornada en `under_review`.
+- `ordinary_minutes` replica el total operativo solo como base temporal; `overtime_minutes`, `night_minutes`, `sunday_minutes` y `mandatory_rest_minutes` permanecen en cero hasta motor legal.
+- `classification = pending` mientras no exista clasificacion legal real.
+- No crea alertas, incidencias, cierres, conformidad, reportes ni API.
 
 Índices:
 

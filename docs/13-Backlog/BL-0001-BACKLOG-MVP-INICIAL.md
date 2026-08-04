@@ -458,8 +458,9 @@ Bloque Work Days base implementa `work_days` como jornada operativa unica por em
 Bloque Work Days refresco operativo agrega configuracion de hora automatica por empresa, ejecucion manual desde `/work-days`, comandos `work-days:refresh` y `work-days:auto-refresh`, y scheduler cada minuto para refrescar empresas activas por hora local. No incluye `work_day_calculations`, motor legal, horas extra, alertas, incidencias, cierres, conformidad, reportes ni API.
 Bloque Work Days consulta operativa agrega `/work-days` como listado inicial de jornadas generadas, con filtros de rango, centro, horario, estado y trabajador para `owner`, `admin` y `rh`. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque revision de capturas manuales agrega aprobacion/rechazo de eventos `admin_manual` en `pending_review`. Aprobar cambia el evento a `valid` y refresca `work_days` de la fecha; rechazar cambia a `ignored` con motivo obligatorio. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
+Bloque Work Day Calculations base agrega `work_day_calculations` versionado, `CalculateWorkDayAction`, `CalculateWorkDaysForDateRangeAction` y accion manual desde `/work-days`. Calcula pares entrada/salida, descuenta pausas completas, conserva snapshots y deja secuencias incompletas en revision. No incluye motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
 EPIC-05 queda completo a nivel web/kiosco/manual para eventos fuente, sin API de negocio.
-No se implementaron motor legal ni calculos.
+No se implementaron motor legal, horas extra, alertas ni incidencias.
 ```
 
 ## Sprint 3 — API y motor legal base

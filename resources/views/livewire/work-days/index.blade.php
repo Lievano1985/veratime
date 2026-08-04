@@ -1,8 +1,10 @@
 <?php
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Domains\WorkDays\Actions\CalculateWorkDaysForDateRangeAction;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
 use App\Domains\WorkDays\Actions\RunCompanyWorkDaysRefreshAction;
+use App\Models\WorkDayCalculation;
 use App\Models\WorkDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
@@ -34,7 +36,11 @@ new class extends Component {
 
     public array $refreshForm = [];
 
+    public array $calculationForm = [];
+
     public bool $showRefreshPanel = false;
+
+    public bool $showCalculationPanel = false;
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -48,6 +54,7 @@ new class extends Component {
         $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString();
         $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString();
         $this->loadRefreshForm($company);
+        $this->loadCalculationForm($company);
     }
 
     public function openRefreshPanel(CurrentCompany $currentCompany): void
@@ -63,6 +70,21 @@ new class extends Component {
     public function closeRefreshPanel(): void
     {
         $this->showRefreshPanel = false;
+    }
+
+    public function openCalculationPanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('viewAny', [WorkDay::class, $company]);
+
+        $this->loadCalculationForm($company);
+        $this->showCalculationPanel = true;
+    }
+
+    public function closeCalculationPanel(): void
+    {
+        $this->showCalculationPanel = false;
     }
 
     public function refreshWorkDays(RunCompanyWorkDaysRefreshAction $action, CurrentCompany $currentCompany): void
@@ -89,6 +111,35 @@ new class extends Component {
         $this->resetPage();
 
         Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
+    }
+
+    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('viewAny', [WorkDay::class, $company]);
+
+        $validated = $this->validate([
+            'calculationForm.date_from' => ['required', 'date'],
+            'calculationForm.date_to' => ['required', 'date', 'after_or_equal:calculationForm.date_from'],
+            'calculationForm.reason' => ['nullable', 'string', 'max:500'],
+        ])['calculationForm'];
+
+        $result = $action->handle(
+            $company,
+            CarbonImmutable::parse($validated['date_from'])->toDateString(),
+            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+            actor: auth()->user(),
+            generatedByType: WorkDayCalculation::GENERATED_BY_USER,
+            reason: trim((string) ($validated['reason'] ?? '')) ?: 'Calculo manual desde jornadas',
+        );
+
+        $this->dateFrom = CarbonImmutable::parse($validated['date_from'])->toDateString();
+        $this->dateTo = CarbonImmutable::parse($validated['date_to'])->toDateString();
+        $this->showCalculationPanel = false;
+        $this->resetPage();
+
+        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision y {$result['skipped']} sin eventos validos.");
     }
 
     public function updatedDateFrom(): void
@@ -238,6 +289,15 @@ new class extends Component {
         return $time ? substr((string) $time, 0, 5) : 'Sin configurar';
     }
 
+    private function calculationMinutesLabel(?WorkDayCalculation $calculation): string
+    {
+        if (! $calculation) {
+            return 'Sin calculo';
+        }
+
+        return $this->minutesLabel($calculation->total_work_minutes);
+    }
+
     private function lastRefreshLabel($company): string
     {
         if (! $company->setting?->work_days_last_refreshed_at) {
@@ -259,6 +319,18 @@ new class extends Component {
             'date_to' => $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString(),
         ];
     }
+
+    private function loadCalculationForm($company): void
+    {
+        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
+            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+
+        $this->calculationForm = [
+            'date_from' => $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString(),
+            'date_to' => $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString(),
+            'reason' => '',
+        ];
+    }
 }; ?>
 
 <section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
@@ -268,9 +340,14 @@ new class extends Component {
             <flux:subheading>Consulta jornadas generadas desde horarios publicados y eventos validos.</flux:subheading>
         </div>
 
-        <flux:button type="button" variant="primary" wire:click="openRefreshPanel">
-            Actualizar jornadas
-        </flux:button>
+        <div class="flex flex-wrap gap-2">
+            <flux:button type="button" wire:click="openCalculationPanel">
+                Calcular jornadas
+            </flux:button>
+            <flux:button type="button" variant="primary" wire:click="openRefreshPanel">
+                Actualizar jornadas
+            </flux:button>
+        </div>
     </div>
 
     @if (session('status'))
@@ -320,6 +397,7 @@ new class extends Component {
                             <th class="px-4 py-3">Horario</th>
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Esperado</th>
+                            <th class="px-4 py-3">Trabajado</th>
                             <th class="px-4 py-3">Eventos</th>
                             <th class="px-4 py-3">Calculo</th>
                         </tr>
@@ -340,6 +418,7 @@ new class extends Component {
                                 </td>
                                 <td class="px-4 py-3">{{ $this->dayTypeLabel($workDay->day_type) }}</td>
                                 <td class="px-4 py-3">{{ $this->minutesLabel($workDay->expected_work_minutes) }}</td>
+                                <td class="px-4 py-3">{{ $this->calculationMinutesLabel($workDay->activeCalculation) }}</td>
                                 <td class="px-4 py-3">
                                     <span class="font-medium">{{ $workDay->valid_time_event_count }}</span>
                                     @if ($workDay->first_event_at_utc)
@@ -358,7 +437,7 @@ new class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
+                                <td colspan="9" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -421,6 +500,48 @@ new class extends Component {
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
                 <flux:button type="button" variant="ghost" wire:click="closeRefreshPanel">Cancelar</flux:button>
                 <flux:button type="submit" variant="primary">Actualizar</flux:button>
+            </div>
+        </form>
+    </x-side-panel>
+
+    <x-side-panel
+        wire:model="showCalculationPanel"
+        title="Calcular jornadas"
+        subheading="Genera una version de calculo operativo para las jornadas con eventos validos."
+        labelledby="calculate-work-days-title"
+    >
+        <form wire:submit="calculateWorkDays" class="flex flex-1 flex-col overflow-y-auto">
+            <div class="flex-1 space-y-4 p-6">
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
+                    <dl class="grid gap-3">
+                        <div>
+                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Empresa</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Alcance</dt>
+                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">Jornadas del rango seleccionado con eventos validos.</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <flux:input wire:model="calculationForm.date_from" label="Desde" type="date" required />
+                <flux:input wire:model="calculationForm.date_to" label="Hasta" type="date" required />
+                <flux:textarea wire:model="calculationForm.reason" label="Motivo" placeholder="Opcional para trazabilidad del recalculo." rows="3" />
+
+                <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                    <p class="font-medium">Este bloque calcula solo base operativa.</p>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>Usa eventos validos ordenados por fecha real del hecho.</li>
+                        <li>Genera una version activa y conserva versiones anteriores.</li>
+                        <li>No calcula horas extra, reglas legales, alertas ni incidencias.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:button type="button" variant="ghost" wire:click="closeCalculationPanel">Cancelar</flux:button>
+                <flux:button type="submit" variant="primary">Calcular</flux:button>
             </div>
         </form>
     </x-side-panel>

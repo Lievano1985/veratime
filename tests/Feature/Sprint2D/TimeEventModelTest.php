@@ -470,7 +470,7 @@ it('void permissions allow owner admin and rh but block supervisor foreign and i
 it('sprint 2d creates only time events and no future operational modules', function (): void {
     expect(Schema::hasTable('time_events'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeTrue()
-        ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
+        ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse()
