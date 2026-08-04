@@ -47,6 +47,15 @@ Cada cálculo debe guardar snapshot de reglas aplicadas.
 
 Si cambia una regla futura, no debe modificar cálculos históricos automáticamente.
 
+El motor legal se organiza por pais y empresa:
+
+- `legal_rules` y `legal_rule_versions` guardan reglas base por pais y vigencia.
+- `legal_parameters` guarda parametros globales o de empresa.
+- Las reglas base legales son protegidas para la empresa ordinaria.
+- La empresa puede configurar parametros internos permitidos, preferentemente mas favorables o neutrales.
+- Cualquier override legal avanzado debe ser versionado, auditable y visible.
+- Ver decision en `docs/12-Decisiones/ADR-0005-MOTOR-LEGAL-POR-PAIS-Y-PARAMETROS-DE-EMPRESA.md`.
+
 ---
 
 ## 3. Casos mínimos del motor
@@ -187,5 +196,4 @@ Agregar pruebas para:
 - corrección genera nueva versión;
 - evento original conservado;
 - reporte firmado no cambia.
-
 

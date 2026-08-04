@@ -941,6 +941,28 @@ Uso:
 - Reglas internas por empresa.
 - Ajustes específicos por política.
 
+Regla de producto:
+
+- El motor legal usa reglas base por pais y parametros configurables por empresa.
+- Mexico se preconfigura como primer pais operativo.
+- Las reglas legales minimas viven en `legal_rules` y `legal_rule_versions` y no se editan libremente por empresa.
+- Los ajustes ordinarios de empresa viven en `legal_parameters` con `company_id`, vigencia y estado.
+- Un parametro de empresa puede complementar o mejorar la regla base, pero no debe debilitar cumplimiento minimo sin bloqueo o marca explicita fuera de cumplimiento.
+- Cada calculo guarda snapshot de reglas y parametros usados; cambiar reglas futuras no modifica historicos.
+- Decision: `docs/12-Decisiones/ADR-0005-MOTOR-LEGAL-POR-PAIS-Y-PARAMETROS-DE-EMPRESA.md`.
+
+---
+
+Implementacion base 2026-08-04:
+
+- `legal_rules` guarda catalogo global de reglas por codigo, categoria y estado.
+- `legal_rule_versions` guarda valores versionados por vigencia; solo `status = active` participa en resolucion operativa.
+- `legal_parameters` permite parametros globales o por empresa; si existe parametro activo de empresa para la fecha, tiene prioridad sobre el global.
+- `ResolveLegalRuleVersionForDateAction` y `ResolveLegalParameterForDateAction` son la entrada de dominio para evitar constantes legales dispersas.
+- `LegalRuleSeeder` carga reglas base para ventana diurna, umbral nocturno de jornada mixta y limites diarios por tipo de jornada.
+- `ClassifyWorkDayCalculationAction` aplica la primera clasificacion legal diaria sobre `work_day_calculations` activos y guarda snapshot de reglas aplicadas.
+- No se calculan todavia horas extra, alertas, incidencias, reportes ni API.
+
 ---
 
 # 12. Jornadas calculadas
@@ -1034,8 +1056,10 @@ Reglas implementadas en el bloque base de calculo:
 - Una fecha sin entrada propia no genera jornada no programada separada cuando sus eventos pertenecen a la continuacion de la jornada anterior.
 - Al calcular, `work_days` actualiza el resumen visible de eventos validos con los eventos realmente usados por la version activa.
 - Las pausas completas se restan del total operativo; secuencias incompletas dejan la jornada en `under_review`.
-- `ordinary_minutes` replica el total operativo solo como base temporal; `overtime_minutes`, `night_minutes`, `sunday_minutes` y `mandatory_rest_minutes` permanecen en cero hasta motor legal.
-- `classification = pending` mientras no exista clasificacion legal real.
+- `ordinary_minutes` replica el total operativo solo como base temporal; `overtime_minutes`, `sunday_minutes` y `mandatory_rest_minutes` permanecen en cero hasta el bloque de ordinario/extra y casos especiales.
+- `night_minutes` se actualiza desde la clasificacion legal diaria inicial, descontando pausas.
+- `classification` puede ser `pending`, `diurnal`, `nocturnal` o `mixed`.
+- `rules_snapshot` conserva las versiones de reglas usadas para clasificar la jornada historica.
 - No crea alertas, incidencias, cierres, conformidad, reportes ni API.
 
 Índices:

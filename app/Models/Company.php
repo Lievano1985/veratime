@@ -162,6 +162,11 @@ class Company extends Model
         return $this->hasMany(MandatoryRestDay::class);
     }
 
+    public function legalParameters(): HasMany
+    {
+        return $this->hasMany(LegalParameter::class);
+    }
+
     public static function defaultSettings(): array
     {
         return [

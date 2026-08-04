@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\LegalRules\Actions\ClassifyWorkDayCalculationsForDateRangeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\WorkDays\Actions\CalculateWorkDaysForDateRangeAction;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
@@ -113,7 +114,7 @@ new class extends Component {
         Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
     }
 
-    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, CurrentCompany $currentCompany): void
+    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, ClassifyWorkDayCalculationsForDateRangeAction $classifyAction, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
@@ -133,13 +134,18 @@ new class extends Component {
             generatedByType: WorkDayCalculation::GENERATED_BY_USER,
             reason: trim((string) ($validated['reason'] ?? '')) ?: 'Calculo manual desde jornadas',
         );
+        $classificationResult = $classifyAction->handle(
+            $company,
+            CarbonImmutable::parse($validated['date_from'])->toDateString(),
+            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+        );
 
         $this->dateFrom = CarbonImmutable::parse($validated['date_from'])->toDateString();
         $this->dateTo = CarbonImmutable::parse($validated['date_to'])->toDateString();
         $this->showCalculationPanel = false;
         $this->resetPage();
 
-        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision y {$result['skipped']} sin eventos validos.");
+        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos y {$classificationResult['classified']} clasificadas legalmente.");
     }
 
     public function updatedDateFrom(): void
@@ -298,6 +304,37 @@ new class extends Component {
         return $this->minutesLabel($calculation->total_work_minutes);
     }
 
+    private function legalClassificationLabel(?WorkDayCalculation $calculation): string
+    {
+        return match ($calculation?->classification) {
+            WorkDayCalculation::CLASSIFICATION_DIURNAL => 'Diurna',
+            WorkDayCalculation::CLASSIFICATION_NOCTURNAL => 'Nocturna',
+            WorkDayCalculation::CLASSIFICATION_MIXED => 'Mixta',
+            default => 'Pendiente',
+        };
+    }
+
+    private function legalClassificationVariant(?WorkDayCalculation $calculation): string
+    {
+        return match ($calculation?->classification) {
+            WorkDayCalculation::CLASSIFICATION_DIURNAL => 'success',
+            WorkDayCalculation::CLASSIFICATION_NOCTURNAL => 'info',
+            WorkDayCalculation::CLASSIFICATION_MIXED => 'warning',
+            default => 'neutral',
+        };
+    }
+
+    private function legalNightMinutesLabel(?WorkDayCalculation $calculation): string
+    {
+        if (! $calculation || $calculation->classification === WorkDayCalculation::CLASSIFICATION_PENDING) {
+            return '';
+        }
+
+        return $calculation->night_minutes > 0
+            ? 'Nocturna: '.$this->minutesLabel($calculation->night_minutes)
+            : 'Sin nocturna';
+    }
+
     private function lastRefreshLabel($company): string
     {
         if (! $company->setting?->work_days_last_refreshed_at) {
@@ -398,6 +435,7 @@ new class extends Component {
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Esperado</th>
                             <th class="px-4 py-3">Trabajado</th>
+                            <th class="px-4 py-3">Legal</th>
                             <th class="px-4 py-3">Eventos</th>
                             <th class="px-4 py-3">Calculo</th>
                         </tr>
@@ -420,6 +458,14 @@ new class extends Component {
                                 <td class="px-4 py-3">{{ $this->minutesLabel($workDay->expected_work_minutes) }}</td>
                                 <td class="px-4 py-3">{{ $this->calculationMinutesLabel($workDay->activeCalculation) }}</td>
                                 <td class="px-4 py-3">
+                                    <x-ui.badge variant="{{ $this->legalClassificationVariant($workDay->activeCalculation) }}">
+                                        {{ $this->legalClassificationLabel($workDay->activeCalculation) }}
+                                    </x-ui.badge>
+                                    @if ($this->legalNightMinutesLabel($workDay->activeCalculation) !== '')
+                                        <span class="mt-1 block text-xs text-zinc-500">{{ $this->legalNightMinutesLabel($workDay->activeCalculation) }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
                                     <span class="font-medium">{{ $workDay->valid_time_event_count }}</span>
                                     @if ($workDay->first_event_at_utc)
                                         <span class="block text-xs text-zinc-500">
@@ -437,7 +483,7 @@ new class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
+                                <td colspan="10" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -530,11 +576,12 @@ new class extends Component {
                 <flux:textarea wire:model="calculationForm.reason" label="Motivo" placeholder="Opcional para trazabilidad del recalculo." rows="3" />
 
                 <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                    <p class="font-medium">Este bloque calcula solo base operativa.</p>
+                    <p class="font-medium">Este bloque calcula base operativa y clasificacion legal diaria.</p>
                     <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>Usa eventos validos ordenados por fecha real del hecho.</li>
                         <li>Genera una version activa y conserva versiones anteriores.</li>
-                        <li>No calcula horas extra, reglas legales, alertas ni incidencias.</li>
+                        <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
+                        <li>No calcula horas extra, alertas ni incidencias.</li>
                     </ul>
                 </div>
             </div>

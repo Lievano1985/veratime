@@ -21,6 +21,9 @@ class WorkDayCalculation extends Model
     public const GENERATED_BY_JOB = 'job';
 
     public const CLASSIFICATION_PENDING = 'pending';
+    public const CLASSIFICATION_DIURNAL = 'diurnal';
+    public const CLASSIFICATION_NOCTURNAL = 'nocturnal';
+    public const CLASSIFICATION_MIXED = 'mixed';
 
     protected $fillable = [
         'company_id',
