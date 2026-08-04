@@ -1594,6 +1594,49 @@ php artisan test tests/Feature/WorkDays/WorkDayOperationalListTest.php --stop-on
 
 ---
 
+## Bloque revision de capturas manuales
+
+**Estado:** En progreso.
+
+Este bloque permite decidir si una captura manual justificada entra o no a Jornadas. La captura nace como `En revision`; solo al aprobar pasa a `Valido` y actualiza `work_days`.
+
+### Ruta
+
+- `/time-events/manual`
+- `/work-days`
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Captura manual | Crear una entrada o salida manual justificada. | Se guarda como `En revision` y todavia no aparece en Jornadas como evento valido. |
+| Aprobar | En la tabla de eventos, presionar `Aprobar` sobre una captura pendiente. | Cambia a `Valido`, registra metadata de revision y actualiza la jornada de esa fecha. |
+| Ver en Jornadas | Abrir `/work-days` en el rango de la fecha aprobada. | Aparece jornada `No programada` si no habia horario publicado, con conteo de eventos. |
+| Rechazar | Crear otra captura manual, presionar `Rechazar`, capturar motivo y confirmar. | Cambia a `Ignorado`, conserva motivo y no entra a Jornadas. |
+| Doble revision | Intentar aprobar o rechazar un evento ya revisado. | La accion queda bloqueada. |
+| Supervisor | Entrar como supervisor. | No puede revisar capturas manuales. |
+| Otra empresa | Manipular IDs o cambiar empresa. | No puede revisar eventos de otro tenant. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/Sprint2F/ManualTimeEventCaptureTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Calculo de horas trabajadas.
+- Motor legal.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
+- Conformidad.
+- Reportes.
+- API.
+
+---
+
 ## Limpieza de catalogos sin uso
 
 ### Objetivo

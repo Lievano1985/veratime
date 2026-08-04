@@ -7,6 +7,7 @@ use App\Models\EmploymentRelationship;
 use App\Models\Role;
 use App\Models\TimeEvent;
 use App\Models\User;
+use App\Models\WorkDay;
 use App\Models\Worker;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Schema;
@@ -230,6 +231,89 @@ it('manual livewire voids a visible company event with required reason', functio
         'voided_by_user_id' => $user->id,
         'void_reason' => 'Registro duplicado validado por RH',
     ]);
+});
+
+it('manual livewire approves pending manual event and refreshes work day', function (): void {
+    [$company, $worker, $relationship] = sprint2fManualFixture();
+    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $event = app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-08-16',
+        'occurred_local_time' => '08:05',
+        'reason' => 'Entrada omitida validada por RH',
+    ]);
+
+    expect(WorkDay::query()->where('company_id', $company->id)->count())->toBe(0);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->call('approveManualEvent', $event->id)
+        ->assertHasNoErrors()
+        ->assertSee('Captura manual aprobada y jornadas actualizadas.');
+
+    $approved = $event->refresh();
+    expect($approved->status)->toBe('valid')
+        ->and($approved->metadata['review']['decision'])->toBe('approved')
+        ->and($approved->metadata['review']['actor_user_id'])->toBe($user->id)
+        ->and($approved->metadata['review']['previous_status'])->toBe('pending_review')
+        ->and($approved->metadata['review']['resulting_status'])->toBe('valid');
+
+    $workDay = WorkDay::query()
+        ->where('company_id', $company->id)
+        ->where('employment_relationship_id', $relationship->id)
+        ->whereDate('work_date', '2026-08-16')
+        ->firstOrFail();
+
+    expect($workDay->schedule_status)->toBe(WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
+        ->and($workDay->valid_time_event_count)->toBe(1)
+        ->and($workDay->valid_time_event_ids)->toBe([$event->id]);
+});
+
+it('manual livewire rejects pending manual event with required reason', function (): void {
+    [$company, $worker] = sprint2fManualFixture();
+    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $event = app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
+        'event_type' => 'clock_out',
+        'occurred_local_date' => '2026-08-16',
+        'occurred_local_time' => '17:05',
+        'reason' => 'Salida omitida por prueba',
+    ]);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->call('startReject', $event->id)
+        ->set('rejectReason', 'No coincide con evidencia revisada')
+        ->call('rejectManualEvent')
+        ->assertHasNoErrors()
+        ->assertSee('Captura manual rechazada.');
+
+    $rejected = $event->refresh();
+    expect($rejected->status)->toBe('ignored')
+        ->and($rejected->metadata['review']['decision'])->toBe('rejected')
+        ->and($rejected->metadata['review']['reason'])->toBe('No coincide con evidencia revisada')
+        ->and(WorkDay::query()->where('company_id', $company->id)->count())->toBe(0);
+});
+
+it('manual review cannot be applied twice or by supervisor', function (): void {
+    [$company, $worker] = sprint2fManualFixture();
+    $rh = sprint2fManualUserWithCompany($company, 'rh');
+    $supervisor = sprint2fManualUserWithCompany($company, 'supervisor');
+    $event = app(RegisterManualTimeEventAction::class)->handle($company, $rh, $worker, [
+        'event_type' => 'clock_in',
+        'occurred_local_date' => '2026-08-16',
+        'occurred_local_time' => '08:05',
+        'reason' => 'Entrada omitida para revision',
+    ]);
+
+    expect(fn () => app(\App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction::class)->handle($event, $supervisor))
+        ->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
+
+    app(\App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction::class)->handle($event, $rh);
+
+    expect(fn () => app(\App\Domains\TimeRecords\Actions\RejectManualTimeEventAction::class)->handle($event->refresh(), $rh, 'Segundo intento'))
+        ->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
 });
 
 it('manual capture preserves existing events and does not void replace or delete', function (): void {

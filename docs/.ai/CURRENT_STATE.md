@@ -128,6 +128,11 @@ EPIC-05:
   - ruta `/work-days`.
   - listado paginado y filtrable por rango, centro, horario, estado y trabajador.
   - visible para `owner`, `admin` y `rh`.
+- Revision de capturas manuales:
+  - capturas `admin_manual` nacen como `pending_review`.
+  - `owner`, `admin` y `rh` pueden aprobar o rechazar capturas pendientes.
+  - aprobar cambia el evento a `valid` y refresca `work_days` para la fecha.
+  - rechazar cambia el evento a `ignored` y conserva motivo de rechazo.
 
 Nota de descansos obligatorios:
 
@@ -239,6 +244,18 @@ Estado: en progreso en rama `feature/work-days-operational-list`.
 - La consulta se concentra en `ListWorkDaysAction`; Livewire solo orquesta filtros y render.
 - La policy `WorkDayPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
 - No se agregan calculos, motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
+
+## Bloque revision de capturas manuales
+
+Estado: en progreso en rama `feature/manual-time-event-review`.
+
+- `ApproveManualTimeEventAction` aprueba capturas manuales `pending_review` y las convierte en eventos `valid`.
+- `RejectManualTimeEventAction` rechaza capturas manuales `pending_review` y las convierte en eventos `ignored` con motivo obligatorio.
+- La revision conserva metadata con decision, actor, fecha UTC, estado anterior y estado resultante.
+- `/time-events/manual` muestra acciones `Aprobar` y `Rechazar` para capturas manuales pendientes.
+- Al aprobar, la UI refresca `work_days` de la relacion laboral y fecha del evento para que Jornadas quede actualizada.
+- `supervisor`, otra empresa, membresias inactivas y eventos ya revisados quedan bloqueados.
+- No se implementan calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 
 ## Bloque A - regla de evidencia operativa
 

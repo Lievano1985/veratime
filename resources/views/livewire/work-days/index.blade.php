@@ -175,7 +175,7 @@ new class extends Component {
             'with_alerts' => 'Con alertas',
             'under_review' => 'En revision',
             'closed' => 'Cerrada',
-            default => 'Sin estado',
+            default => 'Pendiente de calculo',
         };
     }
 
@@ -321,7 +321,7 @@ new class extends Component {
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Esperado</th>
                             <th class="px-4 py-3">Eventos</th>
-                            <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Calculo</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">

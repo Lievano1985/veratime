@@ -838,6 +838,8 @@ Reglas:
 - Sprint 2F agrega `source = kiosk` para eventos registrados con codigo/NIP y `source = admin_manual` para captura manual justificada.
 - Kiosco no acepta fecha/hora explicita; usa hora actual del sistema y no guarda NIP en metadata.
 - Captura manual si acepta fecha/hora explicita y motivo obligatorio; queda como `pending_review` por regla de `CreateTimeEventAction` para `admin_manual`.
+- La revision de captura manual permite aprobar `pending_review` a `valid` o rechazar a `ignored` con motivo; la metadata conserva decision, actor, fecha UTC, estado anterior y estado resultante.
+- Al aprobar una captura manual desde UI se refresca `work_days` para la relacion laboral y fecha del evento.
 - El registro web debe usar `RegisterWebTimeEventAction`, que orquesta `CreateTimeEventAction` para conservar normalizacion de timezone, fuente `web`, estado `valid`, `received_at` y metadata minima no sensible.
 - Bloque 5 no crea `work_days`, `work_day_calculations`, motor legal, alertas, incidencias ni reportes.
 ## 10.3 `kiosk_sessions`

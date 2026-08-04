@@ -30,6 +30,19 @@ class TimeEventPolicy
             && ! $timeEvent->isVoided();
     }
 
+    public function approve(User $user, TimeEvent $timeEvent): bool
+    {
+        return $this->canAccessTimeEvents($user, $timeEvent->company)
+            && $timeEvent->source === 'admin_manual'
+            && $timeEvent->status === 'pending_review'
+            && ! $timeEvent->isVoided();
+    }
+
+    public function reject(User $user, TimeEvent $timeEvent): bool
+    {
+        return $this->approve($user, $timeEvent);
+    }
+
     private function canAccessTimeEvents(User $user, Company $company): bool
     {
         return $company->status === 'active'

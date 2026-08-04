@@ -1,8 +1,11 @@
 <?php
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\RejectManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
+use App\Domains\WorkDays\Actions\RefreshWorkDaysForDateRangeAction;
 use App\Models\TimeEvent;
 use App\Models\Worker;
 use Carbon\CarbonImmutable;
@@ -29,6 +32,10 @@ new class extends Component {
     public ?int $voidingEventId = null;
 
     public string $voidReason = '';
+
+    public ?int $rejectingEventId = null;
+
+    public string $rejectReason = '';
 
     public string $sourceFilter = '';
 
@@ -123,6 +130,85 @@ new class extends Component {
         $this->voidReason = '';
     }
 
+    public function approveManualEvent(int $eventId, CurrentCompany $currentCompany, ApproveManualTimeEventAction $action, RefreshWorkDaysForDateRangeAction $refreshWorkDays): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        $event = TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($eventId);
+
+        try {
+            $approved = $action->handle($event, auth()->user());
+
+            if ($approved->employment_relationship_id) {
+                $refreshWorkDays->handle(
+                    $company,
+                    $approved->occurred_local_date->toDateString(),
+                    $approved->occurred_local_date->toDateString(),
+                    $approved->center,
+                );
+            }
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'statusFilter' => $exception->getMessage(),
+            ]);
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Captura manual aprobada y jornadas actualizadas.');
+    }
+
+    public function startReject(int $eventId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        $event = TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($eventId);
+
+        Gate::authorize('reject', $event);
+
+        $this->rejectingEventId = $event->id;
+        $this->rejectReason = '';
+    }
+
+    public function cancelReject(): void
+    {
+        $this->rejectingEventId = null;
+        $this->rejectReason = '';
+    }
+
+    public function rejectManualEvent(CurrentCompany $currentCompany, RejectManualTimeEventAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        $validated = $this->validate([
+            'rejectingEventId' => [
+                'required',
+                'integer',
+                Rule::exists('time_events', 'id')->where('company_id', $company->id),
+            ],
+            'rejectReason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $event = TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->findOrFail((int) $validated['rejectingEventId']);
+
+        try {
+            $action->handle($event, auth()->user(), $validated['rejectReason']);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'rejectReason' => $exception->getMessage(),
+            ]);
+        }
+
+        $this->cancelReject();
+        $this->resetPage();
+        Session::flash('status', 'Captura manual rechazada.');
+    }
+
     public function voidEvent(CurrentCompany $currentCompany, VoidTimeEventAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -149,6 +235,7 @@ new class extends Component {
         }
 
         $this->cancelVoid();
+        $this->cancelReject();
         $this->resetPage();
         Session::flash('status', 'Evento de jornada anulado.');
     }
@@ -165,7 +252,7 @@ new class extends Component {
             ->get();
 
         $events = $company->timeEvents()
-            ->with(['worker', 'voidedBy'])
+            ->with(['worker', 'sourceUser', 'voidedBy'])
             ->when($this->sourceFilter !== '', fn ($query) => $query->where('source', $this->sourceFilter))
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
             ->latest('occurred_at_utc')
@@ -293,6 +380,7 @@ new class extends Component {
                         <th class="px-4 py-3">Hora local</th>
                         <th class="px-4 py-3">Fuente</th>
                         <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3">Revision</th>
                         <th class="px-4 py-3">Anulacion</th>
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
@@ -311,6 +399,18 @@ new class extends Component {
                                 </x-ui.badge>
                             </td>
                             <td class="px-4 py-3">
+                                @if ($event->metadata['review'] ?? null)
+                                    <div class="space-y-1">
+                                        <p class="font-medium">{{ $event->metadata['review']['decision'] === 'approved' ? 'Aprobada' : 'Rechazada' }}</p>
+                                        <p class="text-xs text-zinc-500">{{ $event->metadata['review']['reviewed_at'] ?? '' }}</p>
+                                    </div>
+                                @elseif ($event->source === 'admin_manual' && $event->status === 'pending_review')
+                                    <x-ui.badge variant="warning">Pendiente</x-ui.badge>
+                                @else
+                                    <span class="text-zinc-500">No aplica</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
                                 @if ($event->voided_at)
                                     <div class="space-y-1">
                                         <p class="font-medium">{{ $event->voided_at->utc()->format('Y-m-d H:i') }} UTC</p>
@@ -321,16 +421,34 @@ new class extends Component {
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right">
-                                @if ($event->status !== 'voided')
+                                @if ($event->source === 'admin_manual' && $event->status === 'pending_review')
+                                    <div class="flex justify-end gap-2">
+                                        <flux:button type="button" size="xs" variant="primary" wire:click="approveManualEvent({{ $event->id }})">Aprobar</flux:button>
+                                        <flux:button type="button" size="xs" variant="ghost" wire:click="startReject({{ $event->id }})">Rechazar</flux:button>
+                                    </div>
+                                @elseif ($event->status !== 'voided')
                                     <flux:button type="button" size="xs" variant="ghost" wire:click="startVoid({{ $event->id }})">Anular</flux:button>
                                 @else
                                     <span class="text-xs text-zinc-500">Sin acciones</span>
                                 @endif
                             </td>
                         </tr>
+                        @if ($rejectingEventId === $event->id)
+                            <tr>
+                                <td colspan="9" class="bg-red-50 px-4 py-4 dark:bg-red-950/30">
+                                    <form wire:submit="rejectManualEvent" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                                        <flux:textarea label="Motivo de rechazo" wire:model="rejectReason" rows="2" />
+                                        <div class="flex gap-2">
+                                            <flux:button type="submit" variant="primary">Confirmar rechazo</flux:button>
+                                            <flux:button type="button" variant="ghost" wire:click="cancelReject">Cancelar</flux:button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endif
                         @if ($voidingEventId === $event->id)
                             <tr>
-                                <td colspan="8" class="bg-amber-50 px-4 py-4 dark:bg-amber-950/30">
+                                <td colspan="9" class="bg-amber-50 px-4 py-4 dark:bg-amber-950/30">
                                     <form wire:submit="voidEvent" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
                                         <flux:textarea label="Motivo de anulacion" wire:model="voidReason" rows="2" />
                                         <div class="flex gap-2">
@@ -343,7 +461,7 @@ new class extends Component {
                         @endif
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-zinc-500">Sin eventos de jornada.</td>
+                            <td colspan="9" class="px-4 py-8 text-center text-zinc-500">Sin eventos de jornada.</td>
                         </tr>
                     @endforelse
                 </tbody>
