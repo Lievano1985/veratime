@@ -446,19 +446,25 @@ new class extends Component {
                                             @endif
                                         </div>
 
-                                        <div class="grid gap-3 md:grid-cols-[120px_150px_minmax(0,1fr)_auto] md:items-end">
-                                            <flux:input
-                                                wire:model="legalParameterForm.{{ $code }}.value"
-                                                label="Minutos"
-                                                type="number"
-                                                min="{{ $parameter['definition']['min'] }}"
-                                                max="{{ $parameter['definition']['max'] }}"
-                                            />
-                                            <flux:input wire:model="legalParameterForm.{{ $code }}.effective_from" label="Vigente desde" type="date" />
+                                        <div class="space-y-3">
+                                            <div class="grid gap-3 sm:grid-cols-2">
+                                                <flux:input
+                                                    wire:model="legalParameterForm.{{ $code }}.value"
+                                                    label="Minutos"
+                                                    type="number"
+                                                    min="{{ $parameter['definition']['min'] }}"
+                                                    max="{{ $parameter['definition']['max'] }}"
+                                                />
+                                                <flux:input wire:model="legalParameterForm.{{ $code }}.effective_from" label="Vigente desde" type="date" />
+                                            </div>
+
                                             <flux:input wire:model="legalParameterForm.{{ $code }}.reason" label="Motivo" />
-                                            <flux:button type="button" variant="primary" wire:click="updateLegalParameter('{{ $code }}')">
-                                                Guardar
-                                            </flux:button>
+
+                                            <div class="flex justify-end">
+                                                <flux:button type="button" variant="primary" wire:click="updateLegalParameter('{{ $code }}')">
+                                                    Guardar
+                                                </flux:button>
+                                            </div>
                                         </div>
 
                                         <p class="mt-2 text-xs text-zinc-500">
