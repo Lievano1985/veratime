@@ -292,7 +292,7 @@ it('sprint 2e creates only time events and no calculation or kiosk modules', fun
     app(RegisterWebTimeEventAction::class)->handle($company, $user, $worker, 'clock_in');
 
     expect(Schema::hasTable('time_events'))->toBeTrue()
-        ->and(Schema::hasTable('work_days'))->toBeFalse()
+        ->and(Schema::hasTable('work_days'))->toBeTrue()
         ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()

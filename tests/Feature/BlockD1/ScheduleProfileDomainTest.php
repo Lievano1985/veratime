@@ -50,7 +50,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertTrue(Schema::hasTable('schedule_batches'));
         $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
         $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
     }
 
@@ -298,7 +298,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'company', null, '2026-08-01']));
         $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
 
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => now()->toDateString()], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], center: $center);
 
         $this->assertTrue(Gate::forUser($supervisor)->allows('view', $profile));
         $this->assertTrue(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));

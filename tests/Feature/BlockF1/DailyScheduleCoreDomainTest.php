@@ -41,7 +41,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertTrue(Schema::hasTable('schedule_batches'));
         $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
         $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
@@ -54,12 +54,14 @@ class DailyScheduleCoreDomainTest extends TestCase
         $create = app(CreateScheduleBatchAction::class);
 
         $batch = $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']);
+        $this->assertSame('2026-07-27', $batch->period_start->toDateString());
+        $this->assertSame('2026-08-02', $batch->period_end->toDateString());
         $this->assertNull($batch->version);
         $this->assertSame('draft', $batch->status);
 
         $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']));
 
-        $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => '2026-08-15', 'period_end' => '2026-08-01']));
+        $this->assertInvalid(fn () => $create->handle($company, $center, ['period_start' => 'fecha-invalida']));
         $this->assertInvalid(fn () => $create->handle($company, $otherCenter, ['period_start' => '2026-08-01', 'period_end' => '2026-08-15']));
 
         $updated = app(UpdateDraftScheduleBatchAction::class)->handle($batch, ['notes' => 'Ajuste interno']);
@@ -303,11 +305,22 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertSame('on_call', $resolver->handle($company, $relationship, '2026-08-04')['day_type']);
         $this->assertSame('rest', $resolver->handle($company, $relationship, '2026-08-05')['day_type']);
 
-        $second = app(CreateScheduleBatchAction::class)->handle($company, $center, [
-            'period_start' => '2026-08-01',
-            'period_end' => '2026-08-15',
+        $second = ScheduleBatch::factory()->create([
+            'company_id' => $company->id,
+            'center_id' => $center->id,
+            'period_start' => '2026-08-03',
+            'period_end' => '2026-08-09',
+            'status' => 'published',
+            'version' => 2,
         ]);
-        $this->replaceDay($company, $second, $relationship, ['work_date' => '2026-08-03', 'day_type' => 'rest']);
+        DailyScheduleAssignment::factory()->create([
+            'company_id' => $company->id,
+            'schedule_batch_id' => $second->id,
+            'employment_relationship_id' => $relationship->id,
+            'work_date' => '2026-08-03',
+            'day_type' => 'rest',
+            'timezone' => 'America/Mexico_City',
+        ]);
         $second->forceFill(['status' => 'published', 'version' => 2])->save();
 
         $this->expectException(LogicException::class);
@@ -382,8 +395,8 @@ class DailyScheduleCoreDomainTest extends TestCase
     private function batch(Company $company, Center $center): ScheduleBatch
     {
         return app(CreateScheduleBatchAction::class)->handle($company, $center, [
-            'period_start' => '2026-08-01',
-            'period_end' => '2026-08-15',
+            'period_start' => '2026-08-03',
+            'period_end' => '2026-08-09',
         ]);
     }
 

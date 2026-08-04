@@ -1472,6 +1472,40 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 - Activaciones on-call.
 - Motor legal, calculos, alertas, incidencias y reportes.
 
+## Bloque Work Days base
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+Este bloque no agrega pantalla nueva. La validacion manual, si aplica, se hace por comandos y revision de base de datos.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Jornada esperada sin eventos | Publicar una semana y refrescar `work_days` para el rango. | Se crea una jornada `pending` con `schedule_status = scheduled`, aunque no existan eventos. |
+| Evento anulado | Crear eventos validos, anular uno y refrescar la jornada. | Solo los eventos validos no anulados quedan en `valid_time_event_ids`. |
+| Evento sin horario | Registrar un evento valido en una fecha sin programacion publicada y refrescar. | Se crea jornada `schedule_status = unscheduled`. |
+| Multi-tenant | Refrescar una empresa con eventos en otra empresa. | Solo se crean jornadas de la empresa indicada. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/WorkDays/WorkDayFoundationTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- UI de jornadas.
+- `work_day_calculations`.
+- Motor legal.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
+- Conformidad.
+- Reportes.
+- API.
+
 ---
 
 ## Limpieza de catalogos sin uso

@@ -112,6 +112,13 @@ EPIC-05:
   - descarga reporte CSV de errores.
   - no muestra historial persistente ni motivo visible de importacion en la UI.
   - no publica automaticamente.
+- Base `work_days`:
+  - tabla `work_days`.
+  - modelo `WorkDay`.
+  - generacion desde programacion diaria publicada aunque no existan eventos.
+  - deteccion de eventos validos sin programacion publicada como jornada no programada.
+  - resolucion por empresa, relacion laboral y fecha.
+  - eventos anulados quedan excluidos mediante `ResolveValidTimeEventsForWorkDateAction`.
 
 Nota de descansos obligatorios:
 
@@ -132,7 +139,6 @@ Nota de descansos obligatorios:
 ## No implementado
 
 - Motor legal.
-- work_days.
 - work_day_calculations.
 - Alertas.
 - Incidencias.
@@ -169,7 +175,7 @@ Resultado:
 - Empresas no activas no generan 404 en `/companies`.
 - No quedan fallos S1/S2 abiertos.
 
-`work_days`, motor legal, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
+Motor legal, calculos, alertas, incidencias, cierres, conformidad, reportes, API WFM y XLSX siguen pendientes.
 
 ## Bloque 5 - eventos de tiempo completos
 
@@ -186,6 +192,19 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 - No se implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
 - Siguiente bloque pendiente: `work_days`.
 - Pendiente UI siguiente bloque: `/time-events/manual` lista solo 10 eventos recientes; agregar paginacion y filtros por fuente/estado para que eventos web/kiosco/anulados no queden ocultos por capturas manuales recientes.
+
+## Bloque Work Days base
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- `work_days` existe como jornada operativa unica por empresa, trabajador y fecha.
+- `RefreshWorkDaysForDateRangeAction` orquesta la generacion por rango y centro opcional.
+- `GenerateWorkDaysFromPublishedSchedulesAction` crea/actualiza jornadas esperadas desde `daily_schedule_assignments` de batches `published`, aun sin eventos.
+- `GenerateUnscheduledWorkDaysFromTimeEventsAction` crea/actualiza jornadas no programadas cuando existen eventos validos sin programacion publicada.
+- `ResolveWorkDayForRelationshipDateAction` consulta una jornada por empresa, relacion laboral y fecha.
+- La jornada conserva referencia a trabajador, relacion laboral, centro, batch publicado, asignacion diaria, tipo de dia, minutos esperados cuando aplica y resumen de eventos validos.
+- No se implementa `work_day_calculations`, motor legal, horas extra, alertas, incidencias, cierres, conformidad, reportes, API ni UI de jornadas.
+- Eventos sin `employment_relationship_id` quedan pendientes de resolucion futura; no se ligan automaticamente en este bloque.
 
 ## Bloque A - regla de evidencia operativa
 

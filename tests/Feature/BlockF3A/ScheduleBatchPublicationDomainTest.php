@@ -76,9 +76,9 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertNotNull($result->publishedAt);
         $this->assertSame(\App\Domains\Scheduling\Actions\BuildScheduleBatchSnapshotAction::SCHEMA_VERSION, $result->snapshotSchemaVersion);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $result->snapshotSha256);
-        $this->assertSame(42, $result->assignmentCount);
+        $this->assertSame(21, $result->assignmentCount);
         $this->assertGreaterThan(0, $result->segmentCount);
-        $this->assertSame(['shift' => 30, 'rest' => 12, 'flexible' => 0, 'on_call' => 0], $result->countsByDayType);
+        $this->assertSame(['shift' => 15, 'rest' => 6, 'flexible' => 0, 'on_call' => 0], $result->countsByDayType);
 
         $verification = app(VerifyPublishedScheduleBatchSnapshotAction::class)->handle($company, $result->scheduleBatch);
         $this->assertTrue($verification->valid);
@@ -230,7 +230,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
         $this->assertSame(4, ScheduleBatch::query()->whereIn('company_id', $publishableCompanies)->where('status', 'published')->count());
         $this->assertSame(2, ScheduleBatch::query()->whereIn('company_id', $draftCompanies)->where('status', 'draft')->count());
         $this->assertSame(0, ScheduleBatch::query()->where('version', 2)->count());
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }
@@ -280,7 +280,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
             ->with(['company', 'center', 'dailyAssignments.segments'])
             ->where('company_id', $company->id)
             ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->whereDate('period_end', '2026-08-09')
             ->whereNull('version')
             ->where('status', 'draft')
             ->firstOrFail();

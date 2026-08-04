@@ -97,9 +97,9 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $result = $this->generate($this->userWithCompanyRole($company, RoleKey::RH), $company, $batch);
 
         $this->assertSame(3, $result->relationshipsConsidered);
-        $this->assertSame(5 + 3 + 4, $result->assignmentsCreated);
-        $this->assertSame(5, DailyScheduleAssignment::query()->where('employment_relationship_id', $full->id)->count());
-        $this->assertSame(3, DailyScheduleAssignment::query()->where('employment_relationship_id', $startsMid->id)->count());
+        $this->assertSame(7 + 5 + 4, $result->assignmentsCreated);
+        $this->assertSame(7, DailyScheduleAssignment::query()->where('employment_relationship_id', $full->id)->count());
+        $this->assertSame(5, DailyScheduleAssignment::query()->where('employment_relationship_id', $startsMid->id)->count());
         $this->assertSame(4, DailyScheduleAssignment::query()->where('employment_relationship_id', $endsMid->id)->count());
     }
 
@@ -202,7 +202,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $ids = DailyScheduleAssignment::query()->pluck('id')->all();
         $second = $this->generate($actor, $company, $batch);
 
-        $this->assertSame(3, $first->assignmentsCreated);
+        $this->assertSame(7, $first->assignmentsCreated);
         $this->assertSame(0, $second->assignmentsCreated);
         $this->assertSame($ids, DailyScheduleAssignment::query()->pluck('id')->all());
 
@@ -222,7 +222,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $generated = DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-03')->firstOrFail();
         $refresh = $this->generate($actor, $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_REFRESH_PROFILE_GENERATED);
 
-        $this->assertSame(2, $refresh->assignmentsRefreshed);
+        $this->assertSame(6, $refresh->assignmentsRefreshed);
         $this->assertSame($generated->id, DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-03')->value('id'));
         $this->assertSame('rest', DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-03')->value('day_type'));
         $this->assertSame('manual', DailyScheduleAssignment::query()->whereDate('work_date', '2026-08-04')->value('source_type'));
@@ -262,7 +262,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $template->forceFill(['status' => 'inactive'])->save();
 
         $this->assertInvalid(fn () => $this->generate($actor, $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_REFRESH_PROFILE_GENERATED));
-        $this->assertSame(3, DailyScheduleAssignment::query()->count());
+        $this->assertSame(7, DailyScheduleAssignment::query()->count());
         $this->assertSame($before, app(BuildScheduleBatchSnapshotAction::class)->handle($batch)['canonical_json']);
         $this->assertSame($relationship->id, DailyScheduleAssignment::query()->firstOrFail()->employment_relationship_id);
     }
@@ -314,7 +314,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assertGreaterThan(0, DailyScheduleAssignment::query()->where('day_type', 'flexible')->count());
         $this->assertGreaterThan(0, DailyScheduleAssignment::query()->where('day_type', 'on_call')->count());
         $this->assertGreaterThan(0, DailyScheduleAssignment::query()->where('source_type', 'system')->where('day_type', 'unassigned')->count());
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
     }

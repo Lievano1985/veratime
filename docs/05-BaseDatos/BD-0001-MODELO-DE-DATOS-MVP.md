@@ -950,11 +950,20 @@ Representa la jornada operativa de una persona en una fecha local.
 | `worker_id` | ulid fk | Trabajador |
 | `employment_relationship_id` | ulid nullable | Relación |
 | `center_id` | ulid nullable | Centro |
-| `schedule_id` | ulid nullable | Horario |
+| `schedule_batch_id` | ulid nullable | Lote de programacion publicada |
+| `daily_schedule_assignment_id` | ulid nullable | Dia publicado origen |
 | `work_date` | date | Fecha local operativa |
-| `timezone` | string | Zona horaria |
+| `timezone` | string nullable | Zona horaria |
 | `status` | enum | `pending`, `calculated`, `with_alerts`, `under_review`, `closed` |
+| `schedule_status` | enum | `scheduled`, `unscheduled` |
+| `day_type` | string nullable | Tipo de dia publicado |
+| `expected_work_minutes` | smallint nullable | Minutos esperados sin calculo legal |
+| `valid_time_event_count` | smallint | Eventos validos considerados |
+| `first_event_at_utc` | datetime nullable | Primer evento valido |
+| `last_event_at_utc` | datetime nullable | Ultimo evento valido |
+| `valid_time_event_ids` | json nullable | IDs de eventos validos |
 | `active_calculation_id` | ulid nullable | Versión activa |
+| `metadata` | json nullable | Origen y snapshot |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
 
@@ -965,7 +974,15 @@ unique(company_id, worker_id, work_date)
 index(company_id, work_date)
 index(company_id, center_id, work_date)
 index(company_id, status)
+index(company_id, schedule_status)
 ```
+
+Implementacion base 2026-08-03:
+
+- `work_days` se genera desde programacion diaria publicada aunque no existan eventos.
+- Eventos validos sin programacion publicada crean jornadas `schedule_status = unscheduled`.
+- Eventos anulados no participan.
+- No se implementa `work_day_calculations`, motor legal, alertas, incidencias, cierres ni reportes.
 
 ## 12.2 `work_day_calculations`
 

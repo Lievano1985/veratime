@@ -444,7 +444,7 @@ it('sprint 2a does not create jornada calculation tables or registration ui', fu
     expect(Schema::hasTable('schedules'))->toBeTrue()
         ->and(Schema::hasTable('schedule_days'))->toBeTrue()
         ->and(Schema::hasTable('schedule_breaks'))->toBeTrue()
-        ->and(Schema::hasTable('work_days'))->toBeFalse();
+        ->and(Schema::hasTable('work_days'))->toBeTrue();
 });
 
 function scheduleUserWithCompany(Company $company, string $roleKey = 'owner'): User

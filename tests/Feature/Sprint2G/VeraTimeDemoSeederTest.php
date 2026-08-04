@@ -68,7 +68,7 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
 it('does not create future Sprint 3 or calculation modules', function (): void {
     $this->seed(VeraTimeDemoSeeder::class);
 
-    expect(Schema::hasTable('work_days'))->toBeFalse()
+    expect(Schema::hasTable('work_days'))->toBeTrue()
         ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()

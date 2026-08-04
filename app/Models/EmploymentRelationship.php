@@ -92,6 +92,11 @@ class EmploymentRelationship extends Model
         return $this->hasMany(DailyScheduleAssignment::class);
     }
 
+    public function workDays(): HasMany
+    {
+        return $this->hasMany(WorkDay::class);
+    }
+
     public function isEffectiveOn(string|\DateTimeInterface $date): bool
     {
         $workDate = CarbonImmutable::parse($date)->toDateString();

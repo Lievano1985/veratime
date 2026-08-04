@@ -104,7 +104,7 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->set('batchForm.period_end', '2026-09-07')
             ->call('createEmptyBatch')
             ->assertHasNoErrors()
-            ->assertSee('Lote creado en borrador.');
+            ->assertSee('Semana creada en borrador.');
 
         $this->assertTrue(ScheduleBatch::query()
             ->where('company_id', $company->id)
@@ -638,7 +638,7 @@ class DailyScheduleCalendarUiTest extends TestCase
     {
         $this->seedPublishedScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
-        $batch = $this->firstBatch($company);
+        $batch = $this->firstPublishedBatch($company);
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
 
@@ -663,7 +663,7 @@ class DailyScheduleCalendarUiTest extends TestCase
     {
         $this->seedPublishedScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
-        $published = $this->firstBatch($company);
+        $published = $this->firstPublishedBatch($company);
         $expectedWorkers = $published->dailyAssignments()
             ->distinct('employment_relationship_id')
             ->count('employment_relationship_id');
@@ -725,7 +725,7 @@ class DailyScheduleCalendarUiTest extends TestCase
 
     public function test_f3b_does_not_create_future_operational_tables(): void
     {
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
@@ -757,6 +757,16 @@ class DailyScheduleCalendarUiTest extends TestCase
         return ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->where('status', 'draft')
+            ->whereNull('previous_batch_id')
+            ->orderBy('period_start')
+            ->firstOrFail();
+    }
+
+    private function firstPublishedBatch(Company $company): ScheduleBatch
+    {
+        return ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'published')
             ->whereNull('previous_batch_id')
             ->orderBy('period_start')
             ->firstOrFail();

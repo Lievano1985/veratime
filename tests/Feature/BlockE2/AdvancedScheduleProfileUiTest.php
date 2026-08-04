@@ -63,7 +63,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
             ->call('moveCycleDay', 2, 'up')
             ->call('save')
             ->assertHasNoErrors()
-            ->assertSee('Perfil creado.');
+            ->assertSee('Modelo creado.');
 
         $profile = ScheduleProfile::query()->where('code', 'CYCLEUI')->firstOrFail();
         $this->assertSame('pattern', $profile->profile_type);
@@ -110,7 +110,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
             ->set('flexibleRules.2.day_type', 'rest')
             ->call('save')
             ->assertHasNoErrors()
-            ->assertSee('Perfil creado.');
+            ->assertSee('Modelo creado.');
 
         $profile = ScheduleProfile::query()->where('code', 'FLEXUI')->firstOrFail();
         $this->assertSame('flexible', $profile->profile_type);
@@ -217,7 +217,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
         $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
         $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
         $this->assertFalse(Schema::hasTable('on_call_activations'));
-        $this->assertFalse(Schema::hasTable('work_days'));
+        $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertFalse(Schema::hasTable('work_day_calculations'));
     }
 

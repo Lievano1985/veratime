@@ -65,4 +65,9 @@ class Worker extends Model
     {
         return $this->hasMany(TimeEvent::class);
     }
+
+    public function workDays(): HasMany
+    {
+        return $this->hasMany(WorkDay::class);
+    }
 }
