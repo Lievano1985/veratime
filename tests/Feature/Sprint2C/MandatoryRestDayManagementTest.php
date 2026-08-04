@@ -676,7 +676,7 @@ it('sprint 2c does not create jornada calculation or operational tables', functi
         ->and(Schema::hasColumn('mandatory_rest_days', 'source_reference'))->toBeTrue()
         ->and(Schema::hasColumn('mandatory_rest_days', 'capture_source'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeTrue()
-        ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
+        ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse();

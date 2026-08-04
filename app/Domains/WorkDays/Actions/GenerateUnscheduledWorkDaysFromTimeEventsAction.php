@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\TimeEvent;
 use App\Models\WorkDay;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
@@ -49,6 +50,13 @@ class GenerateUnscheduledWorkDaysFromTimeEventsAction
                 $date = $eventGroup->occurred_local_date instanceof CarbonInterface
                     ? $eventGroup->occurred_local_date->toDateString()
                     : (string) $eventGroup->occurred_local_date;
+
+                if ($this->isContinuationOfPreviousWorkDate($company, $relationship, $date)) {
+                    $this->removeDerivedContinuationWorkDay($company, $relationship, $date);
+
+                    return;
+                }
+
                 $schedule = $this->publishedSchedule->handle($company, $relationship, $date);
 
                 if ($schedule['resolution_status'] !== 'missing') {
@@ -66,6 +74,39 @@ class GenerateUnscheduledWorkDaysFromTimeEventsAction
             });
 
         return $createdOrUpdated;
+    }
+
+    private function isContinuationOfPreviousWorkDate(Company $company, EmploymentRelationship $relationship, string $date): bool
+    {
+        $currentDateEvents = $this->validEvents->handle($company, $relationship, $date);
+
+        if ($currentDateEvents->contains(fn (TimeEvent $event): bool => $event->event_type === 'clock_in')) {
+            return false;
+        }
+
+        $previousDate = CarbonImmutable::parse($date)->subDay()->toDateString();
+        $previousWorkDateEvents = $this->validEvents->handle($company, $relationship, $previousDate);
+
+        return $previousWorkDateEvents->contains(
+            fn (TimeEvent $event): bool => $event->occurred_local_date?->toDateString() === $date,
+        );
+    }
+
+    private function removeDerivedContinuationWorkDay(Company $company, EmploymentRelationship $relationship, string $date): void
+    {
+        $workDay = WorkDay::query()
+            ->where('company_id', $company->id)
+            ->where('worker_id', $relationship->worker_id)
+            ->whereDate('work_date', $date)
+            ->where('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
+            ->first();
+
+        if (! $workDay || ($workDay->metadata['source'] ?? null) !== 'time_events') {
+            return;
+        }
+
+        $workDay->calculations()->delete();
+        $workDay->delete();
     }
 
     /**

@@ -128,6 +128,17 @@ EPIC-05:
   - ruta `/work-days`.
   - listado paginado y filtrable por rango, centro, horario, estado y trabajador.
   - visible para `owner`, `admin` y `rh`.
+- Calculo operativo base de jornadas:
+  - tabla `work_day_calculations`.
+  - modelo `WorkDayCalculation`.
+  - calculos versionados por jornada con version activa en `work_days.active_calculation_id`.
+  - pares entrada/salida por `occurred_at_utc` y desempate estable del resolver de eventos validos.
+  - jornadas que cruzan medianoche conservan los eventos de madrugada en la fecha de la entrada abierta.
+  - el calculo sincroniza el resumen visible de eventos validos de la jornada.
+  - pausas completas se descuentan del total operativo.
+  - secuencias incompletas pasan la jornada a `under_review`.
+  - `/work-days` permite ejecutar calculo manual por rango desde panel lateral.
+  - no aplica motor legal, horas extra, alertas ni incidencias.
 - Revision de capturas manuales:
   - capturas `admin_manual` nacen como `pending_review`.
   - `owner`, `admin` y `rh` pueden aprobar o rechazar capturas pendientes.
@@ -153,7 +164,8 @@ Nota de descansos obligatorios:
 ## No implementado
 
 - Motor legal.
-- work_day_calculations.
+- Clasificacion legal real de `work_day_calculations`.
+- Horas extra y limites legales.
 - Alertas.
 - Incidencias.
 - Reportes.
@@ -237,13 +249,29 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 ## Bloque Work Days consulta operativa
 
-Estado: en progreso en rama `feature/work-days-operational-list`.
+Estado: cerrado e integrado a `main`.
 
 - `/work-days` muestra las jornadas generadas por `work_days` con filtros basicos.
 - `/work-days` concentra la accion manual `Actualizar jornadas` en un panel lateral; configuracion de empresa solo conserva la hora automatica.
 - La consulta se concentra en `ListWorkDaysAction`; Livewire solo orquesta filtros y render.
 - La policy `WorkDayPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
 - No se agregan calculos, motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
+
+## Bloque Work Day Calculations base
+
+Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-foundation`.
+
+- `work_day_calculations` versiona resultados de una jornada y conserva versiones anteriores como `superseded`.
+- `CalculateWorkDayAction` calcula una jornada con eventos validos de su relacion laboral y fecha.
+- `CalculateWorkDaysForDateRangeAction` calcula jornadas por empresa, rango y centro opcional.
+- La version activa queda referenciada desde `work_days.active_calculation_id`.
+- El calculo usa pares `clock_in`/`clock_out`, descuenta pausas completas `break_start`/`break_end` y conserva snapshots de eventos usados.
+- Eventos fuera de orden se resuelven por `occurred_at_utc` con desempate estable heredado de `ResolveValidTimeEventsForWorkDateAction`.
+- Eventos de madrugada que continuan una entrada abierta del dia anterior pertenecen a la jornada del dia de entrada y no crean una segunda jornada no programada.
+- Cada calculo sincroniza `valid_time_event_count`, `valid_time_event_ids`, `first_event_at_utc` y `last_event_at_utc` con los eventos realmente usados.
+- Jornadas con eventos incompletos quedan `under_review`; jornadas sin eventos validos permanecen `pending`.
+- `/work-days` muestra minutos trabajados cuando hay calculo activo y permite ejecutar calculo manual desde un panel lateral.
+- No se implementan motor legal, clasificacion diurna/nocturna/mixta real, horas extra, alertas, incidencias, cierres, reportes ni API.
 
 ## Bloque revision de capturas manuales
 

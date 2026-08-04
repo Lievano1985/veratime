@@ -325,7 +325,7 @@ class ShiftTemplateCatalogTest extends TestCase
         }
 
         $this->assertTrue(Schema::hasTable('work_days'), 'work_days ya debe existir desde el bloque base de jornadas.');
-        $this->assertFalse(Schema::hasTable('work_day_calculations'), 'work_day_calculations sigue fuera del alcance actual.');
+        $this->assertTrue(Schema::hasTable('work_day_calculations'), 'work_day_calculations ya debe existir desde el bloque base de calculo de jornadas.');
     }
 
     private function simpleWorkSegments(): array

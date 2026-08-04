@@ -1594,6 +1594,50 @@ php artisan test tests/Feature/WorkDays/WorkDayOperationalListTest.php --stop-on
 
 ---
 
+## Bloque Work Day Calculations base
+
+**Estado:** En progreso.
+
+Este bloque calcula una version operativa inicial de cada jornada con eventos validos. No aplica todavia reglas legales, horas extra, alertas ni incidencias.
+
+### Ruta
+
+- `/work-days`
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Calculo manual | En `/work-days`, presionar `Calcular jornadas`, seleccionar rango y confirmar. | Se muestra resumen de calculadas, en revision y sin eventos validos. |
+| Jornada completa | Tener entrada y salida validas en el mismo dia, actualizar jornadas y calcular. | La fila muestra estado `Calculada` y minutos trabajados. |
+| Pausa completa | Registrar entrada, inicio de pausa, fin de pausa y salida; calcular. | Los minutos trabajados descuentan la pausa completa. |
+| Secuencia incompleta | Registrar solo entrada o dejar pausa abierta; calcular. | La jornada queda `En revision`, sin borrar eventos. |
+| Sin eventos | Calcular una jornada programada sin eventos. | Permanece `Pendiente` y sin calculo activo. |
+| Evento fuera de orden | Capturar eventos tardios o fuera de orden y calcular. | El resultado se arma por hora real del evento, no por orden de captura. |
+| Cruce de medianoche | Registrar entrada 22:00, pausa 02:00-02:30 y salida 06:00 del dia siguiente; actualizar y calcular. | Se crea una sola jornada en la fecha de entrada con 7 h 30 min trabajadas; no aparece otra jornada no programada por la madrugada. |
+| Recalculo | Calcular, corregir/anular un evento y volver a calcular. | Se crea nueva version activa y la anterior queda historica. |
+| Multi-tenant | Cambiar de empresa o manipular datos de otra empresa. | Solo calcula jornadas de la empresa activa. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/WorkDays/WorkDayCalculationFoundationTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Motor legal.
+- Clasificacion diurna/nocturna/mixta real.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
+- Conformidad.
+- Reportes.
+- API.
+
+---
+
 ## Bloque revision de capturas manuales
 
 **Estado:** En progreso.

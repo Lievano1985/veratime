@@ -6,6 +6,7 @@ use Database\Factories\WorkDayFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkDay extends Model
 {
@@ -13,6 +14,8 @@ class WorkDay extends Model
     use HasFactory;
 
     public const STATUS_PENDING = 'pending';
+    public const STATUS_CALCULATED = 'calculated';
+    public const STATUS_UNDER_REVIEW = 'under_review';
 
     public const SCHEDULE_STATUS_SCHEDULED = 'scheduled';
     public const SCHEDULE_STATUS_UNSCHEDULED = 'unscheduled';
@@ -80,6 +83,16 @@ class WorkDay extends Model
     public function dailyScheduleAssignment(): BelongsTo
     {
         return $this->belongsTo(DailyScheduleAssignment::class);
+    }
+
+    public function activeCalculation(): BelongsTo
+    {
+        return $this->belongsTo(WorkDayCalculation::class, 'active_calculation_id');
+    }
+
+    public function calculations(): HasMany
+    {
+        return $this->hasMany(WorkDayCalculation::class);
     }
 
     public function isUnscheduled(): bool

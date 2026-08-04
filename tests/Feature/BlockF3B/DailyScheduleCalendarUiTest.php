@@ -726,7 +726,7 @@ class DailyScheduleCalendarUiTest extends TestCase
     public function test_f3b_does_not_create_future_operational_tables(): void
     {
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertTrue(Schema::hasTable('work_day_calculations'));
         $this->assertFalse(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
     }

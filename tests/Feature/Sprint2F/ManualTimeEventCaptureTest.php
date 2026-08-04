@@ -377,7 +377,7 @@ it('manual capture creates only time events and no future modules', function ():
 
     expect(Schema::hasTable('time_events'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeTrue()
-        ->and(Schema::hasTable('work_day_calculations'))->toBeFalse()
+        ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
         ->and(Schema::hasTable('alerts'))->toBeFalse()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse()

@@ -15,7 +15,7 @@ class ListWorkDaysAction
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
         return WorkDay::query()
-            ->with(['worker', 'center', 'employmentRelationship', 'scheduleBatch'])
+            ->with(['worker', 'center', 'employmentRelationship', 'scheduleBatch', 'activeCalculation'])
             ->where('company_id', $company->id)
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '<=', $date))

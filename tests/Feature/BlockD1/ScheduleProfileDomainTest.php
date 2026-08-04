@@ -51,7 +51,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertTrue(Schema::hasTable('daily_schedule_assignments'));
         $this->assertTrue(Schema::hasTable('daily_schedule_segments'));
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('work_day_calculations'));
+        $this->assertTrue(Schema::hasTable('work_day_calculations'));
     }
 
     public function test_creates_pattern_weekly_and_calendar_profiles_with_d1_rules(): void
