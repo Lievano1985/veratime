@@ -92,6 +92,7 @@ El MVP debe permitir que una empresa pueda:
 | API | `/api/v1` con tokens por empresa |
 | Correcciones | No destructivas y versionadas |
 | Conformidad | Digital, ligada a versión exacta del reporte |
+| Motor legal | Reglas base por pais, Mexico preconfigurado, parametros de empresa permitidos y snapshots historicos |
 | Alertas | Preventivas, con lenguaje neutral |
 | Biometría | Fuera de P0 |
 | App nativa | Fuera del MVP |
@@ -143,5 +144,4 @@ despliegue
 ```
 
 Si una funcionalidad no aparece como P0 en el backlog, no debe implementarse salvo instrucción explícita.
-
 

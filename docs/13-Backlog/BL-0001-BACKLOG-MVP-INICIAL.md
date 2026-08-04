@@ -228,6 +228,10 @@ EPIC-04 debe evolucionar hacia programacion diaria publicada como fuente de verd
 | BL-0708 | Calcular descansos/domingo/obligatorios | P0 | Detecta casos especiales |
 | BL-0709 | Explicación del cálculo | P0 | Muestra reglas, eventos y resultado |
 | BL-0710 | Snapshot de reglas | P0 | Cálculo histórico no cambia por regla futura |
+| BL-0711 | Reglas base por pais | P0 | Mexico queda preconfigurado como primer pais operativo |
+| BL-0712 | Parametros legales de empresa | P0 | Empresa configura parametros permitidos con vigencia |
+| BL-0713 | Reglas protegidas | P0 | Valores menos favorables quedan bloqueados o marcados fuera de cumplimiento |
+| BL-0714 | UI de configuracion legal segura | P0 | Muestra reglas pais protegidas y permite editar solo parametros internos |
 
 ---
 
@@ -459,8 +463,10 @@ Bloque Work Days refresco operativo agrega configuracion de hora automatica por 
 Bloque Work Days consulta operativa agrega `/work-days` como listado inicial de jornadas generadas, con filtros de rango, centro, horario, estado y trabajador para `owner`, `admin` y `rh`. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque revision de capturas manuales agrega aprobacion/rechazo de eventos `admin_manual` en `pending_review`. Aprobar cambia el evento a `valid` y refresca `work_days` de la fecha; rechazar cambia a `ignored` con motivo obligatorio. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque Work Day Calculations base agrega `work_day_calculations` versionado, `CalculateWorkDayAction`, `CalculateWorkDaysForDateRangeAction` y accion manual desde `/work-days`. Calcula pares entrada/salida, descuenta pausas completas, conserva snapshots y deja secuencias incompletas en revision. No incluye motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
+Bloque Legal Rules versionado inicia motor legal con `legal_rules`, `legal_rule_versions`, `legal_parameters`, resolvers por fecha trabajada, seeder de reglas base y clasificacion diaria visible en `/work-days` para `work_day_calculations` activos. Clasifica como diurna, nocturna, mixta o pendiente y guarda snapshot de reglas aplicadas. No calcula todavia horas extra, dominicales, descansos obligatorios ni genera alertas.
+ADR-0005 define la linea de motor legal configurable: reglas base por pais, Mexico preconfigurado, reglas minimas protegidas, parametros internos configurables por empresa, overrides versionados y snapshots historicos. El siguiente bloque recomendado es L2 - configuracion legal por empresa antes de avanzar a ordinario/extra completo.
 EPIC-05 queda completo a nivel web/kiosco/manual para eventos fuente, sin API de negocio.
-No se implementaron motor legal, horas extra, alertas ni incidencias.
+No se implementaron horas extra, alertas ni incidencias.
 ```
 
 ## Sprint 3 — API y motor legal base
@@ -647,6 +653,15 @@ Se implementa dominio para importacion CSV de programacion diaria a lotes `draft
 
 Nota Bloque F5B:
 Se implementa la interfaz de importacion CSV dentro de `/scheduling/daily` para lotes `draft`. La carga aparece como accion compacta del lote, la plantilla se descarga desde el panel de importacion, el archivo queda privado, se valida antes de aplicar, muestra preview paginado y permite descargar errores. La UI no muestra historial persistente ni motivo visible de importacion. No incluye XLSX, API WFM, jobs asincronos, publicacion automatica, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad ni reportes.
+
+## Plan motor legal configurable
+
+| Bloque | Objetivo | Dependencia | Incluye | No incluye | Pruebas necesarias | Commit sugerido |
+|---|---|---|---|---|---|---|
+| L1. Fundacion Legal Rules | Crear reglas versionadas y clasificacion diaria inicial | Work Day Calculations base | `legal_rules`, `legal_rule_versions`, `legal_parameters`, seeder Mexico, resolvers, clasificacion visible en Jornadas | UI legal, horas extra, alertas, incidencias | Resolver por fecha, clasificacion diurna/nocturna/mixta, snapshot, multi-tenant | `legal-rules: add versioned foundation` |
+| L2. Configuracion legal por empresa | Permitir consultar reglas pais y configurar parametros internos permitidos | L1 | parametros editables, reglas protegidas, UI compacta, vigencia, motivo, actor | horas extra completa, alertas, incidencias, administracion global avanzada | editar parametro permitido, bloquear valor protegido, prioridad empresa/global, permisos | `legal-rules: add company configuration` |
+| L3. Ordinario y extra | Calcular ordinario y extra diario/semanal con reglas versionadas | L2 | limite diario, limite semanal, ordinary/overtime minutes, explicacion visible | alertas preventivas, incidencias, cierres | horas diarias, horas semanales, recalculo versionado, snapshot | `work-days: calculate ordinary and overtime minutes` |
+| L4. Casos especiales | Calcular domingo, descanso semanal y obligatorio | L3 | dominical, descanso obligatorio, descanso semanal, reglas por pais/empresa donde aplique | cierre, conformidad, reportes finales | domingo, obligatorio, descanso insuficiente, multi-tenant | `work-days: calculate special legal cases` |
 
 | C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Implementado/candidato a cierre: catalogo disponible sin calcular jornada | Mezclar flexible con turno rigido | 3 |
 | D. Modelos de horario weekly y calendar | Crear modelos, reglas semanales y aplicacion con herencia | C | `schedule_profiles`, `pattern_mode`, weekly rules, assignments | dominio, resolucion y UI | D1/D2 implementado/candidato a cierre: perfiles tecnicos conservados; UI visible reorganizada como modelos de horario y aplicacion de modelos; Bloques 3/4 aclaran filtros por camino operativo y fecha Dia 1 para ciclos | Publicacion prematura | 4 |

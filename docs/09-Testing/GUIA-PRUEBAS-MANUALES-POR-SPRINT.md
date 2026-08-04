@@ -1598,7 +1598,7 @@ php artisan test tests/Feature/WorkDays/WorkDayOperationalListTest.php --stop-on
 
 **Estado:** En progreso.
 
-Este bloque calcula una version operativa inicial de cada jornada con eventos validos. No aplica todavia reglas legales, horas extra, alertas ni incidencias.
+Este bloque calcula una version operativa inicial de cada jornada con eventos validos. La clasificacion legal diaria se aplica desde el bloque Legal Rules versionado; horas extra, alertas e incidencias siguen pendientes.
 
 ### Ruta
 
@@ -1626,13 +1626,48 @@ php artisan test tests/Feature/WorkDays/WorkDayCalculationFoundationTest.php --s
 
 ### No incluido todavia
 
-- Motor legal.
-- Clasificacion diurna/nocturna/mixta real.
 - Horas extra.
 - Alertas.
 - Incidencias.
 - Cierres.
 - Conformidad.
+- Reportes.
+- API.
+
+---
+
+## Bloque Legal Rules versionado
+
+**Estado:** Implementado/candidato a cierre.
+
+Este bloque crea la base tecnica para reglas legales versionadas y aplica la primera clasificacion visible en Jornadas. Todavia no muestra pantalla administrativa de reglas ni calcula horas extra.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Migraciones | Ejecutar migraciones en entorno de prueba. | Existen `legal_rules`, `legal_rule_versions` y `legal_parameters`. |
+| Regla por fecha | Crear dos versiones activas de una regla con vigencias distintas desde prueba automatizada. | El resolver devuelve la version vigente para la fecha trabajada. |
+| Version no activa | Crear regla inactiva o version `draft`. | No participa en resolucion. |
+| Parametro empresa | Crear parametro global y parametro de empresa para el mismo codigo/fecha. | Se resuelve el de empresa; sin empresa se usa global. |
+| Clasificacion diurna | Registrar entrada/salida dentro de 06:00-20:00, actualizar y calcular jornadas. | La columna `Legal` muestra `Diurna` y sin minutos nocturnos. |
+| Clasificacion mixta | Registrar una jornada que combine minutos diurnos y nocturnos bajo el umbral nocturno, actualizar y calcular. | La columna `Legal` muestra `Mixta` y muestra minutos nocturnos. |
+| Clasificacion nocturna | Registrar una jornada nocturna o con minutos nocturnos suficientes, actualizar y calcular. | La columna `Legal` muestra `Nocturna` y conserva snapshot de reglas. |
+| Secuencia incompleta | Registrar solo entrada o dejar pausa abierta y calcular. | La columna `Legal` queda `Pendiente`. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/LegalRules --stop-on-failure
+```
+
+### No incluido todavia
+
+- UI de administracion legal.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
 - Reportes.
 - API.
 

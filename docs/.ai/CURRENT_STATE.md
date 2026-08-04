@@ -138,7 +138,19 @@ EPIC-05:
   - pausas completas se descuentan del total operativo.
   - secuencias incompletas pasan la jornada a `under_review`.
   - `/work-days` permite ejecutar calculo manual por rango desde panel lateral.
-  - no aplica motor legal, horas extra, alertas ni incidencias.
+- Clasificacion legal diaria inicial:
+  - `legal_rules`, `legal_rule_versions` y `legal_parameters` guardan reglas versionadas y parametros por vigencia.
+  - `LegalRuleSeeder` carga reglas base para ventana diurna, umbral nocturno de jornada mixta y limites diarios por tipo de jornada.
+  - `ClassifyWorkDayCalculationAction` clasifica calculos activos como `diurnal`, `nocturnal`, `mixed` o `pending`.
+  - La clasificacion usa intervalos reconstruidos, descuenta pausas y guarda snapshot de reglas aplicadas en `work_day_calculations`.
+  - `/work-days` muestra columna `Legal` con Diurna/Nocturna/Mixta/Pendiente y minutos nocturnos cuando aplica.
+  - no calcula horas extra, alertas ni incidencias.
+- Decision de producto para motor legal configurable:
+  - registrada en `docs/12-Decisiones/ADR-0005-MOTOR-LEGAL-POR-PAIS-Y-PARAMETROS-DE-EMPRESA.md`.
+  - Vera tendra reglas base por pais, empezando por Mexico.
+  - las reglas minimas de pais son protegidas.
+  - cada empresa podra configurar parametros internos permitidos con vigencia, motivo y trazabilidad.
+  - los calculos historicos conservaran snapshot de reglas y parametros usados.
 - Revision de capturas manuales:
   - capturas `admin_manual` nacen como `pending_review`.
   - `owner`, `admin` y `rh` pueden aprobar o rechazar capturas pendientes.
@@ -163,8 +175,7 @@ Nota de descansos obligatorios:
 
 ## No implementado
 
-- Motor legal.
-- Clasificacion legal real de `work_day_calculations`.
+- Aplicacion completa del motor legal sobre `work_day_calculations`.
 - Horas extra y limites legales.
 - Alertas.
 - Incidencias.
@@ -272,6 +283,28 @@ Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-f
 - Jornadas con eventos incompletos quedan `under_review`; jornadas sin eventos validos permanecen `pending`.
 - `/work-days` muestra minutos trabajados cuando hay calculo activo y permite ejecutar calculo manual desde un panel lateral.
 - No se implementan motor legal, clasificacion diurna/nocturna/mixta real, horas extra, alertas, incidencias, cierres, reportes ni API.
+
+## Bloque Legal Rules versionado
+
+Estado: implementado/candidato a cierre en rama `feature/legal-calculation-foundation`.
+
+- Tablas base:
+  - `legal_rules`.
+  - `legal_rule_versions`.
+  - `legal_parameters`.
+- Modelos base:
+  - `LegalRule`.
+  - `LegalRuleVersion`.
+  - `LegalParameter`.
+- `ResolveLegalRuleVersionForDateAction` resuelve la version activa de una regla por codigo y fecha trabajada.
+- `ResolveLegalParameterForDateAction` resuelve parametros globales o de empresa con prioridad de empresa sobre global.
+- `LegalRuleSeeder` carga reglas base para clasificacion diaria.
+- `ClassifyWorkDayCalculationAction` aplica clasificacion diurna/nocturna/mixta sobre `work_day_calculations` activos usando intervalos reconstruidos y pausas.
+- `ClassifyWorkDayCalculationsForDateRangeAction` clasifica un rango de jornadas de una empresa.
+- `/work-days` aplica la clasificacion despues del calculo manual y muestra columna `Legal`.
+- Este bloque todavia no calcula horas extra, dominicales, descansos obligatorios, alertas, incidencias ni reportes.
+- Decision de configuracion legal por pais/empresa documentada en ADR-0005.
+- Siguiente paso recomendado: Bloque L2 - configuracion legal por empresa antes de ordinario/extra completo.
 
 ## Bloque revision de capturas manuales
 
