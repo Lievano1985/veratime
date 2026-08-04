@@ -4,7 +4,9 @@ use App\Domains\Companies\Actions\CreateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Domains\WorkDays\Actions\RunCompanyWorkDaysRefreshAction;
 use App\Models\Company;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -14,6 +16,7 @@ new class extends Component {
     public array $createForm = [];
     public array $editForm = [];
     public array $settingsForm = [];
+    public array $workDaysRefreshForm = [];
     public bool $showCreateDrawer = false;
     public ?int $editingCompanyId = null;
 
@@ -26,6 +29,7 @@ new class extends Component {
         if ($company && Gate::allows('update', $company)) {
             $this->loadEditForm($company->id);
             $this->loadSettingsForm($company);
+            $this->loadWorkDaysRefreshForm($company);
         }
     }
 
@@ -111,6 +115,7 @@ new class extends Component {
             'settingsForm.payroll_period_type' => ['required', Rule::in(['weekly', 'biweekly', 'monthly', 'custom'])],
             'settingsForm.default_timezone' => ['required', 'string', 'max:100'],
             'settingsForm.default_closure_day' => ['nullable', 'integer', 'between:1,31'],
+            'settingsForm.work_days_auto_refresh_time' => ['nullable', 'date_format:H:i'],
             'settingsForm.allow_worker_corrections' => ['boolean'],
             'settingsForm.require_pin_for_kiosk' => ['boolean'],
             'settingsForm.require_pin_for_confirmation' => ['boolean'],
@@ -120,6 +125,31 @@ new class extends Component {
         $this->loadSettingsForm($company->refresh());
 
         Session::flash('status', 'Configuracion actualizada.');
+    }
+
+    public function refreshWorkDays(RunCompanyWorkDaysRefreshAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $currentCompany->get();
+
+        abort_unless($company, 403);
+        Gate::authorize('update', $company);
+
+        $validated = $this->validate([
+            'workDaysRefreshForm.date_from' => ['required', 'date'],
+            'workDaysRefreshForm.date_to' => ['required', 'date', 'after_or_equal:workDaysRefreshForm.date_from'],
+        ])['workDaysRefreshForm'];
+
+        $result = $action->handle(
+            $company,
+            CarbonImmutable::parse($validated['date_from'])->toDateString(),
+            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+            mode: 'manual_ui',
+        );
+
+        $this->loadSettingsForm($company->refresh());
+        $this->loadWorkDaysRefreshForm($company);
+
+        Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
     }
 
     public function with(CurrentCompany $currentCompany): array
@@ -160,9 +190,23 @@ new class extends Component {
             'payroll_period_type' => $settings['payroll_period_type'],
             'default_timezone' => $settings['default_timezone'] ?? $company->timezone,
             'default_closure_day' => $settings['default_closure_day'],
+            'work_days_auto_refresh_time' => $settings['work_days_auto_refresh_time']
+                ? substr((string) $settings['work_days_auto_refresh_time'], 0, 5)
+                : null,
             'allow_worker_corrections' => (bool) $settings['allow_worker_corrections'],
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
+        ];
+    }
+
+    private function loadWorkDaysRefreshForm(Company $company): void
+    {
+        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
+            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+
+        $this->workDaysRefreshForm = [
+            'date_from' => $today->toDateString(),
+            'date_to' => $today->addDays(6)->toDateString(),
         ];
     }
 
@@ -295,6 +339,7 @@ new class extends Component {
 
                         <flux:input wire:model="settingsForm.default_timezone" label="Zona horaria" required />
                         <flux:input wire:model="settingsForm.default_closure_day" label="Dia de cierre" type="number" min="1" max="31" />
+                        <flux:input wire:model="settingsForm.work_days_auto_refresh_time" label="Hora automatica de jornadas" type="time" />
 
                         <div class="space-y-3">
                             <flux:checkbox wire:model="settingsForm.allow_worker_corrections" label="Permitir solicitudes de correccion" />
@@ -304,6 +349,29 @@ new class extends Component {
 
                         <flux:button type="submit" variant="primary">Guardar configuracion</flux:button>
                     </form>
+
+                    <div class="mt-6 border-t border-zinc-200 pt-5 dark:border-zinc-700">
+                        <div class="mb-4">
+                            <flux:heading size="sm">Jornadas operativas</flux:heading>
+                            <flux:subheading>Actualiza manualmente las jornadas esperadas y no programadas del rango indicado.</flux:subheading>
+                        </div>
+
+                        <form wire:submit="refreshWorkDays" class="space-y-4">
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <flux:input wire:model="workDaysRefreshForm.date_from" label="Desde" type="date" required />
+                                <flux:input wire:model="workDaysRefreshForm.date_to" label="Hasta" type="date" required />
+                            </div>
+
+                            @if ($currentCompany->setting?->work_days_last_refreshed_at)
+                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                                    Ultima actualizacion: {{ $currentCompany->setting->work_days_last_refreshed_at->timezone($currentCompany->setting->default_timezone ?: $currentCompany->timezone)->format('Y-m-d H:i') }}
+                                    - {{ $currentCompany->setting->work_days_last_refresh_status }}
+                                </div>
+                            @endif
+
+                            <flux:button type="submit" variant="primary">Actualizar jornadas</flux:button>
+                        </form>
+                    </div>
                 </section>
             @endif
         </div>

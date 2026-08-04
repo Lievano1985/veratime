@@ -217,6 +217,10 @@ Configuraciones generales de la empresa.
 | `payroll_period_type` | enum | `weekly`, `biweekly`, `monthly`, `custom` |
 | `default_timezone` | string | Zona horaria |
 | `default_closure_day` | smallint nullable | Día de cierre |
+| `work_days_auto_refresh_time` | time nullable | Hora local opcional para refresco automatico de jornadas |
+| `work_days_last_refreshed_at` | datetime nullable | Ultima ejecucion de refresco registrada en UTC |
+| `work_days_last_refresh_status` | string nullable | Estado tecnico de la ultima ejecucion |
+| `work_days_last_refresh_summary` | JSON nullable | Resumen de rango, modo y totales generados |
 | `allow_worker_corrections` | boolean | Solicitudes desde portal |
 | `require_pin_for_kiosk` | boolean | Kiosco con NIP |
 | `require_pin_for_confirmation` | boolean | Confirmaciíal |
@@ -982,6 +986,8 @@ Implementacion base 2026-08-03:
 - `work_days` se genera desde programacion diaria publicada aunque no existan eventos.
 - Eventos validos sin programacion publicada crean jornadas `schedule_status = unscheduled`.
 - Eventos anulados no participan.
+- El refresco operativo puede ejecutarse manualmente desde `/companies`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
+- La hora automatica se configura en `company_settings.work_days_auto_refresh_time` y se evalua por timezone local de la empresa.
 - No se implementa `work_day_calculations`, motor legal, alertas, incidencias, cierres ni reportes.
 
 ## 12.2 `work_day_calculations`

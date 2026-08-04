@@ -1508,6 +1508,50 @@ php artisan test tests/Feature/WorkDays/WorkDayFoundationTest.php --stop-on-fail
 
 ---
 
+## Bloque Work Days refresco operativo
+
+**Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
+
+Este bloque agrega la forma operativa de actualizar `work_days`: manual desde configuracion de empresa, manual por comando y automatico por hora configurada. No agrega pantalla de listado de jornadas ni calculos legales.
+
+### Ruta
+
+- `/companies`
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Hora automatica | Entrar a `/companies`, editar configuracion y guardar una hora en `Hora automatica de jornadas`. | La hora se conserva al recargar. |
+| Refresco manual UI | En `/companies`, usar `Jornadas operativas`, seleccionar rango y presionar `Actualizar jornadas`. | Se muestra mensaje con total, programadas y no programadas. |
+| Jornada esperada | Publicar una semana, refrescar el rango y revisar base/pruebas. | Se crean jornadas desde horarios publicados aunque no existan eventos. |
+| Evento sin horario | Registrar evento valido en fecha sin horario publicado y refrescar. | Se crea jornada `unscheduled`. |
+| Automatico | Configurar hora local, ejecutar `php artisan work-days:auto-refresh` en esa hora. | Procesa solo empresas activas vencidas y guarda ultimo resumen. |
+| Idempotencia diaria auto | Ejecutar dos veces el automatico en la misma hora local. | No duplica jornadas ni repite empresa ya procesada automaticamente ese dia. |
+| Comando manual | Ejecutar `php artisan work-days:refresh --company=ID --from=YYYY-MM-DD --to=YYYY-MM-DD`. | Refresca solo esa empresa/rango. |
+| Multi-tenant | Ejecutar refresco para Empresa A teniendo eventos/lotes de Empresa B. | Solo se crean o actualizan jornadas de Empresa A. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/WorkDays/WorkDayOperationalRefreshTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- UI/listado de jornadas.
+- `work_day_calculations`.
+- Motor legal.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
+- Conformidad.
+- Reportes.
+- API.
+
+---
+
 ## Limpieza de catalogos sin uso
 
 ### Objetivo
