@@ -961,6 +961,9 @@ Implementacion base 2026-08-04:
 - `ResolveLegalRuleVersionForDateAction` y `ResolveLegalParameterForDateAction` son la entrada de dominio para evitar constantes legales dispersas.
 - `LegalRuleSeeder` carga reglas base para ventana diurna, umbral nocturno de jornada mixta y limites diarios por tipo de jornada.
 - `ClassifyWorkDayCalculationAction` aplica la primera clasificacion legal diaria sobre `work_day_calculations` activos y guarda snapshot de reglas aplicadas.
+- L2 agrega auditoria a `legal_parameters` con `reason`, `created_by`, `updated_by` y `metadata`.
+- `CompanyLegalParameterCatalog` define parametros internos editables por empresa y sus limites protegidos.
+- `/companies` muestra reglas base de Mexico en lectura y permite configurar parametros internos permitidos con vigencia y motivo.
 - No se calculan todavia horas extra, alertas, incidencias, reportes ni API.
 
 ---

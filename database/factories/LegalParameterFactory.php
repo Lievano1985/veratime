@@ -21,6 +21,10 @@ class LegalParameterFactory extends Factory
             'effective_to' => null,
             'status' => LegalParameter::STATUS_ACTIVE,
             'source_reference' => 'SRC-001',
+            'reason' => 'Parametro de prueba',
+            'created_by' => null,
+            'updated_by' => null,
+            'metadata' => [],
         ];
     }
 

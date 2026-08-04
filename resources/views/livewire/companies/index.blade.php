@@ -3,6 +3,8 @@
 use App\Domains\Companies\Actions\CreateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
+use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
+use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use Illuminate\Support\Facades\Gate;
@@ -14,6 +16,7 @@ new class extends Component {
     public array $createForm = [];
     public array $editForm = [];
     public array $settingsForm = [];
+    public array $legalParameterForm = [];
     public bool $showCreateDrawer = false;
     public ?int $editingCompanyId = null;
 
@@ -26,6 +29,7 @@ new class extends Component {
         if ($company && Gate::allows('update', $company)) {
             $this->loadEditForm($company->id);
             $this->loadSettingsForm($company);
+            $this->loadLegalParameterForm($company);
         }
     }
 
@@ -123,19 +127,50 @@ new class extends Component {
         Session::flash('status', 'Configuracion actualizada.');
     }
 
-    public function with(CurrentCompany $currentCompany): array
+    public function updateLegalParameter(string $code, UpdateCompanyLegalParameterAction $action, CurrentCompany $currentCompany): void
     {
+        $company = $currentCompany->get();
+
+        abort_unless($company, 403);
+        Gate::authorize('update', $company);
+
+        $validated = $this->validate([
+            "legalParameterForm.{$code}.value" => ['required', 'integer'],
+            "legalParameterForm.{$code}.effective_from" => ['required', 'date'],
+            "legalParameterForm.{$code}.reason" => ['required', 'string', 'max:500'],
+        ])['legalParameterForm'][$code];
+
+        $action->handle(
+            $company,
+            $code,
+            (int) $validated['value'],
+            (string) $validated['effective_from'],
+            trim((string) $validated['reason']),
+            auth()->user(),
+        );
+
+        $this->loadLegalParameterForm($company);
+
+        Session::flash('status', 'Parametro legal actualizado.');
+    }
+
+    public function with(CurrentCompany $currentCompany, ResolveCompanyLegalConfigurationAction $legalConfiguration): array
+    {
+        $company = $currentCompany->get();
+        $canManageCurrentCompany = $company ? Gate::allows('update', $company) : false;
+
         return [
             'companies' => auth()->user()
                 ->companiesWithActiveMembership()
                 ->orderBy('name')
                 ->get(),
-            'currentCompany' => $currentCompany->get(),
+            'currentCompany' => $company,
             'canCreateCompany' => Gate::allows('create', Company::class),
-            'canManageCurrentCompany' => $currentCompany->get()
-                ? Gate::allows('update', $currentCompany->get())
-                : false,
+            'canManageCurrentCompany' => $canManageCurrentCompany,
             'canManageEditingCompany' => $this->canManageEditingCompany(),
+            'legalConfiguration' => $company && $canManageCurrentCompany
+                ? $legalConfiguration->handle($company)
+                : null,
         ];
     }
 
@@ -168,6 +203,46 @@ new class extends Component {
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
         ];
+    }
+
+    private function loadLegalParameterForm(Company $company): void
+    {
+        $configuration = app(ResolveCompanyLegalConfigurationAction::class)->handle($company);
+
+        $this->legalParameterForm = collect($configuration['parameters'])
+            ->mapWithKeys(fn (array $parameter, string $code): array => [$code => [
+                'value' => $parameter['value'],
+                'effective_from' => $parameter['effective_from'],
+                'reason' => $parameter['reason'] ?: 'Configuracion interna de empresa',
+            ]])
+            ->all();
+    }
+
+    private function minutesLabel(?int $minutes): string
+    {
+        if ($minutes === null) {
+            return 'No aplica';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remaining = $minutes % 60;
+
+        return $remaining === 0 ? "{$hours} h" : "{$hours} h {$remaining} min";
+    }
+
+    private function ruleValueLabel(array $rule): string
+    {
+        $value = $rule['value'] ?? [];
+
+        if (array_key_exists('minutes', $value)) {
+            return $this->minutesLabel((int) $value['minutes']);
+        }
+
+        if (array_key_exists('start', $value) && array_key_exists('end', $value)) {
+            return "{$value['start']} - {$value['end']}";
+        }
+
+        return 'Configurada';
     }
 
     private function canManageEditingCompany(): bool
@@ -309,6 +384,91 @@ new class extends Component {
 
                         <flux:button type="submit" variant="primary">Guardar configuracion</flux:button>
                     </form>
+                </section>
+            @endif
+
+            @if ($currentCompany && $canManageCurrentCompany && $legalConfiguration)
+                <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+                    <div class="mb-4">
+                        <flux:heading>Configuracion legal</flux:heading>
+                        <flux:subheading>Mexico preconfigurado. Las reglas base son protegidas; solo se ajustan parametros internos permitidos.</flux:subheading>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Reglas base del pais</h3>
+                                <x-ui.badge variant="neutral">MX</x-ui.badge>
+                            </div>
+
+                            <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+                                <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                                    <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                        <tr>
+                                            <th class="px-3 py-2">Regla</th>
+                                            <th class="px-3 py-2">Valor</th>
+                                            <th class="px-3 py-2">Version</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                                        @foreach ($legalConfiguration['rules'] as $rule)
+                                            <tr>
+                                                <td class="px-3 py-2">
+                                                    <span class="block font-medium">{{ $rule['name'] }}</span>
+                                                    <span class="text-xs text-zinc-500">{{ $rule['code'] }}</span>
+                                                </td>
+                                                <td class="px-3 py-2">{{ $this->ruleValueLabel($rule) }}</td>
+                                                <td class="px-3 py-2">
+                                                    <x-ui.badge variant="info">v{{ $rule['version'] }}</x-ui.badge>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Parametros internos</h3>
+
+                            <div class="space-y-3">
+                                @foreach ($legalConfiguration['parameters'] as $code => $parameter)
+                                    <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
+                                        <div class="mb-3 flex items-start justify-between gap-3">
+                                            <div>
+                                                <p class="font-medium text-zinc-900 dark:text-zinc-100">{{ $parameter['definition']['label'] }}</p>
+                                                <p class="text-xs text-zinc-500">{{ $parameter['definition']['description'] }}</p>
+                                            </div>
+                                            @if ($parameter['definition']['protected_max'])
+                                                <x-ui.badge variant="warning">Protegido</x-ui.badge>
+                                            @else
+                                                <x-ui.badge variant="neutral">Interno</x-ui.badge>
+                                            @endif
+                                        </div>
+
+                                        <div class="grid gap-3 md:grid-cols-[120px_150px_minmax(0,1fr)_auto] md:items-end">
+                                            <flux:input
+                                                wire:model="legalParameterForm.{{ $code }}.value"
+                                                label="Minutos"
+                                                type="number"
+                                                min="{{ $parameter['definition']['min'] }}"
+                                                max="{{ $parameter['definition']['max'] }}"
+                                            />
+                                            <flux:input wire:model="legalParameterForm.{{ $code }}.effective_from" label="Vigente desde" type="date" />
+                                            <flux:input wire:model="legalParameterForm.{{ $code }}.reason" label="Motivo" />
+                                            <flux:button type="button" variant="primary" wire:click="updateLegalParameter('{{ $code }}')">
+                                                Guardar
+                                            </flux:button>
+                                        </div>
+
+                                        <p class="mt-2 text-xs text-zinc-500">
+                                            Limite permitido: {{ $parameter['definition']['min'] }} a {{ $parameter['definition']['max'] }} minutos.
+                                        </p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                 </section>
             @endif
         </div>
