@@ -49,15 +49,27 @@ class WorkDayOperationalRefreshTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
-            ->set('workDaysRefreshForm.date_from', '2026-08-03')
-            ->set('workDaysRefreshForm.date_to', '2026-08-03')
+        Volt::test('work-days.index')
+            ->call('openRefreshPanel')
+            ->set('refreshForm.date_from', '2026-08-03')
+            ->set('refreshForm.date_to', '2026-08-03')
             ->call('refreshWorkDays')
             ->assertHasNoErrors()
             ->assertSee('Jornadas actualizadas');
 
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
         $this->assertSame('manual_ui', $company->setting->refresh()->work_days_last_refresh_summary['mode']);
+    }
+
+    public function test_company_settings_do_not_show_manual_work_days_refresh(): void
+    {
+        [$company, $user] = $this->companyUserAndPublishedDay();
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('companies.index')
+            ->assertSee('Hora automatica de jornadas')
+            ->assertDontSee('Actualizar jornadas');
     }
 
     public function test_manual_command_refreshes_company_range(): void

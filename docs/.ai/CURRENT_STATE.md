@@ -121,9 +121,13 @@ EPIC-05:
   - eventos anulados quedan excluidos mediante `ResolveValidTimeEventsForWorkDateAction`.
 - Refresco operativo de `work_days`:
   - configuracion opcional de hora automatica por empresa.
-  - actualizacion manual desde configuracion de empresa.
+  - actualizacion manual desde panel lateral en `/work-days`.
   - comandos `work-days:refresh` y `work-days:auto-refresh`.
   - scheduler cada minuto sobre database/cron, ejecutando solo empresas vencidas por hora local.
+- Consulta operativa inicial de `work_days`:
+  - ruta `/work-days`.
+  - listado paginado y filtrable por rango, centro, horario, estado y trabajador.
+  - visible para `owner`, `admin` y `rh`.
 
 Nota de descansos obligatorios:
 
@@ -217,13 +221,24 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - `company_settings` permite configurar `work_days_auto_refresh_time` por empresa.
 - Se guarda ultima ejecucion de jornadas con fecha UTC, estado y resumen JSON.
-- `/companies` permite ejecutar refresco manual por rango de fechas para la empresa activa.
+- `/companies` solo conserva la hora automatica de jornadas dentro de configuracion.
+- `/work-days` permite ejecutar refresco manual por rango de fechas desde un panel lateral.
 - `work-days:refresh` permite refresco manual por empresa, rango y centro opcional.
 - `work-days:auto-refresh` evalua empresas activas con hora configurada y actualiza rango operativo por timezone local.
 - El scheduler registra `work-days:auto-refresh` cada minuto con `withoutOverlapping`; en hosting/cPanel requiere cron de `php artisan schedule:run`.
 - El refresco automatico no se bloquea por ejecuciones manuales previas del mismo dia.
 - No se implementa `work_day_calculations`, motor legal, horas extra, alertas, incidencias, cierres, conformidad, reportes ni API.
 - Siguiente bloque recomendado: consulta/listado operativo de jornadas o `work_day_calculations` basicos segun decision de producto.
+
+## Bloque Work Days consulta operativa
+
+Estado: en progreso en rama `feature/work-days-operational-list`.
+
+- `/work-days` muestra las jornadas generadas por `work_days` con filtros basicos.
+- `/work-days` concentra la accion manual `Actualizar jornadas` en un panel lateral; configuracion de empresa solo conserva la hora automatica.
+- La consulta se concentra en `ListWorkDaysAction`; Livewire solo orquesta filtros y render.
+- La policy `WorkDayPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
+- No se agregan calculos, motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
 
 ## Bloque A - regla de evidencia operativa
 

@@ -4,9 +4,7 @@ use App\Domains\Companies\Actions\CreateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
-use App\Domains\WorkDays\Actions\RunCompanyWorkDaysRefreshAction;
 use App\Models\Company;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -16,7 +14,6 @@ new class extends Component {
     public array $createForm = [];
     public array $editForm = [];
     public array $settingsForm = [];
-    public array $workDaysRefreshForm = [];
     public bool $showCreateDrawer = false;
     public ?int $editingCompanyId = null;
 
@@ -29,7 +26,6 @@ new class extends Component {
         if ($company && Gate::allows('update', $company)) {
             $this->loadEditForm($company->id);
             $this->loadSettingsForm($company);
-            $this->loadWorkDaysRefreshForm($company);
         }
     }
 
@@ -127,31 +123,6 @@ new class extends Component {
         Session::flash('status', 'Configuracion actualizada.');
     }
 
-    public function refreshWorkDays(RunCompanyWorkDaysRefreshAction $action, CurrentCompany $currentCompany): void
-    {
-        $company = $currentCompany->get();
-
-        abort_unless($company, 403);
-        Gate::authorize('update', $company);
-
-        $validated = $this->validate([
-            'workDaysRefreshForm.date_from' => ['required', 'date'],
-            'workDaysRefreshForm.date_to' => ['required', 'date', 'after_or_equal:workDaysRefreshForm.date_from'],
-        ])['workDaysRefreshForm'];
-
-        $result = $action->handle(
-            $company,
-            CarbonImmutable::parse($validated['date_from'])->toDateString(),
-            CarbonImmutable::parse($validated['date_to'])->toDateString(),
-            mode: 'manual_ui',
-        );
-
-        $this->loadSettingsForm($company->refresh());
-        $this->loadWorkDaysRefreshForm($company);
-
-        Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
-    }
-
     public function with(CurrentCompany $currentCompany): array
     {
         return [
@@ -196,17 +167,6 @@ new class extends Component {
             'allow_worker_corrections' => (bool) $settings['allow_worker_corrections'],
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
-        ];
-    }
-
-    private function loadWorkDaysRefreshForm(Company $company): void
-    {
-        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
-            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
-
-        $this->workDaysRefreshForm = [
-            'date_from' => $today->toDateString(),
-            'date_to' => $today->addDays(6)->toDateString(),
         ];
     }
 
@@ -349,29 +309,6 @@ new class extends Component {
 
                         <flux:button type="submit" variant="primary">Guardar configuracion</flux:button>
                     </form>
-
-                    <div class="mt-6 border-t border-zinc-200 pt-5 dark:border-zinc-700">
-                        <div class="mb-4">
-                            <flux:heading size="sm">Jornadas operativas</flux:heading>
-                            <flux:subheading>Actualiza manualmente las jornadas esperadas y no programadas del rango indicado.</flux:subheading>
-                        </div>
-
-                        <form wire:submit="refreshWorkDays" class="space-y-4">
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <flux:input wire:model="workDaysRefreshForm.date_from" label="Desde" type="date" required />
-                                <flux:input wire:model="workDaysRefreshForm.date_to" label="Hasta" type="date" required />
-                            </div>
-
-                            @if ($currentCompany->setting?->work_days_last_refreshed_at)
-                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                                    Ultima actualizacion: {{ $currentCompany->setting->work_days_last_refreshed_at->timezone($currentCompany->setting->default_timezone ?: $currentCompany->timezone)->format('Y-m-d H:i') }}
-                                    - {{ $currentCompany->setting->work_days_last_refresh_status }}
-                                </div>
-                            @endif
-
-                            <flux:button type="submit" variant="primary">Actualizar jornadas</flux:button>
-                        </form>
-                    </div>
                 </section>
             @endif
         </div>

@@ -1512,18 +1512,19 @@ php artisan test tests/Feature/WorkDays/WorkDayFoundationTest.php --stop-on-fail
 
 **Estado:** Implementado/candidato a cierre si la suite automatizada permanece verde.
 
-Este bloque agrega la forma operativa de actualizar `work_days`: manual desde configuracion de empresa, manual por comando y automatico por hora configurada. No agrega pantalla de listado de jornadas ni calculos legales.
+Este bloque agrega la forma operativa de actualizar `work_days`: manual desde `/work-days`, manual por comando y automatico por hora configurada en empresa. No agrega calculos legales.
 
 ### Ruta
 
 - `/companies`
+- `/work-days`
 
 ### Validaciones esperadas
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Hora automatica | Entrar a `/companies`, editar configuracion y guardar una hora en `Hora automatica de jornadas`. | La hora se conserva al recargar. |
-| Refresco manual UI | En `/companies`, usar `Jornadas operativas`, seleccionar rango y presionar `Actualizar jornadas`. | Se muestra mensaje con total, programadas y no programadas. |
+| Hora automatica | Entrar a `/companies`, editar configuracion y guardar una hora en `Hora automatica de jornadas`. | La hora se conserva al recargar y no aparece boton manual de actualizar jornadas. |
+| Refresco manual UI | En `/work-days`, presionar `Actualizar jornadas`, seleccionar rango en el panel lateral y confirmar. | Se muestra mensaje con total, programadas y no programadas. |
 | Jornada esperada | Publicar una semana, refrescar el rango y revisar base/pruebas. | Se crean jornadas desde horarios publicados aunque no existan eventos. |
 | Evento sin horario | Registrar evento valido en fecha sin horario publicado y refrescar. | Se crea jornada `unscheduled`. |
 | Automatico | Configurar hora local, ejecutar `php artisan work-days:auto-refresh` en esa hora. | Procesa solo empresas activas vencidas y guarda ultimo resumen. |
@@ -1541,6 +1542,47 @@ php artisan test tests/Feature/WorkDays/WorkDayOperationalRefreshTest.php --stop
 
 - UI/listado de jornadas.
 - `work_day_calculations`.
+- Motor legal.
+- Horas extra.
+- Alertas.
+- Incidencias.
+- Cierres.
+- Conformidad.
+- Reportes.
+- API.
+
+---
+
+## Bloque Work Days consulta operativa
+
+**Estado:** En progreso.
+
+Este bloque permite ver las jornadas ya generadas por `work_days`. Es una consulta operativa de lectura; no calcula horas, no genera alertas y no abre incidencias.
+
+### Ruta
+
+- `/work-days`
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Acceso manager | Entrar con owner/admin/rh y abrir `/work-days`. | Carga el listado de jornadas de la empresa activa. |
+| Actualizar jornadas | En `/work-days`, presionar `Actualizar jornadas`. | Abre panel lateral con rango; no aparece en configuracion de empresa. |
+| Filtros | Usar fecha, centro, tipo de horario o busqueda por trabajador. | La tabla se filtra sin mezclar datos de otras empresas. |
+| Jornada programada | Refrescar jornadas desde una semana publicada y abrir `/work-days`. | Aparece con badge `Programada`, tipo de dia y minutos esperados. |
+| Jornada no programada | Refrescar eventos validos sin horario publicado y abrir `/work-days`. | Aparece con badge `No programada` y conteo de eventos. |
+| Supervisor | Entrar como supervisor. | La ruta queda bloqueada en este bloque inicial. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/WorkDays/WorkDayOperationalListTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Calculo de horas trabajadas.
 - Motor legal.
 - Horas extra.
 - Alertas.

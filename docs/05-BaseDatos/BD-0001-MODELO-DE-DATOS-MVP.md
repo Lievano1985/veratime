@@ -986,7 +986,7 @@ Implementacion base 2026-08-03:
 - `work_days` se genera desde programacion diaria publicada aunque no existan eventos.
 - Eventos validos sin programacion publicada crean jornadas `schedule_status = unscheduled`.
 - Eventos anulados no participan.
-- El refresco operativo puede ejecutarse manualmente desde `/companies`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
+- El refresco operativo puede ejecutarse manualmente desde `/work-days`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
 - La hora automatica se configura en `company_settings.work_days_auto_refresh_time` y se evalua por timezone local de la empresa.
 - No se implementa `work_day_calculations`, motor legal, alertas, incidencias, cierres ni reportes.
 

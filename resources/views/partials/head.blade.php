@@ -22,6 +22,7 @@
         'scheduling.daily' => 'Programacion semanal',
         'time-clock.index' => 'Registro asistido',
         'time-events.manual' => 'Captura justificada',
+        'work-days.index' => 'Jornadas',
         'kiosk.index' => 'Kiosco',
         'settings.profile' => 'Perfil',
         'settings.password' => 'Contrasena',
