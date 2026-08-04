@@ -23,6 +23,10 @@ class LegalParameter extends Model
         'effective_to',
         'status',
         'source_reference',
+        'reason',
+        'created_by',
+        'updated_by',
+        'metadata',
     ];
 
     protected function casts(): array
@@ -32,11 +36,24 @@ class LegalParameter extends Model
             'value' => 'array',
             'effective_from' => 'date',
             'effective_to' => 'date',
+            'created_by' => 'integer',
+            'updated_by' => 'integer',
+            'metadata' => 'array',
         ];
     }
 
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

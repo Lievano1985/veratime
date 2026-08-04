@@ -286,7 +286,7 @@ Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-f
 
 ## Bloque Legal Rules versionado
 
-Estado: implementado/candidato a cierre en rama `feature/legal-calculation-foundation`.
+Estado: L1 integrado a `main`; L2 en progreso en rama `feature/company-legal-configuration`.
 
 - Tablas base:
   - `legal_rules`.
@@ -302,9 +302,16 @@ Estado: implementado/candidato a cierre en rama `feature/legal-calculation-found
 - `ClassifyWorkDayCalculationAction` aplica clasificacion diurna/nocturna/mixta sobre `work_day_calculations` activos usando intervalos reconstruidos y pausas.
 - `ClassifyWorkDayCalculationsForDateRangeAction` clasifica un rango de jornadas de una empresa.
 - `/work-days` aplica la clasificacion despues del calculo manual y muestra columna `Legal`.
-- Este bloque todavia no calcula horas extra, dominicales, descansos obligatorios, alertas, incidencias ni reportes.
 - Decision de configuracion legal por pais/empresa documentada en ADR-0005.
-- Siguiente paso recomendado: Bloque L2 - configuracion legal por empresa antes de ordinario/extra completo.
+- L2 agrega configuracion legal por empresa:
+  - migracion de auditoria para `legal_parameters`: `reason`, `created_by`, `updated_by`, `metadata`.
+  - `CompanyLegalParameterCatalog` define parametros internos permitidos y limites protegidos.
+  - `ResolveCompanyLegalConfigurationAction` muestra reglas base del pais y parametros efectivos de empresa.
+  - `UpdateCompanyLegalParameterAction` guarda parametros con vigencia, motivo y actor.
+  - `/companies` muestra reglas base Mexico en lectura y permite editar parametros internos permitidos.
+  - parametros que superan limites protegidos quedan bloqueados.
+- Este bloque todavia no calcula horas extra, dominicales, descansos obligatorios, alertas, incidencias ni reportes.
+- Siguiente paso recomendado: terminar validacion visual/manual de L2; despues Bloque L3 - ordinario/extra diario y semanal.
 
 ## Bloque revision de capturas manuales
 

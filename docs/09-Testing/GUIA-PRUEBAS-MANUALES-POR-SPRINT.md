@@ -1640,7 +1640,7 @@ php artisan test tests/Feature/WorkDays/WorkDayCalculationFoundationTest.php --s
 
 **Estado:** Implementado/candidato a cierre.
 
-Este bloque crea la base tecnica para reglas legales versionadas y aplica la primera clasificacion visible en Jornadas. Todavia no muestra pantalla administrativa de reglas ni calcula horas extra.
+Este bloque crea la base tecnica para reglas legales versionadas, aplica la primera clasificacion visible en Jornadas y agrega configuracion legal segura por empresa en `/companies`. Todavia no calcula horas extra.
 
 ### Validaciones esperadas
 
@@ -1654,6 +1654,10 @@ Este bloque crea la base tecnica para reglas legales versionadas y aplica la pri
 | Clasificacion mixta | Registrar una jornada que combine minutos diurnos y nocturnos bajo el umbral nocturno, actualizar y calcular. | La columna `Legal` muestra `Mixta` y muestra minutos nocturnos. |
 | Clasificacion nocturna | Registrar una jornada nocturna o con minutos nocturnos suficientes, actualizar y calcular. | La columna `Legal` muestra `Nocturna` y conserva snapshot de reglas. |
 | Secuencia incompleta | Registrar solo entrada o dejar pausa abierta y calcular. | La columna `Legal` queda `Pendiente`. |
+| Ver reglas pais | Entrar a `/companies` como owner/admin/rh. | Se muestra `Configuracion legal`, reglas base Mexico en lectura y badge `MX`. |
+| Editar parametro permitido | Cambiar un limite interno a un valor igual o menor al limite protegido, capturar motivo y guardar. | Se crea `legal_parameters` con `company_id`, vigencia, motivo y actor. |
+| Bloquear limite menos favorable | Intentar guardar limite diurno mayor a 480 minutos. | El sistema rechaza el valor y no crea parametro. |
+| Supervisor | Entrar como supervisor. | No puede modificar configuracion legal de empresa. |
 
 Comando sugerido:
 
@@ -1663,7 +1667,7 @@ php artisan test tests/Feature/LegalRules --stop-on-failure
 
 ### No incluido todavia
 
-- UI de administracion legal.
+- Administracion global avanzada de reglas legales por pais.
 - Horas extra.
 - Alertas.
 - Incidencias.

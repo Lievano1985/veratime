@@ -49,6 +49,14 @@ class LegalRuleSeeder extends Seeder
             value: ['minutes' => 450],
             unit: 'minutes',
         );
+
+        $this->seedRule(
+            code: 'maximum_weekly_hours',
+            name: 'Limite semanal ordinario',
+            category: 'weekly_limit',
+            value: ['minutes' => 2880],
+            unit: 'minutes',
+        );
     }
 
     /**
