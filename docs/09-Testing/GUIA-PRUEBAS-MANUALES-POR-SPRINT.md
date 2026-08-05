@@ -1640,7 +1640,7 @@ php artisan test tests/Feature/WorkDays/WorkDayCalculationFoundationTest.php --s
 
 **Estado:** Implementado/candidato a cierre.
 
-Este bloque crea la base tecnica para reglas legales versionadas, aplica la primera clasificacion visible en Jornadas y agrega configuracion legal segura por empresa en `/companies`. Todavia no calcula horas extra.
+Este bloque crea la base tecnica para reglas legales versionadas, aplica clasificacion visible en Jornadas, agrega configuracion legal segura por empresa en `/companies` y calcula minutos ordinarios/extra diarios y semanales. Todavia no genera alertas ni incidencias.
 
 ### Validaciones esperadas
 
@@ -1658,6 +1658,10 @@ Este bloque crea la base tecnica para reglas legales versionadas, aplica la prim
 | Editar parametro permitido | Cambiar un limite interno a un valor igual o menor al limite protegido, capturar motivo y guardar. | Se crea `legal_parameters` con `company_id`, vigencia, motivo y actor. |
 | Bloquear limite menos favorable | Intentar guardar limite diurno mayor a 480 minutos. | El sistema rechaza el valor y no crea parametro. |
 | Supervisor | Entrar como supervisor. | No puede modificar configuracion legal de empresa. |
+| Extra diaria | Registrar una jornada diurna de mas de 8 horas, actualizar y calcular. | La tabla muestra `Ordinario` hasta 8 h y el excedente en `Extra`. |
+| Parametro mas favorable | En `/companies`, bajar el limite interno diurno a 450 minutos y recalcular una jornada de 480 minutos. | La jornada queda con 450 minutos ordinarios y 30 extra. |
+| Extra semanal | Calcular siete jornadas de 8 h en la misma semana natural. | La septima jornada queda como extra cuando se supera el limite semanal. |
+| Pendiente legal | Dejar una jornada con clasificacion `Pendiente`. | Ordinario y extra quedan pendientes o en 0 hasta resolver la clasificacion. |
 
 Comando sugerido:
 
@@ -1668,7 +1672,6 @@ php artisan test tests/Feature/LegalRules --stop-on-failure
 ### No incluido todavia
 
 - Administracion global avanzada de reglas legales por pais.
-- Horas extra.
 - Alertas.
 - Incidencias.
 - Cierres.

@@ -176,7 +176,7 @@ Nota de descansos obligatorios:
 ## No implementado
 
 - Aplicacion completa del motor legal sobre `work_day_calculations`.
-- Horas extra y limites legales.
+- Alertas por horas extra, limites especiales y casos de descanso.
 - Alertas.
 - Incidencias.
 - Reportes.
@@ -286,7 +286,7 @@ Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-f
 
 ## Bloque Legal Rules versionado
 
-Estado: L1 integrado a `main`; L2 en progreso en rama `feature/company-legal-configuration`.
+Estado: L1 y L2 integrados a `main`; L3 en progreso en rama `feature/work-day-ordinary-overtime-calculation`.
 
 - Tablas base:
   - `legal_rules`.
@@ -310,8 +310,13 @@ Estado: L1 integrado a `main`; L2 en progreso en rama `feature/company-legal-con
   - `UpdateCompanyLegalParameterAction` guarda parametros con vigencia, motivo y actor.
   - `/companies` muestra reglas base Mexico en lectura y permite editar parametros internos permitidos.
   - parametros que superan limites protegidos quedan bloqueados.
-- Este bloque todavia no calcula horas extra, dominicales, descansos obligatorios, alertas, incidencias ni reportes.
-- Siguiente paso recomendado: terminar validacion visual/manual de L2; despues Bloque L3 - ordinario/extra diario y semanal.
+- L3 agrega ordinario/extra:
+  - `ApplyOrdinaryOvertimeForDateRangeAction` calcula ordinario y extra por dia y semana natural lunes-domingo.
+  - usa reglas versionadas de limite diario/semanal o parametros de empresa mas favorables.
+  - guarda `ordinary_minutes`, `overtime_minutes`, snapshot de reglas y explicacion.
+  - `/work-days` muestra columnas `Ordinario` y `Extra`.
+- Este bloque todavia no calcula dominicales, descansos obligatorios, alertas, incidencias ni reportes.
+- Siguiente paso recomendado: validar L3; despues Bloque L4 - domingo, descanso semanal y descanso obligatorio.
 
 ## Bloque revision de capturas manuales
 

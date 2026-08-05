@@ -964,7 +964,8 @@ Implementacion base 2026-08-04:
 - L2 agrega auditoria a `legal_parameters` con `reason`, `created_by`, `updated_by` y `metadata`.
 - `CompanyLegalParameterCatalog` define parametros internos editables por empresa y sus limites protegidos.
 - `/companies` muestra reglas base de Mexico en lectura y permite configurar parametros internos permitidos con vigencia y motivo.
-- No se calculan todavia horas extra, alertas, incidencias, reportes ni API.
+- L3 calcula `ordinary_minutes` y `overtime_minutes` por limite diario y semanal usando reglas versionadas o parametros de empresa.
+- No se calculan todavia alertas, incidencias, reportes ni API.
 
 ---
 
@@ -1059,7 +1060,7 @@ Reglas implementadas en el bloque base de calculo:
 - Una fecha sin entrada propia no genera jornada no programada separada cuando sus eventos pertenecen a la continuacion de la jornada anterior.
 - Al calcular, `work_days` actualiza el resumen visible de eventos validos con los eventos realmente usados por la version activa.
 - Las pausas completas se restan del total operativo; secuencias incompletas dejan la jornada en `under_review`.
-- `ordinary_minutes` replica el total operativo solo como base temporal; `overtime_minutes`, `sunday_minutes` y `mandatory_rest_minutes` permanecen en cero hasta el bloque de ordinario/extra y casos especiales.
+- `ordinary_minutes` y `overtime_minutes` se calculan desde L3 con limite diario por clasificacion y limite semanal lunes-domingo.
 - `night_minutes` se actualiza desde la clasificacion legal diaria inicial, descontando pausas.
 - `classification` puede ser `pending`, `diurnal`, `nocturnal` o `mixed`.
 - `rules_snapshot` conserva las versiones de reglas usadas para clasificar la jornada historica.
