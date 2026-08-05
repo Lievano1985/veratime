@@ -464,9 +464,9 @@ Bloque Work Days consulta operativa agrega `/work-days` como listado inicial de 
 Bloque revision de capturas manuales agrega aprobacion/rechazo de eventos `admin_manual` en `pending_review`. Aprobar cambia el evento a `valid` y refresca `work_days` de la fecha; rechazar cambia a `ignored` con motivo obligatorio. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque Work Day Calculations base agrega `work_day_calculations` versionado, `CalculateWorkDayAction`, `CalculateWorkDaysForDateRangeAction` y accion manual desde `/work-days`. Calcula pares entrada/salida, descuenta pausas completas, conserva snapshots y deja secuencias incompletas en revision. No incluye motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque Legal Rules versionado inicia motor legal con `legal_rules`, `legal_rule_versions`, `legal_parameters`, resolvers por fecha trabajada, seeder de reglas base y clasificacion diaria visible en `/work-days` para `work_day_calculations` activos. Clasifica como diurna, nocturna, mixta o pendiente y guarda snapshot de reglas aplicadas. No calcula todavia horas extra, dominicales, descansos obligatorios ni genera alertas.
-ADR-0005 define la linea de motor legal configurable: reglas base por pais, Mexico preconfigurado, reglas minimas protegidas, parametros internos configurables por empresa, overrides versionados y snapshots historicos. El siguiente bloque recomendado es L2 - configuracion legal por empresa antes de avanzar a ordinario/extra completo.
+ADR-0005 define la linea de motor legal configurable: reglas base por pais, Mexico preconfigurado, reglas minimas protegidas, parametros internos configurables por empresa, overrides versionados y snapshots historicos. L2 agrega configuracion legal por empresa y L3 inicia calculo ordinario/extra diario y semanal.
 EPIC-05 queda completo a nivel web/kiosco/manual para eventos fuente, sin API de negocio.
-No se implementaron horas extra, alertas ni incidencias.
+No se implementaron alertas ni incidencias.
 ```
 
 ## Sprint 3 — API y motor legal base
@@ -665,6 +665,9 @@ Se implementa la interfaz de importacion CSV dentro de `/scheduling/daily` para 
 
 Nota L2:
 La configuracion legal por empresa inicia en `feature/company-legal-configuration`. Usa `CompanyLegalParameterCatalog` para definir parametros internos permitidos y limites protegidos, agrega auditoria a `legal_parameters` y expone en `/companies` reglas base Mexico en lectura junto con parametros editables por empresa. No calcula horas extra ni crea alertas.
+
+Nota L3:
+Ordinario/extra inicia en `feature/work-day-ordinary-overtime-calculation`. `ApplyOrdinaryOvertimeForDateRangeAction` calcula minutos ordinarios y extra por limite diario y limite semanal lunes-domingo, usando reglas versionadas o parametros de empresa mas favorables. Actualiza `ordinary_minutes`, `overtime_minutes`, snapshots y explicacion en `work_day_calculations`. No crea alertas ni incidencias.
 
 | C. Plantillas de turno | Reemplazar horario simple por turnos reutilizables | B opcional | shift_templates, segmentos, UI | CRUD, cruces medianoche | Implementado/candidato a cierre: catalogo disponible sin calcular jornada | Mezclar flexible con turno rigido | 3 |
 | D. Modelos de horario weekly y calendar | Crear modelos, reglas semanales y aplicacion con herencia | C | `schedule_profiles`, `pattern_mode`, weekly rules, assignments | dominio, resolucion y UI | D1/D2 implementado/candidato a cierre: perfiles tecnicos conservados; UI visible reorganizada como modelos de horario y aplicacion de modelos; Bloques 3/4 aclaran filtros por camino operativo y fecha Dia 1 para ciclos | Publicacion prematura | 4 |

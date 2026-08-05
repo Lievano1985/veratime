@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\LegalRules\Actions\ClassifyWorkDayCalculationsForDateRangeAction;
+use App\Domains\LegalRules\Actions\ApplyOrdinaryOvertimeForDateRangeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\WorkDays\Actions\CalculateWorkDaysForDateRangeAction;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
@@ -114,7 +115,7 @@ new class extends Component {
         Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
     }
 
-    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, ClassifyWorkDayCalculationsForDateRangeAction $classifyAction, CurrentCompany $currentCompany): void
+    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, ClassifyWorkDayCalculationsForDateRangeAction $classifyAction, ApplyOrdinaryOvertimeForDateRangeAction $ordinaryOvertimeAction, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
@@ -139,13 +140,18 @@ new class extends Component {
             CarbonImmutable::parse($validated['date_from'])->toDateString(),
             CarbonImmutable::parse($validated['date_to'])->toDateString(),
         );
+        $ordinaryOvertimeResult = $ordinaryOvertimeAction->handle(
+            $company,
+            CarbonImmutable::parse($validated['date_from'])->toDateString(),
+            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+        );
 
         $this->dateFrom = CarbonImmutable::parse($validated['date_from'])->toDateString();
         $this->dateTo = CarbonImmutable::parse($validated['date_to'])->toDateString();
         $this->showCalculationPanel = false;
         $this->resetPage();
 
-        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos y {$classificationResult['classified']} clasificadas legalmente.");
+        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos, {$classificationResult['classified']} clasificadas y {$ordinaryOvertimeResult['calculated']} con ordinario/extra.");
     }
 
     public function updatedDateFrom(): void
@@ -335,6 +341,15 @@ new class extends Component {
             : 'Sin nocturna';
     }
 
+    private function calculationSplitLabel(?WorkDayCalculation $calculation, string $field): string
+    {
+        if (! $calculation || $calculation->classification === WorkDayCalculation::CLASSIFICATION_PENDING) {
+            return 'Pendiente';
+        }
+
+        return $this->minutesLabel((int) $calculation->{$field});
+    }
+
     private function lastRefreshLabel($company): string
     {
         if (! $company->setting?->work_days_last_refreshed_at) {
@@ -435,6 +450,8 @@ new class extends Component {
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Esperado</th>
                             <th class="px-4 py-3">Trabajado</th>
+                            <th class="px-4 py-3">Ordinario</th>
+                            <th class="px-4 py-3">Extra</th>
                             <th class="px-4 py-3">Legal</th>
                             <th class="px-4 py-3">Eventos</th>
                             <th class="px-4 py-3">Calculo</th>
@@ -457,6 +474,8 @@ new class extends Component {
                                 <td class="px-4 py-3">{{ $this->dayTypeLabel($workDay->day_type) }}</td>
                                 <td class="px-4 py-3">{{ $this->minutesLabel($workDay->expected_work_minutes) }}</td>
                                 <td class="px-4 py-3">{{ $this->calculationMinutesLabel($workDay->activeCalculation) }}</td>
+                                <td class="px-4 py-3">{{ $this->calculationSplitLabel($workDay->activeCalculation, 'ordinary_minutes') }}</td>
+                                <td class="px-4 py-3">{{ $this->calculationSplitLabel($workDay->activeCalculation, 'overtime_minutes') }}</td>
                                 <td class="px-4 py-3">
                                     <x-ui.badge variant="{{ $this->legalClassificationVariant($workDay->activeCalculation) }}">
                                         {{ $this->legalClassificationLabel($workDay->activeCalculation) }}
@@ -483,7 +502,7 @@ new class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
+                                <td colspan="12" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -576,12 +595,13 @@ new class extends Component {
                 <flux:textarea wire:model="calculationForm.reason" label="Motivo" placeholder="Opcional para trazabilidad del recalculo." rows="3" />
 
                 <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                    <p class="font-medium">Este bloque calcula base operativa y clasificacion legal diaria.</p>
+                    <p class="font-medium">Este bloque calcula base operativa, clasificacion legal y ordinario/extra.</p>
                     <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>Usa eventos validos ordenados por fecha real del hecho.</li>
                         <li>Genera una version activa y conserva versiones anteriores.</li>
                         <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
-                        <li>No calcula horas extra, alertas ni incidencias.</li>
+                        <li>Calcula minutos ordinarios y extra con reglas versionadas.</li>
+                        <li>No genera alertas ni incidencias.</li>
                     </ul>
                 </div>
             </div>
