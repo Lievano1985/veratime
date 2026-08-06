@@ -21,7 +21,7 @@
         'scheduling.profile-assignments' => 'Aplicacion de modelos',
         'scheduling.daily' => 'Programacion semanal',
         'time-clock.index' => 'Registro asistido',
-        'time-events.manual' => 'Captura justificada',
+        'time-events.manual' => 'Eventos',
         'work-days.index' => 'Jornadas',
         'kiosk.index' => 'Kiosco',
         'settings.profile' => 'Perfil',

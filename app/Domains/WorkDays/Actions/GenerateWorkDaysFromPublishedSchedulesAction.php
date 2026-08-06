@@ -6,6 +6,7 @@ use App\Domains\TimeRecords\Actions\ResolveValidTimeEventsForWorkDateAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
+use App\Models\DailyScheduleSegment;
 use App\Models\TimeEvent;
 use App\Models\WorkDay;
 use Illuminate\Support\Collection;
@@ -88,7 +89,7 @@ class GenerateWorkDaysFromPublishedSchedulesAction
         if ($assignment->day_type === 'shift') {
             $minutes = $assignment->segments
                 ->where('segment_type', 'work')
-                ->sum(fn ($segment): int => (int) $segment->duration_minutes);
+                ->sum(fn (DailyScheduleSegment $segment): int => $this->segmentWorkMinutes($segment));
 
             return $minutes > 0 ? $minutes : null;
         }
@@ -98,6 +99,19 @@ class GenerateWorkDaysFromPublishedSchedulesAction
         }
 
         return null;
+    }
+
+    private function segmentWorkMinutes(DailyScheduleSegment $segment): int
+    {
+        if ((int) $segment->duration_minutes > 0) {
+            return (int) $segment->duration_minutes;
+        }
+
+        if ($segment->starts_at_utc && $segment->ends_at_utc) {
+            return max(0, (int) $segment->starts_at_utc->diffInMinutes($segment->ends_at_utc));
+        }
+
+        return 0;
     }
 
     /**

@@ -727,7 +727,7 @@ class DailyScheduleCalendarUiTest extends TestCase
     {
         $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertTrue(Schema::hasTable('work_day_calculations'));
-        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertTrue(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
     }
 

@@ -2,8 +2,10 @@
 
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\RegisterWebTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\RejectManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
 use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
 use App\Domains\WorkDays\Actions\RefreshWorkDaysForDateRangeAction;
 use App\Models\TimeEvent;
@@ -20,6 +22,8 @@ new class extends Component {
     use WithPagination;
 
     public string $workerId = '';
+
+    public string $assistedWorkerId = '';
 
     public string $eventType = 'clock_in';
 
@@ -41,6 +45,16 @@ new class extends Component {
 
     public string $statusFilter = '';
 
+    public string $dateFromFilter = '';
+
+    public string $dateToFilter = '';
+
+    public string $workerSearch = '';
+
+    public bool $showCapturePanel = false;
+
+    public bool $showAssistedPanel = false;
+
     public function mount(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -51,6 +65,7 @@ new class extends Component {
             ->where('status', 'active')
             ->orderBy('full_name')
             ->value('id') ?? '');
+        $this->assistedWorkerId = $this->workerId;
 
         $now = CarbonImmutable::now($company->timezone);
         $this->occurredLocalDate = $now->toDateString();
@@ -97,7 +112,77 @@ new class extends Component {
 
         $this->reason = '';
         $this->resetPage();
+        $this->showCapturePanel = false;
         Session::flash('status', 'Captura manual guardada para revision.');
+    }
+
+    public function openCapturePanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [TimeEvent::class, $company]);
+
+        $now = CarbonImmutable::now($company->timezone);
+        $this->occurredLocalDate = $now->toDateString();
+        $this->occurredLocalTime = $now->format('H:i');
+        $this->showCapturePanel = true;
+    }
+
+    public function closeCapturePanel(): void
+    {
+        $this->showCapturePanel = false;
+        $this->reason = '';
+    }
+
+    public function openAssistedPanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [TimeEvent::class, $company]);
+
+        if ($this->assistedWorkerId === '') {
+            $this->assistedWorkerId = $this->workerId;
+        }
+
+        $this->showAssistedPanel = true;
+    }
+
+    public function closeAssistedPanel(): void
+    {
+        $this->showAssistedPanel = false;
+    }
+
+    public function recordAssisted(string $eventType, CurrentCompany $currentCompany, RegisterWebTimeEventAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [TimeEvent::class, $company]);
+
+        $validated = $this->validate([
+            'assistedWorkerId' => [
+                'required',
+                'integer',
+                Rule::exists('workers', 'id')
+                    ->where('company_id', $company->id)
+                    ->where('status', 'active'),
+            ],
+        ]);
+
+        $worker = Worker::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->findOrFail((int) $validated['assistedWorkerId']);
+
+        try {
+            $event = $action->handle($company, auth()->user(), $worker, $eventType);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'assistedWorkerId' => $exception->getMessage(),
+            ]);
+        }
+
+        $this->resetPage();
+        Session::flash('status', $this->eventMessage($event->event_type));
     }
 
     public function updatedSourceFilter(): void
@@ -107,6 +192,31 @@ new class extends Component {
 
     public function updatedStatusFilter(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatedDateFromFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateToFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedWorkerSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearEventFilters(): void
+    {
+        $this->sourceFilter = '';
+        $this->statusFilter = '';
+        $this->dateFromFilter = '';
+        $this->dateToFilter = '';
+        $this->workerSearch = '';
         $this->resetPage();
     }
 
@@ -240,7 +350,7 @@ new class extends Component {
         Session::flash('status', 'Evento de jornada anulado.');
     }
 
-    public function with(CurrentCompany $currentCompany): array
+    public function with(CurrentCompany $currentCompany, ResolveCurrentTimeRecordStateAction $resolveState): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
@@ -250,11 +360,31 @@ new class extends Component {
             ->where('status', 'active')
             ->orderBy('full_name')
             ->get();
+        $assistedWorker = filled($this->assistedWorkerId)
+            ? $workers->firstWhere('id', (int) $this->assistedWorkerId)
+            : null;
+        $relationship = $assistedWorker?->activeEmploymentRelationship()->with('center')->first();
+        $assistedState = $assistedWorker ? $resolveState->handle($company, $assistedWorker, null, $relationship?->center) : null;
 
         $events = $company->timeEvents()
             ->with(['worker', 'sourceUser', 'voidedBy'])
+            ->when($this->dateFromFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '>=', $this->dateFromFilter))
+            ->when($this->dateToFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '<=', $this->dateToFilter))
             ->when($this->sourceFilter !== '', fn ($query) => $query->where('source', $this->sourceFilter))
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
+            ->when($this->workerSearch !== '', function ($query): void {
+                $term = trim($this->workerSearch);
+
+                if ($term === '') {
+                    return;
+                }
+
+                $query->whereHas('worker', function ($workerQuery) use ($term): void {
+                    $workerQuery
+                        ->where('full_name', 'like', "%{$term}%")
+                        ->orWhere('employee_code', 'like', "%{$term}%");
+                });
+            })
             ->latest('occurred_at_utc')
             ->paginate(10);
 
@@ -264,6 +394,7 @@ new class extends Component {
             'events' => $events,
             'eventSources' => TimeEvent::SOURCES,
             'eventStatuses' => TimeEvent::STATUSES,
+            'assistedState' => $assistedState,
         ];
     }
 
@@ -284,6 +415,27 @@ new class extends Component {
             'break_start' => 'Inicio de pausa',
             'break_end' => 'Fin de pausa',
             default => $eventType,
+        };
+    }
+
+    private function eventMessage(string $eventType): string
+    {
+        return match ($eventType) {
+            'clock_in' => 'Entrada registrada.',
+            'clock_out' => 'Salida registrada.',
+            'break_start' => 'Inicio de pausa registrado.',
+            'break_end' => 'Fin de pausa registrado.',
+            default => 'Registro guardado.',
+        };
+    }
+
+    private function stateLabel(?string $state): string
+    {
+        return match ($state) {
+            'trabajando' => 'Trabajando',
+            'en_pausa' => 'En pausa',
+            'jornada_cerrada' => 'Jornada cerrada',
+            default => 'Sin entrada',
         };
     }
 
@@ -311,9 +463,20 @@ new class extends Component {
 }; ?>
 
 <section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
-    <div>
-        <flux:heading size="xl">Captura manual</flux:heading>
-        <flux:subheading>Registra eventos justificados sin calcular jornadas.</flux:subheading>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <flux:heading size="xl">Eventos</flux:heading>
+            <flux:subheading>Consulta eventos de jornada y usa herramientas de captura cuando aplique.</flux:subheading>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <flux:button type="button" variant="primary" wire:click="openAssistedPanel">
+                Captura asistida
+            </flux:button>
+            <flux:button type="button" variant="primary" wire:click="openCapturePanel">
+                Captura justificada
+            </flux:button>
+        </div>
     </div>
 
     @if (session('status'))
@@ -322,38 +485,15 @@ new class extends Component {
         </div>
     @endif
 
-    <form wire:submit="capture" class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 lg:grid-cols-2">
-        <flux:select label="Trabajador" wire:model="workerId">
-            <flux:select.option value="">Selecciona</flux:select.option>
-            @foreach ($workers as $worker)
-                <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
-            @endforeach
-        </flux:select>
-
-        <flux:select label="Tipo de evento" wire:model="eventType">
-            <flux:select.option value="clock_in">Entrada</flux:select.option>
-            <flux:select.option value="clock_out">Salida</flux:select.option>
-            <flux:select.option value="break_start">Inicio de pausa</flux:select.option>
-            <flux:select.option value="break_end">Fin de pausa</flux:select.option>
-        </flux:select>
-
-        <flux:input label="Fecha" type="date" wire:model="occurredLocalDate" />
-        <flux:input label="Hora" type="time" wire:model="occurredLocalTime" />
-
-        <div class="lg:col-span-2">
-            <flux:textarea label="Motivo" wire:model="reason" rows="4" placeholder="Describe por que se captura manualmente este evento." />
-        </div>
-
-        <div class="lg:col-span-2">
-            <flux:button type="submit" variant="primary">Guardar captura manual</flux:button>
-        </div>
-    </form>
-
     <section class="space-y-4">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div class="flex flex-col gap-3">
             <flux:heading>Eventos de jornada</flux:heading>
 
-            <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
+            <div class="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1.4fr_auto] xl:items-end">
+                <flux:input label="Desde" type="date" wire:model.live="dateFromFilter" />
+
+                <flux:input label="Hasta" type="date" wire:model.live="dateToFilter" />
+
                 <flux:select label="Fuente" wire:model.live="sourceFilter">
                     <flux:select.option value="">Todas</flux:select.option>
                     @foreach ($eventSources as $source)
@@ -367,6 +507,10 @@ new class extends Component {
                         <flux:select.option value="{{ $status }}">{{ $this->statusLabel($status) }}</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                <flux:input label="Trabajador" placeholder="Nombre o codigo" wire:model.live.debounce.400ms="workerSearch" />
+
+                <flux:button type="button" variant="ghost" wire:click="clearEventFilters">Limpiar</flux:button>
             </div>
         </div>
 
@@ -470,4 +614,106 @@ new class extends Component {
 
         {{ $events->links() }}
     </section>
+
+    <x-side-panel wire:model="showAssistedPanel" title="Captura asistida" subheading="Registra eventos en vivo para un trabajador activo." maxWidth="max-w-xl" closeMethod="closeAssistedPanel">
+        <div class="grid gap-5 p-6">
+            <flux:select label="Trabajador" wire:model.live="assistedWorkerId">
+                <flux:select.option value="">Selecciona</flux:select.option>
+                @foreach ($workers as $worker)
+                    <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            @if ($assistedState)
+                <div class="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900/60 sm:grid-cols-3">
+                    <div>
+                        <p class="text-xs uppercase text-zinc-500">Estado</p>
+                        <p class="font-medium">{{ $this->stateLabel($assistedState['state']) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase text-zinc-500">Fecha local</p>
+                        <p class="font-medium">{{ $assistedState['local_date'] }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase text-zinc-500">Zona horaria</p>
+                        <p class="font-medium">{{ $assistedState['timezone'] }}</p>
+                    </div>
+                </div>
+
+                @if ($assistedState['last_event'])
+                    <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <flux:heading>Ultimo evento</flux:heading>
+                        <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <dt class="text-xs uppercase text-zinc-500">Tipo</dt>
+                                <dd class="font-medium">{{ $this->eventLabel($assistedState['last_event']->event_type) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs uppercase text-zinc-500">Hora local</dt>
+                                <dd class="font-medium">{{ $assistedState['last_event']->occurred_local_time }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs uppercase text-zinc-500">Fuente</dt>
+                                <dd class="font-medium">{{ $assistedState['last_event']->source }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs uppercase text-zinc-500">Estado</dt>
+                                <dd class="font-medium">{{ $this->statusLabel($assistedState['last_event']->status) }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                @endif
+
+                <div class="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                    @if (in_array('clock_in', $assistedState['allowed_actions'], true))
+                        <flux:button type="button" variant="primary" wire:click="recordAssisted('clock_in')">Registrar entrada</flux:button>
+                    @endif
+                    @if (in_array('break_start', $assistedState['allowed_actions'], true))
+                        <flux:button type="button" variant="primary" wire:click="recordAssisted('break_start')">Iniciar pausa</flux:button>
+                    @endif
+                    @if (in_array('break_end', $assistedState['allowed_actions'], true))
+                        <flux:button type="button" variant="primary" wire:click="recordAssisted('break_end')">Terminar pausa</flux:button>
+                    @endif
+                    @if (in_array('clock_out', $assistedState['allowed_actions'], true))
+                        <flux:button type="button" variant="primary" wire:click="recordAssisted('clock_out')">Registrar salida</flux:button>
+                    @endif
+                    @if (empty($assistedState['allowed_actions']))
+                        <span class="text-sm text-zinc-500">No hay acciones disponibles para el estado actual.</span>
+                    @endif
+                </div>
+            @else
+                <p class="text-sm text-zinc-500">No hay trabajadores activos disponibles.</p>
+            @endif
+        </div>
+    </x-side-panel>
+
+    <x-side-panel wire:model="showCapturePanel" title="Captura justificada" subheading="Registra un evento justificado para revision." maxWidth="max-w-xl" closeMethod="closeCapturePanel">
+        <form wire:submit="capture" class="grid gap-4 p-6">
+            <flux:select label="Trabajador" wire:model="workerId">
+                <flux:select.option value="">Selecciona</flux:select.option>
+                @foreach ($workers as $worker)
+                    <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:select label="Tipo de evento" wire:model="eventType">
+                <flux:select.option value="clock_in">Entrada</flux:select.option>
+                <flux:select.option value="clock_out">Salida</flux:select.option>
+                <flux:select.option value="break_start">Inicio de pausa</flux:select.option>
+                <flux:select.option value="break_end">Fin de pausa</flux:select.option>
+            </flux:select>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input label="Fecha" type="date" wire:model="occurredLocalDate" />
+                <flux:input label="Hora" type="time" wire:model="occurredLocalTime" />
+            </div>
+
+            <flux:textarea label="Motivo" wire:model="reason" rows="5" placeholder="Describe por que se captura manualmente este evento." />
+
+            <div class="flex justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                <flux:button type="button" variant="ghost" wire:click="closeCapturePanel">Cancelar</flux:button>
+                <flux:button type="submit" variant="primary">Guardar captura manual</flux:button>
+            </div>
+        </form>
+    </x-side-panel>
 </section>

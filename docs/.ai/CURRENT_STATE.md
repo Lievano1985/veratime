@@ -327,7 +327,33 @@ Estado: L1, L2 y L3 integrados a `main`; L4 en progreso en rama `feature/work-da
   - genera 146 eventos idempotentes: web, kiosco y captura manual pendiente.
   - limpia las 10 claves antiguas del demo fechadas en `2026-08-17/18` para evitar pruebas futuras confusas.
 - Este bloque todavia no crea alertas, incidencias, cierres, conformidad, reportes ni API.
-- Siguiente paso recomendado: validar L4; despues iniciar alertas/calculos derivados o incidencias segun prioridad.
+- Siguiente paso recomendado: validar L4; despues iniciar incidencias/correcciones segun prioridad.
+
+## Bloque Alertas preventivas base
+
+Estado: en progreso en rama `feature/work-day-alerts-foundation`.
+
+- Tablas base:
+  - `alert_types`.
+  - `alerts`.
+- Modelos base:
+  - `AlertType`.
+  - `Alert`.
+- `AlertTypeSeeder` carga los tipos mínimos del MVP inicial:
+  - `incomplete_work_day`.
+  - `overtime_detected`.
+  - `twelve_hours_exceeded`.
+  - `sunday_work`.
+  - `mandatory_rest_work`.
+  - `six_consecutive_days`.
+- `EvaluateWorkDayAlertsAction` genera o actualiza alertas desde la version activa de `work_day_calculations`.
+- `EvaluateWorkDayAlertsForDateRangeAction` evalua alertas por empresa, rango y centro opcional.
+- `ProcessCompanyWorkDaysAction` ejecuta alertas despues de refrescar, calcular y aplicar motor legal disponible.
+- Las alertas son idempotentes por huella `company_id + work_day_id + tipo`; el recalculo no duplica y cierra alertas stale.
+- `/alerts` muestra un listado preventivo con filtros por fecha, centro, estado, severidad y busqueda.
+- La policy `AlertPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
+- No se implementan comentarios, resolucion manual, incidencias, bloqueos de cierre, reportes ni API.
+- Siguiente paso recomendado: validar UI de alertas; despues Bloque Incidencias base.
 
 ## Bloque revision de capturas manuales
 
@@ -421,7 +447,12 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - Seeder: `database/seeders/VeraTimeDemoSeeder.php`.
 - Ejecucion manual: `php artisan db:seed --class=VeraTimeDemoSeeder`.
 - Datos ficticios/locales: empresa demo, usuarios demo, centros, trabajadores, relaciones laborales, condiciones, credenciales kiosco, horarios, pausas, asignaciones, descansos obligatorios y eventos `time_events` demo.
-- No crea `work_days`, `work_day_calculations`, alertas, incidencias, reportes, API ni CSV.
+- Seeder operativo alineado: `database/seeders/VeraTimeOperationalVerificationSeeder.php`.
+- Ejecucion manual: `php artisan db:seed --class=VeraTimeOperationalVerificationSeeder`.
+- `DatabaseSeeder` llama el seeder operativo para que `migrate:fresh --seed` deje datos verificables.
+- Cubre la semana pasada `2026-07-27` a `2026-08-02` y la semana actual `2026-08-03` a `2026-08-09`.
+- Publica lotes semanales por centro, genera eventos demo limpios, refresca/calcula `work_days` y deja `Horario`, `Tipo`, `Esperado` y `Trabajado` alineados para revision manual.
+- No crea incidencias, cierres, conformidad, reportes ni API.
 ## UX-01 refinamiento general Sprint 2
 
 ## Consolidacion WFM propuesta

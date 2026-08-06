@@ -2,6 +2,7 @@
 
 namespace App\Domains\WorkDays\Actions;
 
+use App\Domains\Alerts\Actions\EvaluateWorkDayAlertsForDateRangeAction;
 use App\Domains\LegalRules\Actions\ApplyOrdinaryOvertimeForDateRangeAction;
 use App\Domains\LegalRules\Actions\ApplySpecialLegalCasesForDateRangeAction;
 use App\Domains\LegalRules\Actions\ClassifyWorkDayCalculationsForDateRangeAction;
@@ -26,6 +27,7 @@ class ProcessCompanyWorkDaysAction
         private readonly ClassifyWorkDayCalculationsForDateRangeAction $classify,
         private readonly ApplyOrdinaryOvertimeForDateRangeAction $ordinaryOvertime,
         private readonly ApplySpecialLegalCasesForDateRangeAction $specialLegalCases,
+        private readonly EvaluateWorkDayAlertsForDateRangeAction $alerts,
     ) {}
 
     /**
@@ -53,6 +55,7 @@ class ProcessCompanyWorkDaysAction
             $classificationResult = $this->classify->handle($company, $range['start_date'], $range['end_date'], $center);
             $ordinaryOvertimeResult = $this->ordinaryOvertime->handle($company, $range['start_date'], $range['end_date'], $center);
             $specialLegalCasesResult = $this->specialLegalCases->handle($company, $range['start_date'], $range['end_date'], $center);
+            $alertsResult = $this->alerts->handle($company, $range['start_date'], $range['end_date'], $center);
 
             $summary = [
                 'company_id' => $company->id,
@@ -70,6 +73,9 @@ class ProcessCompanyWorkDaysAction
                 'classified' => $classificationResult['classified'],
                 'ordinary_overtime' => $ordinaryOvertimeResult['calculated'],
                 'special_legal_cases' => $specialLegalCasesResult['calculated'],
+                'alerts_created_or_updated' => $alertsResult['created_or_updated'],
+                'alerts_closed' => $alertsResult['closed'],
+                'alerts_open' => $alertsResult['open'],
             ];
 
             $this->recordResult($settings, $summary);
@@ -92,6 +98,9 @@ class ProcessCompanyWorkDaysAction
                 'classified' => 0,
                 'ordinary_overtime' => 0,
                 'special_legal_cases' => 0,
+                'alerts_created_or_updated' => 0,
+                'alerts_closed' => 0,
+                'alerts_open' => 0,
                 'error' => $exception->getMessage(),
             ];
 

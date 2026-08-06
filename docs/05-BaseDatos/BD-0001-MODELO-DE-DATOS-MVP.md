@@ -1131,7 +1131,7 @@ weekly_limit_exceeded
 overtime_detected
 twelve_hours_exceeded
 insufficient_break
-six_consecutive_days
+weekly_rest_missing
 sunday_work
 mandatory_rest_work
 invalid_schedule
@@ -1180,6 +1180,16 @@ index(company_id, worker_id, detected_at)
 index(company_id, work_day_id)
 index(company_id, assigned_to, status)
 ```
+
+Implementacion base 2026-08-05:
+
+- `alert_types` y `alerts` existen como módulo preventivo inicial.
+- `AlertTypeSeeder` carga tipos mínimos para jornada incompleta, tiempo extra, más de 12 horas, domingo, descanso obligatorio y semana sin descanso.
+- Las alertas se generan desde `work_day_calculations` activos con `EvaluateWorkDayAlertsAction`.
+- La huella `fingerprint` evita duplicados por empresa, jornada y tipo de alerta.
+- Cuando un recalculo elimina la condición, las alertas abiertas del tipo gestionado se cierran automáticamente como `closed`.
+- `/alerts` permite consulta con filtros básicos.
+- No se implementan todavía `alert_comments`, resolución manual avanzada, incidencias, cierres, reportes ni API.
 
 ## 13.3 `alert_comments`
 
