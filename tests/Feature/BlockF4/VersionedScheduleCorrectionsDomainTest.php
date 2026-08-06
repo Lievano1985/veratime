@@ -167,7 +167,7 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
         $this->assertTrue(ScheduleBatch::query()->where('company_id', $cycle->id)->whereNull('version')->where('status', 'draft')->exists());
         $this->assertSame(2, ScheduleBatch::query()->where('company_id', $office->id)->count());
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertTrue(Schema::hasTable('alerts'));
     }
 
     private function seedPublishedScenarios(): void

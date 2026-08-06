@@ -62,12 +62,34 @@ it('sidebar shows time clock only to authorized roles', function (): void {
     $this->actingAs($authorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('Registro asistido');
+        ->assertSee('Eventos');
 
     $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
         ->assertOk()
         ->assertDontSee('Registro de jornada');
+});
+
+it('manual capture screen supports assisted registration panel', function (): void {
+    [$company, $worker] = webTimeFixture();
+    $user = webTimeUserWithCompany($company, 'rh');
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->set('assistedWorkerId', (string) $worker->id)
+        ->call('openAssistedPanel')
+        ->assertSet('showAssistedPanel', true)
+        ->assertSee('Captura asistida')
+        ->call('recordAssisted', 'clock_in')
+        ->assertSee('Entrada registrada.');
+
+    expect(TimeEvent::query()
+        ->where('company_id', $company->id)
+        ->where('worker_id', $worker->id)
+        ->where('source', 'web')
+        ->where('event_type', 'clock_in')
+        ->count())->toBe(1);
 });
 
 it('web registration action does not accept explicit occurrence time in sprint 2e', function (): void {
@@ -294,7 +316,7 @@ it('sprint 2e creates only time events and no calculation or kiosk modules', fun
     expect(Schema::hasTable('time_events'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeTrue()
         ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
-        ->and(Schema::hasTable('alerts'))->toBeFalse()
+        ->and(Schema::hasTable('alerts'))->toBeTrue()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse()
         ->and(Schema::hasTable('kiosk_sessions'))->toBeFalse();

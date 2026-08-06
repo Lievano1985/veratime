@@ -2,11 +2,14 @@
 
 use App\Models\Company;
 use App\Models\MandatoryRestDay;
+use App\Models\ScheduleBatch;
 use App\Models\TimeEvent;
 use App\Models\User;
+use App\Models\WorkDay;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
 use Database\Seeders\VeraTimeDemoSeeder;
+use Database\Seeders\VeraTimeOperationalVerificationSeeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
@@ -70,7 +73,42 @@ it('does not create future Sprint 3 or calculation modules', function (): void {
 
     expect(Schema::hasTable('work_days'))->toBeTrue()
         ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
-        ->and(Schema::hasTable('alerts'))->toBeFalse()
+        ->and(Schema::hasTable('alerts'))->toBeTrue()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse();
+});
+
+it('seeds operational weeks aligned from published calendar to work days', function (): void {
+    $this->seed(VeraTimeOperationalVerificationSeeder::class);
+    $this->seed(VeraTimeOperationalVerificationSeeder::class);
+
+    $company = Company::query()->where('tax_id', 'VTD260712XX1')->firstOrFail();
+    $bruno = Worker::query()->where('company_id', $company->id)->where('employee_code', 'VT-002')->firstOrFail();
+
+    expect(ScheduleBatch::query()
+        ->where('company_id', $company->id)
+        ->whereDate('period_start', '>=', '2026-07-27')
+        ->whereDate('period_end', '<=', '2026-08-09')
+        ->where('status', 'published')
+        ->count())->toBe(4)
+        ->and(WorkDay::query()
+            ->where('company_id', $company->id)
+            ->whereDate('work_date', '>=', '2026-07-27')
+            ->whereDate('work_date', '<=', '2026-08-09')
+            ->where('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
+            ->count())->toBe(0);
+
+    $workDay = WorkDay::query()
+        ->with(['activeCalculation', 'dailyScheduleAssignment.shiftTemplate'])
+        ->where('company_id', $company->id)
+        ->where('worker_id', $bruno->id)
+        ->whereDate('work_date', '2026-08-03')
+        ->firstOrFail();
+
+    expect($workDay->schedule_status)->toBe(WorkDay::SCHEDULE_STATUS_SCHEDULED)
+        ->and($workDay->day_type)->toBe('shift')
+        ->and($workDay->expected_work_minutes)->toBe(450)
+        ->and($workDay->valid_time_event_count)->toBe(4)
+        ->and($workDay->dailyScheduleAssignment?->shiftTemplate?->code)->toBe('NOCT75')
+        ->and($workDay->activeCalculation?->total_work_minutes)->toBe(450);
 });

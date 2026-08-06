@@ -96,7 +96,7 @@ new class extends Component {
         $this->showProcessPanel = false;
         $this->resetPage();
 
-        Session::flash('status', "Proceso de jornadas: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos y {$result['special_legal_cases']} con casos especiales revisados.");
+        Session::flash('status', "Proceso de jornadas: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos, {$result['special_legal_cases']} con casos especiales y {$result['alerts_created_or_updated']} alertas revisadas.");
     }
 
     public function updatedDateFrom(): void
@@ -520,7 +520,8 @@ new class extends Component {
                         <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
                         <li>Calcula minutos ordinarios y extra con reglas versionadas.</li>
                         <li>Identifica trabajo en domingo, descanso obligatorio y semanas sin descanso detectado.</li>
-                        <li>No genera alertas ni incidencias.</li>
+                        <li>Genera o cierra alertas preventivas segun el calculo vigente.</li>
+                        <li>No genera incidencias ni cierres.</li>
                     </ul>
                 </div>
             </div>

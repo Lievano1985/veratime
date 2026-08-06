@@ -53,11 +53,13 @@
 
                 @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompany]))
                     <flux:navlist.group heading="Registro de jornada" class="grid">
-                        <flux:navlist.item icon="clock" :href="route('time-clock.index')" :current="request()->routeIs('time-clock.*')" wire:navigate>Registro asistido</flux:navlist.item>
                         <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
-                        <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*')" wire:navigate>Captura justificada</flux:navlist.item>
+                        <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*') || request()->routeIs('time-clock.*')" wire:navigate>Eventos</flux:navlist.item>
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
+                        @endcan
+                        @can('viewAny', [\App\Models\Alert::class, $activeCompany])
+                            <flux:navlist.item icon="exclamation-triangle" :href="route('alerts.index')" :current="request()->routeIs('alerts.*')" wire:navigate>Alertas</flux:navlist.item>
                         @endcan
                     </flux:navlist.group>
                 @endif

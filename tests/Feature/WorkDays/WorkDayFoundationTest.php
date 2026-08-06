@@ -86,7 +86,7 @@ class WorkDayFoundationTest extends TestCase
         $this->assertSame(0, WorkDay::query()->where('company_id', $otherCompany->id)->count());
         $this->assertTrue(Schema::hasTable('work_days'));
         $this->assertTrue(Schema::hasTable('work_day_calculations'));
-        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertTrue(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
         $this->assertFalse(Schema::hasTable('reports'));
     }

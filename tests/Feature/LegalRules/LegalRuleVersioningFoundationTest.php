@@ -22,7 +22,7 @@ class LegalRuleVersioningFoundationTest extends TestCase
         $this->assertTrue(Schema::hasTable('legal_rule_versions'));
         $this->assertTrue(Schema::hasTable('legal_parameters'));
         $this->assertTrue(Schema::hasTable('work_day_calculations'));
-        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertTrue(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
         $this->assertFalse(Schema::hasTable('reports'));
     }

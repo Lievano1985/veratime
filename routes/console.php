@@ -48,7 +48,7 @@ Artisan::command('work-days:refresh {--company=} {--from=} {--to=} {--center=}',
 
     $result = $action->handle($company, $range['start_date'], $range['end_date'], $center, mode: 'manual_command');
 
-    $this->info("Jornadas procesadas: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos.");
+    $this->info("Jornadas procesadas: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos, {$result['alerts_created_or_updated']} alertas revisadas.");
 
     return 0;
 })->purpose('Refresh and calculate work_days for one company and date range.');
@@ -59,7 +59,7 @@ Artisan::command('work-days:auto-refresh', function (RunDueWorkDaysAutoRefreshAc
     $this->info('Empresas procesadas: '.$results->count());
 
     foreach ($results as $result) {
-        $this->line("Empresa {$result['company_id']}: {$result['total']} actualizadas, {$result['calculated']} calculadas ({$result['start_date']} a {$result['end_date']}).");
+        $this->line("Empresa {$result['company_id']}: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['alerts_created_or_updated']} alertas ({$result['start_date']} a {$result['end_date']}).");
     }
 
     return 0;

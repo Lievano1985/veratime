@@ -15,6 +15,7 @@ class WorkDay extends Model
 
     public const STATUS_PENDING = 'pending';
     public const STATUS_CALCULATED = 'calculated';
+    public const STATUS_WITH_ALERTS = 'with_alerts';
     public const STATUS_UNDER_REVIEW = 'under_review';
 
     public const SCHEDULE_STATUS_SCHEDULED = 'scheduled';

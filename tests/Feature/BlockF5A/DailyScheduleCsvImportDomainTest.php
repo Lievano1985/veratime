@@ -229,7 +229,7 @@ class DailyScheduleCsvImportDomainTest extends TestCase
         $this->assertTrue(ImportBatch::query()->where('company_id', $company->id)->where('status', 'applied')->exists());
         $this->assertTrue(ImportBatch::query()->where('company_id', $company->id)->where('status', 'invalid')->exists());
         $this->assertTrue(Schema::hasTable('work_days'));
-        $this->assertFalse(Schema::hasTable('alerts'));
+        $this->assertTrue(Schema::hasTable('alerts'));
         $this->assertFalse(Schema::hasTable('incidents'));
         $this->assertFalse(Schema::hasTable('reports'));
     }

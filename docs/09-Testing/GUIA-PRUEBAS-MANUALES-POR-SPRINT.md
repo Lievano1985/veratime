@@ -127,7 +127,6 @@ Reportar como mejora si ocurre cualquiera de estos casos:
 
 - Registro de jornada.
 - Motor legal.
-- Alertas.
 - Incidencias.
 - Reportes.
 - Conformidad digital.
@@ -1679,6 +1678,42 @@ php artisan test tests/Feature/LegalRules --stop-on-failure
 - Alertas.
 - Incidencias.
 - Cierres.
+- Reportes.
+- API.
+
+---
+
+## Bloque Alertas preventivas base
+
+**Estado:** Implementado/candidato a validacion.
+
+Este bloque genera alertas preventivas desde jornadas calculadas y las muestra en `/alerts`. No abre incidencias ni permite resolucion manual avanzada todavia.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Procesar jornadas | En `/work-days`, presionar `Procesar jornadas` para un rango con extras, domingo o semana sin descanso. | El resumen indica alertas revisadas. |
+| Listado | Entrar a `/alerts`. | Se muestran alertas con trabajador, jornada, centro, severidad, estado y fecha. |
+| Filtros | Filtrar por severidad, estado, centro y trabajador. | La tabla cambia sin mostrar alertas de otra empresa. |
+| Tiempo extra | Calcular una jornada con `overtime_minutes > 0`. | Se crea alerta `overtime_detected`. |
+| Domingo | Calcular una jornada con `sunday_minutes > 0`. | Se crea alerta `sunday_work`. |
+| Descanso semanal | Calcular semana natural sin dia de descanso. | Se crea una sola alerta `weekly_rest_missing` por trabajador y semana natural. |
+| Recalculo | Corregir/recalcular una jornada para quitar la condicion. | La alerta abierta queda `closed`; no se duplica. |
+| Supervisor | Entrar como supervisor. | No puede ver `/alerts`. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/Alerts --stop-on-failure
+```
+
+### No incluido todavia
+
+- Comentarios de alerta.
+- Resolucion manual avanzada.
+- Incidencias.
+- Bloqueo de cierres.
 - Reportes.
 - API.
 

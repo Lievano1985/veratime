@@ -43,7 +43,7 @@ it('authorized role sees manual capture screen', function (): void {
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('time-events.manual')
-        ->assertSee('Captura manual')
+        ->assertSee('Eventos')
         ->assertSee($worker->full_name);
 });
 
@@ -378,7 +378,7 @@ it('manual capture creates only time events and no future modules', function ():
     expect(Schema::hasTable('time_events'))->toBeTrue()
         ->and(Schema::hasTable('work_days'))->toBeTrue()
         ->and(Schema::hasTable('work_day_calculations'))->toBeTrue()
-        ->and(Schema::hasTable('alerts'))->toBeFalse()
+        ->and(Schema::hasTable('alerts'))->toBeTrue()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse()
         ->and(route('kiosk.index'))->toContain('/kiosk')
