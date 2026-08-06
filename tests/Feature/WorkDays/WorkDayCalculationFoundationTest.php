@@ -150,6 +150,43 @@ class WorkDayCalculationFoundationTest extends TestCase
         $this->assertCount(0, app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-08-18'));
     }
 
+    public function test_consecutive_overnight_shifts_do_not_mix_previous_morning_events_with_next_clock_in(): void
+    {
+        [$company, $relationship] = $this->relationshipFixture();
+        $this->timeEventOnDate($company, $relationship, 'clock_in', '2026-08-17', '22:00:00', '2026-08-18 04:00:00');
+        $this->timeEventOnDate($company, $relationship, 'break_start', '2026-08-18', '02:00:00', '2026-08-18 08:00:00');
+        $this->timeEventOnDate($company, $relationship, 'break_end', '2026-08-18', '02:30:00', '2026-08-18 08:30:00');
+        $this->timeEventOnDate($company, $relationship, 'clock_out', '2026-08-18', '06:00:00', '2026-08-18 12:00:00');
+        $this->timeEventOnDate($company, $relationship, 'clock_in', '2026-08-18', '22:00:00', '2026-08-19 04:00:00');
+        $this->timeEventOnDate($company, $relationship, 'break_start', '2026-08-19', '02:00:00', '2026-08-19 08:00:00');
+        $this->timeEventOnDate($company, $relationship, 'break_end', '2026-08-19', '02:30:00', '2026-08-19 08:30:00');
+        $this->timeEventOnDate($company, $relationship, 'clock_out', '2026-08-19', '06:00:00', '2026-08-19 12:00:00');
+
+        app(RefreshWorkDaysForDateRangeAction::class)->handle($company, '2026-08-17', '2026-08-19');
+        $summary = app(CalculateWorkDaysForDateRangeAction::class)->handle($company, '2026-08-17', '2026-08-19');
+
+        $firstWorkDay = WorkDay::query()
+            ->where('company_id', $company->id)
+            ->where('worker_id', $relationship->worker_id)
+            ->whereDate('work_date', '2026-08-17')
+            ->firstOrFail();
+        $secondWorkDay = WorkDay::query()
+            ->where('company_id', $company->id)
+            ->where('worker_id', $relationship->worker_id)
+            ->whereDate('work_date', '2026-08-18')
+            ->firstOrFail();
+
+        $this->assertSame(['total' => 2, 'calculated' => 2, 'under_review' => 0, 'skipped' => 0], $summary);
+        $this->assertSame(2, WorkDay::query()->where('company_id', $company->id)->count());
+        $this->assertSame(450, $firstWorkDay->activeCalculation->total_work_minutes);
+        $this->assertSame(450, $secondWorkDay->activeCalculation->total_work_minutes);
+        $this->assertSame([], $secondWorkDay->activeCalculation->result_snapshot['issues']);
+        $this->assertSame(
+            ['clock_in', 'break_start', 'break_end', 'clock_out'],
+            collect($secondWorkDay->activeCalculation->inputs_snapshot['events'])->pluck('event_type')->all(),
+        );
+    }
+
     public function test_equal_timestamps_have_deterministic_event_type_order(): void
     {
         [$company, $relationship, $workDay] = $this->workDayFixture();
@@ -191,13 +228,13 @@ class WorkDayCalculationFoundationTest extends TestCase
         $this->actingAs($company->users()->first())->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
-            ->call('openCalculationPanel')
-            ->set('calculationForm.date_from', '2026-08-03')
-            ->set('calculationForm.date_to', '2026-08-03')
-            ->set('calculationForm.reason', 'Prueba UI')
-            ->call('calculateWorkDays')
+            ->call('openProcessPanel')
+            ->set('processForm.date_from', '2026-08-03')
+            ->set('processForm.date_to', '2026-08-03')
+            ->set('processForm.reason', 'Prueba UI')
+            ->call('processWorkDays')
             ->assertHasNoErrors()
-            ->assertSee('Calculo de jornadas');
+            ->assertSee('Proceso de jornadas');
 
         $this->assertSame(1, WorkDayCalculation::query()->where('company_id', $company->id)->count());
     }

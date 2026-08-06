@@ -38,9 +38,9 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
         ->and(MandatoryRestDay::query()->where('type', 'electoral')->where('scope', 'subnational')->where('country_code', 'MX')->where('jurisdiction_code', 'MX-NLE')->count())->toBe(1)
         ->and(MandatoryRestDay::query()->where('capture_source', 'seeder')->count())->toBe(2)
         ->and(MandatoryRestDay::query()->where('source_reference', 'Referencia demo interna')->count())->toBe(1)
-        ->and($company->timeEvents()->count())->toBe(10)
-        ->and($company->timeEvents()->where('source', 'web')->count())->toBe(4)
-        ->and($company->timeEvents()->where('source', 'kiosk')->count())->toBe(4)
+        ->and($company->timeEvents()->count())->toBe(146)
+        ->and($company->timeEvents()->where('source', 'web')->count())->toBe(56)
+        ->and($company->timeEvents()->where('source', 'kiosk')->count())->toBe(88)
         ->and($company->timeEvents()->where('source', 'admin_manual')->count())->toBe(2);
 
     $credential = WorkerCredential::query()

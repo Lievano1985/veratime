@@ -47,34 +47,40 @@ class GenerateWorkDaysFromPublishedSchedulesAction
         $events = $this->validEvents->handle($company, $relationship, $date);
         $eventSummary = $this->eventSummary($events);
 
-        return WorkDay::query()->updateOrCreate(
-            [
+        $workDay = WorkDay::query()
+            ->where('company_id', $company->id)
+            ->where('worker_id', $worker->id)
+            ->whereDate('work_date', $date)
+            ->first() ?? new WorkDay([
                 'company_id' => $company->id,
                 'worker_id' => $worker->id,
                 'work_date' => $date,
+            ]);
+
+        $workDay->fill([
+            'employment_relationship_id' => $relationship->id,
+            'center_id' => $assignment->scheduleBatch->center_id,
+            'schedule_batch_id' => $assignment->schedule_batch_id,
+            'daily_schedule_assignment_id' => $assignment->id,
+            'timezone' => $assignment->timezone,
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => $assignment->day_type,
+            'expected_work_minutes' => $this->expectedWorkMinutes($assignment),
+            'valid_time_event_count' => $eventSummary['count'],
+            'first_event_at_utc' => $eventSummary['first_event_at_utc'],
+            'last_event_at_utc' => $eventSummary['last_event_at_utc'],
+            'valid_time_event_ids' => $eventSummary['ids'],
+            'metadata' => [
+                'schema_version' => 1,
+                'source' => 'published_schedule',
+                'snapshot_sha256' => $assignment->scheduleBatch->snapshot_sha256,
+                'batch_version' => $assignment->scheduleBatch->version,
             ],
-            [
-                'employment_relationship_id' => $relationship->id,
-                'center_id' => $assignment->scheduleBatch->center_id,
-                'schedule_batch_id' => $assignment->schedule_batch_id,
-                'daily_schedule_assignment_id' => $assignment->id,
-                'timezone' => $assignment->timezone,
-                'status' => WorkDay::STATUS_PENDING,
-                'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
-                'day_type' => $assignment->day_type,
-                'expected_work_minutes' => $this->expectedWorkMinutes($assignment),
-                'valid_time_event_count' => $eventSummary['count'],
-                'first_event_at_utc' => $eventSummary['first_event_at_utc'],
-                'last_event_at_utc' => $eventSummary['last_event_at_utc'],
-                'valid_time_event_ids' => $eventSummary['ids'],
-                'metadata' => [
-                    'schema_version' => 1,
-                    'source' => 'published_schedule',
-                    'snapshot_sha256' => $assignment->scheduleBatch->snapshot_sha256,
-                    'batch_version' => $assignment->scheduleBatch->version,
-                ],
-            ],
-        );
+        ]);
+        $workDay->save();
+
+        return $workDay->refresh();
     }
 
     private function expectedWorkMinutes(DailyScheduleAssignment $assignment): ?int

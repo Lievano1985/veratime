@@ -235,7 +235,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final y
 Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 
 - `work_days` existe como jornada operativa unica por empresa, trabajador y fecha.
-- `RefreshWorkDaysForDateRangeAction` orquesta la generacion por rango y centro opcional.
+- `RefreshWorkDaysForDateRangeAction` genera/actualiza jornadas por rango y centro opcional como Action interna.
+- `ProcessCompanyWorkDaysAction` orquesta el flujo operativo completo: refresca jornadas, calcula versiones y aplica motor legal disponible.
 - `GenerateWorkDaysFromPublishedSchedulesAction` crea/actualiza jornadas esperadas desde `daily_schedule_assignments` de batches `published`, aun sin eventos.
 - `GenerateUnscheduledWorkDaysFromTimeEventsAction` crea/actualiza jornadas no programadas cuando existen eventos validos sin programacion publicada.
 - `ResolveWorkDayForRelationshipDateAction` consulta una jornada por empresa, relacion laboral y fecha.
@@ -250,9 +251,10 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `company_settings` permite configurar `work_days_auto_refresh_time` por empresa.
 - Se guarda ultima ejecucion de jornadas con fecha UTC, estado y resumen JSON.
 - `/companies` solo conserva la hora automatica de jornadas dentro de configuracion.
-- `/work-days` permite ejecutar refresco manual por rango de fechas desde un panel lateral.
-- `work-days:refresh` permite refresco manual por empresa, rango y centro opcional.
-- `work-days:auto-refresh` evalua empresas activas con hora configurada y actualiza rango operativo por timezone local.
+- `/work-days` permite ejecutar `Procesar jornadas` desde un panel lateral.
+- El proceso manual sugiere el rango disponible hasta hoy y permite capturar rango solo para reproceso puntual.
+- `work-days:refresh` conserva el nombre tecnico, pero procesa refresco y calculo legal disponible por empresa, rango y centro opcional.
+- `work-days:auto-refresh` evalua empresas activas con hora configurada y procesa el rango disponible hasta hoy por timezone local.
 - El scheduler registra `work-days:auto-refresh` cada minuto con `withoutOverlapping`; en hosting/cPanel requiere cron de `php artisan schedule:run`.
 - El refresco automatico no se bloquea por ejecuciones manuales previas del mismo dia.
 - No se implementa `work_day_calculations`, motor legal, horas extra, alertas, incidencias, cierres, conformidad, reportes ni API.
@@ -263,7 +265,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 Estado: cerrado e integrado a `main`.
 
 - `/work-days` muestra las jornadas generadas por `work_days` con filtros basicos.
-- `/work-days` concentra la accion manual `Actualizar jornadas` en un panel lateral; configuracion de empresa solo conserva la hora automatica.
+- `/work-days` concentra la accion manual `Procesar jornadas` en un panel lateral; configuracion de empresa solo conserva la hora automatica.
 - La consulta se concentra en `ListWorkDaysAction`; Livewire solo orquesta filtros y render.
 - La policy `WorkDayPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
 - No se agregan calculos, motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
@@ -281,12 +283,12 @@ Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-f
 - Eventos de madrugada que continuan una entrada abierta del dia anterior pertenecen a la jornada del dia de entrada y no crean una segunda jornada no programada.
 - Cada calculo sincroniza `valid_time_event_count`, `valid_time_event_ids`, `first_event_at_utc` y `last_event_at_utc` con los eventos realmente usados.
 - Jornadas con eventos incompletos quedan `under_review`; jornadas sin eventos validos permanecen `pending`.
-- `/work-days` muestra minutos trabajados cuando hay calculo activo y permite ejecutar calculo manual desde un panel lateral.
+- `/work-days` muestra minutos trabajados cuando hay calculo activo; el calculo manual se ejecuta dentro del flujo unico `Procesar jornadas`.
 - No se implementan motor legal, clasificacion diurna/nocturna/mixta real, horas extra, alertas, incidencias, cierres, reportes ni API.
 
 ## Bloque Legal Rules versionado
 
-Estado: L1 y L2 integrados a `main`; L3 en progreso en rama `feature/work-day-ordinary-overtime-calculation`.
+Estado: L1, L2 y L3 integrados a `main`; L4 en progreso en rama `feature/work-day-special-legal-cases`.
 
 - Tablas base:
   - `legal_rules`.
@@ -315,8 +317,17 @@ Estado: L1 y L2 integrados a `main`; L3 en progreso en rama `feature/work-day-or
   - usa reglas versionadas de limite diario/semanal o parametros de empresa mas favorables.
   - guarda `ordinary_minutes`, `overtime_minutes`, snapshot de reglas y explicacion.
   - `/work-days` muestra columnas `Ordinario` y `Extra`.
-- Este bloque todavia no calcula dominicales, descansos obligatorios, alertas, incidencias ni reportes.
-- Siguiente paso recomendado: validar L3; despues Bloque L4 - domingo, descanso semanal y descanso obligatorio.
+- L4 agrega casos especiales:
+  - `ApplySpecialLegalCasesForDateRangeAction` identifica trabajo en domingo, descanso obligatorio y semana natural sin dia de descanso trabajado.
+  - reutiliza `ResolveMandatoryRestDaysForDateAction`, por lo que respeta descansos nacionales, subnacionales y de empresa.
+  - actualiza `sunday_minutes`, `mandatory_rest_minutes`, snapshots y explicacion de la version activa.
+  - `/work-days` ejecuta L4 despues de ordinario/extra y muestra columna compacta `Especiales`.
+- Demo:
+  - `VeraTimeDemoSeeder` siembra eventos de asistencia del `2026-07-20` al `2026-08-05` para pruebas de dos semanas anteriores y semana actual hasta hoy.
+  - genera 146 eventos idempotentes: web, kiosco y captura manual pendiente.
+  - limpia las 10 claves antiguas del demo fechadas en `2026-08-17/18` para evitar pruebas futuras confusas.
+- Este bloque todavia no crea alertas, incidencias, cierres, conformidad, reportes ni API.
+- Siguiente paso recomendado: validar L4; despues iniciar alertas/calculos derivados o incidencias segun prioridad.
 
 ## Bloque revision de capturas manuales
 

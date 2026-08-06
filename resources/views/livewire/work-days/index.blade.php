@@ -1,11 +1,8 @@
 <?php
 
-use App\Domains\LegalRules\Actions\ClassifyWorkDayCalculationsForDateRangeAction;
-use App\Domains\LegalRules\Actions\ApplyOrdinaryOvertimeForDateRangeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
-use App\Domains\WorkDays\Actions\CalculateWorkDaysForDateRangeAction;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
-use App\Domains\WorkDays\Actions\RunCompanyWorkDaysRefreshAction;
+use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Models\WorkDayCalculation;
 use App\Models\WorkDay;
 use Carbon\CarbonImmutable;
@@ -36,13 +33,9 @@ new class extends Component {
     #[Url]
     public string $search = '';
 
-    public array $refreshForm = [];
+    public array $processForm = [];
 
-    public array $calculationForm = [];
-
-    public bool $showRefreshPanel = false;
-
-    public bool $showCalculationPanel = false;
+    public bool $showProcessPanel = false;
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -55,103 +48,55 @@ new class extends Component {
 
         $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString();
         $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString();
-        $this->loadRefreshForm($company);
-        $this->loadCalculationForm($company);
+        $this->loadProcessForm($company);
     }
 
-    public function openRefreshPanel(CurrentCompany $currentCompany): void
+    public function openProcessPanel(CurrentCompany $currentCompany, ProcessCompanyWorkDaysAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
-        $this->loadRefreshForm($company);
-        $this->showRefreshPanel = true;
+        $this->loadProcessForm($company, $action);
+        $this->showProcessPanel = true;
     }
 
-    public function closeRefreshPanel(): void
+    public function closeProcessPanel(): void
     {
-        $this->showRefreshPanel = false;
+        $this->showProcessPanel = false;
     }
 
-    public function openCalculationPanel(CurrentCompany $currentCompany): void
-    {
-        $company = $this->currentCompanyOrFail($currentCompany);
-
-        Gate::authorize('viewAny', [WorkDay::class, $company]);
-
-        $this->loadCalculationForm($company);
-        $this->showCalculationPanel = true;
-    }
-
-    public function closeCalculationPanel(): void
-    {
-        $this->showCalculationPanel = false;
-    }
-
-    public function refreshWorkDays(RunCompanyWorkDaysRefreshAction $action, CurrentCompany $currentCompany): void
+    public function processWorkDays(ProcessCompanyWorkDaysAction $action, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
         $validated = $this->validate([
-            'refreshForm.date_from' => ['required', 'date'],
-            'refreshForm.date_to' => ['required', 'date', 'after_or_equal:refreshForm.date_from'],
-        ])['refreshForm'];
+            'processForm.date_from' => ['nullable', 'date', 'required_with:processForm.date_to'],
+            'processForm.date_to' => ['nullable', 'date', 'required_with:processForm.date_from', 'after_or_equal:processForm.date_from'],
+            'processForm.reason' => ['nullable', 'string', 'max:500'],
+        ])['processForm'];
+
+        $startDate = blank($validated['date_from'] ?? null) ? null : CarbonImmutable::parse($validated['date_from'])->toDateString();
+        $endDate = blank($validated['date_to'] ?? null) ? null : CarbonImmutable::parse($validated['date_to'])->toDateString();
 
         $result = $action->handle(
             $company,
-            CarbonImmutable::parse($validated['date_from'])->toDateString(),
-            CarbonImmutable::parse($validated['date_to'])->toDateString(),
-            mode: 'manual_ui',
-        );
-
-        $this->dateFrom = CarbonImmutable::parse($validated['date_from'])->toDateString();
-        $this->dateTo = CarbonImmutable::parse($validated['date_to'])->toDateString();
-        $this->showRefreshPanel = false;
-        $this->resetPage();
-
-        Session::flash('status', "Jornadas actualizadas: {$result['total']} total, {$result['scheduled']} programadas y {$result['unscheduled']} no programadas.");
-    }
-
-    public function calculateWorkDays(CalculateWorkDaysForDateRangeAction $action, ClassifyWorkDayCalculationsForDateRangeAction $classifyAction, ApplyOrdinaryOvertimeForDateRangeAction $ordinaryOvertimeAction, CurrentCompany $currentCompany): void
-    {
-        $company = $this->currentCompanyOrFail($currentCompany);
-
-        Gate::authorize('viewAny', [WorkDay::class, $company]);
-
-        $validated = $this->validate([
-            'calculationForm.date_from' => ['required', 'date'],
-            'calculationForm.date_to' => ['required', 'date', 'after_or_equal:calculationForm.date_from'],
-            'calculationForm.reason' => ['nullable', 'string', 'max:500'],
-        ])['calculationForm'];
-
-        $result = $action->handle(
-            $company,
-            CarbonImmutable::parse($validated['date_from'])->toDateString(),
-            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+            $startDate,
+            $endDate,
             actor: auth()->user(),
+            mode: 'manual_ui',
             generatedByType: WorkDayCalculation::GENERATED_BY_USER,
-            reason: trim((string) ($validated['reason'] ?? '')) ?: 'Calculo manual desde jornadas',
-        );
-        $classificationResult = $classifyAction->handle(
-            $company,
-            CarbonImmutable::parse($validated['date_from'])->toDateString(),
-            CarbonImmutable::parse($validated['date_to'])->toDateString(),
-        );
-        $ordinaryOvertimeResult = $ordinaryOvertimeAction->handle(
-            $company,
-            CarbonImmutable::parse($validated['date_from'])->toDateString(),
-            CarbonImmutable::parse($validated['date_to'])->toDateString(),
+            reason: trim((string) ($validated['reason'] ?? '')) ?: 'Proceso manual desde jornadas',
         );
 
-        $this->dateFrom = CarbonImmutable::parse($validated['date_from'])->toDateString();
-        $this->dateTo = CarbonImmutable::parse($validated['date_to'])->toDateString();
-        $this->showCalculationPanel = false;
+        $this->dateFrom = $result['start_date'];
+        $this->dateTo = $result['end_date'];
+        $this->showProcessPanel = false;
         $this->resetPage();
 
-        Session::flash('status', "Calculo de jornadas: {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos, {$classificationResult['classified']} clasificadas y {$ordinaryOvertimeResult['calculated']} con ordinario/extra.");
+        Session::flash('status', "Proceso de jornadas: {$result['total']} actualizadas, {$result['calculated']} calculadas, {$result['under_review']} en revision, {$result['skipped']} sin eventos validos y {$result['special_legal_cases']} con casos especiales revisados.");
     }
 
     public function updatedDateFrom(): void
@@ -350,6 +295,29 @@ new class extends Component {
         return $this->minutesLabel((int) $calculation->{$field});
     }
 
+    private function specialCasesLabel(?WorkDayCalculation $calculation): string
+    {
+        if (! $calculation || $calculation->classification === WorkDayCalculation::CLASSIFICATION_PENDING) {
+            return 'Pendiente';
+        }
+
+        $labels = [];
+
+        if ($calculation->sunday_minutes > 0) {
+            $labels[] = 'Dom '.$this->minutesLabel($calculation->sunday_minutes);
+        }
+
+        if ($calculation->mandatory_rest_minutes > 0) {
+            $labels[] = 'Obl '.$this->minutesLabel($calculation->mandatory_rest_minutes);
+        }
+
+        if ((bool) data_get($calculation->result_snapshot, 'special_legal_cases.weekly_rest.requires_review')) {
+            $labels[] = 'Sin descanso semanal';
+        }
+
+        return $labels === [] ? 'Sin especiales' : implode(' | ', $labels);
+    }
+
     private function lastRefreshLabel($company): string
     {
         if (! $company->setting?->work_days_last_refreshed_at) {
@@ -361,25 +329,13 @@ new class extends Component {
             ->format('Y-m-d H:i');
     }
 
-    private function loadRefreshForm($company): void
+    private function loadProcessForm($company, ?ProcessCompanyWorkDaysAction $action = null): void
     {
-        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
-            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+        $range = $action?->defaultAvailableRange($company);
 
-        $this->refreshForm = [
-            'date_from' => $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString(),
-            'date_to' => $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString(),
-        ];
-    }
-
-    private function loadCalculationForm($company): void
-    {
-        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
-            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
-
-        $this->calculationForm = [
-            'date_from' => $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString(),
-            'date_to' => $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString(),
+        $this->processForm = [
+            'date_from' => $range['start_date'] ?? '',
+            'date_to' => $range['end_date'] ?? '',
             'reason' => '',
         ];
     }
@@ -393,11 +349,8 @@ new class extends Component {
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <flux:button type="button" wire:click="openCalculationPanel">
-                Calcular jornadas
-            </flux:button>
-            <flux:button type="button" variant="primary" wire:click="openRefreshPanel">
-                Actualizar jornadas
+            <flux:button type="button" variant="primary" wire:click="openProcessPanel">
+                Procesar jornadas
             </flux:button>
         </div>
     </div>
@@ -452,6 +405,7 @@ new class extends Component {
                             <th class="px-4 py-3">Trabajado</th>
                             <th class="px-4 py-3">Ordinario</th>
                             <th class="px-4 py-3">Extra</th>
+                            <th class="px-4 py-3">Especiales</th>
                             <th class="px-4 py-3">Legal</th>
                             <th class="px-4 py-3">Eventos</th>
                             <th class="px-4 py-3">Calculo</th>
@@ -476,6 +430,7 @@ new class extends Component {
                                 <td class="px-4 py-3">{{ $this->calculationMinutesLabel($workDay->activeCalculation) }}</td>
                                 <td class="px-4 py-3">{{ $this->calculationSplitLabel($workDay->activeCalculation, 'ordinary_minutes') }}</td>
                                 <td class="px-4 py-3">{{ $this->calculationSplitLabel($workDay->activeCalculation, 'overtime_minutes') }}</td>
+                                <td class="whitespace-nowrap px-4 py-3">{{ $this->specialCasesLabel($workDay->activeCalculation) }}</td>
                                 <td class="px-4 py-3">
                                     <x-ui.badge variant="{{ $this->legalClassificationVariant($workDay->activeCalculation) }}">
                                         {{ $this->legalClassificationLabel($workDay->activeCalculation) }}
@@ -502,7 +457,7 @@ new class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
+                                <td colspan="13" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -514,12 +469,12 @@ new class extends Component {
     </section>
 
     <x-side-panel
-        wire:model="showRefreshPanel"
-        title="Actualizar jornadas"
-        subheading="Ejecuta el refresco manual de jornadas para el rango indicado."
-        labelledby="refresh-work-days-title"
+        wire:model="showProcessPanel"
+        title="Procesar jornadas"
+        subheading="Actualiza jornadas disponibles y calcula resultados operativos hasta hoy."
+        labelledby="process-work-days-title"
     >
-        <form wire:submit="refreshWorkDays" class="flex flex-1 flex-col overflow-y-auto">
+        <form wire:submit="processWorkDays" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
                 <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
                     <dl class="grid gap-3">
@@ -528,8 +483,8 @@ new class extends Component {
                             <dd class="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Zona horaria</dt>
-                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">{{ $company->setting?->default_timezone ?: $company->timezone }}</dd>
+                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Alcance</dt>
+                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">Datos disponibles hasta hoy. Las fechas permiten reprocesar un rango puntual.</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Hora automatica</dt>
@@ -542,73 +497,37 @@ new class extends Component {
                     </dl>
                 </div>
 
-                <flux:input wire:model="refreshForm.date_from" label="Desde" type="date" required />
-                <flux:input wire:model="refreshForm.date_to" label="Hasta" type="date" required />
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <flux:input wire:model="processForm.date_from" label="Desde" type="date" />
+                    <flux:input wire:model="processForm.date_to" label="Hasta" type="date" />
+                </div>
+                <flux:textarea wire:model="processForm.reason" label="Motivo" placeholder="Opcional para trazabilidad del reproceso." rows="3" />
 
                 @if ($company->setting?->work_days_last_refreshed_at)
                     <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                        Ultima actualizacion: {{ $company->setting->work_days_last_refreshed_at->timezone($company->setting->default_timezone ?: $company->timezone)->format('Y-m-d H:i') }}
+                        Ultima ejecucion: {{ $company->setting->work_days_last_refreshed_at->timezone($company->setting->default_timezone ?: $company->timezone)->format('Y-m-d H:i') }}
                         - {{ $company->setting->work_days_last_refresh_status }}
                     </div>
                 @endif
 
-                <div class="rounded-md border border-sky-100 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-950 dark:bg-sky-950/40 dark:text-sky-100">
-                    <p class="font-medium">Al ejecutar se actualizara:</p>
-                    <ul class="mt-2 list-disc space-y-1 pl-5">
-                        <li>Jornadas programadas desde horarios publicados del rango.</li>
-                        <li>Jornadas no programadas cuando existan eventos validos sin horario publicado.</li>
-                        <li>Eventos anulados y capturas pendientes de revision quedan fuera.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closeRefreshPanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Actualizar</flux:button>
-            </div>
-        </form>
-    </x-side-panel>
-
-    <x-side-panel
-        wire:model="showCalculationPanel"
-        title="Calcular jornadas"
-        subheading="Genera una version de calculo operativo para las jornadas con eventos validos."
-        labelledby="calculate-work-days-title"
-    >
-        <form wire:submit="calculateWorkDays" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
-                    <dl class="grid gap-3">
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Empresa</dt>
-                            <dd class="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Alcance</dt>
-                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">Jornadas del rango seleccionado con eventos validos.</dd>
-                        </div>
-                    </dl>
-                </div>
-
-                <flux:input wire:model="calculationForm.date_from" label="Desde" type="date" required />
-                <flux:input wire:model="calculationForm.date_to" label="Hasta" type="date" required />
-                <flux:textarea wire:model="calculationForm.reason" label="Motivo" placeholder="Opcional para trazabilidad del recalculo." rows="3" />
-
                 <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                    <p class="font-medium">Este bloque calcula base operativa, clasificacion legal y ordinario/extra.</p>
+                    <p class="font-medium">Al ejecutar se procesara:</p>
                     <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>Jornadas programadas desde horarios publicados.</li>
+                        <li>Jornadas no programadas cuando existan eventos validos sin horario.</li>
                         <li>Usa eventos validos ordenados por fecha real del hecho.</li>
                         <li>Genera una version activa y conserva versiones anteriores.</li>
                         <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
                         <li>Calcula minutos ordinarios y extra con reglas versionadas.</li>
+                        <li>Identifica trabajo en domingo, descanso obligatorio y semanas sin descanso detectado.</li>
                         <li>No genera alertas ni incidencias.</li>
                     </ul>
                 </div>
             </div>
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closeCalculationPanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Calcular</flux:button>
+                <flux:button type="button" variant="ghost" wire:click="closeProcessPanel">Cancelar</flux:button>
+                <flux:button type="submit" variant="primary">Procesar</flux:button>
             </div>
         </form>
     </x-side-panel>

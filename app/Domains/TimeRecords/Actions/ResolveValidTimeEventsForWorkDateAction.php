@@ -27,6 +27,11 @@ class ResolveValidTimeEventsForWorkDateAction
             ->whereDate('occurred_local_date', $date)
             ->get();
 
+        if ($events->contains(fn (TimeEvent $event): bool => $event->event_type === 'clock_in')
+            && $this->belongsToPreviousOpenWorkDate($company, $relationship, $date)) {
+            $events = $this->eventsFromFirstClockIn($events);
+        }
+
         if ($events->isNotEmpty()
             && ! $events->contains(fn (TimeEvent $event): bool => $event->event_type === 'clock_in')
             && $this->belongsToPreviousOpenWorkDate($company, $relationship, $date)) {
@@ -125,6 +130,27 @@ class ResolveValidTimeEventsForWorkDateAction
             if ($event->event_type === 'clock_out') {
                 break;
             }
+        }
+
+        return $selected;
+    }
+
+    /**
+     * @param Collection<int, TimeEvent> $events
+     * @return Collection<int, TimeEvent>
+     */
+    private function eventsFromFirstClockIn(Collection $events): Collection
+    {
+        $selected = new Collection;
+        $started = false;
+
+        foreach ($events as $event) {
+            if (! $started && $event->event_type !== 'clock_in') {
+                continue;
+            }
+
+            $started = true;
+            $selected->push($event);
         }
 
         return $selected;

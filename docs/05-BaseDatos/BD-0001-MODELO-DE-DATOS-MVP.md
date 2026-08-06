@@ -1014,7 +1014,9 @@ Implementacion base 2026-08-03:
 - `work_days` se genera desde programacion diaria publicada aunque no existan eventos.
 - Eventos validos sin programacion publicada crean jornadas `schedule_status = unscheduled`.
 - Eventos anulados no participan.
-- El refresco operativo puede ejecutarse manualmente desde `/work-days`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
+- La operacion visible usa `ProcessCompanyWorkDaysAction`: refresca jornadas disponibles hasta hoy, calcula versiones pendientes/stale y aplica motor legal disponible en una sola ejecucion.
+- El rango manual queda para reproceso puntual; el proceso por defecto busca la primera evidencia disponible hasta la fecha local actual.
+- El proceso operativo puede ejecutarse manualmente desde `/work-days`, por comando `work-days:refresh` o automaticamente con `work-days:auto-refresh`.
 - La hora automatica se configura en `company_settings.work_days_auto_refresh_time` y se evalua por timezone local de la empresa.
 - `work_day_calculations` se implementa primero como calculo operativo base versionado; motor legal, alertas, incidencias, cierres y reportes siguen pendientes.
 
@@ -1062,6 +1064,9 @@ Reglas implementadas en el bloque base de calculo:
 - Las pausas completas se restan del total operativo; secuencias incompletas dejan la jornada en `under_review`.
 - `ordinary_minutes` y `overtime_minutes` se calculan desde L3 con limite diario por clasificacion y limite semanal lunes-domingo.
 - `night_minutes` se actualiza desde la clasificacion legal diaria inicial, descontando pausas.
+- `sunday_minutes` y `mandatory_rest_minutes` se calculan desde L4 para trabajo en domingo y descansos obligatorios vigentes.
+- L4 reutiliza `mandatory_rest_days` para descansos nacionales, subnacionales y de empresa; el resultado queda congelado en `rules_snapshot.special_legal_cases` y `result_snapshot.special_legal_cases`.
+- L4 deja en snapshot la revision de descanso semanal por semana natural lunes-domingo; si detecta trabajo los 7 dias marca `requires_review`, pero no crea alertas ni incidencias.
 - `classification` puede ser `pending`, `diurnal`, `nocturnal` o `mixed`.
 - `rules_snapshot` conserva las versiones de reglas usadas para clasificar la jornada historica.
 - No crea alertas, incidencias, cierres, conformidad, reportes ni API.
