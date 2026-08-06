@@ -1524,7 +1524,7 @@ Este bloque agrega la forma operativa de actualizar `work_days`: manual desde `/
 | Caso | Accion | Resultado esperado |
 |---|---|---|
 | Hora automatica | Entrar a `/companies`, editar configuracion y guardar una hora en `Hora automatica de jornadas`. | La hora se conserva al recargar y no aparece boton manual de actualizar jornadas. |
-| Refresco manual UI | En `/work-days`, presionar `Actualizar jornadas`, seleccionar rango en el panel lateral y confirmar. | Se muestra mensaje con total, programadas y no programadas. |
+| Proceso manual UI | En `/work-days`, presionar `Procesar jornadas`, revisar el rango sugerido o capturar un rango puntual y confirmar. | Se muestra mensaje con jornadas actualizadas, calculadas, en revision y sin eventos validos. |
 | Jornada esperada | Publicar una semana, refrescar el rango y revisar base/pruebas. | Se crean jornadas desde horarios publicados aunque no existan eventos. |
 | Evento sin horario | Registrar evento valido en fecha sin horario publicado y refrescar. | Se crea jornada `unscheduled`. |
 | Automatico | Configurar hora local, ejecutar `php artisan work-days:auto-refresh` en esa hora. | Procesa solo empresas activas vencidas y guarda ultimo resumen. |
@@ -1568,7 +1568,7 @@ Este bloque permite ver las jornadas ya generadas por `work_days`. Es una consul
 | Caso | Accion | Resultado esperado |
 |---|---|---|
 | Acceso manager | Entrar con owner/admin/rh y abrir `/work-days`. | Carga el listado de jornadas de la empresa activa. |
-| Actualizar jornadas | En `/work-days`, presionar `Actualizar jornadas`. | Abre panel lateral con rango; no aparece en configuracion de empresa. |
+| Procesar jornadas | En `/work-days`, presionar `Procesar jornadas`. | Abre panel lateral con rango sugerido hasta hoy; no aparece en configuracion de empresa. |
 | Filtros | Usar fecha, centro, tipo de horario o busqueda por trabajador. | La tabla se filtra sin mezclar datos de otras empresas. |
 | Jornada programada | Refrescar jornadas desde una semana publicada y abrir `/work-days`. | Aparece con badge `Programada`, tipo de dia y minutos esperados. |
 | Jornada no programada | Refrescar eventos validos sin horario publicado y abrir `/work-days`. | Aparece con badge `No programada` y conteo de eventos. |
@@ -1608,7 +1608,7 @@ Este bloque calcula una version operativa inicial de cada jornada con eventos va
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Calculo manual | En `/work-days`, presionar `Calcular jornadas`, seleccionar rango y confirmar. | Se muestra resumen de calculadas, en revision y sin eventos validos. |
+| Calculo manual | En `/work-days`, presionar `Procesar jornadas`, seleccionar rango si se requiere reproceso y confirmar. | Actualiza jornadas y calcula automaticamente las que no tienen calculo o quedaron stale/en revision. |
 | Jornada completa | Tener entrada y salida validas en el mismo dia, actualizar jornadas y calcular. | La fila muestra estado `Calculada` y minutos trabajados. |
 | Pausa completa | Registrar entrada, inicio de pausa, fin de pausa y salida; calcular. | Los minutos trabajados descuentan la pausa completa. |
 | Secuencia incompleta | Registrar solo entrada o dejar pausa abierta; calcular. | La jornada queda `En revision`, sin borrar eventos. |
@@ -1662,6 +1662,10 @@ Este bloque crea la base tecnica para reglas legales versionadas, aplica clasifi
 | Parametro mas favorable | En `/companies`, bajar el limite interno diurno a 450 minutos y recalcular una jornada de 480 minutos. | La jornada queda con 450 minutos ordinarios y 30 extra. |
 | Extra semanal | Calcular siete jornadas de 8 h en la misma semana natural. | La septima jornada queda como extra cuando se supera el limite semanal. |
 | Pendiente legal | Dejar una jornada con clasificacion `Pendiente`. | Ordinario y extra quedan pendientes o en 0 hasta resolver la clasificacion. |
+| Trabajo en domingo | Registrar eventos validos en domingo, actualizar y calcular jornadas. | La columna `Especiales` muestra minutos de domingo y conserva snapshot. |
+| Descanso obligatorio empresa | Crear un descanso obligatorio interno para la empresa en la fecha trabajada y recalcular. | La columna `Especiales` muestra minutos obligatorios y el snapshot referencia el descanso. |
+| Descanso obligatorio nacional | Usar un descanso nacional vigente para MX y recalcular una jornada de esa fecha. | La jornada marca descanso obligatorio sin depender de otra empresa. |
+| Semana sin descanso | Calcular siete dias trabajados en una semana lunes-domingo. | `Especiales` marca semana sin descanso para revision futura; no crea alerta ni incidencia. |
 
 Comando sugerido:
 

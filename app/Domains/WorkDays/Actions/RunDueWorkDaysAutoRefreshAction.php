@@ -3,13 +3,14 @@
 namespace App\Domains\WorkDays\Actions;
 
 use App\Models\Company;
+use App\Models\WorkDayCalculation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class RunDueWorkDaysAutoRefreshAction
 {
     public function __construct(
-        private readonly RunCompanyWorkDaysRefreshAction $refreshCompany,
+        private readonly ProcessCompanyWorkDaysAction $processCompany,
     ) {}
 
     /**
@@ -31,12 +32,13 @@ class RunDueWorkDaysAutoRefreshAction
                         continue;
                     }
 
-                    $range = $this->refreshCompany->defaultAutomaticRange($company, $nowUtc);
-                    $results->push($this->refreshCompany->handle(
+                    $range = $this->processCompany->defaultAvailableRange($company, $nowUtc);
+                    $results->push($this->processCompany->handle(
                         $company,
                         $range['start_date'],
                         $range['end_date'],
                         mode: 'auto',
+                        generatedByType: WorkDayCalculation::GENERATED_BY_JOB,
                     ));
                 }
             });

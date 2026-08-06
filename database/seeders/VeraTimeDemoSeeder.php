@@ -42,6 +42,8 @@ class VeraTimeDemoSeeder extends Seeder
     private const COMPANY_TAX_ID = 'VTD260712XX1';
     private const DEMO_PASSWORD = 'VeraDemo123!';
     private const DEMO_PIN = '1234';
+    private const DEMO_ATTENDANCE_START = '2026-07-20';
+    private const DEMO_ATTENDANCE_END = '2026-08-05';
 
     public function run(): void
     {
@@ -330,7 +332,7 @@ class VeraTimeDemoSeeder extends Seeder
                 [
                     'center_id' => $center->id,
                     'position_name' => $position,
-                    'started_at' => '2026-08-01',
+                    'started_at' => self::DEMO_ATTENDANCE_START,
                     'ended_at' => null,
                     'status' => 'active',
                     'source' => 'demo_seed',
@@ -365,7 +367,7 @@ class VeraTimeDemoSeeder extends Seeder
         $condition = LaborCondition::query()
             ->where('company_id', $company->id)
             ->where('employment_relationship_id', $relationship->id)
-            ->whereDate('effective_from', '2026-08-01')
+            ->whereDate('effective_from', self::DEMO_ATTENDANCE_START)
             ->first() ?? new LaborCondition();
 
         $condition->fill([
@@ -375,7 +377,7 @@ class VeraTimeDemoSeeder extends Seeder
             'weekly_hours' => 48,
             'rest_day_of_week' => 0,
             'policy_id' => null,
-            'effective_from' => '2026-08-01',
+            'effective_from' => self::DEMO_ATTENDANCE_START,
             'effective_to' => null,
             'status' => 'active',
             'metadata' => ['demo' => true],
@@ -621,22 +623,109 @@ class VeraTimeDemoSeeder extends Seeder
     {
         $action = app(CreateTimeEventAction::class);
 
-        $this->event($action, $company, $workers['ana'], 'clock_in', 'web', '2026-08-17', '08:00:00', 'demo-web-ana-in');
-        $this->event($action, $company, $workers['ana'], 'break_start', 'web', '2026-08-17', '13:00:00', 'demo-web-ana-break-start');
-        $this->event($action, $company, $workers['ana'], 'break_end', 'web', '2026-08-17', '14:00:00', 'demo-web-ana-break-end');
-        $this->event($action, $company, $workers['ana'], 'clock_out', 'web', '2026-08-17', '17:00:00', 'demo-web-ana-out');
+        $this->deleteObsoleteDemoTimeEvents($company);
 
-        $this->event($action, $company, $workers['bruno'], 'clock_in', 'kiosk', '2026-08-17', '22:00:00', 'demo-kiosk-bruno-in');
-        $this->event($action, $company, $workers['bruno'], 'break_start', 'kiosk', '2026-08-18', '02:00:00', 'demo-kiosk-bruno-break-start');
-        $this->event($action, $company, $workers['bruno'], 'break_end', 'kiosk', '2026-08-18', '02:30:00', 'demo-kiosk-bruno-break-end');
-        $this->event($action, $company, $workers['bruno'], 'clock_out', 'kiosk', '2026-08-18', '06:00:00', 'demo-kiosk-bruno-out');
+        $this->seedDayShiftEvents($action, $company, $workers['ana'], 'ana', 'web', [
+            ['date' => '2026-07-20', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-07-21', 'in' => '08:04:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:02:00'],
+            ['date' => '2026-07-22', 'in' => '08:00:00', 'break_start' => '13:05:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-07-23', 'in' => '08:06:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:10:00'],
+            ['date' => '2026-07-24', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-07-27', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-07-28', 'in' => '08:03:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:01:00'],
+            ['date' => '2026-07-29', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-07-30', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:35:00'],
+            ['date' => '2026-07-31', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-08-02', 'in' => '09:00:00', 'break_start' => '13:00:00', 'break_end' => '13:30:00', 'out' => '15:00:00'],
+            ['date' => '2026-08-03', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-08-04', 'in' => '08:02:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+            ['date' => '2026-08-05', 'in' => '08:00:00', 'break_start' => '13:00:00', 'break_end' => '14:00:00', 'out' => '17:00:00'],
+        ]);
 
-        $this->event($action, $company, $workers['carla'], 'clock_in', 'admin_manual', '2026-08-17', '08:10:00', 'demo-manual-carla-in', $sourceUser, [
-            'reason' => 'Captura manual demo por olvido de registro.',
+        $this->seedNightShiftEvents($action, $company, $workers['bruno'], 'bruno', [
+            ['date' => '2026-07-20', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-21', 'in' => '22:02:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:03:00'],
+            ['date' => '2026-07-22', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-23', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-24', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:10:00'],
+            ['date' => '2026-07-27', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-28', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-29', 'in' => '22:04:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-30', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-07-31', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-08-03', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
+            ['date' => '2026-08-04', 'in' => '22:00:00', 'break_start' => '02:00:00', 'break_end' => '02:30:00', 'out' => '06:00:00'],
         ]);
-        $this->event($action, $company, $workers['carla'], 'clock_out', 'admin_manual', '2026-08-17', '17:05:00', 'demo-manual-carla-out', $sourceUser, [
-            'reason' => 'Captura manual demo por cierre administrativo.',
+
+        $this->seedDayShiftEvents($action, $company, $workers['diego'], 'diego', 'kiosk', [
+            ['date' => '2026-07-20', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-21', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-22', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-23', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-24', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-25', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-07-26', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-08-03', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-08-04', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
+            ['date' => '2026-08-05', 'in' => '08:00:00', 'break_start' => '12:30:00', 'break_end' => '13:00:00', 'out' => '16:00:00'],
         ]);
+
+        $this->event($action, $company, $workers['carla'], 'clock_in', 'admin_manual', '2026-08-04', '08:10:00', 'demo-manual-carla-2026-08-04-in', $sourceUser, [
+            'reason' => 'Captura manual demo pendiente por olvido de registro.',
+        ]);
+        $this->event($action, $company, $workers['carla'], 'clock_out', 'admin_manual', '2026-08-04', '17:05:00', 'demo-manual-carla-2026-08-04-out', $sourceUser, [
+            'reason' => 'Captura manual demo pendiente por cierre administrativo.',
+        ]);
+    }
+
+    private function deleteObsoleteDemoTimeEvents(Company $company): void
+    {
+        TimeEvent::query()
+            ->where('company_id', $company->id)
+            ->whereIn('idempotency_key', [
+                'demo-web-ana-in',
+                'demo-web-ana-break-start',
+                'demo-web-ana-break-end',
+                'demo-web-ana-out',
+                'demo-kiosk-bruno-in',
+                'demo-kiosk-bruno-break-start',
+                'demo-kiosk-bruno-break-end',
+                'demo-kiosk-bruno-out',
+                'demo-manual-carla-in',
+                'demo-manual-carla-out',
+            ])
+            ->delete();
+    }
+
+    /**
+     * @param array{worker: Worker, relationship: EmploymentRelationship, center: Center} $context
+     * @param array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}> $days
+     */
+    private function seedDayShiftEvents(CreateTimeEventAction $action, Company $company, array $context, string $workerKey, string $source, array $days): void
+    {
+        foreach ($days as $day) {
+            $prefix = "demo-{$source}-{$workerKey}-{$day['date']}";
+            $this->event($action, $company, $context, 'clock_in', $source, $day['date'], $day['in'], "{$prefix}-in");
+            $this->event($action, $company, $context, 'break_start', $source, $day['date'], $day['break_start'], "{$prefix}-break-start");
+            $this->event($action, $company, $context, 'break_end', $source, $day['date'], $day['break_end'], "{$prefix}-break-end");
+            $this->event($action, $company, $context, 'clock_out', $source, $day['date'], $day['out'], "{$prefix}-out");
+        }
+    }
+
+    /**
+     * @param array{worker: Worker, relationship: EmploymentRelationship, center: Center} $context
+     * @param array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}> $days
+     */
+    private function seedNightShiftEvents(CreateTimeEventAction $action, Company $company, array $context, string $workerKey, array $days): void
+    {
+        foreach ($days as $day) {
+            $nextDate = CarbonImmutable::parse($day['date'])->addDay()->toDateString();
+            $prefix = "demo-kiosk-{$workerKey}-{$day['date']}";
+            $this->event($action, $company, $context, 'clock_in', 'kiosk', $day['date'], $day['in'], "{$prefix}-in");
+            $this->event($action, $company, $context, 'break_start', 'kiosk', $nextDate, $day['break_start'], "{$prefix}-break-start");
+            $this->event($action, $company, $context, 'break_end', 'kiosk', $nextDate, $day['break_end'], "{$prefix}-break-end");
+            $this->event($action, $company, $context, 'clock_out', 'kiosk', $nextDate, $day['out'], "{$prefix}-out");
+        }
     }
 
     /**

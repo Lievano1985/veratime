@@ -18,7 +18,7 @@ class CalculateWorkDaysForDateRangeAction
     /**
      * @return array{total: int, calculated: int, under_review: int, skipped: int}
      */
-    public function handle(Company $company, string $startDate, string $endDate, ?Center $center = null, ?User $actor = null, string $generatedByType = WorkDayCalculation::GENERATED_BY_SYSTEM, ?string $reason = null): array
+    public function handle(Company $company, string $startDate, string $endDate, ?Center $center = null, ?User $actor = null, string $generatedByType = WorkDayCalculation::GENERATED_BY_SYSTEM, ?string $reason = null, bool $onlyPendingOrStale = false): array
     {
         $summary = [
             'total' => 0,
@@ -33,6 +33,12 @@ class CalculateWorkDaysForDateRangeAction
             ->whereDate('work_date', '>=', $startDate)
             ->whereDate('work_date', '<=', $endDate)
             ->when($center, fn ($query) => $query->where('center_id', $center->id))
+            ->when($onlyPendingOrStale, fn ($query) => $query
+                ->where(function ($query): void {
+                    $query->whereNull('active_calculation_id')
+                        ->orWhere('status', WorkDay::STATUS_UNDER_REVIEW)
+                        ->orWhereHas('activeCalculation', fn ($query) => $query->whereColumn('work_days.updated_at', '>', 'work_day_calculations.calculated_at'));
+                }))
             ->orderBy('work_date')
             ->orderBy('worker_id')
             ->chunkById(200, function (Collection $workDays) use ($company, $actor, $generatedByType, $reason, &$summary): void {

@@ -43,19 +43,19 @@ class WorkDayOperationalRefreshTest extends TestCase
         $this->assertSame('02:30', substr((string) $company->setting->refresh()->work_days_auto_refresh_time, 0, 5));
     }
 
-    public function test_ui_manual_refresh_creates_work_days_for_selected_range(): void
+    public function test_ui_manual_process_creates_work_days_for_selected_range(): void
     {
         [$company, $user] = $this->companyUserAndPublishedDay();
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
-            ->call('openRefreshPanel')
-            ->set('refreshForm.date_from', '2026-08-03')
-            ->set('refreshForm.date_to', '2026-08-03')
-            ->call('refreshWorkDays')
+            ->call('openProcessPanel')
+            ->set('processForm.date_from', '2026-08-03')
+            ->set('processForm.date_to', '2026-08-03')
+            ->call('processWorkDays')
             ->assertHasNoErrors()
-            ->assertSee('Jornadas actualizadas');
+            ->assertSee('Proceso de jornadas');
 
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
         $this->assertSame('manual_ui', $company->setting->refresh()->work_days_last_refresh_summary['mode']);
@@ -69,7 +69,7 @@ class WorkDayOperationalRefreshTest extends TestCase
 
         Volt::test('companies.index')
             ->assertSee('Hora automatica de jornadas')
-            ->assertDontSee('Actualizar jornadas');
+            ->assertDontSee('Procesar jornadas');
     }
 
     public function test_manual_command_refreshes_company_range(): void
@@ -82,7 +82,7 @@ class WorkDayOperationalRefreshTest extends TestCase
             '--to' => '2026-08-03',
         ]);
 
-        $this->assertStringContainsString('Jornadas actualizadas', Artisan::output());
+        $this->assertStringContainsString('Jornadas procesadas', Artisan::output());
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
         $this->assertSame('manual_command', $company->setting->refresh()->work_days_last_refresh_summary['mode']);
     }
