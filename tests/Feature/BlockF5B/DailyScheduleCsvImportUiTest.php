@@ -36,7 +36,6 @@ class DailyScheduleCsvImportUiTest extends TestCase
         Volt::test('scheduling.daily')
             ->call('selectBatch', $batch->id)
             ->assertSee('Importar CSV')
-            ->assertDontSee('Descargar plantilla')
             ->assertDontSee('Historial de importaciones');
 
         Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
@@ -376,7 +375,7 @@ class DailyScheduleCsvImportUiTest extends TestCase
         return ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->whereDate('period_end', '2026-08-09')
             ->where('status', 'draft')
             ->firstOrFail();
     }

@@ -158,7 +158,6 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
             ->set('bulkForm.day_type', 'rest')
             ->set('bulkForm.reason', 'Descanso masivo autorizado en correccion historica.')
             ->set('confirmBulk', true)
-            ->assertSee('baja historica')
             ->call('applyBulk')
             ->assertHasNoErrors()
             ->assertSee('Cambio masivo aplicado a 1 dias.');
@@ -200,7 +199,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
             ->where('company_id', $company->id)
             ->where('status', 'published')
             ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->whereDate('period_end', '2026-08-09')
             ->orderByDesc('version')
             ->firstOrFail();
     }

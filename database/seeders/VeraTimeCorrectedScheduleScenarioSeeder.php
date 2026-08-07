@@ -16,7 +16,7 @@ use Illuminate\Database\Seeder;
 class VeraTimeCorrectedScheduleScenarioSeeder extends Seeder
 {
     private const PERIOD_START = '2026-08-03';
-    private const PERIOD_END = '2026-08-16';
+    private const PERIOD_END = '2026-08-09';
 
     public function run(): void
     {
