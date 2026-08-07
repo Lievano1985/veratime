@@ -113,7 +113,7 @@ new class extends Component {
         $this->reason = '';
         $this->resetPage();
         $this->showCapturePanel = false;
-        Session::flash('status', 'Captura manual guardada para revision.');
+        Session::flash('status', 'Captura justificada guardada y enviada a recalculo de jornada.');
     }
 
     public function openCapturePanel(CurrentCompany $currentCompany): void
@@ -545,7 +545,7 @@ new class extends Component {
                             <td class="px-4 py-3">
                                 @if ($event->metadata['review'] ?? null)
                                     <div class="space-y-1">
-                                        <p class="font-medium">{{ $event->metadata['review']['decision'] === 'approved' ? 'Aprobada' : 'Rechazada' }}</p>
+                                        <p class="font-medium">{{ in_array($event->metadata['review']['decision'], ['approved', 'auto_approved'], true) ? 'Aprobada' : 'Rechazada' }}</p>
                                         <p class="text-xs text-zinc-500">{{ $event->metadata['review']['reviewed_at'] ?? '' }}</p>
                                     </div>
                                 @elseif ($event->source === 'admin_manual' && $event->status === 'pending_review')

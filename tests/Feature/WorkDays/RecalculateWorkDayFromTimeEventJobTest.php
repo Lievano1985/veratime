@@ -4,6 +4,7 @@ namespace Tests\Feature\WorkDays;
 
 use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
+use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
 use App\Domains\WorkDays\Actions\ProcessSingleWorkDayAction;
 use App\Domains\WorkDays\Jobs\RecalculateWorkDayFromTimeEventJob;
@@ -108,6 +109,28 @@ class RecalculateWorkDayFromTimeEventJobTest extends TestCase
             RecalculateWorkDayFromTimeEventJob::class,
             fn (RecalculateWorkDayFromTimeEventJob $job): bool => $job->timeEventId === $event->id
                 && $job->trigger === 'void',
+        );
+    }
+
+    public function test_justified_manual_capture_dispatches_recalculation_job_without_extra_approval(): void
+    {
+        Queue::fake();
+        [$company, $relationship] = $this->relationshipFixture();
+        $actor = $this->managerForCompany($company);
+
+        $event = app(RegisterManualTimeEventAction::class)->handle($company, $actor, $relationship->worker, [
+            'event_type' => 'clock_in',
+            'occurred_local_date' => '2026-08-03',
+            'occurred_local_time' => '08:00',
+            'reason' => 'Entrada justificada por RH.',
+        ]);
+
+        $this->assertSame('valid', $event->status);
+        $this->assertSame('auto_approved', $event->metadata['review']['decision']);
+        Queue::assertPushed(
+            RecalculateWorkDayFromTimeEventJob::class,
+            fn (RecalculateWorkDayFromTimeEventJob $job): bool => $job->timeEventId === $event->id
+                && $job->trigger === 'time_event_created',
         );
     }
 

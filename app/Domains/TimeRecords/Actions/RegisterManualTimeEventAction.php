@@ -38,6 +38,7 @@ class RegisterManualTimeEventAction
         $center = $employmentRelationship?->center;
         $timezone = $this->validateTimezone($data['timezone'] ?? $center?->timezone ?? $company->timezone);
         $local = $this->validateLocalDateTime($data['occurred_local_date'] ?? null, $data['occurred_local_time'] ?? null, $timezone);
+        $capturedAt = CarbonImmutable::now('UTC');
 
         return $this->createTimeEvent->handle(
             $company,
@@ -47,13 +48,23 @@ class RegisterManualTimeEventAction
                 'occurred_local_date' => $local->toDateString(),
                 'occurred_local_time' => $local->format('H:i:s'),
                 'timezone' => $timezone,
-                'received_at' => CarbonImmutable::now('UTC'),
+                'received_at' => $capturedAt,
                 'source' => 'admin_manual',
+                'status' => 'valid',
                 'metadata' => [
                     'channel' => 'manual',
                     'reason' => $reason,
                     'captured_by' => $sourceUser->id,
+                    'captured_at' => $capturedAt->toISOString(),
                     'context' => 'manual_justified_entry',
+                    'review' => [
+                        'decision' => 'auto_approved',
+                        'actor_user_id' => $sourceUser->id,
+                        'reviewed_at' => $capturedAt->toISOString(),
+                        'reason' => 'Captura justificada por usuario autorizado.',
+                        'previous_status' => null,
+                        'resulting_status' => 'valid',
+                    ],
                 ],
             ],
             $employmentRelationship,
