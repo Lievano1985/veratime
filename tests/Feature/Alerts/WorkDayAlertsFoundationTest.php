@@ -157,6 +157,29 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame('2026-08-09', $alerts->first()->metadata['week_end']);
     }
 
+    public function test_scheduled_absence_creates_dictaminable_incident_without_events(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay();
+        $workDay->activeCalculation()->dissociate();
+        $workDay->forceFill([
+            'active_calculation_id' => null,
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 0,
+            'valid_time_event_ids' => [],
+        ])->save();
+
+        $result = app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay->refresh());
+
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+        $this->assertSame(1, $result['created_or_updated']);
+        $this->assertSame('scheduled_absence', $alert->rule_code);
+        $this->assertSame('Falta', $alert->title);
+        $this->assertSame(WorkDay::STATUS_WITH_ALERTS, $workDay->refresh()->status);
+    }
+
     public function test_alerts_list_is_visible_to_managers_and_scoped_by_company(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
@@ -184,7 +207,8 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
-            ->assertSee('Alerta (1)')
+            ->assertSee('Tiempo extra detectado')
+            ->assertSee('Dictaminar')
             ->call('openAlertsPanel', $workDay->id)
             ->assertSet('showAlertsPanel', true)
             ->assertSee('Tiempo extra detectado')

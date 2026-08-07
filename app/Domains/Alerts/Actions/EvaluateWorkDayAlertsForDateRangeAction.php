@@ -29,7 +29,6 @@ class EvaluateWorkDayAlertsForDateRangeAction
             ->where('company_id', $company->id)
             ->whereDate('work_date', '>=', $startDate)
             ->whereDate('work_date', '<=', $endDate)
-            ->whereNotNull('active_calculation_id')
             ->when($center, fn ($query) => $query->where('center_id', $center->id))
             ->orderBy('work_date')
             ->orderBy('worker_id')

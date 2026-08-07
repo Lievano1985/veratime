@@ -58,9 +58,6 @@
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan
-                        @can('viewAny', [\App\Models\Alert::class, $activeCompany])
-                            <flux:navlist.item icon="exclamation-triangle" :href="route('alerts.index')" :current="request()->routeIs('alerts.*')" wire:navigate>Alertas</flux:navlist.item>
-                        @endcan
                     </flux:navlist.group>
                 @endif
             </flux:navlist>
