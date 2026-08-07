@@ -191,6 +191,6 @@ class CreateTimeEventAction
     {
         return $event->status === 'valid'
             && $event->employment_relationship_id !== null
-            && $event->event_type === 'clock_out';
+            && ($event->event_type === 'clock_out' || $event->source === 'admin_manual');
     }
 }

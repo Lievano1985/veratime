@@ -189,7 +189,7 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
             ->where('company_id', $company->id)
             ->where('status', 'published')
             ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->whereDate('period_end', '2026-08-09')
             ->orderByDesc('version')
             ->firstOrFail();
     }

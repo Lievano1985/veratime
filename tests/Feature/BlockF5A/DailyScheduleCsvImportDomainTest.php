@@ -252,7 +252,7 @@ class DailyScheduleCsvImportDomainTest extends TestCase
         return ScheduleBatch::query()
             ->where('company_id', $company->id)
             ->whereDate('period_start', '2026-08-03')
-            ->whereDate('period_end', '2026-08-16')
+            ->whereDate('period_end', '2026-08-09')
             ->where('status', 'draft')
             ->firstOrFail();
     }

@@ -34,6 +34,12 @@ new class extends Component {
     #[Url(as: 'schedule')]
     public string $scheduleStatusFilter = '';
 
+    #[Url(as: 'incident')]
+    public string $incidentTypeFilter = '';
+
+    #[Url(as: 'dictamen')]
+    public string $incidentStatusFilter = '';
+
     #[Url]
     public string $search = '';
 
@@ -58,11 +64,12 @@ new class extends Component {
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
-        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
-            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+        $today = $this->todayForCompany($company);
+        $weekStart = $today->startOfWeek(\Carbon\CarbonInterface::MONDAY);
 
-        $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $today->toDateString();
-        $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->addDays(6)->toDateString();
+        $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $weekStart->toDateString();
+        $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->toDateString();
+        $this->capDateFiltersToToday($company);
         $this->loadProcessForm($company);
     }
 
@@ -88,20 +95,18 @@ new class extends Component {
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
         $workDay = WorkDay::query()
-            ->with(['alerts' => fn ($query) => $query->whereIn('status', Alert::OPEN_STATUSES)->orderBy('severity')->orderBy('detected_at')])
+            ->with(['alerts' => fn ($query) => $query->with(['alertType', 'resolver'])->orderByRaw("case when status in ('new', 'in_review', 'pending_information') then 1 else 2 end")->orderBy('detected_at')])
             ->where('company_id', $company->id)
             ->findOrFail($workDayId);
 
         Gate::authorize('view', $workDay);
 
-        $firstAlert = $workDay->alerts->first();
-        if (! $firstAlert) {
-            Session::flash('status', 'La jornada no tiene alertas abiertas.');
-            return;
-        }
+        $firstAlert = $workDay->alerts
+            ->first(fn (Alert $alert): bool => in_array($alert->status, Alert::OPEN_STATUSES, true))
+            ?? $workDay->alerts->first();
 
         $this->selectedWorkDayId = $workDay->id;
-        $this->selectedAlertId = $firstAlert->id;
+        $this->selectedAlertId = $firstAlert?->id;
         $this->alertResolutionForm = [
             'status' => Alert::STATUS_JUSTIFIED,
             'resolution' => '',
@@ -158,14 +163,14 @@ new class extends Component {
 
         if (! $nextAlertId) {
             $this->closeAlertsPanel();
-            Session::flash('status', 'Alerta dictaminada. La jornada quedo sin alertas abiertas.');
+            Session::flash('status', 'Incidencia dictaminada. La jornada quedo sin incidencias pendientes.');
             $this->resetPage();
             return;
         }
 
         $this->selectedAlertId = (int) $nextAlertId;
         $this->alertResolutionForm['resolution'] = '';
-        Session::flash('status', 'Alerta dictaminada. Aun quedan alertas abiertas para la jornada.');
+        Session::flash('status', 'Incidencia dictaminada. Aun quedan incidencias pendientes para la jornada.');
         $this->resetPage();
     }
 
@@ -183,6 +188,11 @@ new class extends Component {
 
         $startDate = blank($validated['date_from'] ?? null) ? null : CarbonImmutable::parse($validated['date_from'])->toDateString();
         $endDate = blank($validated['date_to'] ?? null) ? null : CarbonImmutable::parse($validated['date_to'])->toDateString();
+        $today = $this->todayForCompany($company)->toDateString();
+
+        if ($endDate !== null && $endDate > $today) {
+            $endDate = $today;
+        }
 
         $result = $action->handle(
             $company,
@@ -227,6 +237,16 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function updatedIncidentTypeFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedIncidentStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -235,14 +255,16 @@ new class extends Component {
     public function clearFilters(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)
-            ->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+        $today = $this->todayForCompany($company);
+        $weekStart = $today->startOfWeek(\Carbon\CarbonInterface::MONDAY);
 
-        $this->dateFrom = $today->toDateString();
-        $this->dateTo = $today->addDays(6)->toDateString();
+        $this->dateFrom = $weekStart->toDateString();
+        $this->dateTo = $today->toDateString();
         $this->centerId = '';
         $this->statusFilter = '';
         $this->scheduleStatusFilter = '';
+        $this->incidentTypeFilter = '';
+        $this->incidentStatusFilter = '';
         $this->search = '';
         $this->resetPage();
     }
@@ -253,12 +275,16 @@ new class extends Component {
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
+        $this->capDateFiltersToToday($company);
+
         $workDays = $listWorkDays->handle($company, [
             'date_from' => $this->dateFrom,
             'date_to' => $this->dateTo,
             'center_id' => $this->centerId === '' ? null : (int) $this->centerId,
             'status' => $this->statusFilter === '' ? null : $this->statusFilter,
             'schedule_status' => $this->scheduleStatusFilter === '' ? null : $this->scheduleStatusFilter,
+            'incident_type' => $this->incidentTypeFilter === '' ? null : $this->incidentTypeFilter,
+            'incident_status' => $this->incidentStatusFilter === '' ? null : $this->incidentStatusFilter,
             'search' => $this->search,
         ]);
 
@@ -280,6 +306,7 @@ new class extends Component {
             'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
             'workDays' => $workDays,
             'selectedWorkDay' => $selectedWorkDay,
+            'todayDate' => $this->todayForCompany($company)->toDateString(),
         ];
     }
 
@@ -290,6 +317,24 @@ new class extends Component {
         abort_unless($company, 403);
 
         return $company;
+    }
+
+    private function todayForCompany($company): CarbonImmutable
+    {
+        return CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)->startOfDay();
+    }
+
+    private function capDateFiltersToToday($company): void
+    {
+        $today = $this->todayForCompany($company)->toDateString();
+
+        if ($this->dateTo === '' || CarbonImmutable::parse($this->dateTo)->toDateString() > $today) {
+            $this->dateTo = $today;
+        }
+
+        if ($this->dateFrom !== '' && CarbonImmutable::parse($this->dateFrom)->toDateString() > $this->dateTo) {
+            $this->dateFrom = $this->dateTo;
+        }
     }
 
     private function statusLabel(?string $status): string
@@ -359,9 +404,9 @@ new class extends Component {
             'new' => 'Nueva',
             'in_review' => 'En revision',
             'pending_information' => 'Pendiente info',
-            'justified' => 'Justificada',
-            'corrected' => 'Corregida',
-            'closed' => 'Cerrada',
+            'justified' => 'Aprobada',
+            'corrected' => 'No aprobada',
+            'closed' => 'Cerrada / no procede',
             default => ucfirst($status),
         };
     }
@@ -544,13 +589,117 @@ new class extends Component {
         return $this->specialCasesLabel($workDay->activeCalculation);
     }
 
+    private function primaryIncidentLabel(WorkDay $workDay): string
+    {
+        $alert = $this->primaryIncidentAlert($workDay);
+
+        if ($alert) {
+            return $alert->title;
+        }
+
+        if ($this->isScheduledAbsenceCandidate($workDay)) {
+            return 'Falta';
+        }
+
+        if ($workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED) {
+            return 'Jornada no programada';
+        }
+
+        if ($workDay->status === WorkDay::STATUS_UNDER_REVIEW) {
+            return 'En revision';
+        }
+
+        return 'Sin incidencia';
+    }
+
+    private function primaryIncidentVariant(WorkDay $workDay): string
+    {
+        $alert = $this->primaryIncidentAlert($workDay);
+
+        if ($alert) {
+            return match ($alert->rule_code) {
+                'scheduled_absence' => 'rose',
+                'incomplete_work_day' => 'orange',
+                'overtime_detected' => 'violet',
+                'twelve_hours_exceeded' => 'danger',
+                'sunday_work' => 'cyan',
+                'mandatory_rest_work' => 'warning',
+                'weekly_rest_missing' => 'lime',
+                default => $this->alertStatusVariant($alert->status),
+            };
+        }
+
+        if ($this->isScheduledAbsenceCandidate($workDay)) {
+            return 'danger';
+        }
+
+        if ($workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED) {
+            return 'warning';
+        }
+
+        if ($workDay->status === WorkDay::STATUS_UNDER_REVIEW) {
+            return 'info';
+        }
+
+        return 'neutral';
+    }
+
+    private function incidentStatusLabel(WorkDay $workDay): string
+    {
+        if (($workDay->open_alerts_count ?? 0) > 0) {
+            return 'Pendiente';
+        }
+
+        if (($workDay->resolved_alerts_count ?? 0) > 0) {
+            return 'Dictaminada';
+        }
+
+        return 'Sin dictamen';
+    }
+
+    private function hasOperationalIncident(WorkDay $workDay): bool
+    {
+        return $workDay->alerts->contains(fn (Alert $alert): bool => $alert->status !== Alert::STATUS_CLOSED)
+            || $this->isScheduledAbsenceCandidate($workDay)
+            || $workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED
+            || $workDay->status === WorkDay::STATUS_UNDER_REVIEW;
+    }
+
+    private function primaryIncidentAlert(WorkDay $workDay): ?Alert
+    {
+        return $workDay->alerts->first(fn (Alert $alert): bool => $this->isVisibleOperationalAlert($workDay, $alert) && in_array($alert->status, Alert::OPEN_STATUSES, true))
+            ?? $workDay->alerts->first(fn (Alert $alert): bool => $this->isVisibleOperationalAlert($workDay, $alert) && in_array($alert->status, [Alert::STATUS_JUSTIFIED, Alert::STATUS_CORRECTED], true));
+    }
+
     private function isScheduledAbsenceCandidate(WorkDay $workDay): bool
     {
         return ! $workDay->activeCalculation
             && $workDay->valid_time_event_count === 0
+            && $this->hasWorkDatePassed($workDay)
             && $workDay->schedule_status === WorkDay::SCHEDULE_STATUS_SCHEDULED
             && $workDay->day_type === 'shift'
             && (int) $workDay->expected_work_minutes > 0;
+    }
+
+    private function isVisibleOperationalAlert(WorkDay $workDay, Alert $alert): bool
+    {
+        if ($alert->status === Alert::STATUS_CLOSED) {
+            return false;
+        }
+
+        if ($alert->rule_code === 'scheduled_absence' && ! $this->hasWorkDatePassed($workDay)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function hasWorkDatePassed(WorkDay $workDay): bool
+    {
+        $timezone = $workDay->timezone ?: config('app.timezone');
+        $today = CarbonImmutable::now($timezone)->toDateString();
+
+        return $workDay->work_date?->toDateString() < $today;
     }
 
     private function lastRefreshLabel($company): string
@@ -580,7 +729,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Jornadas</flux:heading>
-            <flux:subheading>Consulta jornadas generadas desde horarios publicados y eventos validos.</flux:subheading>
+            <flux:subheading>Revisa jornadas e identifica solo las incidencias que requieren dictamen operativo.</flux:subheading>
         </div>
 
         <div class="flex flex-wrap gap-2">
@@ -597,9 +746,9 @@ new class extends Component {
     @endif
 
     <section class="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
-            <flux:input label="Desde" type="date" wire:model.live="dateFrom" />
-            <flux:input label="Hasta" type="date" wire:model.live="dateTo" />
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[0.85fr_0.85fr_1fr_1fr_1fr_1fr_1fr_auto] xl:items-end">
+            <flux:input label="Desde" type="date" max="{{ $todayDate }}" wire:model.live="dateFrom" />
+            <flux:input label="Hasta" type="date" max="{{ $todayDate }}" wire:model.live="dateTo" />
 
             <flux:select label="Centro" wire:model.live="centerId">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -614,12 +763,31 @@ new class extends Component {
                 <flux:select.option value="unscheduled">No programadas</flux:select.option>
             </flux:select>
 
-            <flux:select label="Calculo" wire:model.live="statusFilter">
+            <flux:select label="Resultado" wire:model.live="statusFilter">
                 <flux:select.option value="">Todas</flux:select.option>
                 <flux:select.option value="with_alerts">Con alertas</flux:select.option>
                 <flux:select.option value="calculated">Calculadas</flux:select.option>
                 <flux:select.option value="under_review">En revision</flux:select.option>
                 <flux:select.option value="pending">Pendientes</flux:select.option>
+            </flux:select>
+
+            <flux:select label="Incidencia" wire:model.live="incidentTypeFilter">
+                <flux:select.option value="">Todas</flux:select.option>
+                <flux:select.option value="with_incidents">Solo con incidencia</flux:select.option>
+                <flux:select.option value="scheduled_absence">Falta</flux:select.option>
+                <flux:select.option value="incomplete_work_day">Evento incompleto</flux:select.option>
+                <flux:select.option value="unscheduled_work_day">No programada</flux:select.option>
+                <flux:select.option value="overtime_detected">Hora extra</flux:select.option>
+                <flux:select.option value="sunday_work">Domingo trabajado</flux:select.option>
+                <flux:select.option value="mandatory_rest_work">Descanso obligatorio</flux:select.option>
+                <flux:select.option value="weekly_rest_missing">Semana sin descanso</flux:select.option>
+            </flux:select>
+
+            <flux:select label="Dictamen" wire:model.live="incidentStatusFilter">
+                <flux:select.option value="">Todos</flux:select.option>
+                <flux:select.option value="pending">Pendiente</flux:select.option>
+                <flux:select.option value="dictated">Dictaminada</flux:select.option>
+                <flux:select.option value="none">Sin incidencia</flux:select.option>
             </flux:select>
 
             <flux:input label="Trabajador" placeholder="Clave o nombre" wire:model.live.debounce.400ms="search" />
@@ -640,18 +808,13 @@ new class extends Component {
                     <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                         <tr>
                             <th class="px-4 py-3">Fecha</th>
-                            <th class="px-4 py-3">Trabajador</th>
-                            <th class="px-4 py-3">Centro</th>
+                            <th class="px-4 py-3">Trabajador / Centro</th>
                             <th class="px-4 py-3">Horario</th>
-                            <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Esperado</th>
                             <th class="px-4 py-3">Trabajado</th>
-                            <th class="px-4 py-3">Ordinario</th>
-                            <th class="px-4 py-3">Extra</th>
-                            <th class="px-4 py-3">Especiales</th>
-                            <th class="px-4 py-3">Legal</th>
-                            <th class="px-4 py-3">Eventos</th>
-                            <th class="px-4 py-3">Calculo</th>
+                            <th class="px-4 py-3">Incidencia</th>
+                            <th class="px-4 py-3">Dictamen</th>
+                            <th class="px-4 py-3 text-right">Accion</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
@@ -660,58 +823,38 @@ new class extends Component {
                                 <td class="whitespace-nowrap px-4 py-3">{{ $workDay->work_date?->toDateString() }}</td>
                                 <td class="px-4 py-3">
                                     <div class="font-medium">{{ $workDay->worker?->employee_code }} - {{ $workDay->worker?->full_name }}</div>
-                                    <div class="text-xs text-zinc-500">{{ $workDay->employmentRelationship?->position_name ?? 'Sin puesto' }}</div>
+                                    <div class="text-xs text-zinc-500">{{ $workDay->center?->name ?? 'Sin centro' }}</div>
                                 </td>
-                                <td class="px-4 py-3">{{ $workDay->center?->name ?? 'Sin centro' }}</td>
                                 <td class="px-4 py-3">
                                     <x-ui.badge variant="{{ $this->scheduleStatusVariant($workDay->schedule_status) }}">
                                         {{ $this->scheduleStatusLabel($workDay->schedule_status) }}
                                     </x-ui.badge>
                                 </td>
-                                <td class="px-4 py-3">{{ $this->dayTypeLabel($workDay->day_type) }}</td>
                                 <td class="px-4 py-3">{{ $this->minutesLabel($workDay->expected_work_minutes) }}</td>
                                 <td class="px-4 py-3">{{ $this->workedMinutesLabel($workDay) }}</td>
-                                <td class="px-4 py-3">{{ $this->workDayCalculationSplitLabel($workDay, 'ordinary_minutes') }}</td>
-                                <td class="px-4 py-3">{{ $this->workDayCalculationSplitLabel($workDay, 'overtime_minutes') }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">{{ $this->workDaySpecialCasesLabel($workDay) }}</td>
                                 <td class="px-4 py-3">
-                                    <x-ui.badge variant="{{ $this->workDayLegalClassificationVariant($workDay) }}">
-                                        {{ $this->workDayLegalClassificationLabel($workDay) }}
+                                    <x-ui.badge variant="{{ $this->primaryIncidentVariant($workDay) }}">
+                                        {{ $this->primaryIncidentLabel($workDay) }}
                                     </x-ui.badge>
-                                    @if ($this->legalNightMinutesLabel($workDay->activeCalculation) !== '')
-                                        <span class="mt-1 block text-xs text-zinc-500">{{ $this->legalNightMinutesLabel($workDay->activeCalculation) }}</span>
-                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="font-medium">{{ $workDay->valid_time_event_count }}</span>
-                                    @if ($workDay->first_event_at_utc)
-                                        <span class="block text-xs text-zinc-500">
-                                            {{ $workDay->first_event_at_utc->timezone($workDay->timezone ?: $company->timezone)->format('H:i') }}
-                                            -
-                                            {{ $workDay->last_event_at_utc?->timezone($workDay->timezone ?: $company->timezone)->format('H:i') }}
-                                        </span>
-                                    @endif
+                                    <span class="text-sm text-zinc-700 dark:text-zinc-200">{{ $this->incidentStatusLabel($workDay) }}</span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    @if ($workDay->status === WorkDay::STATUS_WITH_ALERTS && ($workDay->open_alerts_count ?? 0) > 0)
-                                        <button
-                                            type="button"
-                                            wire:click="openAlertsPanel({{ $workDay->id }})"
-                                            class="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-sm transition hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/60"
-                                            title="Atender alertas de la jornada"
-                                        >
-                                            Alerta ({{ $workDay->open_alerts_count }})
-                                        </button>
-                                    @else
-                                        <x-ui.badge variant="{{ $this->workDayStatusVariant($workDay) }}">
-                                            {{ $this->workDayStatusLabel($workDay) }}
-                                        </x-ui.badge>
-                                    @endif
+                                <td class="px-4 py-3 text-right">
+                                    @php($hasPendingIncidents = ($workDay->open_alerts_count ?? 0) > 0)
+                                    <button
+                                        type="button"
+                                        wire:click="openAlertsPanel({{ $workDay->id }})"
+                                        class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition focus:outline-none focus:ring-2 {{ $hasPendingIncidents ? 'border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-300 hover:bg-blue-100 focus:ring-blue-200 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60' : 'border-emerald-300 bg-emerald-100 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-200 focus:ring-emerald-200 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/70' }}"
+                                        title="Abrir detalle de jornada"
+                                    >
+                                        {{ $hasPendingIncidents ? 'Dictaminar' : 'Ver' }}
+                                    </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="13" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
+                                <td colspan="8" class="px-4 py-8 text-center text-zinc-500">Sin jornadas en el rango seleccionado.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -724,10 +867,10 @@ new class extends Component {
 
     <x-side-panel
         wire:model="showAlertsPanel"
-        title="Alertas de jornada"
-        subheading="Dictamina alertas abiertas sin recalcular la jornada."
+        title="Incidencias de jornada"
+        subheading="Revisa solo lo fuera de comun y deja dictamen con trazabilidad."
         labelledby="work-day-alerts-title"
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-3xl"
         closeMethod="closeAlertsPanel"
     >
         <div class="flex flex-1 flex-col overflow-y-auto">
@@ -751,13 +894,71 @@ new class extends Component {
                                 <dt class="text-xs font-medium uppercase text-zinc-500">Calculado</dt>
                                 <dd class="mt-1">{{ $this->workedMinutesLabel($selectedWorkDay) }}</dd>
                             </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Horario</dt>
+                                <dd class="mt-1">{{ $this->scheduleStatusLabel($selectedWorkDay->schedule_status) }} - {{ $this->dayTypeLabel($selectedWorkDay->day_type) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Esperado</dt>
+                                <dd class="mt-1">{{ $this->minutesLabel($selectedWorkDay->expected_work_minutes) }}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <div class="mb-3 flex items-center justify-between">
+                            <flux:heading>Detalle operativo</flux:heading>
+                            <x-ui.badge variant="{{ $this->primaryIncidentVariant($selectedWorkDay) }}">
+                                {{ $this->primaryIncidentLabel($selectedWorkDay) }}
+                            </x-ui.badge>
+                        </div>
+
+                        <dl class="grid gap-3 sm:grid-cols-3">
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Eventos</dt>
+                                <dd class="mt-1">
+                                    {{ $selectedWorkDay->valid_time_event_count }}
+                                    @if ($selectedWorkDay->first_event_at_utc)
+                                        <span class="block text-xs text-zinc-500">
+                                            {{ $selectedWorkDay->first_event_at_utc->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('H:i') }}
+                                            -
+                                            {{ $selectedWorkDay->last_event_at_utc?->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('H:i') }}
+                                        </span>
+                                    @endif
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Ordinario</dt>
+                                <dd class="mt-1">{{ $this->workDayCalculationSplitLabel($selectedWorkDay, 'ordinary_minutes') }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Extra</dt>
+                                <dd class="mt-1">{{ $this->workDayCalculationSplitLabel($selectedWorkDay, 'overtime_minutes') }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Especiales</dt>
+                                <dd class="mt-1">{{ $this->workDaySpecialCasesLabel($selectedWorkDay) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Legal</dt>
+                                <dd class="mt-1">
+                                    {{ $this->workDayLegalClassificationLabel($selectedWorkDay) }}
+                                    @if ($this->legalNightMinutesLabel($selectedWorkDay->activeCalculation) !== '')
+                                        <span class="block text-xs text-zinc-500">{{ $this->legalNightMinutesLabel($selectedWorkDay->activeCalculation) }}</span>
+                                    @endif
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Dictamen</dt>
+                                <dd class="mt-1">{{ $this->incidentStatusLabel($selectedWorkDay) }}</dd>
+                            </div>
                         </dl>
                     </section>
 
                     <section class="space-y-3">
-                        <flux:heading>Alertas</flux:heading>
+                        <flux:heading>Incidencias</flux:heading>
 
-                        @foreach ($selectedWorkDay->alerts as $alert)
+                        @forelse ($selectedWorkDay->alerts as $alert)
                             <label class="block rounded-md border border-zinc-200 p-4 dark:border-zinc-700 {{ $selectedAlertId === $alert->id ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-zinc-900' }}">
                                 <div class="flex items-start gap-3">
                                     @if (in_array($alert->status, Alert::OPEN_STATUSES, true))
@@ -795,18 +996,22 @@ new class extends Component {
                                     </div>
                                 </div>
                             </label>
-                        @endforeach
+                        @empty
+                            <div class="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                                Esta jornada no tiene incidencias registradas.
+                            </div>
+                        @endforelse
                     </section>
 
                     @if ($selectedWorkDay->alerts->contains(fn ($alert) => in_array($alert->status, Alert::OPEN_STATUSES, true)))
                         <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
                             <flux:select label="Dictamen" wire:model="alertResolutionForm.status">
-                                <flux:select.option value="justified">Justificada</flux:select.option>
-                                <flux:select.option value="corrected">Corregida</flux:select.option>
+                                <flux:select.option value="justified">Aprobar</flux:select.option>
+                                <flux:select.option value="corrected">No aprobar</flux:select.option>
                                 <flux:select.option value="closed">Cerrada / no procede</flux:select.option>
                             </flux:select>
 
-                            <flux:textarea label="Motivo" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe la aclaracion o decision operativa." />
+                            <flux:textarea label="Comentario obligatorio" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe la razon del dictamen operativo." />
 
                             <div class="flex justify-end gap-2">
                                 <flux:button type="button" variant="ghost" wire:click="closeAlertsPanel">Cancelar</flux:button>
@@ -815,11 +1020,11 @@ new class extends Component {
                         </form>
                     @else
                         <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                            Esta jornada no tiene alertas abiertas.
+                            Esta jornada no tiene incidencias pendientes.
                         </div>
                     @endif
                 @else
-                    <p class="text-sm text-zinc-500">Selecciona una jornada con alertas.</p>
+                    <p class="text-sm text-zinc-500">Selecciona una jornada.</p>
                 @endif
             </div>
         </div>
@@ -855,8 +1060,8 @@ new class extends Component {
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <flux:input wire:model="processForm.date_from" label="Desde" type="date" />
-                    <flux:input wire:model="processForm.date_to" label="Hasta" type="date" />
+                    <flux:input wire:model="processForm.date_from" label="Desde" type="date" max="{{ $todayDate }}" />
+                    <flux:input wire:model="processForm.date_to" label="Hasta" type="date" max="{{ $todayDate }}" />
                 </div>
                 <flux:textarea wire:model="processForm.reason" label="Motivo obligatorio" placeholder="Ej. Reproceso por checadas capturadas tarde o revision de RH." rows="3" />
 

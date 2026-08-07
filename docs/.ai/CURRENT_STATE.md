@@ -152,9 +152,9 @@ EPIC-05:
   - cada empresa podra configurar parametros internos permitidos con vigencia, motivo y trazabilidad.
   - los calculos historicos conservaran snapshot de reglas y parametros usados.
 - Revision de capturas manuales:
-  - capturas `admin_manual` nacen como `pending_review`.
-  - `owner`, `admin` y `rh` pueden aprobar o rechazar capturas pendientes.
-  - aprobar cambia el evento a `valid` y refresca `work_days` para la fecha.
+  - capturas justificadas `admin_manual` hechas por `owner`, `admin` o `rh` nacen como `valid` con metadata `auto_approved`.
+  - `owner`, `admin` y `rh` conservan acciones para aprobar o rechazar capturas `admin_manual` pendientes de flujos existentes o futuros.
+  - aprobar cambia el evento a `valid`; capturas justificadas validas y aprobaciones encolan recalculo de `work_days`.
   - rechazar cambia el evento a `ignored` y conserva motivo de rechazo.
 
 Nota de descansos obligatorios:
@@ -331,7 +331,7 @@ Estado: L1, L2 y L3 integrados a `main`; L4 en progreso en rama `feature/work-da
 
 ## Bloque Alertas preventivas base
 
-Estado: en progreso en rama `feature/work-day-alert-resolution`.
+Estado: en progreso en rama `feature/work-day-incidence-board`.
 
 - Tablas base:
   - `alert_types`.
@@ -340,23 +340,24 @@ Estado: en progreso en rama `feature/work-day-alert-resolution`.
   - `AlertType`.
   - `Alert`.
 - `AlertTypeSeeder` carga los tipos mínimos del MVP inicial:
+  - `scheduled_absence`.
   - `incomplete_work_day`.
   - `overtime_detected`.
   - `twelve_hours_exceeded`.
   - `sunday_work`.
   - `mandatory_rest_work`.
-  - `six_consecutive_days`.
-- `EvaluateWorkDayAlertsAction` genera o actualiza alertas desde la version activa de `work_day_calculations`.
+  - `weekly_rest_missing`.
+- `EvaluateWorkDayAlertsAction` genera o actualiza alertas/incidencias desde la version activa de `work_day_calculations` y tambien detecta faltas programadas sin eventos validos.
 - `EvaluateWorkDayAlertsForDateRangeAction` evalua alertas por empresa, rango y centro opcional.
 - `ProcessCompanyWorkDaysAction` ejecuta alertas despues de refrescar, calcular y aplicar motor legal disponible.
 - Las alertas son idempotentes por huella `company_id + work_day_id + tipo`; el recalculo no duplica y cierra alertas stale.
-- `/alerts` muestra un listado preventivo con filtros por fecha, centro, estado, severidad y busqueda.
-- `/work-days` muestra filtro `Calculo`; el badge `Con alertas` abre un panel lateral con las alertas abiertas de la jornada.
-- `ResolveAlertAction` permite dictaminar alertas abiertas como `justified`, `corrected` o `closed` con motivo obligatorio, actor y fecha UTC.
+- `/alerts` se conserva como ruta tecnica de consulta, pero ya no aparece en el menu operativo.
+- `/work-days` funciona como tablero de incidencias: la tabla muestra datos basicos, tipo de incidencia, dictamen y accion; el detalle legal/eventos/trazabilidad vive en el side panel.
+- `ResolveAlertAction` permite dictaminar incidencias abiertas como `justified`, `corrected` o `closed` con motivo obligatorio, actor y fecha UTC.
 - Al dictaminar la ultima alerta abierta de una jornada, `work_days.status` vuelve a `calculated` si conserva calculo activo.
 - La policy `AlertPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
-- No se implementan comentarios, incidencias, bloqueo de cierres, conformidad, reportes ni API.
-- Siguiente paso recomendado: alcance operativo de Jornadas/Alertas para supervisores; despues Bloque Incidencias base.
+- No se implementan comentarios multiples, adjuntos, bloqueo de cierres, conformidad, reportes ni API.
+- Siguiente paso recomendado: alcance operativo de Jornadas para supervisores/encargados por centro o unidad.
 
 ## Bloque Recalculo puntual de jornada
 
@@ -390,11 +391,12 @@ Estado: en progreso en rama `feature/work-day-alert-resolution`.
 
 Estado: en progreso en rama `feature/manual-time-event-review`.
 
-- `ApproveManualTimeEventAction` aprueba capturas manuales `pending_review` y las convierte en eventos `valid`.
+- `RegisterManualTimeEventAction` guarda capturas justificadas de roles autorizados como eventos `valid` con motivo obligatorio, actor y metadata `auto_approved`.
+- `ApproveManualTimeEventAction` aprueba capturas manuales `pending_review` y las convierte en eventos `valid` para flujos pendientes existentes o futuros.
 - `RejectManualTimeEventAction` rechaza capturas manuales `pending_review` y las convierte en eventos `ignored` con motivo obligatorio.
 - La revision conserva metadata con decision, actor, fecha UTC, estado anterior y estado resultante.
-- `/time-events/manual` muestra acciones `Aprobar` y `Rechazar` para capturas manuales pendientes.
-- Al aprobar, la UI refresca `work_days` de la relacion laboral y fecha del evento para que Jornadas quede actualizada.
+- `/time-events/manual` muestra acciones `Aprobar` y `Rechazar` solo para capturas manuales pendientes.
+- Al crear una captura justificada valida o aprobar una pendiente, se encola recalculo de jornada para que Jornadas quede actualizada por scheduler/cola.
 - `supervisor`, otra empresa, membresias inactivas y eventos ya revisados quedan bloqueados.
 - No se implementan calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 

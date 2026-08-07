@@ -99,6 +99,17 @@ class EvaluateWorkDayAlertsAction
     {
         $alerts = [];
 
+        if ($this->isScheduledAbsence($workDay, $calculation)) {
+            $alerts['scheduled_absence'] = [
+                'title' => 'Falta',
+                'description' => 'La jornada estaba programada y no tiene eventos validos de asistencia.',
+                'metadata' => [
+                    'expected_work_minutes' => $workDay->expected_work_minutes,
+                    'valid_time_event_count' => $workDay->valid_time_event_count,
+                ],
+            ];
+        }
+
         if (! $calculation) {
             return $alerts;
         }
@@ -162,6 +173,15 @@ class EvaluateWorkDayAlertsAction
         }
 
         return $alerts;
+    }
+
+    private function isScheduledAbsence(WorkDay $workDay, ?WorkDayCalculation $calculation): bool
+    {
+        return ! $calculation
+            && $workDay->valid_time_event_count === 0
+            && $workDay->schedule_status === WorkDay::SCHEDULE_STATUS_SCHEDULED
+            && $workDay->day_type === 'shift'
+            && (int) $workDay->expected_work_minutes > 0;
     }
 
     private function closeLegacyWeeklyRestAlerts(Company $company): int

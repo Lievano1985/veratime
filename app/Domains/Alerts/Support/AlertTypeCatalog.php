@@ -12,6 +12,12 @@ class AlertTypeCatalog
     public static function entries(): array
     {
         return [
+            'scheduled_absence' => [
+                'name' => 'Falta',
+                'description' => 'La jornada estaba programada y no tiene eventos validos.',
+                'default_severity' => AlertType::SEVERITY_HIGH,
+                'category' => 'attendance',
+            ],
             'incomplete_work_day' => [
                 'name' => 'Jornada incompleta',
                 'description' => 'La secuencia de eventos requiere revision operativa.',

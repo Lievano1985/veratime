@@ -97,7 +97,7 @@ it('manual capture does not allow worker from another company', function (): voi
         ->assertHasErrors(['workerId']);
 });
 
-it('manual action creates pending review event with source user reason and local utc conversion', function (): void {
+it('manual action creates valid justified event with source user reason and local utc conversion', function (): void {
     [$company, $worker, $relationship, $center] = sprint2fManualFixture(centerAttributes: ['timezone' => 'America/Tijuana']);
     $user = sprint2fManualUserWithCompany($company, 'rh');
 
@@ -110,7 +110,7 @@ it('manual action creates pending review event with source user reason and local
 
     expect($event->event_type)->toBe('clock_in')
         ->and($event->source)->toBe('admin_manual')
-        ->and($event->status)->toBe('pending_review')
+        ->and($event->status)->toBe('valid')
         ->and($event->company_id)->toBe($company->id)
         ->and($event->worker_id)->toBe($worker->id)
         ->and($event->employment_relationship_id)->toBe($relationship->id)
@@ -121,12 +121,13 @@ it('manual action creates pending review event with source user reason and local
         ->and($event->occurred_local_time)->toBe('08:05:00')
         ->and($event->occurred_at_utc->utc()->format('Y-m-d H:i:s'))->toBe('2026-08-16 15:05:00')
         ->and($event->received_at)->not->toBeNull()
-        ->and($event->metadata)->toBe([
-            'channel' => 'manual',
-            'reason' => 'Olvido registrar entrada',
-            'captured_by' => $user->id,
-            'context' => 'manual_justified_entry',
-        ]);
+        ->and($event->metadata['channel'])->toBe('manual')
+        ->and($event->metadata['reason'])->toBe('Olvido registrar entrada')
+        ->and($event->metadata['captured_by'])->toBe($user->id)
+        ->and($event->metadata['context'])->toBe('manual_justified_entry')
+        ->and($event->metadata['review']['decision'])->toBe('auto_approved')
+        ->and($event->metadata['review']['actor_user_id'])->toBe($user->id)
+        ->and($event->metadata['review']['resulting_status'])->toBe('valid');
 });
 
 it('manual livewire creates event and lists only active company manual captures', function (): void {
@@ -152,7 +153,7 @@ it('manual livewire creates event and lists only active company manual captures'
         ->set('reason', 'Salida registrada por RH')
         ->call('capture')
         ->assertHasNoErrors()
-        ->assertSee('Captura manual guardada para revision.')
+        ->assertSee('Captura justificada guardada y enviada a recalculo de jornada.')
         ->assertSee($worker->full_name)
         ->assertDontSee($otherWorker->full_name);
 
@@ -161,7 +162,7 @@ it('manual livewire creates event and lists only active company manual captures'
         'worker_id' => $worker->id,
         'source' => 'admin_manual',
         'event_type' => 'clock_out',
-        'status' => 'pending_review',
+        'status' => 'valid',
     ]);
 });
 
@@ -236,11 +237,20 @@ it('manual livewire voids a visible company event with required reason', functio
 it('manual livewire approves pending manual event and refreshes work day', function (): void {
     [$company, $worker, $relationship] = sprint2fManualFixture();
     $user = sprint2fManualUserWithCompany($company, 'rh');
-    $event = app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
+    $event = TimeEvent::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id,
+        'center_id' => $relationship->center_id,
         'event_type' => 'clock_in',
+        'occurred_at_utc' => '2026-08-16 14:05:00',
         'occurred_local_date' => '2026-08-16',
-        'occurred_local_time' => '08:05',
-        'reason' => 'Entrada omitida validada por RH',
+        'occurred_local_time' => '08:05:00',
+        'timezone' => 'America/Mexico_City',
+        'received_at' => '2026-08-16 14:06:00',
+        'source' => 'admin_manual',
+        'status' => 'pending_review',
+        'metadata' => ['reason' => 'Entrada omitida validada por RH'],
     ]);
 
     expect(WorkDay::query()->where('company_id', $company->id)->count())->toBe(0);
@@ -271,13 +281,22 @@ it('manual livewire approves pending manual event and refreshes work day', funct
 });
 
 it('manual livewire rejects pending manual event with required reason', function (): void {
-    [$company, $worker] = sprint2fManualFixture();
+    [$company, $worker, $relationship] = sprint2fManualFixture();
     $user = sprint2fManualUserWithCompany($company, 'rh');
-    $event = app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
+    $event = TimeEvent::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id,
+        'center_id' => $relationship->center_id,
         'event_type' => 'clock_out',
+        'occurred_at_utc' => '2026-08-16 23:05:00',
         'occurred_local_date' => '2026-08-16',
-        'occurred_local_time' => '17:05',
-        'reason' => 'Salida omitida por prueba',
+        'occurred_local_time' => '17:05:00',
+        'timezone' => 'America/Mexico_City',
+        'received_at' => '2026-08-16 23:06:00',
+        'source' => 'admin_manual',
+        'status' => 'pending_review',
+        'metadata' => ['reason' => 'Salida omitida por prueba'],
     ]);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
@@ -297,14 +316,23 @@ it('manual livewire rejects pending manual event with required reason', function
 });
 
 it('manual review cannot be applied twice or by supervisor', function (): void {
-    [$company, $worker] = sprint2fManualFixture();
+    [$company, $worker, $relationship] = sprint2fManualFixture();
     $rh = sprint2fManualUserWithCompany($company, 'rh');
     $supervisor = sprint2fManualUserWithCompany($company, 'supervisor');
-    $event = app(RegisterManualTimeEventAction::class)->handle($company, $rh, $worker, [
+    $event = TimeEvent::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id,
+        'center_id' => $relationship->center_id,
         'event_type' => 'clock_in',
+        'occurred_at_utc' => '2026-08-16 14:05:00',
         'occurred_local_date' => '2026-08-16',
-        'occurred_local_time' => '08:05',
-        'reason' => 'Entrada omitida para revision',
+        'occurred_local_time' => '08:05:00',
+        'timezone' => 'America/Mexico_City',
+        'received_at' => '2026-08-16 14:06:00',
+        'source' => 'admin_manual',
+        'status' => 'pending_review',
+        'metadata' => ['reason' => 'Entrada omitida para revision'],
     ]);
 
     expect(fn () => app(\App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction::class)->handle($event, $supervisor))

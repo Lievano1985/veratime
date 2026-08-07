@@ -79,8 +79,9 @@ class ProcessSingleWorkDayAction
             $classificationResult = $this->classify->handle($company, $date, $date, $relationship->center);
             $ordinaryOvertimeResult = $this->ordinaryOvertime->handle($company, $date, $date, $relationship->center);
             $specialLegalCasesResult = $this->specialLegalCases->handle($company, $weekStart, $weekEnd, $relationship->center);
-            $alertsResult = $this->alerts->handle($company, $workDay->refresh());
         }
+
+        $alertsResult = $this->alerts->handle($company, $workDay->refresh());
 
         $workDay->refresh();
 
