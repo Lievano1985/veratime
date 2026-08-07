@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\WorkDays\Jobs\RecalculateWorkDayFromTimeEventJob;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -34,9 +35,9 @@ class CreateTimeEventAction
         $status = $this->validateInList($data['status'] ?? $this->defaultStatusForSource($source), TimeEvent::STATUSES, 'El estado del evento de jornada no es valido.');
         $times = $this->normalizeTimes($company, $center, $data);
 
-        return DB::transaction(function () use ($company, $worker, $employmentRelationship, $center, $sourceUser, $data, $eventType, $source, $status, $times): TimeEvent {
+        $result = DB::transaction(function () use ($company, $worker, $employmentRelationship, $center, $sourceUser, $data, $eventType, $source, $status, $times): array {
             if ($existing = $this->findExistingIdempotentEvent($company, $source, $data)) {
-                return $existing;
+                return ['event' => $existing, 'created' => false];
             }
 
             $event = new TimeEvent([
@@ -60,8 +61,14 @@ class CreateTimeEventAction
             $event->sourceUser()->associate($sourceUser);
             $event->save();
 
-            return $event->refresh();
+            return ['event' => $event->refresh(), 'created' => true];
         });
+
+        if ($result['created'] && $this->shouldDispatchWorkDayRecalculation($result['event'])) {
+            RecalculateWorkDayFromTimeEventJob::dispatch($result['event']->id, 'time_event_created')->afterCommit();
+        }
+
+        return $result['event'];
     }
 
     private function assertCompanyIsActive(Company $company): void
@@ -178,5 +185,12 @@ class CreateTimeEventAction
         }
 
         return null;
+    }
+
+    private function shouldDispatchWorkDayRecalculation(TimeEvent $event): bool
+    {
+        return $event->status === 'valid'
+            && $event->employment_relationship_id !== null
+            && $event->event_type === 'clock_out';
     }
 }

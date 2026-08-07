@@ -251,9 +251,9 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `company_settings` permite configurar `work_days_auto_refresh_time` por empresa.
 - Se guarda ultima ejecucion de jornadas con fecha UTC, estado y resumen JSON.
 - `/companies` solo conserva la hora automatica de jornadas dentro de configuracion.
-- `/work-days` permite ejecutar `Procesar jornadas` desde un panel lateral.
-- El proceso manual sugiere el rango disponible hasta hoy y permite capturar rango solo para reproceso puntual.
-- `work-days:refresh` conserva el nombre tecnico, pero procesa refresco y calculo legal disponible por empresa, rango y centro opcional.
+- `/work-days` permite ejecutar `Recalcular jornadas` desde un panel lateral con motivo obligatorio.
+- El proceso manual sugiere el rango disponible hasta hoy, permite capturar rango solo para reproceso puntual y guarda actor, motivo, modo y tipo de generacion en el resumen de ejecucion.
+- `work-days:refresh` conserva el nombre tecnico, pero procesa refresco y calculo legal disponible por empresa, rango y centro opcional; el reproceso manual por consola requiere `--reason`.
 - `work-days:auto-refresh` evalua empresas activas con hora configurada y procesa el rango disponible hasta hoy por timezone local.
 - El scheduler registra `work-days:auto-refresh` cada minuto con `withoutOverlapping`; en hosting/cPanel requiere cron de `php artisan schedule:run`.
 - El refresco automatico no se bloquea por ejecuciones manuales previas del mismo dia.
@@ -265,7 +265,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 Estado: cerrado e integrado a `main`.
 
 - `/work-days` muestra las jornadas generadas por `work_days` con filtros basicos.
-- `/work-days` concentra la accion manual `Procesar jornadas` en un panel lateral; configuracion de empresa solo conserva la hora automatica.
+- `/work-days` concentra la accion manual `Recalcular jornadas` en un panel lateral con motivo obligatorio; configuracion de empresa solo conserva la hora automatica.
 - La consulta se concentra en `ListWorkDaysAction`; Livewire solo orquesta filtros y render.
 - La policy `WorkDayPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
 - No se agregan calculos, motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
@@ -283,7 +283,7 @@ Estado: implementado/candidato a cierre en rama `feature/work-day-calculations-f
 - Eventos de madrugada que continuan una entrada abierta del dia anterior pertenecen a la jornada del dia de entrada y no crean una segunda jornada no programada.
 - Cada calculo sincroniza `valid_time_event_count`, `valid_time_event_ids`, `first_event_at_utc` y `last_event_at_utc` con los eventos realmente usados.
 - Jornadas con eventos incompletos quedan `under_review`; jornadas sin eventos validos permanecen `pending`.
-- `/work-days` muestra minutos trabajados cuando hay calculo activo; el calculo manual se ejecuta dentro del flujo unico `Procesar jornadas`.
+- `/work-days` muestra minutos trabajados cuando hay calculo activo; el calculo manual se ejecuta dentro del flujo unico `Recalcular jornadas`.
 - No se implementan motor legal, clasificacion diurna/nocturna/mixta real, horas extra, alertas, incidencias, cierres, reportes ni API.
 
 ## Bloque Legal Rules versionado
@@ -331,7 +331,7 @@ Estado: L1, L2 y L3 integrados a `main`; L4 en progreso en rama `feature/work-da
 
 ## Bloque Alertas preventivas base
 
-Estado: en progreso en rama `feature/work-day-alerts-foundation`.
+Estado: en progreso en rama `feature/work-day-alert-resolution`.
 
 - Tablas base:
   - `alert_types`.
@@ -351,9 +351,40 @@ Estado: en progreso en rama `feature/work-day-alerts-foundation`.
 - `ProcessCompanyWorkDaysAction` ejecuta alertas despues de refrescar, calcular y aplicar motor legal disponible.
 - Las alertas son idempotentes por huella `company_id + work_day_id + tipo`; el recalculo no duplica y cierra alertas stale.
 - `/alerts` muestra un listado preventivo con filtros por fecha, centro, estado, severidad y busqueda.
+- `/work-days` muestra filtro `Calculo`; el badge `Con alertas` abre un panel lateral con las alertas abiertas de la jornada.
+- `ResolveAlertAction` permite dictaminar alertas abiertas como `justified`, `corrected` o `closed` con motivo obligatorio, actor y fecha UTC.
+- Al dictaminar la ultima alerta abierta de una jornada, `work_days.status` vuelve a `calculated` si conserva calculo activo.
 - La policy `AlertPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
-- No se implementan comentarios, resolucion manual, incidencias, bloqueos de cierre, reportes ni API.
-- Siguiente paso recomendado: validar UI de alertas; despues Bloque Incidencias base.
+- No se implementan comentarios, incidencias, bloqueo de cierres, conformidad, reportes ni API.
+- Siguiente paso recomendado: alcance operativo de Jornadas/Alertas para supervisores; despues Bloque Incidencias base.
+
+## Bloque Recalculo puntual de jornada
+
+Estado: en progreso en rama `feature/work-day-alert-resolution`.
+
+- `ProcessSingleWorkDayAction` procesa una sola relacion laboral y fecha como punto de entrada reutilizable para cola por evento.
+- La Action refresca/crea `work_days` para la fecha, calcula la jornada, aplica clasificacion legal, ordinario/extra, casos especiales y evalua alertas.
+- Para reglas semanales usa la semana natural lunes-domingo alrededor de la fecha trabajada, sin cambiar la interfaz publica de relacion + fecha.
+- Soporta jornadas programadas desde programacion publicada y no programadas desde eventos validos.
+- Bloquea relaciones laborales de otra empresa y exige empresa activa.
+- No implementa todavia Job, dispatch automatico desde checadas, batch nocturno nuevo, dashboard, incidencias, reportes, API, Redis, SQS ni AWS.
+- Siguiente paso recomendado: Job por evento usando `database queue`, disparado desde salida, aprobacion manual y anulacion.
+
+## Bloque Job por evento de jornada
+
+Estado: en progreso en rama `feature/work-day-alert-resolution`.
+
+- `RecalculateWorkDayFromTimeEventJob` procesa un `time_event` y llama `ProcessSingleWorkDayAction`.
+- El Job usa la cola `work-days`, implementa unicidad temporal por evento/disparador y no calcula directamente.
+- `CreateTimeEventAction` encola el Job cuando se crea un `clock_out` valido con relacion laboral.
+- `ApproveManualTimeEventAction` encola el Job al aprobar una captura manual con relacion laboral.
+- `VoidTimeEventAction` encola el Job al anular un evento con relacion laboral.
+- En salidas nocturnas o eventos de madrugada, el Job procesa la fecha local del evento y la fecha anterior para que la jornada real de entrada se recalculen correctamente.
+- La infraestructura sigue compatible con cPanel usando `QUEUE_CONNECTION=database`; AWS/SQS queda como cambio futuro de driver, no de dominio.
+- `routes/console.php` programa `queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3` cada minuto con `withoutOverlapping`.
+- En cPanel basta un cron a `schedule:run` para ejecutar `work-days:auto-refresh` y procesar jobs pendientes de cola.
+- No implementa dashboard nuevo, batch nocturno nuevo, incidencias, reportes, API, Redis, SQS ni AWS.
+- Siguiente paso recomendado: convertir el boton manual en reproceso auditable con motivo obligatorio.
 
 ## Bloque revision de capturas manuales
 

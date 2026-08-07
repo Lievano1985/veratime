@@ -498,8 +498,17 @@ php artisan queue:work --stop-when-empty
 
 Ejecutado cada minuto o cada pocos minutos según limitación del hosting.
 
+Para Vera Time en cPanel, el scheduler ejecuta la cola operacional con:
+
+```bash
+php artisan queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3
+```
+
+La cola `work-days` procesa recalculos derivados de eventos de asistencia. `default` queda disponible para jobs generales del MVP. En hosting compartido no se requiere worker permanente: el cron de `schedule:run` levanta procesos cortos y termina cuando no hay trabajos pendientes.
+
 ## 9.4 Jobs que irán a cola
 
+- Recalculo de jornadas por evento de asistencia.
 - Importaciones CSV.
 - Recalculos masivos.
 - Generación de reportes.
@@ -527,6 +536,11 @@ php /home/usuario/veratime/artisan schedule:run >> /dev/null 2>&1
 ```
 
 La ruta exacta deberá ajustarse según el hosting.
+
+Con este único cron, Laravel ejecuta:
+
+- `work-days:auto-refresh` para el respaldo programado por empresa.
+- `queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3` para procesar jobs pendientes sin worker permanente.
 
 ## 10.2 Frecuencia
 
@@ -1322,5 +1336,4 @@ docs/13-Backlog/BL-0001-BACKLOG-MVP-INICIAL.md
 ```
 
 Ese documento convertirá todo lo definido en épicas, módulos, historias y prioridades para iniciar desarrollo con Codex.
-
 

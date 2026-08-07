@@ -20,6 +20,12 @@ class AlertPolicy
             && $this->canViewAlerts($user, $alert->company);
     }
 
+    public function resolve(User $user, Alert $alert): bool
+    {
+        return $alert->company
+            && $this->canViewAlerts($user, $alert->company);
+    }
+
     private function canViewAlerts(User $user, Company $company): bool
     {
         return $company->status === 'active'

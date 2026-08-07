@@ -16,6 +16,9 @@ class ListWorkDaysAction
     {
         return WorkDay::query()
             ->with(['worker', 'center', 'employmentRelationship', 'scheduleBatch', 'activeCalculation'])
+            ->withCount([
+                'alerts as open_alerts_count' => fn ($query) => $query->whereIn('status', \App\Models\Alert::OPEN_STATUSES),
+            ])
             ->where('company_id', $company->id)
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '<=', $date))

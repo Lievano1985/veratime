@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\WorkDays\Jobs\RecalculateWorkDayFromTimeEventJob;
 use App\Models\TimeEvent;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -19,7 +20,7 @@ class VoidTimeEventAction
             throw new InvalidArgumentException('El motivo de anulacion es requerido.');
         }
 
-        return DB::transaction(function () use ($timeEvent, $actor, $reason, $voidedAt): TimeEvent {
+        $event = DB::transaction(function () use ($timeEvent, $actor, $reason, $voidedAt): TimeEvent {
             $event = TimeEvent::query()
                 ->whereKey($timeEvent->id)
                 ->lockForUpdate()
@@ -51,5 +52,11 @@ class VoidTimeEventAction
 
             return $event->refresh();
         });
+
+        if ($event->employment_relationship_id !== null) {
+            RecalculateWorkDayFromTimeEventJob::dispatch($event->id, 'void')->afterCommit();
+        }
+
+        return $event;
     }
 }

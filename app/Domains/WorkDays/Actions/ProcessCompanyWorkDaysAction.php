@@ -36,6 +36,7 @@ class ProcessCompanyWorkDaysAction
     public function handle(Company $company, ?string $startDate = null, ?string $endDate = null, ?Center $center = null, ?User $actor = null, string $mode = 'manual', string $generatedByType = WorkDayCalculation::GENERATED_BY_SYSTEM, ?string $reason = null, bool $onlyPendingOrStale = true): array
     {
         $settings = $company->setting ?: $company->setting()->create(Company::defaultSettings());
+        $effectiveReason = trim((string) $reason) ?: 'Proceso operativo de jornadas';
         $range = ($startDate && $endDate)
             ? ['start_date' => CarbonImmutable::parse($startDate)->toDateString(), 'end_date' => CarbonImmutable::parse($endDate)->toDateString()]
             : $this->defaultAvailableRange($company);
@@ -49,7 +50,7 @@ class ProcessCompanyWorkDaysAction
                 $center,
                 $actor,
                 $generatedByType,
-                $reason ?: 'Proceso operativo de jornadas',
+                $effectiveReason,
                 $onlyPendingOrStale,
             );
             $classificationResult = $this->classify->handle($company, $range['start_date'], $range['end_date'], $center);
@@ -62,7 +63,10 @@ class ProcessCompanyWorkDaysAction
                 'start_date' => $range['start_date'],
                 'end_date' => $range['end_date'],
                 'center_id' => $center?->id,
+                'actor_id' => $actor?->id,
                 'mode' => $mode,
+                'generated_by_type' => $generatedByType,
+                'reason' => $effectiveReason,
                 'status' => 'ok',
                 'scheduled' => $refreshResult['scheduled'],
                 'unscheduled' => $refreshResult['unscheduled'],
@@ -87,7 +91,10 @@ class ProcessCompanyWorkDaysAction
                 'start_date' => $range['start_date'],
                 'end_date' => $range['end_date'],
                 'center_id' => $center?->id,
+                'actor_id' => $actor?->id,
                 'mode' => $mode,
+                'generated_by_type' => $generatedByType,
+                'reason' => $effectiveReason,
                 'status' => 'failed',
                 'scheduled' => 0,
                 'unscheduled' => 0,

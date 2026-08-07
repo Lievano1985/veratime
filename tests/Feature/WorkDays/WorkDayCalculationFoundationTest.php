@@ -234,7 +234,7 @@ class WorkDayCalculationFoundationTest extends TestCase
             ->set('processForm.reason', 'Prueba UI')
             ->call('processWorkDays')
             ->assertHasNoErrors()
-            ->assertSee('Proceso de jornadas');
+            ->assertSee('Recalculo de jornadas');
 
         $this->assertSame(1, WorkDayCalculation::query()->where('company_id', $company->id)->count());
     }

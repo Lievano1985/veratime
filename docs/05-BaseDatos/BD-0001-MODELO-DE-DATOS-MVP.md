@@ -1191,6 +1191,8 @@ Implementacion base 2026-08-05:
 - `/alerts` permite consulta con filtros básicos.
 - No se implementan todavía `alert_comments`, resolución manual avanzada, incidencias, cierres, reportes ni API.
 
+- `/work-days` permite dictamen basico de alertas abiertas desde el badge `Con alertas`; se conserva `resolution`, `resolved_by`, `resolved_at` y metadata de resolucion.
+
 ## 13.3 `alert_comments`
 
 Comentarios o seguimiento de alerta.
