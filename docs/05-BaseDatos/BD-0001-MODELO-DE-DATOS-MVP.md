@@ -837,9 +837,9 @@ Reglas:
 - En Sprint 2E, los eventos web se crean con source `web`, hora actual del sistema segun zona horaria aplicable y sin aceptar fecha u hora explicita desde la interfaz.
 - Sprint 2F agrega `source = kiosk` para eventos registrados con codigo/NIP y `source = admin_manual` para captura manual justificada.
 - Kiosco no acepta fecha/hora explicita; usa hora actual del sistema y no guarda NIP en metadata.
-- Captura manual si acepta fecha/hora explicita y motivo obligatorio; queda como `pending_review` por regla de `CreateTimeEventAction` para `admin_manual`.
-- La revision de captura manual permite aprobar `pending_review` a `valid` o rechazar a `ignored` con motivo; la metadata conserva decision, actor, fecha UTC, estado anterior y estado resultante.
-- Al aprobar una captura manual desde UI se refresca `work_days` para la relacion laboral y fecha del evento.
+- Captura manual justificada acepta fecha/hora explicita y motivo obligatorio; si la realiza `owner`, `admin` o `rh` desde la UI operativa queda como `valid` con metadata `auto_approved`.
+- La revision de captura manual sigue permitiendo aprobar `pending_review` a `valid` o rechazar a `ignored` con motivo para flujos pendientes existentes o futuros; la metadata conserva decision, actor, fecha UTC, estado anterior y estado resultante.
+- Al crear una captura justificada valida o aprobar una pendiente se encola recalculo de `work_days` para la relacion laboral y fecha del evento.
 - El registro web debe usar `RegisterWebTimeEventAction`, que orquesta `CreateTimeEventAction` para conservar normalizacion de timezone, fuente `web`, estado `valid`, `received_at` y metadata minima no sensible.
 - Bloque 5 no crea `work_days`, `work_day_calculations`, motor legal, alertas, incidencias ni reportes.
 ## 10.3 `kiosk_sessions`
@@ -1126,6 +1126,7 @@ missing_clock_in
 missing_clock_out
 duplicate_event
 incomplete_work_day
+scheduled_absence
 daily_limit_exceeded
 weekly_limit_exceeded
 overtime_detected
@@ -1185,13 +1186,15 @@ Implementacion base 2026-08-05:
 
 - `alert_types` y `alerts` existen como módulo preventivo inicial.
 - `AlertTypeSeeder` carga tipos mínimos para jornada incompleta, tiempo extra, más de 12 horas, domingo, descanso obligatorio y semana sin descanso.
-- Las alertas se generan desde `work_day_calculations` activos con `EvaluateWorkDayAlertsAction`.
+- Las alertas/incidencias se generan desde `work_day_calculations` activos con `EvaluateWorkDayAlertsAction`; `scheduled_absence` tambien se genera desde `work_days` programadas sin eventos validos.
 - La huella `fingerprint` evita duplicados por empresa, jornada y tipo de alerta.
 - Cuando un recalculo elimina la condición, las alertas abiertas del tipo gestionado se cierran automáticamente como `closed`.
 - `/alerts` permite consulta con filtros básicos.
 - No se implementan todavía `alert_comments`, resolución manual avanzada, incidencias, cierres, reportes ni API.
 
-- `/work-days` permite dictamen basico de alertas abiertas desde el badge `Con alertas`; se conserva `resolution`, `resolved_by`, `resolved_at` y metadata de resolucion.
+- `/work-days` permite dictamen basico de incidencias desde la tabla de Jornadas; se conserva `resolution`, `resolved_by`, `resolved_at` y metadata de resolucion.
+- `scheduled_absence` representa una falta dictaminable cuando una jornada programada no tiene eventos validos.
+- `alerts` se conserva como tabla tecnica de trazabilidad; no se agrega tabla separada de incidencias en este bloque.
 
 ## 13.3 `alert_comments`
 

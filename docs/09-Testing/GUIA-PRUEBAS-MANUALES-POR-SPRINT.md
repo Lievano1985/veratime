@@ -1687,22 +1687,24 @@ php artisan test tests/Feature/LegalRules --stop-on-failure
 
 **Estado:** Implementado/candidato a validacion.
 
-Este bloque genera alertas preventivas desde jornadas calculadas, las muestra en `/alerts` y permite dictaminarlas desde el badge `Con alertas` de `/work-days`. No abre incidencias ni agrega comentarios avanzados todavia.
+Este bloque genera alertas/incidencias preventivas y concentra el flujo visible en `/work-days`. La tabla de Jornadas muestra datos basicos, tipo de incidencia y dictamen; el detalle y la trazabilidad se revisan en el side panel. `/alerts` se conserva como ruta tecnica, pero ya no aparece en el menu operativo.
 
 ### Validaciones esperadas
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
 | Recalcular jornadas | En `/work-days`, presionar `Recalcular jornadas` para un rango con extras, domingo o semana sin descanso y capturar motivo. | El resumen indica alertas revisadas. |
-| Listado | Entrar a `/alerts`. | Se muestran alertas con trabajador, jornada, centro, severidad, estado y fecha. |
-| Filtros | Filtrar por severidad, estado, centro y trabajador. | La tabla cambia sin mostrar alertas de otra empresa. |
+| Menu operativo | Revisar el menu lateral. | No aparece una vista separada de `Alertas`; el flujo visible queda en `Jornadas`. |
+| Tabla de Jornadas | Entrar a `/work-days`. | La tabla muestra columnas basicas e `Incidencia`, `Dictamen` y `Accion`; detalles legales quedan fuera de la tabla. |
+| Filtros | Filtrar por tipo de incidencia, dictamen, centro y trabajador. | La tabla cambia sin mostrar datos de otra empresa. |
+| Falta | Recalcular una jornada programada sin eventos validos. | Se crea incidencia `scheduled_absence` y puede dictaminarse desde Jornadas. |
 | Tiempo extra | Calcular una jornada con `overtime_minutes > 0`. | Se crea alerta `overtime_detected`. |
 | Domingo | Calcular una jornada con `sunday_minutes > 0`. | Se crea alerta `sunday_work`. |
 | Descanso semanal | Calcular semana natural sin dia de descanso. | Se crea una sola alerta `weekly_rest_missing` por trabajador y semana natural. |
 | Recalculo | Corregir/recalcular una jornada para quitar la condicion. | La alerta abierta queda `closed`; no se duplica. |
-| Dictamen desde Jornadas | En `/work-days`, filtrar `Calculo = Con alertas`, presionar el badge de una jornada, capturar dictamen y motivo. | El panel lateral guarda actor/fecha, cierra la alerta abierta y la jornada queda `Calculada` si no quedan alertas abiertas. |
+| Dictamen desde Jornadas | En `/work-days`, filtrar `Incidencia` o `Dictamen`, presionar `Dictaminar`, capturar dictamen y comentario. | El panel lateral guarda actor/fecha, cierra la incidencia abierta y la jornada queda `Calculada` si no quedan incidencias pendientes y conserva calculo activo. |
 | Motivo obligatorio | Intentar guardar un dictamen sin motivo o con texto muy corto. | El sistema bloquea el guardado y conserva la alerta abierta. |
-| Supervisor | Entrar como supervisor. | No puede ver `/alerts`. |
+| Supervisor | Entrar como supervisor. | No puede ver ni dictaminar Jornadas en este bloque; el alcance operativo se implementara despues. |
 
 Comando sugerido:
 
@@ -1712,9 +1714,9 @@ php artisan test tests/Feature/Alerts --stop-on-failure
 
 ### No incluido todavia
 
-- Comentarios de alerta.
-- Comentarios avanzados de alerta.
-- Incidencias.
+- Comentarios multiples.
+- Adjuntos.
+- Nueva tabla de incidencias.
 - Bloqueo de cierres.
 - Reportes.
 - API.
@@ -1794,7 +1796,7 @@ php artisan schedule:list
 
 **Estado:** En progreso.
 
-Este bloque permite decidir si una captura manual justificada entra o no a Jornadas. La captura nace como `En revision`; solo al aprobar pasa a `Valido` y actualiza `work_days`.
+Este bloque conserva revision para eventos manuales pendientes, pero la captura justificada realizada por owner/admin/rh entra como `Valido` desde el inicio con motivo obligatorio, metadata de autoaprobacion y job de recalculo. La aprobacion/rechazo queda para eventos `admin_manual` que aun nazcan como `En revision` por otros flujos o datos existentes.
 
 ### Ruta
 
@@ -1805,10 +1807,10 @@ Este bloque permite decidir si una captura manual justificada entra o no a Jorna
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Captura manual | Crear una entrada o salida manual justificada. | Se guarda como `En revision` y todavia no aparece en Jornadas como evento valido. |
-| Aprobar | En la tabla de eventos, presionar `Aprobar` sobre una captura pendiente. | Cambia a `Valido`, registra metadata de revision y actualiza la jornada de esa fecha. |
-| Ver en Jornadas | Abrir `/work-days` en el rango de la fecha aprobada. | Aparece jornada `No programada` si no habia horario publicado, con conteo de eventos. |
-| Rechazar | Crear otra captura manual, presionar `Rechazar`, capturar motivo y confirmar. | Cambia a `Ignorado`, conserva motivo y no entra a Jornadas. |
+| Captura justificada autorizada | Crear una entrada o salida manual justificada con owner/admin/rh. | Se guarda como `Valido`, conserva motivo, actor y metadata `auto_approved`, y encola recalculo de jornada. |
+| Ver en Jornadas | Ejecutar scheduler/cola y abrir `/work-days` en el rango de la fecha capturada. | Aparece o se actualiza la jornada con el evento valido. |
+| Aprobar pendiente | Sobre un evento `admin_manual` existente en `En revision`, presionar `Aprobar`. | Cambia a `Valido`, registra metadata de revision y actualiza la jornada de esa fecha. |
+| Rechazar pendiente | Sobre un evento `admin_manual` existente en `En revision`, presionar `Rechazar`, capturar motivo y confirmar. | Cambia a `Ignorado`, conserva motivo y no entra a Jornadas. |
 | Doble revision | Intentar aprobar o rechazar un evento ya revisado. | La accion queda bloqueada. |
 | Supervisor | Entrar como supervisor. | No puede revisar capturas manuales. |
 | Otra empresa | Manipular IDs o cambiar empresa. | No puede revisar eventos de otro tenant. |
