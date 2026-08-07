@@ -53,12 +53,17 @@ class WorkDayOperationalRefreshTest extends TestCase
             ->call('openProcessPanel')
             ->set('processForm.date_from', '2026-08-03')
             ->set('processForm.date_to', '2026-08-03')
+            ->set('processForm.reason', 'Reproceso manual por prueba operativa')
             ->call('processWorkDays')
             ->assertHasNoErrors()
-            ->assertSee('Proceso de jornadas');
+            ->assertSee('Recalculo de jornadas');
 
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
-        $this->assertSame('manual_ui', $company->setting->refresh()->work_days_last_refresh_summary['mode']);
+        $summary = $company->setting->refresh()->work_days_last_refresh_summary;
+        $this->assertSame('manual_ui', $summary['mode']);
+        $this->assertSame($user->id, $summary['actor_id']);
+        $this->assertSame('user', $summary['generated_by_type']);
+        $this->assertSame('Reproceso manual por prueba operativa', $summary['reason']);
     }
 
     public function test_company_settings_do_not_show_manual_work_days_refresh(): void
@@ -69,7 +74,7 @@ class WorkDayOperationalRefreshTest extends TestCase
 
         Volt::test('companies.index')
             ->assertSee('Hora automatica de jornadas')
-            ->assertDontSee('Procesar jornadas');
+            ->assertDontSee('Recalcular jornadas');
     }
 
     public function test_manual_command_refreshes_company_range(): void
@@ -80,11 +85,30 @@ class WorkDayOperationalRefreshTest extends TestCase
             '--company' => $company->id,
             '--from' => '2026-08-03',
             '--to' => '2026-08-03',
+            '--reason' => 'Reproceso por consola de prueba',
         ]);
 
         $this->assertStringContainsString('Jornadas procesadas', Artisan::output());
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
-        $this->assertSame('manual_command', $company->setting->refresh()->work_days_last_refresh_summary['mode']);
+        $summary = $company->setting->refresh()->work_days_last_refresh_summary;
+        $this->assertSame('manual_command', $summary['mode']);
+        $this->assertSame('user', $summary['generated_by_type']);
+        $this->assertSame('Reproceso por consola de prueba', $summary['reason']);
+    }
+
+    public function test_manual_command_requires_reason(): void
+    {
+        [$company] = $this->companyUserAndPublishedDay();
+
+        $exitCode = Artisan::call('work-days:refresh', [
+            '--company' => $company->id,
+            '--from' => '2026-08-03',
+            '--to' => '2026-08-03',
+        ]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('La opcion --reason es requerida para reproceso manual.', Artisan::output());
+        $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
     }
 
     public function test_auto_refresh_runs_only_when_company_local_time_is_due(): void

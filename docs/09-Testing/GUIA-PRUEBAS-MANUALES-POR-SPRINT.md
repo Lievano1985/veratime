@@ -1523,12 +1523,12 @@ Este bloque agrega la forma operativa de actualizar `work_days`: manual desde `/
 | Caso | Accion | Resultado esperado |
 |---|---|---|
 | Hora automatica | Entrar a `/companies`, editar configuracion y guardar una hora en `Hora automatica de jornadas`. | La hora se conserva al recargar y no aparece boton manual de actualizar jornadas. |
-| Proceso manual UI | En `/work-days`, presionar `Procesar jornadas`, revisar el rango sugerido o capturar un rango puntual y confirmar. | Se muestra mensaje con jornadas actualizadas, calculadas, en revision y sin eventos validos. |
+| Recalculo manual UI | En `/work-days`, presionar `Recalcular jornadas`, revisar el rango sugerido o capturar un rango puntual, capturar motivo obligatorio y confirmar. | Se muestra mensaje con jornadas actualizadas, calculadas, en revision y sin eventos validos; el resumen guarda actor y motivo. |
 | Jornada esperada | Publicar una semana, refrescar el rango y revisar base/pruebas. | Se crean jornadas desde horarios publicados aunque no existan eventos. |
 | Evento sin horario | Registrar evento valido en fecha sin horario publicado y refrescar. | Se crea jornada `unscheduled`. |
 | Automatico | Configurar hora local, ejecutar `php artisan work-days:auto-refresh` en esa hora. | Procesa solo empresas activas vencidas y guarda ultimo resumen. |
 | Idempotencia diaria auto | Ejecutar dos veces el automatico en la misma hora local. | No duplica jornadas ni repite empresa ya procesada automaticamente ese dia. |
-| Comando manual | Ejecutar `php artisan work-days:refresh --company=ID --from=YYYY-MM-DD --to=YYYY-MM-DD`. | Refresca solo esa empresa/rango. |
+| Comando manual | Ejecutar `php artisan work-days:refresh --company=ID --from=YYYY-MM-DD --to=YYYY-MM-DD --reason="Motivo del reproceso"`. | Refresca solo esa empresa/rango y guarda el motivo en el resumen. |
 | Multi-tenant | Ejecutar refresco para Empresa A teniendo eventos/lotes de Empresa B. | Solo se crean o actualizan jornadas de Empresa A. |
 
 Comando sugerido:
@@ -1567,7 +1567,7 @@ Este bloque permite ver las jornadas ya generadas por `work_days`. Es una consul
 | Caso | Accion | Resultado esperado |
 |---|---|---|
 | Acceso manager | Entrar con owner/admin/rh y abrir `/work-days`. | Carga el listado de jornadas de la empresa activa. |
-| Procesar jornadas | En `/work-days`, presionar `Procesar jornadas`. | Abre panel lateral con rango sugerido hasta hoy; no aparece en configuracion de empresa. |
+| Recalcular jornadas | En `/work-days`, presionar `Recalcular jornadas`. | Abre panel lateral con rango sugerido hasta hoy y motivo obligatorio; no aparece en configuracion de empresa. |
 | Filtros | Usar fecha, centro, tipo de horario o busqueda por trabajador. | La tabla se filtra sin mezclar datos de otras empresas. |
 | Jornada programada | Refrescar jornadas desde una semana publicada y abrir `/work-days`. | Aparece con badge `Programada`, tipo de dia y minutos esperados. |
 | Jornada no programada | Refrescar eventos validos sin horario publicado y abrir `/work-days`. | Aparece con badge `No programada` y conteo de eventos. |
@@ -1607,7 +1607,7 @@ Este bloque calcula una version operativa inicial de cada jornada con eventos va
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Calculo manual | En `/work-days`, presionar `Procesar jornadas`, seleccionar rango si se requiere reproceso y confirmar. | Actualiza jornadas y calcula automaticamente las que no tienen calculo o quedaron stale/en revision. |
+| Calculo manual | En `/work-days`, presionar `Recalcular jornadas`, seleccionar rango si se requiere reproceso, capturar motivo y confirmar. | Actualiza jornadas y calcula automaticamente las que no tienen calculo o quedaron stale/en revision. |
 | Jornada completa | Tener entrada y salida validas en el mismo dia, actualizar jornadas y calcular. | La fila muestra estado `Calculada` y minutos trabajados. |
 | Pausa completa | Registrar entrada, inicio de pausa, fin de pausa y salida; calcular. | Los minutos trabajados descuentan la pausa completa. |
 | Secuencia incompleta | Registrar solo entrada o dejar pausa abierta; calcular. | La jornada queda `En revision`, sin borrar eventos. |
@@ -1687,19 +1687,21 @@ php artisan test tests/Feature/LegalRules --stop-on-failure
 
 **Estado:** Implementado/candidato a validacion.
 
-Este bloque genera alertas preventivas desde jornadas calculadas y las muestra en `/alerts`. No abre incidencias ni permite resolucion manual avanzada todavia.
+Este bloque genera alertas preventivas desde jornadas calculadas, las muestra en `/alerts` y permite dictaminarlas desde el badge `Con alertas` de `/work-days`. No abre incidencias ni agrega comentarios avanzados todavia.
 
 ### Validaciones esperadas
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Procesar jornadas | En `/work-days`, presionar `Procesar jornadas` para un rango con extras, domingo o semana sin descanso. | El resumen indica alertas revisadas. |
+| Recalcular jornadas | En `/work-days`, presionar `Recalcular jornadas` para un rango con extras, domingo o semana sin descanso y capturar motivo. | El resumen indica alertas revisadas. |
 | Listado | Entrar a `/alerts`. | Se muestran alertas con trabajador, jornada, centro, severidad, estado y fecha. |
 | Filtros | Filtrar por severidad, estado, centro y trabajador. | La tabla cambia sin mostrar alertas de otra empresa. |
 | Tiempo extra | Calcular una jornada con `overtime_minutes > 0`. | Se crea alerta `overtime_detected`. |
 | Domingo | Calcular una jornada con `sunday_minutes > 0`. | Se crea alerta `sunday_work`. |
 | Descanso semanal | Calcular semana natural sin dia de descanso. | Se crea una sola alerta `weekly_rest_missing` por trabajador y semana natural. |
 | Recalculo | Corregir/recalcular una jornada para quitar la condicion. | La alerta abierta queda `closed`; no se duplica. |
+| Dictamen desde Jornadas | En `/work-days`, filtrar `Calculo = Con alertas`, presionar el badge de una jornada, capturar dictamen y motivo. | El panel lateral guarda actor/fecha, cierra la alerta abierta y la jornada queda `Calculada` si no quedan alertas abiertas. |
+| Motivo obligatorio | Intentar guardar un dictamen sin motivo o con texto muy corto. | El sistema bloquea el guardado y conserva la alerta abierta. |
 | Supervisor | Entrar como supervisor. | No puede ver `/alerts`. |
 
 Comando sugerido:
@@ -1711,11 +1713,80 @@ php artisan test tests/Feature/Alerts --stop-on-failure
 ### No incluido todavia
 
 - Comentarios de alerta.
-- Resolucion manual avanzada.
+- Comentarios avanzados de alerta.
 - Incidencias.
 - Bloqueo de cierres.
 - Reportes.
 - API.
+
+---
+
+## Bloque Recalculo puntual de jornada
+
+**Estado:** Implementado/candidato a validacion automatizada.
+
+Este bloque agrega la Action reutilizable para procesar una relacion laboral y una fecha. Es la base para recalcular jornadas por evento sin depender de que un usuario presione el boton general.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Jornada programada | Crear horario publicado, registrar entrada/salida y ejecutar la Action puntual desde prueba automatizada. | Se crea/actualiza `work_days`, se genera calculo activo, clasificacion legal, ordinario/extra y alertas si aplica. |
+| Jornada no programada | Registrar entrada/salida sin horario publicado y ejecutar la Action puntual. | Se crea jornada `No programada` con calculo activo. |
+| Empresa incorrecta | Ejecutar la Action con una relacion laboral de otra empresa. | Se bloquea y no crea jornadas cruzadas. |
+| Semana natural | Procesar una fecha dentro de una semana con contexto previo. | Ordinario/extra y casos especiales usan semana lunes-domingo. |
+
+Comando sugerido:
+
+```bash
+php artisan test tests/Feature/WorkDays/ProcessSingleWorkDayActionTest.php --stop-on-failure
+```
+
+### No incluido todavia
+
+- Job de cola.
+- Dispatch automatico desde checadas.
+- Batch nocturno nuevo.
+- Dashboard de pendientes.
+- Redis, SQS o AWS.
+
+---
+
+## Bloque Job por evento de jornada
+
+**Estado:** Implementado/candidato a validacion automatizada.
+
+Este bloque agrega el Job que recalcula jornadas desde eventos de asistencia, manteniendo `database queue` como base compatible con cPanel. El Job no contiene reglas de negocio: solo carga el evento y llama `ProcessSingleWorkDayAction`.
+
+### Validaciones esperadas
+
+| Caso | Accion | Resultado esperado |
+|---|---|---|
+| Salida valida | Registrar `clock_out` por web/kiosco o crear evento valido desde Action. | Se encola `RecalculateWorkDayFromTimeEventJob`. |
+| Entrada valida | Registrar solo `clock_in`. | No se encola recalculo pesado todavia. |
+| Captura manual aprobada | Aprobar captura manual pendiente. | Se encola recalculo para la jornada afectada. |
+| Anulacion | Anular un evento valido. | Se encola recalculo para quitar el evento de la jornada. |
+| Salida nocturna | Ejecutar el Job para un `clock_out` de madrugada. | Se recalcula la jornada de la fecha de entrada anterior, no una jornada falsa de madrugada. |
+| cPanel queue | Usar `QUEUE_CONNECTION=database` y revisar `php artisan schedule:list`. | Aparece `queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3` cada minuto. |
+| Cron unico | Configurar cron de cPanel a `php /ruta/artisan schedule:run`. | El scheduler procesa `work-days:auto-refresh` y jobs pendientes sin worker permanente. |
+
+Comandos sugeridos:
+
+```bash
+php artisan test tests/Feature/Sprint0/QueueConfigurationTest.php --stop-on-failure
+php artisan test tests/Feature/WorkDays/RecalculateWorkDayFromTimeEventJobTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2E/WebTimeRegistrationTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2F/KioskTimeRegistrationTest.php --stop-on-failure
+php artisan test tests/Feature/Sprint2F/ManualTimeEventCaptureTest.php --stop-on-failure
+php artisan schedule:list
+```
+
+### No incluido todavia
+
+- Dashboard de cola o pendientes.
+- Batch nocturno nuevo.
+- Reproceso manual con motivo obligatorio.
+- Redis, SQS o AWS.
 
 ---
 

@@ -85,6 +85,14 @@ php artisan queue:work --stop-when-empty
 
 por cron o ejecución controlada.
 
+En Vera Time, el scheduler ejecuta la cola operacional con:
+
+```bash
+php artisan queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3
+```
+
+La cola `work-days` atiende recalculos de jornada derivados de eventos. `default` queda para jobs generales. En cPanel debe bastar con un cron a `schedule:run`; no se requiere worker permanente.
+
 ---
 
 ## 6. Storage
@@ -138,5 +146,4 @@ Migrar antes de:
 No introducir dependencia técnica que impida correr en cPanel durante el MVP.
 
 Si una mejora requiere AWS/Redis/S3, marcarla como futura o configurable por `.env`.
-
 

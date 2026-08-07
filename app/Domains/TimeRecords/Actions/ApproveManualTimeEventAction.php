@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\WorkDays\Jobs\RecalculateWorkDayFromTimeEventJob;
 use App\Models\TimeEvent;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -13,7 +14,7 @@ class ApproveManualTimeEventAction
 {
     public function handle(TimeEvent $timeEvent, User $actor, ?CarbonImmutable $reviewedAt = null): TimeEvent
     {
-        return DB::transaction(function () use ($timeEvent, $actor, $reviewedAt): TimeEvent {
+        $event = DB::transaction(function () use ($timeEvent, $actor, $reviewedAt): TimeEvent {
             $event = TimeEvent::query()
                 ->whereKey($timeEvent->id)
                 ->lockForUpdate()
@@ -42,5 +43,11 @@ class ApproveManualTimeEventAction
 
             return $event->refresh();
         });
+
+        if ($event->employment_relationship_id !== null) {
+            RecalculateWorkDayFromTimeEventJob::dispatch($event->id, 'manual_approval')->afterCommit();
+        }
+
+        return $event;
     }
 }

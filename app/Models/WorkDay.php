@@ -96,6 +96,11 @@ class WorkDay extends Model
         return $this->hasMany(WorkDayCalculation::class);
     }
 
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(Alert::class);
+    }
+
     public function isUnscheduled(): bool
     {
         return $this->schedule_status === self::SCHEDULE_STATUS_UNSCHEDULED;

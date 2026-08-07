@@ -4,6 +4,7 @@ namespace Tests\Feature\Alerts;
 
 use App\Domains\Alerts\Actions\EvaluateWorkDayAlertsAction;
 use App\Domains\Alerts\Actions\EvaluateWorkDayAlertsForDateRangeAction;
+use App\Domains\Alerts\Actions\ResolveAlertAction;
 use App\Models\Alert;
 use App\Models\AlertType;
 use App\Models\Center;
@@ -172,6 +173,53 @@ class WorkDayAlertsFoundationTest extends TestCase
 
         $this->assertSame(1, Alert::query()->where('company_id', $company->id)->count());
         $this->assertSame(1, Alert::query()->where('company_id', $otherCompany->id)->count());
+    }
+
+    public function test_work_days_alert_badge_opens_resolution_panel_and_updates_status(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
+        $user = $this->userForCompany($company, RoleKey::ADMIN);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('work-days.index')
+            ->assertSee('Alerta (1)')
+            ->call('openAlertsPanel', $workDay->id)
+            ->assertSet('showAlertsPanel', true)
+            ->assertSee('Tiempo extra detectado')
+            ->set('alertResolutionForm.status', Alert::STATUS_JUSTIFIED)
+            ->set('alertResolutionForm.resolution', 'Tiempo extra autorizado por operacion.')
+            ->call('resolveSelectedAlert')
+            ->assertHasNoErrors()
+            ->assertSet('showAlertsPanel', false);
+
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+        $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->status);
+        $this->assertSame('Tiempo extra autorizado por operacion.', $alert->resolution);
+        $this->assertSame($user->id, $alert->resolved_by);
+        $this->assertNotNull($alert->resolved_at);
+        $this->assertSame(WorkDay::STATUS_CALCULATED, $workDay->refresh()->status);
+    }
+
+    public function test_resolved_alert_cannot_be_resolved_again(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
+        $user = $this->userForCompany($company, RoleKey::ADMIN);
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+
+        app(ResolveAlertAction::class)->handle($company, $alert, $user, [
+            'status' => Alert::STATUS_JUSTIFIED,
+            'resolution' => 'Tiempo extra autorizado por operacion.',
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(ResolveAlertAction::class)->handle($company, $alert->refresh(), $user, [
+            'status' => Alert::STATUS_CLOSED,
+            'resolution' => 'Segundo dictamen no permitido.',
+        ]);
     }
 
     public function test_supervisor_cannot_view_alerts_list(): void
