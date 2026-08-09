@@ -97,6 +97,11 @@ class Company extends Model
         return $this->hasMany(ScheduleBatch::class);
     }
 
+    public function attendancePeriods(): HasMany
+    {
+        return $this->hasMany(AttendancePeriod::class);
+    }
+
     public function importBatches(): HasMany
     {
         return $this->hasMany(ImportBatch::class);

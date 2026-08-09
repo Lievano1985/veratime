@@ -58,6 +58,12 @@
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan
+                        @can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany])
+                            <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Periodos de asistencia</flux:navlist.item>
+                        @endcan
+                        @if (in_array(auth()->user()->roleKeyForCompany($activeCompany), [...\App\Support\RoleKey::companyManagers(), \App\Support\RoleKey::SUPER_ADMIN], true))
+                            <flux:navlist.item icon="beaker" :href="route('testing.quick-events')" :current="request()->routeIs('testing.quick-events')" wire:navigate>Eventos rapidos</flux:navlist.item>
+                        @endif
                     </flux:navlist.group>
                 @endif
             </flux:navlist>

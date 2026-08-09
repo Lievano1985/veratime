@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Alert;
+use App\Models\AttendancePeriod;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -21,6 +22,7 @@ use App\Models\WorkDay;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
 use App\Policies\AlertPolicy;
+use App\Policies\AttendancePeriodPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\CompanyPolicy;
 use App\Policies\EmploymentUnitAssignmentPolicy;
@@ -57,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Alert::class, AlertPolicy::class);
+        Gate::policy(AttendancePeriod::class, AttendancePeriodPolicy::class);
         Gate::policy(Center::class, CenterPolicy::class);
         Gate::policy(Company::class, CompanyPolicy::class);
         Gate::policy(EmploymentRelationship::class, EmploymentRelationshipPolicy::class);

@@ -1231,6 +1231,19 @@ Origen: Empresa / Centro / Area / Relacion laboral
 
 ## 16.1 Listado de periodos
 
+Actualizacion H:
+
+- La pantalla real inicial es `/attendance-periods`.
+- El usuario crea periodos de asistencia con `Nuevo periodo`.
+- El side panel solicita centro, alcance y rango de fechas.
+- El alcance puede ser todo el centro o unidades organizacionales seleccionadas.
+- La tabla muestra centro, alcance, periodo, estado, creador y acciones.
+- Un periodo abierto puede validarse contra Jornadas.
+- Si hay bloqueantes, se muestra el conteo y un enlace a Jornadas filtrado por rango/centro.
+- Si no hay bloqueantes, el usuario puede cerrar el periodo.
+- Un periodo cerrado muestra reporte base por trabajador y snapshot SHA-256.
+- Vera Time no calcula nomina ni pagos; solo prepara el paquete de asistencia para entrega/exportacion posterior.
+
 **Prioridad:** P0
 
 Incluye:

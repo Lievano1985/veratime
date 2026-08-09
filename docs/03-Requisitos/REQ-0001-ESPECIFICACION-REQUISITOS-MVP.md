@@ -1348,6 +1348,57 @@ La persona podrá consultar políticas y mecanismos de registro vigentes que le 
 
 ## 6.10 Cierre y conformidad digital
 
+### RF-CIE-H1 — Periodos de asistencia por alcance
+
+El sistema permitira crear periodos de asistencia por centro completo o por una o varias unidades organizacionales del mismo centro, usando un rango de fechas definido por el usuario.
+
+Reglas:
+
+- El periodo pertenece a la empresa activa.
+- El centro debe pertenecer a la empresa activa.
+- Las unidades seleccionadas deben pertenecer al mismo centro.
+- No se acepta `company_id` desde la interfaz.
+- H1 genera periodos abiertos.
+- H2 valida si existen bloqueantes en Jornadas y permite cerrar solo periodos sin bloqueantes.
+- H3 genera un reporte base congelado al cierre con resumen general y desglose por trabajador.
+- El modulo de periodos no revisa jornadas en detalle ni resuelve incidencias; enlaza a Jornadas para atenderlas.
+- No exporta y no calcula nomina.
+
+Valor:
+
+Permite que RH prepare paquetes de asistencia por rango real de operacion, sin imponer reglas rigidas de nomina ni dispersión.
+
+### RF-CIE-H2 — Validacion y cierre operativo
+
+El sistema permitira validar un periodo contra las jornadas existentes del mismo centro, unidades y rango.
+
+Reglas:
+
+- Si existen alertas abiertas o jornadas pendientes/en revision, el periodo no podra cerrarse.
+- El usuario debera atender los bloqueantes desde Jornadas.
+- Si no existen bloqueantes, el periodo podra cerrarse.
+- El cierre conservara usuario, fecha, resumen de validacion, snapshot canonico y hash SHA-256.
+
+### RF-CIE-H3 — Reporte base del periodo
+
+Al cerrar un periodo, Vera Time generara un reporte base congelado.
+
+Debe incluir:
+
+- Centro, alcance y rango.
+- Trabajadores incluidos.
+- Jornadas programadas.
+- Asistencias.
+- Faltas.
+- Jornadas incompletas.
+- Minutos ordinarios.
+- Minutos extra aprobados.
+- Domingos trabajados.
+- Descansos obligatorios trabajados.
+- Incidencias abiertas y cerradas.
+
+El reporte es operativo para revision y entrega posterior. No calcula pagos, nomina, impuestos ni dispersion.
+
 ### RF-CIE-000 — Perfiles multiples de cierre
 
 Toda empresa debera tener un perfil de cierre predeterminado. Podran existir excepciones por centro, unidad organizacional o relacion laboral.
