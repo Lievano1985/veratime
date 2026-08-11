@@ -62,6 +62,8 @@ class ListWorkDaysAction
                     $query->where(function ($incidentQuery): void {
                         $incidentQuery
                             ->whereHas('alerts')
+                            ->orWhereNotNull('metadata->attendance_incident')
+                            ->orWhereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'))
                             ->orWhere('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
                             ->orWhere('status', WorkDay::STATUS_UNDER_REVIEW)
                             ->orWhere(function ($absenceQuery): void {
@@ -78,7 +80,10 @@ class ListWorkDaysAction
                 }
 
                 if ($type === 'none') {
-                    $query->whereDoesntHave('alerts');
+                    $query
+                        ->whereDoesntHave('alerts')
+                        ->whereNull('metadata->attendance_incident')
+                        ->whereDoesntHave('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'));
 
                     return;
                 }
@@ -105,7 +110,10 @@ class ListWorkDaysAction
                 }
 
                 if ($status === 'none') {
-                    $query->whereDoesntHave('alerts');
+                    $query
+                        ->whereDoesntHave('alerts')
+                        ->whereNull('metadata->attendance_incident')
+                        ->whereDoesntHave('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'));
                 }
             })
             ->when($filters['search'] ?? null, function ($query, $search): void {

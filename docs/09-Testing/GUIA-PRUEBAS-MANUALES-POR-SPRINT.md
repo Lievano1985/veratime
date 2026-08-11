@@ -1502,6 +1502,10 @@ Validaciones manuales:
 | Validar sin bloqueantes | Seleccionar un periodo con jornadas calculadas y sin alertas abiertas. | Cambia a `Listo` y permite cerrar. |
 | Cerrar periodo | Pulsar `Cerrar` en un periodo sin bloqueantes. | Cambia a `Cerrado`, guarda usuario/fecha y muestra reporte base. |
 | Reporte base | Revisar un periodo cerrado. | Muestra resumen general, desglose por trabajador y SHA-256. |
+| Registrar ausencia | Entrar a `/attendance-incidents`, seleccionar trabajador, rango y tipo `Vacaciones` o `Incapacidad`. | Se crea una incidencia aprobada con referencia/comentario opcional. |
+| Recalcular jornada con ausencia | En `/work-days`, recalcular el rango de la ausencia. | La jornada programada sin eventos aparece como la ausencia registrada, no como falta pendiente. |
+| Cierre con ausencia | Validar un periodo que incluya la ausencia ya recalculada. | No bloquea el cierre por falta pendiente y el reporte suma la ausencia como hecho operativo. |
+| Cancelar ausencia | Cancelar una incidencia aprobada y recalcular el rango. | La jornada vuelve a evaluarse segun eventos/horario; si no hay eventos puede volver a falta pendiente. |
 
 No incluido H:
 
@@ -1509,6 +1513,7 @@ No incluido H:
 - Calcular nomina, pagos o dispersion.
 - Dictaminar o corregir jornadas desde periodos.
 - Conformidad digital.
+- Calcular saldos de vacaciones, subsidios, CFDI o tratamiento fiscal.
 
 ## Bloque Work Days base
 

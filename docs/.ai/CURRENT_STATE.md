@@ -791,3 +791,16 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Vera Time no calcula nomina, pagos, dispersion, ISR, IMSS ni recibos.
 - El modulo de periodos no dictamina jornadas ni corrige incidencias; esas acciones siguen en Jornadas.
 - Pendiente: exportacion CSV/API del periodo, conformidad digital y entrega a sistemas externos.
+
+## Bloque H4 - incidencias y ausencias operativas
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Ruta: `/attendance-incidents`.
+- Agrega `attendance_incidents` para registrar ausencias/incidencias operativas por trabajador y rango: vacaciones, incapacidad, permisos, faltas justificadas/injustificadas, maternidad/paternidad y otro.
+- Cada registro conserva tipo, pago operativo (`paid`, `unpaid`, `not_applicable`), referencia opcional, comentario, actor y estado aprobado/cancelado.
+- `CalculateWorkDayAction` consulta incidencias aprobadas cuando una jornada programada no tiene eventos validos; si aplica, crea una version de calculo con cero minutos y snapshot de la incidencia.
+- La ausencia aprobada evita la alerta automatica de falta y permite que el cierre de periodo no la trate como bloqueante.
+- El reporte base de periodo distingue faltas sin justificar de ausencias justificadas y ausencias no pagadas como hechos operativos.
+- No calcula nomina, descuentos, subsidios, prima vacacional, CFDI, claves SAT obligatorias ni percepciones/deducciones.
+- Pendiente: exportar estas incidencias en CSV/API del periodo y definir si se agregaran referencias/folios mas formales por tipo documental.

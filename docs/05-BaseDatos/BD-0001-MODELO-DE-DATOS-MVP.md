@@ -1243,6 +1243,26 @@ Implementacion base 2026-08-05:
 - `scheduled_absence` representa una falta dictaminable cuando una jornada programada no tiene eventos validos.
 - `alerts` se conserva como tabla tecnica de trazabilidad; no se agrega tabla separada de incidencias en este bloque.
 
+## 13.2.1 `attendance_incidents`
+
+Bloque H4 agrega incidencias/ausencias operativas registradas por RH antes del cierre del periodo.
+
+Campos principales:
+
+- `company_id`, `worker_id`, `employment_relationship_id`.
+- `start_date`, `end_date`.
+- `incident_type`: vacaciones, incapacidad, permiso, falta justificada/injustificada, maternidad/paternidad u otro.
+- `payment_status`: `paid`, `unpaid`, `not_applicable` como dato operativo para exportacion posterior.
+- `status`: `approved` o `cancelled`.
+- `reference`, `notes`, `created_by`, `cancelled_by`, `cancelled_at`, `metadata`.
+
+Reglas:
+
+- No calcula nomina ni tratamiento fiscal.
+- No reemplaza `alerts`; evita faltas automaticas cuando una jornada programada sin eventos tiene una incidencia aprobada.
+- `work_day_calculations.result_snapshot.attendance_incident` conserva el snapshot usado por la jornada.
+- Las cancelaciones no borran historial y requieren recalculo del rango si ya existian jornadas procesadas.
+
 ## 13.3 `alert_comments`
 
 Comentarios o seguimiento de alerta.

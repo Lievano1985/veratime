@@ -70,4 +70,9 @@ class Worker extends Model
     {
         return $this->hasMany(WorkDay::class);
     }
+
+    public function attendanceIncidents(): HasMany
+    {
+        return $this->hasMany(AttendanceIncident::class);
+    }
 }
