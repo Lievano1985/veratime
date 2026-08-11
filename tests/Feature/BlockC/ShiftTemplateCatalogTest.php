@@ -10,9 +10,14 @@ use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
 use App\Domains\Scheduling\Actions\ValidateShiftTemplateSegmentsAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
+use App\Models\DailyScheduleSegment;
+use App\Models\EmploymentRelationship;
 use App\Models\Role;
+use App\Models\ScheduleBatch;
 use App\Models\ShiftTemplate;
 use App\Models\User;
+use App\Models\Worker;
 use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -192,6 +197,49 @@ class ShiftTemplateCatalogTest extends TestCase
         $this->assertSame('Base', $template->name);
         $this->assertCount(1, $template->segments);
         $this->assertSame('08:00:00', (string) $template->segments->first()->start_local_time);
+    }
+
+    public function test_update_detaches_published_daily_segments_before_replacing_template_segments(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        $center = Center::factory()->for($company)->create();
+        $worker = Worker::factory()->for($company)->create();
+        $relationship = EmploymentRelationship::factory()->for($company)->for($worker)->for($center)->create([
+            'status' => 'active',
+            'started_at' => '2026-01-01',
+            'ended_at' => null,
+        ]);
+        $template = app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'BASE', 'name' => 'Base'], $this->simpleWorkSegments());
+        $templateSegment = $template->segments()->firstOrFail();
+        $batch = ScheduleBatch::factory()->for($company)->for($center)->create([
+            'status' => 'published',
+            'period_start' => '2026-08-03',
+            'period_end' => '2026-08-09',
+            'version' => 1,
+        ]);
+        $assignment = DailyScheduleAssignment::factory()->for($company)->for($batch, 'scheduleBatch')->for($relationship, 'employmentRelationship')->create([
+            'work_date' => '2026-08-03',
+            'day_type' => 'shift',
+            'shift_template_id' => $template->id,
+        ]);
+        $dailySegment = DailyScheduleSegment::factory()->for($company)->for($assignment, 'dailyScheduleAssignment')->create([
+            'shift_template_segment_id' => $templateSegment->id,
+            'segment_type' => 'work',
+            'timing_mode' => 'fixed',
+            'start_local_time' => '08:00:00',
+            'end_local_time' => '16:00:00',
+            'segment_order' => 1,
+        ]);
+
+        app(UpdateShiftTemplateAction::class)->handle($company, $template, ['code' => 'BASE', 'name' => 'Base actualizada'], [
+            ['segment_type' => 'work', 'timing_mode' => 'fixed', 'start_local_time' => '09:00', 'end_local_time' => '17:00', 'sort_order' => 1],
+        ]);
+
+        $this->assertNull($dailySegment->refresh()->shift_template_segment_id);
+        $this->assertSame('08:00:00', (string) $dailySegment->start_local_time);
+        $this->assertSame('16:00:00', (string) $dailySegment->end_local_time);
+        $this->assertSame('Base actualizada', $template->refresh()->name);
+        $this->assertSame('09:00:00', (string) $template->segments()->firstOrFail()->start_local_time);
     }
 
     public function test_inactivation_and_valid_reactivation_are_non_destructive(): void
