@@ -554,14 +554,14 @@ new class extends Component {
 }; ?>
 
 <section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Aplicacion de modelos</flux:heading>
             <flux:subheading>Indica donde aplica cada modelo: empresa, centro, unidad o trabajador. El horario semanal se repite; el ciclo usa la fecha inicial como Dia 1.</flux:subheading>
         </div>
 
         @if ($canAssignCompanyScopes || $canAssignRelationshipScope)
-            <flux:button type="button" variant="primary" wire:click="openAssignmentPanel" icon="plus">
+            <flux:button type="button" variant="primary" wire:click="openAssignmentPanel" icon="plus" class="w-full sm:w-auto">
                 Aplicar modelo
             </flux:button>
         @endif
@@ -576,11 +576,11 @@ new class extends Component {
     @enderror
 
     <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(150px,.7fr)_minmax(220px,1.1fr)_auto] lg:items-end">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(180px,1fr)_minmax(150px,.7fr)_minmax(220px,1.1fr)_auto] xl:items-end">
             <flux:input label="Resolver trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="resolveWorkerSearch" />
             <flux:input type="date" label="Fecha" wire:model.live="resolveForm.date" />
             <flux:input label="Buscar aplicaciones" placeholder="Modelo, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
-            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')">
+            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')" class="w-full self-end lg:w-auto">
                 <span class="inline-flex items-center gap-1.5 leading-none">
                     <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
                     <span>Filtros</span>

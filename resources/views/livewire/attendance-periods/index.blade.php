@@ -458,7 +458,7 @@ new class extends Component {
             </div>
 
             @if ($selectedPeriod->validation_summary)
-                <div class="grid gap-3 sm:grid-cols-4">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-md bg-zinc-50 p-3 text-sm">
                         <div class="text-xs text-zinc-500">Jornadas</div>
                         <div class="font-semibold">{{ data_get($selectedPeriod->validation_summary, 'work_days', 0) }}</div>
@@ -484,7 +484,7 @@ new class extends Component {
 
             @if ($selectedPeriod->status === 'closed' && $selectedPeriod->report_summary)
                 @php($summary = $selectedPeriod->report_summary['summary'] ?? [])
-                <div class="grid gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Trabajadores</div><div class="font-semibold">{{ $summary['workers_included'] ?? 0 }}</div></div>
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Jornadas</div><div class="font-semibold">{{ $summary['programmed_days'] ?? 0 }}</div></div>
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Asistencias</div><div class="font-semibold">{{ $summary['attendances'] ?? 0 }}</div></div>

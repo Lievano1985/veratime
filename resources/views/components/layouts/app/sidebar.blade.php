@@ -3,8 +3,60 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky stashable class="vera-app-sidebar border-r border-vera-sidebar-border bg-vera-sidebar text-zinc-100">
+    <body
+        class="min-h-screen bg-white dark:bg-zinc-800"
+        x-data="{
+            sidebarVisible: window.innerWidth >= 1024,
+            sidebarCollapsed: window.innerWidth < 1024,
+            sidebarCollapseTimer: null,
+            init() {
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth < 1024) {
+                        this.sidebarVisible = true;
+                        this.sidebarCollapsed = false;
+                    }
+                });
+            },
+            toggleSidebar() {
+                clearTimeout(this.sidebarCollapseTimer);
+
+                if (this.sidebarVisible) {
+                    this.sidebarVisible = false;
+                    this.sidebarCollapseTimer = setTimeout(() => { this.sidebarCollapsed = true }, 300);
+                    return;
+                }
+
+                this.sidebarCollapsed = false;
+                this.$nextTick(() => {
+                    this.sidebarVisible = true;
+                });
+            },
+        }"
+    >
+        <div
+            class="app-shell-toggle-position fixed top-1/2 z-50 hidden -translate-y-1/2 transition-[left] duration-300 ease-in-out lg:flex"
+            x-bind:class="sidebarVisible ? 'app-shell-toggle-position-open' : 'app-shell-toggle-position-closed'"
+        >
+            <button
+                type="button"
+                class="app-shell-open-toggle app-shell-open-tab flex h-[80px] w-[18px] items-center justify-center"
+                x-bind:aria-label="sidebarVisible ? 'Ocultar menu lateral' : 'Mostrar menu lateral'"
+                @click="toggleSidebar()"
+            >
+                <span class="app-shell-open-symbol" x-show="sidebarVisible">&#8249;</span>
+                <span class="app-shell-open-symbol" x-show="! sidebarVisible">&#8250;</span>
+            </button>
+        </div>
+
+        <flux:sidebar
+            sticky
+            stashable
+            class="vera-app-sidebar border-r border-vera-sidebar-border bg-vera-sidebar text-zinc-100 transition-[width,min-width,transform,padding] duration-300 ease-in-out"
+            x-bind:class="{
+                'lg:!-translate-x-full': ! sidebarVisible,
+                'lg:!w-0 lg:!min-w-0 lg:!overflow-hidden lg:!border-r-0 lg:!p-0': sidebarCollapsed,
+            }"
+        >
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             <a href="{{ route('dashboard') }}" class="vera-sidebar-logo mb-4 flex w-full justify-center rounded-lg px-2 py-2" wire:navigate>
@@ -55,6 +107,9 @@
                     <flux:navlist.group heading="Registro de jornada" class="grid">
                         <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
                         <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*') || request()->routeIs('time-clock.*')" wire:navigate>Eventos</flux:navlist.item>
+                        @can('viewAny', [\App\Models\AttendanceIncident::class, $activeCompany])
+                            <flux:navlist.item icon="clipboard-document-check" :href="route('attendance-incidents.index')" :current="request()->routeIs('attendance-incidents.*')" wire:navigate>Incidencias y ausencias</flux:navlist.item>
+                        @endcan
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan

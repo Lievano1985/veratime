@@ -22,6 +22,7 @@
         'scheduling.daily' => 'Programacion semanal',
         'time-clock.index' => 'Registro asistido',
         'time-events.manual' => 'Eventos',
+        'attendance-incidents.index' => 'Incidencias y ausencias',
         'testing.quick-events' => 'Eventos rapidos de prueba',
         'work-days.index' => 'Jornadas',
         'kiosk.index' => 'Kiosco',

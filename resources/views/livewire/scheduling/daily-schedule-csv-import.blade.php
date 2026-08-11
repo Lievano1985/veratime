@@ -57,6 +57,7 @@
             </div>
 
             @if ($activeImport)
+                @php($canApplyImport = $canUpdate && $activeImport->status === 'validated' && (int) $activeImport->invalid_rows === 0)
                 <div class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
@@ -81,6 +82,31 @@
                             @endif
                         </div>
                     </div>
+
+                    @if ($canApplyImport)
+                        <div class="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p class="font-medium">Archivo listo para enviar</p>
+                                    <p class="mt-1 text-xs">Revisa la vista previa y envia estos horarios al lote borrador.</p>
+                                    @error('confirmApply')<p class="mt-2 text-xs text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" wire:model="confirmApply" class="rounded border-zinc-300">
+                                        <span>Vista previa revisada</span>
+                                    </label>
+                                    <flux:button size="sm" variant="primary" wire:click="applyImport" wire:loading.attr="disabled">
+                                        Enviar horarios al borrador
+                                    </flux:button>
+                                </div>
+                            </div>
+                        </div>
+                    @elseif ($canUpdate && in_array($activeImport->status, ['uploaded', 'invalid'], true))
+                        <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                            Corrige el archivo o revalida la carga. El boton para enviar horarios aparece cuando la vista previa queda validada sin errores.
+                        </div>
+                    @endif
 
                     <div class="grid gap-3 md:grid-cols-4">
                         <div class="rounded-md bg-zinc-50 p-3 dark:bg-zinc-800"><p class="text-xs text-zinc-500">Filas</p><p class="font-semibold">{{ $activeImport->total_rows }}</p></div>
@@ -135,17 +161,17 @@
                         {{ $previewWorkers->links(data: ['scrollTo' => false]) }}
                     @endif
 
-                    @if ($canUpdate && in_array($activeImport->status, ['validated', 'invalid', 'uploaded'], true))
+                    @if ($canApplyImport)
                         <div class="rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
-                            <p class="font-medium">Aplicar importacion</p>
-                            <p class="text-xs text-zinc-500">Solo se puede aplicar una importacion validada sin errores. La Action vuelve a comparar el hash antes de modificar el calendario.</p>
+                            <p class="font-medium">Enviar horarios</p>
+                            <p class="text-xs text-zinc-500">La Action vuelve a comparar el hash antes de modificar el calendario.</p>
                             <label class="mt-3 flex items-center gap-2">
                                 <input type="checkbox" wire:model="confirmApply" class="rounded border-zinc-300">
                                 <span>Confirmo que revise la vista previa.</span>
                             </label>
                             @error('confirmApply')<p class="mt-2 text-xs text-red-600">{{ $message }}</p>@enderror
                             <flux:button class="mt-3" size="sm" variant="primary" wire:click="applyImport">
-                                Aplicar al borrador
+                                Enviar horarios al borrador
                             </flux:button>
                         </div>
                     @endif

@@ -349,7 +349,7 @@ new class extends Component {
     <section class="space-y-4">
         <flux:heading>Filtros</flux:heading>
 
-        <div class="grid gap-4 lg:grid-cols-5">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             <flux:input type="date" label="Fecha" wire:model.live="filters.date" />
             <flux:select label="Tipo" wire:model.live="filters.type">
                 <flux:select.option value="">Todos</flux:select.option>
