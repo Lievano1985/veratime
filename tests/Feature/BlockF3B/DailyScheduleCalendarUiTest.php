@@ -80,13 +80,13 @@ class DailyScheduleCalendarUiTest extends TestCase
         Volt::test('scheduling.daily')
             ->assertSet('filters.status', 'active_work')
             ->assertSet('filters.period_scope', 'current_future')
-            ->assertSee('2026-08-03 - 2026-08-09')
-            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-09-01 - 2026-09-07'])
+            ->assertDontSee('2026-08-03 - 2026-08-09')
+            ->assertSee('2026-09-01 - 2026-09-07')
             ->set('filters.period_scope', 'past')
             ->assertDontSee('2026-09-01 - 2026-09-07')
-            ->assertDontSee('2026-08-03 - 2026-08-09')
+            ->assertSee('2026-08-03 - 2026-08-09')
             ->set('filters.period_scope', 'all')
-            ->assertSeeInOrder(['2026-08-03 - 2026-08-09', '2026-09-01 - 2026-09-07']);
+            ->assertSeeInOrder(['2026-09-01 - 2026-09-07', '2026-08-03 - 2026-08-09']);
     }
 
     public function test_it_creates_empty_batch_and_creates_batch_generated_from_profiles(): void
