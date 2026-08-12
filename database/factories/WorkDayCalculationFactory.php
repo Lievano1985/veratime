@@ -29,6 +29,8 @@ class WorkDayCalculationFactory extends Factory
             'ordinary_minutes' => 480,
             'night_minutes' => 0,
             'overtime_minutes' => 0,
+            'overtime_double_minutes' => 0,
+            'overtime_triple_minutes' => 0,
             'break_minutes' => 0,
             'paid_break_minutes' => 0,
             'sunday_minutes' => 0,

@@ -414,6 +414,11 @@ new class extends Component {
                                         Cancelar
                                     </flux:button>
                                 @endcan
+                                @can('exportPayrollCsv', $period)
+                                    <a href="{{ route('attendance-periods.payroll-csv', $period) }}" class="inline-flex items-center rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50">
+                                        Descargar CSV
+                                    </a>
+                                @endcan
                             </div>
                         </td>
                     </tr>
@@ -491,6 +496,8 @@ new class extends Component {
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Faltas</div><div class="font-semibold">{{ $summary['absences'] ?? 0 }}</div></div>
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Ordinario</div><div class="font-semibold">{{ $this->minutesLabel((int) ($summary['ordinary_minutes'] ?? 0)) }}</div></div>
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Extra aprobado</div><div class="font-semibold">{{ $this->minutesLabel((int) ($summary['overtime_minutes'] ?? 0)) }}</div></div>
+                    <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Extra doble</div><div class="font-semibold">{{ $this->minutesLabel((int) ($summary['overtime_double_minutes'] ?? 0)) }}</div></div>
+                    <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Extra triple</div><div class="font-semibold">{{ $this->minutesLabel((int) ($summary['overtime_triple_minutes'] ?? 0)) }}</div></div>
                 </div>
 
                 <div class="overflow-hidden rounded-lg border border-zinc-200">
@@ -502,6 +509,8 @@ new class extends Component {
                                 <th class="px-4 py-3">Faltas</th>
                                 <th class="px-4 py-3">Ordinario</th>
                                 <th class="px-4 py-3">Extra</th>
+                                <th class="px-4 py-3">Doble</th>
+                                <th class="px-4 py-3">Triple</th>
                                 <th class="px-4 py-3">Domingos</th>
                                 <th class="px-4 py-3">Desc. oblig.</th>
                                 <th class="px-4 py-3">Incidencias</th>
@@ -518,6 +527,8 @@ new class extends Component {
                                     <td class="px-4 py-3">{{ $workerRow['absences'] }}</td>
                                     <td class="px-4 py-3">{{ $this->minutesLabel((int) $workerRow['ordinary_minutes']) }}</td>
                                     <td class="px-4 py-3">{{ $this->minutesLabel((int) $workerRow['overtime_minutes']) }}</td>
+                                    <td class="px-4 py-3">{{ $this->minutesLabel((int) ($workerRow['overtime_double_minutes'] ?? 0)) }}</td>
+                                    <td class="px-4 py-3">{{ $this->minutesLabel((int) ($workerRow['overtime_triple_minutes'] ?? 0)) }}</td>
                                     <td class="px-4 py-3">{{ $this->minutesLabel((int) $workerRow['sunday_minutes']) }}</td>
                                     <td class="px-4 py-3">{{ $this->minutesLabel((int) $workerRow['mandatory_rest_minutes']) }}</td>
                                     <td class="px-4 py-3">{{ $workerRow['open_incidents'] }} abiertas / {{ $workerRow['closed_incidents'] }} cerradas</td>

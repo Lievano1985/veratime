@@ -42,6 +42,12 @@ class AttendancePeriodPolicy
             && $this->canManageAttendancePeriods($user, $period->company);
     }
 
+    public function exportPayrollCsv(User $user, AttendancePeriod $period): bool
+    {
+        return $period->status === AttendancePeriod::STATUS_CLOSED
+            && $this->canManageAttendancePeriods($user, $period->company);
+    }
+
     private function canManageAttendancePeriods(User $user, Company $company): bool
     {
         return $company->status === 'active'

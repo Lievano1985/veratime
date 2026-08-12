@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvTemplateController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('testing/quick-events', 'testing.quick-events')->name('testing.quick-events');
     Volt::route('alerts', 'alerts.index')->name('alerts.index');
     Volt::route('attendance-periods', 'attendance-periods.index')->name('attendance-periods.index');
+    Route::get('attendance-periods/{attendancePeriod}/payroll-csv', AttendancePeriodPayrollCsvController::class)->name('attendance-periods.payroll-csv');
 
     Route::redirect('settings', 'settings/profile');
 

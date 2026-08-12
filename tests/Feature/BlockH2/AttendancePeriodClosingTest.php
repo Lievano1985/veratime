@@ -107,6 +107,8 @@ class AttendancePeriodClosingTest extends TestCase
             'work_day_id' => $workDay->id,
             'ordinary_minutes' => 480,
             'overtime_minutes' => 61,
+            'overtime_double_minutes' => 61,
+            'overtime_triple_minutes' => 0,
         ]);
         $workDay->forceFill(['active_calculation_id' => $calculation->id])->save();
 
@@ -121,6 +123,74 @@ class AttendancePeriodClosingTest extends TestCase
         $this->assertSame(1, data_get($closed->report_summary, 'summary.workers_included'));
         $this->assertSame(480, data_get($closed->report_summary, 'summary.ordinary_minutes'));
         $this->assertSame(61, data_get($closed->report_summary, 'summary.overtime_minutes'));
+        $this->assertSame(61, data_get($closed->report_summary, 'summary.overtime_double_minutes'));
+        $this->assertSame(0, data_get($closed->report_summary, 'summary.overtime_triple_minutes'));
+    }
+
+    public function test_closed_period_can_export_payroll_time_csv(): void
+    {
+        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$period, $worker] = $this->periodWithWorker($company, $user);
+        $worker->forceFill([
+            'rfc' => 'VTDEMO260101',
+            'curp' => 'VTDEMO260101HTCRMN01',
+            'metadata' => ['nss' => '01234567890'],
+        ])->save();
+        $workDay = WorkDay::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $worker->id,
+            'center_id' => $period->center_id,
+            'work_date' => '2026-08-05',
+            'timezone' => 'America/Mexico_City',
+            'status' => WorkDay::STATUS_CALCULATED,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 2,
+            'first_event_at_utc' => '2026-08-05 14:00:00',
+            'last_event_at_utc' => '2026-08-06 00:01:00',
+        ]);
+        $calculation = WorkDayCalculation::factory()->create([
+            'company_id' => $company->id,
+            'work_day_id' => $workDay->id,
+            'ordinary_minutes' => 480,
+            'overtime_minutes' => 61,
+            'overtime_double_minutes' => 61,
+            'overtime_triple_minutes' => 0,
+            'night_minutes' => 30,
+            'sunday_minutes' => 61,
+            'mandatory_rest_minutes' => 61,
+            'rules_snapshot' => [
+                'special_legal_cases' => [
+                    'mandatory_rest' => [
+                        'matches' => [
+                            [
+                                'name' => 'Descanso demo',
+                                'source_reference' => 'Referencia demo',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $workDay->forceFill(['active_calculation_id' => $calculation->id])->save();
+        $this->closedAlert($company, $workDay, $worker, Alert::STATUS_JUSTIFIED);
+        $period->forceFill(['status' => AttendancePeriod::STATUS_CLOSED])->save();
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        $response = $this->get(route('attendance-periods.payroll-csv', $period));
+        $content = $response->streamedContent();
+
+        $response->assertOk();
+        $this->assertStringContainsString('horas_extra_dobles,horas_extra_triples,horas_nocturnas,domingo_trabajado,horas_domingo_trabajado,prima_dominical_aplica', $content);
+        $this->assertStringContainsString('horas_festivo_trabajado,horas_festivo_pago_normal,horas_festivo_pago_doble_adicional,festivo_referencia', $content);
+        $this->assertStringContainsString('VT-900', $content);
+        $this->assertStringContainsString('VTDEMO260101', $content);
+        $this->assertStringContainsString('01234567890', $content);
+        $this->assertStringContainsString('8.00,1.02,1.02,0.00,0.50,si,1.02,si', $content);
+        $this->assertStringContainsString('si,1.02,1.02,1.02,"Descanso demo - Referencia demo"', $content);
+        $this->assertStringContainsString('si,scheduled_absence', $content);
     }
 
     public function test_ui_can_validate_and_close_ready_period(): void
