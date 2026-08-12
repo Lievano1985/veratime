@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 class ApplyOrdinaryOvertimeForDateRangeAction
 {
     private const WEEKLY_LIMIT_RULE = 'maximum_weekly_hours';
+    private const WEEKLY_DOUBLE_OVERTIME_LIMIT_MINUTES = 540;
 
     public function __construct(
         private readonly ResolveLegalRuleVersionForDateAction $rules,
@@ -50,6 +51,7 @@ class ApplyOrdinaryOvertimeForDateRangeAction
             ->groupBy(fn (WorkDay $workDay): string => $this->groupKey($workDay))
             ->each(function (Collection $weekWorkDays) use ($company, $requestedStart, $requestedEnd, &$summary): void {
                 $weeklyOrdinary = 0;
+                $weeklyOvertimeAccumulated = 0;
                 $weeklyLimit = null;
                 $weeklyRuleSnapshot = null;
 
@@ -87,13 +89,17 @@ class ApplyOrdinaryOvertimeForDateRangeAction
                     $ordinary = min($dailyOrdinary, $weeklyRemaining);
                     $weeklyOvertime = max(0, $dailyOrdinary - $ordinary);
                     $overtime = $dailyOvertime + $weeklyOvertime;
+                    [$overtimeDouble, $overtimeTriple] = $this->overtimeBands($overtime, $weeklyOvertimeAccumulated);
 
                     $weeklyOrdinary += $ordinary;
+                    $weeklyOvertimeAccumulated += $overtime;
 
                     $this->applyResult(
                         $calculation,
                         ordinary: $ordinary,
                         overtime: $overtime,
+                        overtimeDouble: $overtimeDouble,
+                        overtimeTriple: $overtimeTriple,
                         dailyLimit: $dailyLimit,
                         weeklyLimit: $weeklyLimit,
                         dailyRuleSnapshot: $dailyRuleSnapshot,
@@ -130,6 +136,8 @@ class ApplyOrdinaryOvertimeForDateRangeAction
         $calculation->forceFill([
             'ordinary_minutes' => 0,
             'overtime_minutes' => 0,
+            'overtime_double_minutes' => 0,
+            'overtime_triple_minutes' => 0,
             'explanation' => array_replace_recursive($calculation->explanation ?? [], [
                 'ordinary_overtime' => 'Pendiente: la jornada requiere clasificacion legal valida antes de calcular ordinario y extra.',
             ]),
@@ -211,13 +219,26 @@ class ApplyOrdinaryOvertimeForDateRangeAction
      * @param array<string, mixed> $dailyRuleSnapshot
      * @param array<string, mixed> $weeklyRuleSnapshot
      */
-    private function applyResult(WorkDayCalculation $calculation, int $ordinary, int $overtime, int $dailyLimit, int $weeklyLimit, array $dailyRuleSnapshot, array $weeklyRuleSnapshot, int $weeklyOrdinaryBefore): void
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private function overtimeBands(int $overtime, int $weeklyOvertimeBefore): array
+    {
+        $doubleRemaining = max(0, self::WEEKLY_DOUBLE_OVERTIME_LIMIT_MINUTES - $weeklyOvertimeBefore);
+        $double = min($overtime, $doubleRemaining);
+
+        return [$double, max(0, $overtime - $double)];
+    }
+
+    private function applyResult(WorkDayCalculation $calculation, int $ordinary, int $overtime, int $overtimeDouble, int $overtimeTriple, int $dailyLimit, int $weeklyLimit, array $dailyRuleSnapshot, array $weeklyRuleSnapshot, int $weeklyOrdinaryBefore): void
     {
         $resultSnapshot = $calculation->result_snapshot ?? [];
 
         $calculation->forceFill([
             'ordinary_minutes' => $ordinary,
             'overtime_minutes' => $overtime,
+            'overtime_double_minutes' => $overtimeDouble,
+            'overtime_triple_minutes' => $overtimeTriple,
             'rules_snapshot' => array_replace_recursive($calculation->rules_snapshot ?? [], [
                 'ordinary_overtime' => [
                     'schema_version' => 1,
@@ -230,13 +251,16 @@ class ApplyOrdinaryOvertimeForDateRangeAction
                     'schema_version' => 1,
                     'ordinary_minutes' => $ordinary,
                     'overtime_minutes' => $overtime,
+                    'overtime_double_minutes' => $overtimeDouble,
+                    'overtime_triple_minutes' => $overtimeTriple,
+                    'weekly_double_overtime_limit_minutes' => self::WEEKLY_DOUBLE_OVERTIME_LIMIT_MINUTES,
                     'daily_limit_minutes' => $dailyLimit,
                     'weekly_limit_minutes' => $weeklyLimit,
                     'weekly_ordinary_before_minutes' => $weeklyOrdinaryBefore,
                 ],
             ]),
             'explanation' => array_replace_recursive($calculation->explanation ?? [], [
-                'ordinary_overtime' => "Ordinario {$ordinary} minutos y extra {$overtime} minutos.",
+                'ordinary_overtime' => "Ordinario {$ordinary} minutos, extra doble {$overtimeDouble} minutos y extra triple {$overtimeTriple} minutos.",
             ]),
         ])->save();
     }

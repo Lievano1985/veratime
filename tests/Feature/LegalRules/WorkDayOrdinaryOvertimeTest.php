@@ -36,6 +36,8 @@ class WorkDayOrdinaryOvertimeTest extends TestCase
         $this->assertSame(['total' => 1, 'calculated' => 1, 'pending' => 0], $summary);
         $this->assertSame(480, $calculation->ordinary_minutes);
         $this->assertSame(60, $calculation->overtime_minutes);
+        $this->assertSame(60, $calculation->overtime_double_minutes);
+        $this->assertSame(0, $calculation->overtime_triple_minutes);
         $this->assertSame(480, $calculation->result_snapshot['ordinary_overtime']['daily_limit_minutes']);
         $this->assertSame('country_rule', $calculation->rules_snapshot['ordinary_overtime']['daily_limit']['source']);
     }
@@ -75,8 +77,37 @@ class WorkDayOrdinaryOvertimeTest extends TestCase
         $this->assertSame(['total' => 7, 'calculated' => 7, 'pending' => 0], $summary);
         $this->assertSame(0, $last->ordinary_minutes);
         $this->assertSame(480, $last->overtime_minutes);
+        $this->assertSame(480, $last->overtime_double_minutes);
+        $this->assertSame(0, $last->overtime_triple_minutes);
         $this->assertSame(2880, $last->result_snapshot['ordinary_overtime']['weekly_limit_minutes']);
         $this->assertSame(2880, $last->result_snapshot['ordinary_overtime']['weekly_ordinary_before_minutes']);
+    }
+
+    public function test_overtime_bands_split_double_and_triple_minutes_by_week(): void
+    {
+        [$company, $relationship] = $this->relationshipFixture();
+        $calculations = collect(range(0, 6))->map(fn (int $offset): WorkDayCalculation => $this->calculatedWorkDay(
+            $company,
+            $relationship,
+            "2026-08-0".($offset + 3),
+            600,
+        ));
+
+        app(ApplyOrdinaryOvertimeForDateRangeAction::class)->handle($company, '2026-08-03', '2026-08-09');
+
+        $first = $calculations->first()->refresh();
+        $fifth = $calculations->get(4)->refresh();
+        $last = $calculations->last()->refresh();
+
+        $this->assertSame(120, $first->overtime_minutes);
+        $this->assertSame(120, $first->overtime_double_minutes);
+        $this->assertSame(0, $first->overtime_triple_minutes);
+        $this->assertSame(60, $fifth->overtime_double_minutes);
+        $this->assertSame(60, $fifth->overtime_triple_minutes);
+        $this->assertSame(0, $last->overtime_double_minutes);
+        $this->assertSame(600, $last->overtime_triple_minutes);
+        $this->assertSame(540, $calculations->sum(fn (WorkDayCalculation $calculation): int => $calculation->refresh()->overtime_double_minutes));
+        $this->assertSame(780, $calculations->sum(fn (WorkDayCalculation $calculation): int => $calculation->refresh()->overtime_triple_minutes));
     }
 
     public function test_pending_classification_is_not_processed_as_overtime(): void
@@ -90,6 +121,8 @@ class WorkDayOrdinaryOvertimeTest extends TestCase
         $calculation->refresh();
         $this->assertSame(0, $calculation->ordinary_minutes);
         $this->assertSame(0, $calculation->overtime_minutes);
+        $this->assertSame(0, $calculation->overtime_double_minutes);
+        $this->assertSame(0, $calculation->overtime_triple_minutes);
         $this->assertArrayNotHasKey('ordinary_overtime', $calculation->result_snapshot);
     }
 

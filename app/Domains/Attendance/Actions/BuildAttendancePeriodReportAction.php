@@ -78,6 +78,8 @@ class BuildAttendancePeriodReportAction
                     'incomplete_days' => 0,
                     'ordinary_minutes' => 0,
                     'overtime_minutes' => 0,
+                    'overtime_double_minutes' => 0,
+                    'overtime_triple_minutes' => 0,
                     'sunday_minutes' => 0,
                     'mandatory_rest_minutes' => 0,
                     'open_incidents' => 0,
@@ -97,6 +99,8 @@ class BuildAttendancePeriodReportAction
             if ($calculation instanceof WorkDayCalculation) {
                 $rows[$workerId]['ordinary_minutes'] += (int) $calculation->ordinary_minutes;
                 $rows[$workerId]['overtime_minutes'] += (int) $calculation->overtime_minutes;
+                $rows[$workerId]['overtime_double_minutes'] += (int) $calculation->overtime_double_minutes;
+                $rows[$workerId]['overtime_triple_minutes'] += (int) $calculation->overtime_triple_minutes;
                 $rows[$workerId]['sunday_minutes'] += (int) $calculation->sunday_minutes;
                 $rows[$workerId]['mandatory_rest_minutes'] += (int) $calculation->mandatory_rest_minutes;
             }
@@ -122,6 +126,8 @@ class BuildAttendancePeriodReportAction
             'incomplete_days' => array_sum(array_column($workerRows, 'incomplete_days')),
             'ordinary_minutes' => array_sum(array_column($workerRows, 'ordinary_minutes')),
             'overtime_minutes' => array_sum(array_column($workerRows, 'overtime_minutes')),
+            'overtime_double_minutes' => array_sum(array_column($workerRows, 'overtime_double_minutes')),
+            'overtime_triple_minutes' => array_sum(array_column($workerRows, 'overtime_triple_minutes')),
             'sunday_minutes' => array_sum(array_column($workerRows, 'sunday_minutes')),
             'mandatory_rest_minutes' => array_sum(array_column($workerRows, 'mandatory_rest_minutes')),
             'open_incidents' => array_sum(array_column($workerRows, 'open_incidents')),
