@@ -181,7 +181,7 @@ new class extends Component {
     </div>
 
     <section class="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto] xl:items-end">
             <flux:input label="Desde" type="date" wire:model.live="dateFrom" />
             <flux:input label="Hasta" type="date" wire:model.live="dateTo" />
 

@@ -63,4 +63,9 @@ class Center extends Model
     {
         return $this->hasMany(ScheduleBatch::class);
     }
+
+    public function attendancePeriods(): HasMany
+    {
+        return $this->hasMany(AttendancePeriod::class);
+    }
 }

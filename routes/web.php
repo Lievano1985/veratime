@@ -37,8 +37,11 @@ Route::middleware(['auth', 'current.company'])->group(function () {
     Volt::route('organization/my-scope', 'organization.my-scope')->name('organization.my-scope');
     Volt::route('time-clock', 'time-clock.index')->name('time-clock.index');
     Volt::route('time-events/manual', 'time-events.manual')->name('time-events.manual');
+    Volt::route('attendance-incidents', 'attendance-incidents.index')->name('attendance-incidents.index');
     Volt::route('work-days', 'work-days.index')->name('work-days.index');
+    Volt::route('testing/quick-events', 'testing.quick-events')->name('testing.quick-events');
     Volt::route('alerts', 'alerts.index')->name('alerts.index');
+    Volt::route('attendance-periods', 'attendance-periods.index')->name('attendance-periods.index');
 
     Route::redirect('settings', 'settings/profile');
 

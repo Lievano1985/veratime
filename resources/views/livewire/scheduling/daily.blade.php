@@ -1768,7 +1768,7 @@ new class extends Component {
         </div>
 
         @if ($showAdvancedFilters)
-            <div class="mt-3 grid gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800 lg:grid-cols-5 lg:items-end">
+            <div class="mt-3 grid gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 xl:items-end">
                 <flux:input type="date" label="Desde" wire:model.live="filters.period_start" />
                 <flux:input type="date" label="Hasta" wire:model.live="filters.period_end" />
                 <flux:select label="Unidad organizacional" wire:model.live="filters.organizational_unit_id">

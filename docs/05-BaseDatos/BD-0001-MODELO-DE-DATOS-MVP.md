@@ -1071,6 +1071,53 @@ Reglas implementadas en el bloque base de calculo:
 - `rules_snapshot` conserva las versiones de reglas usadas para clasificar la jornada historica.
 - No crea alertas, incidencias, cierres, conformidad, reportes ni API.
 
+## 12.4 `attendance_periods`
+
+Bloque H agrega periodos de asistencia manuales por alcance. Estos periodos agrupan el rango que Vera Time usara para cierre operativo, reporte base y futura exportacion CSV o API, pero no calculan nomina.
+
+Campos principales:
+
+- `company_id`
+- `center_id`
+- `scope_type`: `center` u `organizational_units`
+- `name`
+- `period_start`
+- `period_end`
+- `timezone`
+- `status`: `open`, `ready`, `closed`, `cancelled`
+- `created_by`
+- `validated_by`, `validated_at`
+- `closed_by`, `closed_at`
+- `cancelled_by`, `cancelled_at`, `cancellation_reason`
+- `validation_summary`
+- `report_summary`
+- `snapshot_schema_version`
+- `snapshot_canonical_json`
+- `snapshot_sha256`
+- `metadata`
+
+## 12.5 `attendance_period_scopes`
+
+Guarda las unidades organizacionales incluidas cuando un periodo aplica solo a unidades especificas del centro.
+
+Campos principales:
+
+- `company_id`
+- `attendance_period_id`
+- `organizational_unit_id`
+
+Reglas H:
+
+- Si `scope_type = center`, el periodo aplica a todo el centro y no requiere scopes.
+- Si `scope_type = organizational_units`, todas las unidades deben pertenecer a la empresa y centro del periodo.
+- No se acepta `company_id` desde Livewire.
+- No se permite solape para el mismo centro completo o para las mismas unidades seleccionadas.
+- El cierre solo procede si la validacion no detecta bloqueantes en Jornadas.
+- `validation_summary` conserva conteos de jornadas, alertas abiertas y jornadas pendientes/en revision.
+- `report_summary` conserva el reporte base congelado por trabajador.
+- `snapshot_canonical_json` y `snapshot_sha256` conservan evidencia de integridad del cierre.
+- No crea exportaciones ni conceptos de nomina.
+
 Índices:
 
 ```text
@@ -1195,6 +1242,26 @@ Implementacion base 2026-08-05:
 - `/work-days` permite dictamen basico de incidencias desde la tabla de Jornadas; se conserva `resolution`, `resolved_by`, `resolved_at` y metadata de resolucion.
 - `scheduled_absence` representa una falta dictaminable cuando una jornada programada no tiene eventos validos.
 - `alerts` se conserva como tabla tecnica de trazabilidad; no se agrega tabla separada de incidencias en este bloque.
+
+## 13.2.1 `attendance_incidents`
+
+Bloque H4 agrega incidencias/ausencias operativas registradas por RH antes del cierre del periodo.
+
+Campos principales:
+
+- `company_id`, `worker_id`, `employment_relationship_id`.
+- `start_date`, `end_date`.
+- `incident_type`: vacaciones, incapacidad, permiso, falta justificada/injustificada, maternidad/paternidad u otro.
+- `payment_status`: `paid`, `unpaid`, `not_applicable` como dato operativo para exportacion posterior.
+- `status`: `approved` o `cancelled`.
+- `reference`, `notes`, `created_by`, `cancelled_by`, `cancelled_at`, `metadata`.
+
+Reglas:
+
+- No calcula nomina ni tratamiento fiscal.
+- No reemplaza `alerts`; evita faltas automaticas cuando una jornada programada sin eventos tiene una incidencia aprobada.
+- `work_day_calculations.result_snapshot.attendance_incident` conserva el snapshot usado por la jornada.
+- Las cancelaciones no borran historial y requieren recalculo del rango si ya existian jornadas procesadas.
 
 ## 13.3 `alert_comments`
 

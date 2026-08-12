@@ -479,6 +479,10 @@ new class extends Component {
 
     private function workedMinutesLabel(WorkDay $workDay): string
     {
+        if ($this->hasAttendanceIncident($workDay)) {
+            return $this->attendanceIncidentTypeLabel($workDay);
+        }
+
         if ($this->isScheduledAbsenceCandidate($workDay)) {
             return 'Falta';
         }
@@ -591,6 +595,10 @@ new class extends Component {
 
     private function primaryIncidentLabel(WorkDay $workDay): string
     {
+        if ($this->hasAttendanceIncident($workDay)) {
+            return $this->attendanceIncidentTypeLabel($workDay);
+        }
+
         $alert = $this->primaryIncidentAlert($workDay);
 
         if ($alert) {
@@ -614,6 +622,10 @@ new class extends Component {
 
     private function primaryIncidentVariant(WorkDay $workDay): string
     {
+        if ($this->hasAttendanceIncident($workDay)) {
+            return 'success';
+        }
+
         $alert = $this->primaryIncidentAlert($workDay);
 
         if ($alert) {
@@ -646,6 +658,10 @@ new class extends Component {
 
     private function incidentStatusLabel(WorkDay $workDay): string
     {
+        if ($this->hasAttendanceIncident($workDay)) {
+            return 'Aprobada';
+        }
+
         if (($workDay->open_alerts_count ?? 0) > 0) {
             return 'Pendiente';
         }
@@ -659,10 +675,35 @@ new class extends Component {
 
     private function hasOperationalIncident(WorkDay $workDay): bool
     {
-        return $workDay->alerts->contains(fn (Alert $alert): bool => $alert->status !== Alert::STATUS_CLOSED)
+        return $this->hasAttendanceIncident($workDay)
+            || $workDay->alerts->contains(fn (Alert $alert): bool => $alert->status !== Alert::STATUS_CLOSED)
             || $this->isScheduledAbsenceCandidate($workDay)
             || $workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED
             || $workDay->status === WorkDay::STATUS_UNDER_REVIEW;
+    }
+
+    private function hasAttendanceIncident(WorkDay $workDay): bool
+    {
+        return is_array(data_get($workDay->metadata, 'attendance_incident'))
+            || is_array(data_get($workDay->activeCalculation?->result_snapshot, 'attendance_incident'));
+    }
+
+    private function attendanceIncidentTypeLabel(WorkDay $workDay): string
+    {
+        $type = data_get($workDay->metadata, 'attendance_incident.incident_type')
+            ?: data_get($workDay->activeCalculation?->result_snapshot, 'attendance_incident.incident_type');
+
+        return match ($type) {
+            'vacation' => 'Vacaciones',
+            'incapacity' => 'Incapacidad',
+            'paid_permission' => 'Permiso con goce',
+            'unpaid_permission' => 'Permiso sin goce',
+            'justified_paid_absence' => 'Falta justificada pagada',
+            'justified_unpaid_absence' => 'Falta justificada no pagada',
+            'unjustified_absence' => 'Falta injustificada',
+            'maternity_paternity' => 'Maternidad / paternidad',
+            default => 'Ausencia justificada',
+        };
     }
 
     private function primaryIncidentAlert(WorkDay $workDay): ?Alert

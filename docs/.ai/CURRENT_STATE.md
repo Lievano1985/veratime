@@ -774,3 +774,33 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - `/scheduling/daily` muestra crear correccion, comparar con version anterior, publicar correccion e historial de versiones.
 - `VeraTimeCorrectedScheduleScenarioSeeder` prepara una correccion publicada y una correccion draft para pruebas manuales.
 - F5 CSV/XLSX, API WFM, calculos legales, `work_days`, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
+
+## Bloque H - periodos de asistencia, cierre operativo y reporte base
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Ruta: `/attendance-periods`.
+- Permite generar periodos de asistencia abiertos por centro completo o por una o varias unidades organizacionales del mismo centro.
+- El usuario define el rango de fechas manualmente; la configuracion de empresa solo sirve como referencia/sugerencia inicial.
+- `attendance_periods` agrupa el paquete de asistencia que despues alimentara CSV o API.
+- `attendance_period_scopes` guarda las unidades incluidas cuando el periodo no aplica a todo el centro.
+- H2 valida bloqueantes contra Jornadas y enlaza a `/work-days` filtrado por centro/rango para atender pendientes.
+- H2 permite cerrar un periodo solo cuando no existen bloqueantes abiertos.
+- H3 genera reporte base congelado al cerrar: trabajadores, jornadas, asistencias, faltas, ordinario, extra, domingos, descansos obligatorios e incidencias.
+- El cierre guarda `validation_summary`, `report_summary`, snapshot canonico y hash SHA-256.
+- Vera Time no calcula nomina, pagos, dispersion, ISR, IMSS ni recibos.
+- El modulo de periodos no dictamina jornadas ni corrige incidencias; esas acciones siguen en Jornadas.
+- Pendiente: exportacion CSV/API del periodo, conformidad digital y entrega a sistemas externos.
+
+## Bloque H4 - incidencias y ausencias operativas
+
+Estado: implementado/candidato a cierre, condicionado a validacion verde final.
+
+- Ruta: `/attendance-incidents`.
+- Agrega `attendance_incidents` para registrar ausencias/incidencias operativas por trabajador y rango: vacaciones, incapacidad, permisos, faltas justificadas/injustificadas, maternidad/paternidad y otro.
+- Cada registro conserva tipo, pago operativo (`paid`, `unpaid`, `not_applicable`), referencia opcional, comentario, actor y estado aprobado/cancelado.
+- `CalculateWorkDayAction` consulta incidencias aprobadas cuando una jornada programada no tiene eventos validos; si aplica, crea una version de calculo con cero minutos y snapshot de la incidencia.
+- La ausencia aprobada evita la alerta automatica de falta y permite que el cierre de periodo no la trate como bloqueante.
+- El reporte base de periodo distingue faltas sin justificar de ausencias justificadas y ausencias no pagadas como hechos operativos.
+- No calcula nomina, descuentos, subsidios, prima vacacional, CFDI, claves SAT obligatorias ni percepciones/deducciones.
+- Pendiente: exportar estas incidencias en CSV/API del periodo y definir si se agregaran referencias/folios mas formales por tipo documental.

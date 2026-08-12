@@ -69,4 +69,9 @@ class OrganizationalUnit extends Model
     {
         return $this->hasMany(DailyScheduleAssignment::class);
     }
+
+    public function attendancePeriodScopes(): HasMany
+    {
+        return $this->hasMany(AttendancePeriodScope::class);
+    }
 }

@@ -1134,6 +1134,15 @@ Filtros:
 - Responsable.
 - Origen.
 
+Implementacion H4:
+
+- Ruta `/attendance-incidents`.
+- Pantalla simple para registrar ausencias/incidencias operativas por trabajador y rango.
+- Campos visibles: trabajador, desde, hasta, tipo, pago operativo, referencia/folio opcional y comentario.
+- Tipos iniciales: vacaciones, incapacidad, permiso con goce, permiso sin goce, falta justificada pagada, falta justificada no pagada, falta injustificada, maternidad/paternidad y otro.
+- La tabla muestra trabajador, rango, tipo, pago, referencia, estado y accion de cancelar.
+- La pantalla aclara que Vera Time no calcula nomina; solo clasifica hechos de asistencia para jornadas, cierres y exportacion posterior.
+
 ---
 
 ## 15.2 Detalle de incidencia
@@ -1230,6 +1239,19 @@ Origen: Empresa / Centro / Area / Relacion laboral
 ```
 
 ## 16.1 Listado de periodos
+
+Actualizacion H:
+
+- La pantalla real inicial es `/attendance-periods`.
+- El usuario crea periodos de asistencia con `Nuevo periodo`.
+- El side panel solicita centro, alcance y rango de fechas.
+- El alcance puede ser todo el centro o unidades organizacionales seleccionadas.
+- La tabla muestra centro, alcance, periodo, estado, creador y acciones.
+- Un periodo abierto puede validarse contra Jornadas.
+- Si hay bloqueantes, se muestra el conteo y un enlace a Jornadas filtrado por rango/centro.
+- Si no hay bloqueantes, el usuario puede cerrar el periodo.
+- Un periodo cerrado muestra reporte base por trabajador y snapshot SHA-256.
+- Vera Time no calcula nomina ni pagos; solo prepara el paquete de asistencia para entrega/exportacion posterior.
 
 **Prioridad:** P0
 

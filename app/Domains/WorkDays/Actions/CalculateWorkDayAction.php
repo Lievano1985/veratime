@@ -2,7 +2,9 @@
 
 namespace App\Domains\WorkDays\Actions;
 
+use App\Domains\AttendanceIncidents\Actions\ResolveAttendanceIncidentForDateAction;
 use App\Domains\TimeRecords\Actions\ResolveValidTimeEventsForWorkDateAction;
+use App\Models\AttendanceIncident;
 use App\Models\Company;
 use App\Models\TimeEvent;
 use App\Models\User;
@@ -18,6 +20,7 @@ class CalculateWorkDayAction
 {
     public function __construct(
         private readonly ResolveValidTimeEventsForWorkDateAction $validEvents,
+        private readonly ResolveAttendanceIncidentForDateAction $attendanceIncidentForDate,
     ) {}
 
     public function handle(Company $company, WorkDay $workDay, ?User $actor = null, string $generatedByType = WorkDayCalculation::GENERATED_BY_SYSTEM, ?string $reason = null): ?WorkDayCalculation
@@ -31,6 +34,12 @@ class CalculateWorkDayAction
         $events = $this->validEvents->handle($company, $workDay->employmentRelationship, $workDay->work_date);
 
         if ($events->isEmpty()) {
+            $attendanceIncident = $this->attendanceIncidentForDate->handle($company, $workDay->employmentRelationship, $workDay->work_date);
+
+            if ($attendanceIncident && $this->canApplyAttendanceIncident($workDay)) {
+                return $this->calculateFromAttendanceIncident($company, $workDay, $attendanceIncident, $actor, $generatedByType, $reason);
+            }
+
             if ($workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED
                 && ($workDay->metadata['source'] ?? null) === 'time_events') {
                 $workDay->forceFill(['active_calculation_id' => null])->save();
@@ -115,6 +124,85 @@ class CalculateWorkDayAction
                 'last_event_at_utc' => $eventSummary['last_event_at_utc'],
                 'valid_time_event_ids' => $eventSummary['ids'],
                 'active_calculation_id' => $calculation->id,
+            ])->save();
+
+            return $calculation;
+        });
+    }
+
+    private function canApplyAttendanceIncident(WorkDay $workDay): bool
+    {
+        return $workDay->schedule_status === WorkDay::SCHEDULE_STATUS_SCHEDULED
+            && $workDay->day_type === 'shift'
+            && (int) $workDay->expected_work_minutes > 0
+            && (int) $workDay->valid_time_event_count === 0;
+    }
+
+    private function calculateFromAttendanceIncident(Company $company, WorkDay $workDay, AttendanceIncident $attendanceIncident, ?User $actor, string $generatedByType, ?string $reason): WorkDayCalculation
+    {
+        return DB::transaction(function () use ($company, $workDay, $attendanceIncident, $actor, $generatedByType, $reason): WorkDayCalculation {
+            $workDay = WorkDay::query()
+                ->where('company_id', $company->id)
+                ->lockForUpdate()
+                ->findOrFail($workDay->id);
+
+            WorkDayCalculation::query()
+                ->where('work_day_id', $workDay->id)
+                ->where('status', WorkDayCalculation::STATUS_ACTIVE)
+                ->update(['status' => WorkDayCalculation::STATUS_SUPERSEDED]);
+
+            $nextVersion = ((int) WorkDayCalculation::query()
+                ->where('work_day_id', $workDay->id)
+                ->max('version')) + 1;
+
+            $calculation = WorkDayCalculation::query()->create([
+                'company_id' => $company->id,
+                'work_day_id' => $workDay->id,
+                'version' => $nextVersion,
+                'status' => WorkDayCalculation::STATUS_ACTIVE,
+                'calculated_at' => CarbonImmutable::now('UTC'),
+                'generated_by_type' => $generatedByType,
+                'generated_by_id' => $actor?->id,
+                'reason' => $reason,
+                'total_work_minutes' => 0,
+                'ordinary_minutes' => 0,
+                'night_minutes' => 0,
+                'overtime_minutes' => 0,
+                'break_minutes' => 0,
+                'paid_break_minutes' => 0,
+                'sunday_minutes' => 0,
+                'mandatory_rest_minutes' => 0,
+                'classification' => WorkDayCalculation::CLASSIFICATION_PENDING,
+                'rules_snapshot' => [
+                    'schema_version' => 1,
+                    'scope' => 'attendance_incident',
+                    'legal_engine_applied' => false,
+                    'payroll_calculation' => false,
+                ],
+                'inputs_snapshot' => $this->attendanceIncidentInputsSnapshot($workDay, $attendanceIncident),
+                'result_snapshot' => [
+                    'schema_version' => 1,
+                    'attendance_incident' => $this->attendanceIncidentSnapshot($attendanceIncident),
+                    'issues' => [],
+                ],
+                'explanation' => [
+                    'schema_version' => 1,
+                    'summary' => 'La jornada no tiene eventos de asistencia, pero cuenta con una incidencia operativa aprobada para la fecha.',
+                    'legal_pending' => true,
+                ],
+            ]);
+
+            $metadata = $workDay->metadata ?: [];
+            $metadata['attendance_incident'] = $this->attendanceIncidentSnapshot($attendanceIncident);
+
+            $workDay->forceFill([
+                'status' => WorkDay::STATUS_CALCULATED,
+                'valid_time_event_count' => 0,
+                'first_event_at_utc' => null,
+                'last_event_at_utc' => null,
+                'valid_time_event_ids' => [],
+                'active_calculation_id' => $calculation->id,
+                'metadata' => $metadata,
             ])->save();
 
             return $calculation;
@@ -265,6 +353,41 @@ class CalculateWorkDayAction
                 'external_id' => $event->external_id,
                 'idempotency_key' => $event->idempotency_key,
             ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attendanceIncidentInputsSnapshot(WorkDay $workDay, AttendanceIncident $attendanceIncident): array
+    {
+        return [
+            'schema_version' => 1,
+            'work_day' => [
+                'id' => $workDay->id,
+                'work_date' => $workDay->work_date?->toDateString(),
+                'schedule_status' => $workDay->schedule_status,
+                'day_type' => $workDay->day_type,
+                'expected_work_minutes' => $workDay->expected_work_minutes,
+            ],
+            'events' => [],
+            'attendance_incident' => $this->attendanceIncidentSnapshot($attendanceIncident),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attendanceIncidentSnapshot(AttendanceIncident $attendanceIncident): array
+    {
+        return [
+            'id' => $attendanceIncident->id,
+            'incident_type' => $attendanceIncident->incident_type,
+            'payment_status' => $attendanceIncident->payment_status,
+            'status' => $attendanceIncident->status,
+            'start_date' => $attendanceIncident->start_date?->toDateString(),
+            'end_date' => $attendanceIncident->end_date?->toDateString(),
+            'reference' => $attendanceIncident->reference,
         ];
     }
 }

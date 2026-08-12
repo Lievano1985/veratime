@@ -3,6 +3,7 @@
 namespace App\Domains\Scheduling\Actions;
 
 use App\Models\Company;
+use App\Models\DailyScheduleSegment;
 use App\Models\ShiftTemplate;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -47,7 +48,15 @@ class UpdateShiftTemplateAction
             ]);
             $lockedTemplate->save();
 
-            $lockedTemplate->segments()->lockForUpdate()->get();
+            $segmentIds = $lockedTemplate->segments()->lockForUpdate()->pluck('id');
+
+            if ($segmentIds->isNotEmpty()) {
+                DailyScheduleSegment::query()
+                    ->where('company_id', $company->id)
+                    ->whereIn('shift_template_segment_id', $segmentIds)
+                    ->update(['shift_template_segment_id' => null]);
+            }
+
             $lockedTemplate->segments()->delete();
 
             foreach ($normalized as $segment) {

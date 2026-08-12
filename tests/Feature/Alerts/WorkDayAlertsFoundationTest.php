@@ -207,6 +207,8 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
+            ->set('dateFrom', '2026-08-03')
+            ->set('dateTo', '2026-08-03')
             ->assertSee('Tiempo extra detectado')
             ->assertSee('Dictaminar')
             ->call('openAlertsPanel', $workDay->id)
