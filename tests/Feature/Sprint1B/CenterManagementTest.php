@@ -4,6 +4,7 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -456,7 +457,7 @@ it('centers migration is mysql mariadb compatible', function (): void {
     $this->assertTrue($indexes->contains('centers_company_id_status_index'));
 });
 
-function centerUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function centerUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

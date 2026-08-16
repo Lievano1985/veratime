@@ -46,7 +46,7 @@ class ShiftTemplateCatalogTest extends TestCase
     {
         $company = Company::factory()->create(['status' => 'active']);
 
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $index => $roleKey) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $index => $roleKey) {
             $user = $this->userWithCompanyRole($company, $roleKey);
             $this->assertTrue(Gate::forUser($user)->allows('create', [ShiftTemplate::class, $company]));
 
@@ -59,7 +59,7 @@ class ShiftTemplateCatalogTest extends TestCase
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
 
         $this->assertFalse(Gate::forUser($supervisor)->allows('create', [ShiftTemplate::class, $company]));
-        $this->assertDatabaseCount('shift_templates', 3);
+        $this->assertDatabaseCount('shift_templates', 2);
     }
 
     public function test_supervisor_needs_active_operational_scope_to_consult_active_templates(): void
@@ -258,7 +258,7 @@ class ShiftTemplateCatalogTest extends TestCase
     public function test_shift_templates_ui_creates_edits_filters_and_shows_preview(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -307,7 +307,7 @@ class ShiftTemplateCatalogTest extends TestCase
     public function test_shift_template_segment_preview_updates_while_editing_fields(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -326,7 +326,7 @@ class ShiftTemplateCatalogTest extends TestCase
     {
         $company = Company::factory()->create(['status' => 'active']);
         $otherCompany = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $orphanUser = User::factory()->create(['status' => 'active']);
         $foreignTemplate = app(CreateShiftTemplateAction::class)->handle($otherCompany, ['code' => 'EXT', 'name' => 'Externo'], $this->simpleWorkSegments());
 
@@ -345,11 +345,11 @@ class ShiftTemplateCatalogTest extends TestCase
     public function test_sidebar_hides_catalog_for_unauthorized_roles_and_form_does_not_expose_company_id(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $payroll = $this->userWithCompanyRole($company, RoleKey::PAYROLL);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $unauthorized = $this->userWithCompanyRole($company, 'sin_acceso');
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
-        $this->actingAs($payroll)->withSession(['current_company_id' => $company->id]);
-        $this->get(route('dashboard'))->assertOk()->assertDontSee('CatÃ¡logo de turnos');
+        $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id]);
+        $this->get(route('dashboard'))->assertOk()->assertDontSee('Catálogo de turnos');
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
         $this->get(route('dashboard'))

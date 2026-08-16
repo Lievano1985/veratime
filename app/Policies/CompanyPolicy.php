@@ -12,7 +12,10 @@ class CompanyPolicy
     {
         return $user->companiesWithActiveMembership()
             ->get()
-            ->contains(fn (Company $company) => in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true));
+            ->contains(fn (Company $company) => in_array($user->roleKeyForCompanyMembership($company), [
+                ...RoleKey::companyManagers(),
+                RoleKey::SUPER_ADMIN,
+            ], true));
     }
 
     public function view(User $user, Company $company): bool
@@ -23,6 +26,9 @@ class CompanyPolicy
     public function update(User $user, Company $company): bool
     {
         return $user->hasActiveMembershipInCompany($company)
-            && in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true);
+            && in_array($user->roleKeyForCompanyMembership($company), [
+                ...RoleKey::companyManagers(),
+                RoleKey::SUPER_ADMIN,
+            ], true);
     }
 }

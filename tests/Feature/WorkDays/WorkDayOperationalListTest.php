@@ -22,7 +22,7 @@ class WorkDayOperationalListTest extends TestCase
 
     public function test_manager_can_view_work_days_list(): void
     {
-        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN);
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA);
         $normalWorkDay = WorkDay::factory()->create([
             'company_id' => $company->id,
             'worker_id' => $workDay->worker_id,
@@ -45,7 +45,7 @@ class WorkDayOperationalListTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
-            ->get(route('work-days.index'))
+            ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-04']))
             ->assertOk()
             ->assertSee('Jornadas')
             ->assertSee($workDay->worker->employee_code)
@@ -58,12 +58,12 @@ class WorkDayOperationalListTest extends TestCase
 
     public function test_work_days_list_filters_by_company_and_search(): void
     {
-        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH, 'ANA', 'Ana Demo Lopez');
-        [$otherCompany] = $this->companyUserAndWorkDay(RoleKey::RH, 'BRU', 'Bruno Demo Perez');
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'ANA', 'Ana Demo Lopez');
+        [$otherCompany] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'BRU', 'Bruno Demo Perez');
 
         $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
-            ->get(route('work-days.index', ['search' => 'ANA']))
+            ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-03', 'search' => 'ANA']))
             ->assertOk()
             ->assertSee($workDay->worker->full_name)
             ->assertDontSee('Bruno Demo Perez');
@@ -74,10 +74,15 @@ class WorkDayOperationalListTest extends TestCase
 
     public function test_work_days_list_can_show_only_rows_with_incidents(): void
     {
-        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN, 'ANA', 'Ana Demo Lopez');
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
+        $normalWorker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'NOR',
+            'full_name' => 'Bruno Normal',
+        ]);
         $normalWorkDay = WorkDay::factory()->create([
             'company_id' => $company->id,
-            'worker_id' => $workDay->worker_id,
+            'worker_id' => $normalWorker->id,
             'center_id' => $workDay->center_id,
             'work_date' => '2026-08-04',
             'timezone' => 'America/Mexico_City',
@@ -97,13 +102,13 @@ class WorkDayOperationalListTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
-            ->get(route('work-days.index', ['incident' => 'with_incidents']))
+            ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-04', 'incident' => 'with_incidents']))
             ->assertOk()
             ->assertSee('Todas')
             ->assertSee('Solo con incidencia')
             ->assertSee('Falta')
             ->assertSee('2026-08-03')
-            ->assertDontSee('2026-08-04');
+            ->assertDontSee('Bruno Normal');
     }
 
     public function test_work_days_list_caps_future_dates_to_company_today(): void
@@ -111,7 +116,7 @@ class WorkDayOperationalListTest extends TestCase
         CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-07 12:00:00', 'America/Mexico_City'));
 
         try {
-            [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH, 'ANA', 'Ana Demo Lopez');
+            [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'ANA', 'Ana Demo Lopez');
 
             foreach (['2026-08-07', '2026-08-08', '2026-08-09'] as $date) {
                 WorkDay::factory()->create([
@@ -145,7 +150,7 @@ class WorkDayOperationalListTest extends TestCase
         CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-07 12:00:00', 'America/Mexico_City'));
 
         try {
-            [$company, $user, $baseWorkDay] = $this->companyUserAndWorkDay(RoleKey::RH, 'ANA', 'Ana Demo Lopez');
+            [$company, $user, $baseWorkDay] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'ANA', 'Ana Demo Lopez');
 
             $todayWithoutCheckout = Worker::factory()->create([
                 'company_id' => $company->id,
@@ -220,9 +225,9 @@ class WorkDayOperationalListTest extends TestCase
         }
     }
 
-    public function test_approved_overtime_remains_primary_when_absence_was_closed_as_not_applicable(): void
+    public function test_work_days_list_stacks_visible_incidents_and_hides_closed_not_applicable_alerts(): void
     {
-        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH, 'ANA', 'Ana Demo Lopez');
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'ANA', 'Ana Demo Lopez');
 
         $calculation = WorkDayCalculation::factory()->create([
             'company_id' => $company->id,
@@ -292,12 +297,73 @@ class WorkDayOperationalListTest extends TestCase
             'fingerprint' => 'approved-overtime-demo',
         ]);
 
+        $incompleteAlertType = AlertType::query()->create([
+            'code' => 'incomplete_work_day',
+            'name' => 'Jornada incompleta',
+            'description' => 'La jornada tiene eventos, pero requiere revision por secuencia incompleta.',
+            'default_severity' => 'high',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $incompleteAlertType->id,
+            'worker_id' => $workDay->worker_id,
+            'work_day_id' => $workDay->id,
+            'work_day_calculation_id' => $calculation->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_NEW,
+            'title' => 'Jornada incompleta',
+            'description' => 'La jornada tiene eventos validos, pero requiere revision por secuencia incompleta.',
+            'rule_code' => 'incomplete_work_day',
+            'detected_at' => '2026-08-07 11:58:00',
+            'fingerprint' => 'open-incomplete-demo',
+        ]);
+
         $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
             ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-03']))
             ->assertOk()
             ->assertSee('Tiempo extra detectado')
+            ->assertSee('Jornada incompleta')
+            ->assertDontSee('La jornada estaba programada y no tenia eventos validos de asistencia.')
             ->assertSee('Dictaminada');
+    }
+
+    public function test_work_days_list_does_not_duplicate_absence_badge_when_alert_and_candidate_match(): void
+    {
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::RH_ADMIN, 'ANA', 'Ana Demo Lopez');
+
+        $absenceAlertType = AlertType::query()->create([
+            'code' => 'scheduled_absence',
+            'name' => 'Falta',
+            'description' => 'Jornada programada sin eventos validos.',
+            'default_severity' => 'high',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $absenceAlertType->id,
+            'worker_id' => $workDay->worker_id,
+            'work_day_id' => $workDay->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_NEW,
+            'title' => 'Falta',
+            'description' => 'La jornada estaba programada y no tenia eventos validos de asistencia.',
+            'rule_code' => 'scheduled_absence',
+            'detected_at' => '2026-08-04 09:00:00',
+            'fingerprint' => 'open-absence-demo',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-03']))
+            ->assertOk();
+
+        $this->assertSame(2, substr_count((string) $response->getContent(), '>Falta<'));
     }
 
     public function test_supervisor_without_manager_permission_cannot_view_work_days_list(): void

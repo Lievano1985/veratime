@@ -28,7 +28,7 @@ class ScheduleProfileUiTest extends TestCase
     public function test_routes_sidebar_and_legacy_navigation_state(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->assertTrue(Route::has('scheduling.profiles'));
         $this->assertTrue(Route::has('scheduling.profile-assignments'));
@@ -50,7 +50,7 @@ class ScheduleProfileUiTest extends TestCase
     public function test_profiles_ui_creates_pattern_and_calendar_profiles_and_manages_status(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $template = $this->shiftTemplate($company, 'APER', 'Apertura');
         $this->shiftTemplate($company, 'INA', 'Inactiva', 'inactive');
         $this->shiftTemplate(Company::factory()->create(['status' => 'active']), 'EXT', 'Externa');
@@ -118,7 +118,7 @@ class ScheduleProfileUiTest extends TestCase
     public function test_profile_assignments_ui_creates_replaces_ends_and_resolves_inheritance(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $center = Center::factory()->for($company)->create(['status' => 'active', 'name' => 'Planta']);
         $unit = OrganizationalUnit::factory()->for($company)->for($center)->create(['status' => 'active', 'name' => 'Administracion']);
         $relationship = EmploymentRelationship::factory()->forCompany($company)->create(['center_id' => $center->id, 'started_at' => '2026-08-01']);

@@ -216,7 +216,7 @@ class RecalculateWorkDayFromTimeEventJobTest extends TestCase
     private function managerForCompany(Company $company): User
     {
         $role = Role::query()->firstOrCreate(
-            ['key' => RoleKey::RH],
+            ['key' => RoleKey::RH_ADMIN],
             ['name' => 'RH', 'description' => null, 'is_system' => true],
         );
         $user = User::factory()->create(['status' => 'active']);

@@ -8,6 +8,7 @@ use App\Models\Schedule;
 use App\Models\ScheduleBreak;
 use App\Models\ScheduleDay;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -447,7 +448,7 @@ it('sprint 2a does not create jornada calculation tables or registration ui', fu
         ->and(Schema::hasTable('work_days'))->toBeTrue();
 });
 
-function scheduleUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function scheduleUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

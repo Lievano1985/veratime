@@ -231,12 +231,12 @@ class OrganizationalScopeTest extends TestCase
     public function test_company_managers_can_manage_any_worker_and_inactive_contexts_are_blocked(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $role) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $role) {
             app(EnsureUserCanManageWorkerAction::class)->handle($this->userWithCompanyRole($company, $role), $company, $relationship, '2026-08-01');
             $this->assertTrue(true);
         }
 
-        $inactiveUser = $this->userWithCompanyRole($company, RoleKey::RH, userStatus: 'inactive');
+        $inactiveUser = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN, userStatus: 'inactive');
         $this->expectException(AuthorizationException::class);
         app(EnsureUserCanManageWorkerAction::class)->handle($inactiveUser, $company, $relationship, '2026-08-01');
     }
@@ -244,7 +244,7 @@ class OrganizationalScopeTest extends TestCase
     public function test_scope_assignment_requires_supervisor_and_blocks_duplicates(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
 
         try {
@@ -292,7 +292,7 @@ class OrganizationalScopeTest extends TestCase
         [$company, $center] = $this->companyAndCenter();
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
 
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $role) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $role) {
             $user = $this->userWithCompanyRole($company, $role);
             $this->assertTrue($user->can('create', [OrganizationalUnit::class, $company]));
             $this->assertTrue($user->can('update', $unit));

@@ -163,7 +163,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('viewAny', [OrganizationalUnit::class, $company]);
-        $scope = auth()->user()->roleKeyForCompany($company) === RoleKey::SUPERVISOR
+        $scope = in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)
             ? $resolveUserScope->handle($company, auth()->user(), now()->toDateString())
             : null;
 

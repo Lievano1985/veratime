@@ -29,7 +29,7 @@ class WorkDayOperationalRefreshTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
+        Volt::test('company-settings.index')
             ->set('settingsForm.payroll_period_type', 'weekly')
             ->set('settingsForm.default_timezone', 'America/Mexico_City')
             ->set('settingsForm.default_closure_day', 5)
@@ -72,7 +72,7 @@ class WorkDayOperationalRefreshTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
+        Volt::test('company-settings.index')
             ->assertSee('Hora automatica de jornadas')
             ->assertDontSee('Recalcular jornadas');
     }
@@ -151,7 +151,7 @@ class WorkDayOperationalRefreshTest extends TestCase
     private function companyUserAndPublishedDay(string $suffix = 'MAIN'): array
     {
         $role = Role::query()->firstOrCreate(
-            ['key' => RoleKey::ADMIN],
+            ['key' => RoleKey::ADMIN_EMPRESA],
             ['name' => 'Administrador', 'description' => null, 'is_system' => true],
         );
         $company = Company::factory()->create(['status' => 'active', 'timezone' => 'America/Mexico_City']);

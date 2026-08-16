@@ -26,7 +26,7 @@ class AttendanceIncidentManagementTest extends TestCase
 
     public function test_rh_can_create_attendance_incident_from_ui(): void
     {
-        [$company, $user, $worker] = $this->companyUserWorker(RoleKey::RH);
+        [$company, $user, $worker] = $this->companyUserWorker(RoleKey::RH_ADMIN);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -62,8 +62,8 @@ class AttendanceIncidentManagementTest extends TestCase
 
     public function test_cannot_create_incident_for_worker_from_another_company(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
-        [$otherCompany, , $otherWorker] = $this->companyUserWorker(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
+        [$otherCompany, , $otherWorker] = $this->companyUserWorker(RoleKey::RH_ADMIN);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -84,7 +84,7 @@ class AttendanceIncidentManagementTest extends TestCase
 
     public function test_attendance_incident_converts_scheduled_absence_into_calculated_absence(): void
     {
-        [$company, $user, $worker, $relationship, $center] = $this->companyUserWorker(RoleKey::RH);
+        [$company, $user, $worker, $relationship, $center] = $this->companyUserWorker(RoleKey::RH_ADMIN);
         $workDay = WorkDay::factory()->create([
             'company_id' => $company->id,
             'worker_id' => $worker->id,
@@ -121,7 +121,7 @@ class AttendanceIncidentManagementTest extends TestCase
 
     public function test_period_validation_does_not_block_approved_attendance_incident(): void
     {
-        [$company, $user, $worker, $relationship, $center] = $this->companyUserWorker(RoleKey::RH);
+        [$company, $user, $worker, $relationship, $center] = $this->companyUserWorker(RoleKey::RH_ADMIN);
         $period = app(CreateAttendancePeriodAction::class)->handle($company, $center, [
             'period_start' => '2026-08-01',
             'period_end' => '2026-08-07',

@@ -129,7 +129,7 @@ new class extends Component {
         Session::flash('status', 'Descanso obligatorio inactivado.');
     }
 
-    public function delete(int $restDayId, CurrentCompany $currentCompany, DeleteMandatoryRestDayIfUnusedAction $action): void
+    public function deleteRestDay(int $restDayId, CurrentCompany $currentCompany, DeleteMandatoryRestDayIfUnusedAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $restDay = $this->editableRestDay($company, $restDayId);
@@ -412,7 +412,7 @@ new class extends Component {
                                         @if ($restDay->status === 'active')
                                             <flux:button type="button" size="sm" variant="ghost" wire:click="inactivate({{ $restDay->id }})">Inactivar</flux:button>
                                         @endif
-                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este descanso solo si fue capturado por error? Esta accion no se puede deshacer." wire:click="delete({{ $restDay->id }})">Eliminar</flux:button>
+                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este descanso solo si fue capturado por error? Esta accion no se puede deshacer." wire:click="deleteRestDay({{ $restDay->id }})">Eliminar</flux:button>
                                     </div>
                                 @else
                                     <span class="text-xs text-zinc-500">Sin permisos</span>

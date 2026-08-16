@@ -656,6 +656,77 @@ new class extends Component {
         return 'neutral';
     }
 
+    /**
+     * @return array<int, array{key: string, label: string, variant: string}>
+     */
+    private function incidentBadges(WorkDay $workDay): array
+    {
+        $badges = [];
+
+        if ($this->hasAttendanceIncident($workDay)) {
+            $badges[] = [
+                'key' => 'attendance_incident',
+                'label' => $this->attendanceIncidentTypeLabel($workDay),
+                'variant' => 'success',
+            ];
+        }
+
+        foreach ($workDay->alerts as $alert) {
+            if (! $this->isVisibleOperationalAlert($workDay, $alert)) {
+                continue;
+            }
+
+            $badges[] = [
+                'key' => 'alert:'.$alert->rule_code,
+                'label' => $alert->title,
+                'variant' => $this->alertIncidentVariant($alert),
+            ];
+        }
+
+        if ($this->isScheduledAbsenceCandidate($workDay)) {
+            $badges[] = [
+                'key' => 'alert:scheduled_absence',
+                'label' => 'Falta',
+                'variant' => 'danger',
+            ];
+        }
+
+        if ($workDay->schedule_status === WorkDay::SCHEDULE_STATUS_UNSCHEDULED) {
+            $badges[] = [
+                'key' => 'schedule:unscheduled',
+                'label' => 'Jornada no programada',
+                'variant' => 'warning',
+            ];
+        }
+
+        if ($workDay->status === WorkDay::STATUS_UNDER_REVIEW) {
+            $badges[] = [
+                'key' => 'work_day:under_review',
+                'label' => 'En revision',
+                'variant' => 'info',
+            ];
+        }
+
+        return collect($badges)
+            ->unique('key')
+            ->values()
+            ->all();
+    }
+
+    private function alertIncidentVariant(Alert $alert): string
+    {
+        return match ($alert->rule_code) {
+            'scheduled_absence' => 'rose',
+            'incomplete_work_day' => 'orange',
+            'overtime_detected' => 'violet',
+            'twelve_hours_exceeded' => 'danger',
+            'sunday_work' => 'cyan',
+            'mandatory_rest_work' => 'warning',
+            'weekly_rest_missing' => 'lime',
+            default => $this->alertStatusVariant($alert->status),
+        };
+    }
+
     private function incidentStatusLabel(WorkDay $workDay): string
     {
         if ($this->hasAttendanceIncident($workDay)) {
@@ -874,9 +945,19 @@ new class extends Component {
                                 <td class="px-4 py-3">{{ $this->minutesLabel($workDay->expected_work_minutes) }}</td>
                                 <td class="px-4 py-3">{{ $this->workedMinutesLabel($workDay) }}</td>
                                 <td class="px-4 py-3">
-                                    <x-ui.badge variant="{{ $this->primaryIncidentVariant($workDay) }}">
-                                        {{ $this->primaryIncidentLabel($workDay) }}
-                                    </x-ui.badge>
+                                    @php($incidentBadges = $this->incidentBadges($workDay))
+
+                                    @if ($incidentBadges === [])
+                                        <x-ui.badge variant="neutral">Sin incidencia</x-ui.badge>
+                                    @else
+                                        <div class="flex max-w-[220px] flex-col items-start gap-1">
+                                            @foreach ($incidentBadges as $badge)
+                                                <x-ui.badge variant="{{ $badge['variant'] }}">
+                                                    {{ $badge['label'] }}
+                                                </x-ui.badge>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="text-sm text-zinc-700 dark:text-zinc-200">{{ $this->incidentStatusLabel($workDay) }}</span>

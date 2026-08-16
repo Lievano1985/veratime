@@ -416,14 +416,22 @@ Acciones:
 En MVP puede manejarse con roles predefinidos:
 
 ```text
+super_admin
 admin_empresa
-rh
+rh_admin
+rh_operativo
 supervisor
-nomina
-juridico
 trabajador
-solo_lectura
 ```
+
+La regla vigente queda en ADR-0006:
+
+- `admin_empresa` administra toda la empresa.
+- `rh_admin` administra operacion RH, usuarios RH operativos, supervisores y alcances.
+- `rh_operativo` opera solo centros o unidades asignadas.
+- `supervisor` consulta solo trabajadores, horarios, jornadas e incidencias dentro de su alcance explicito.
+- `trabajador` queda para portal propio futuro.
+- `owner` no se usara como rol operativo diferenciado en el MVP.
 
 La pantalla avanzada de permisos puede dejarse para fase posterior.
 

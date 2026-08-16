@@ -59,7 +59,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: herencia desde empresa.',
             'metadata' => ['scenario' => 'office', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         foreach ([
             ['OFF-001', 'Oficina Demo Ana', 'Analista administrativo'],
@@ -91,7 +91,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: perfil por calendario desde empresa.',
             'metadata' => ['scenario' => 'store', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         foreach ([
             ['STR-001', 'Tienda Demo Ana', 'Vendedora', $sales],
@@ -140,7 +140,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: base de empresa.',
             'metadata' => ['scenario' => 'construction', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         $this->assignProfile($company, $siteProfile, [
             'assignment_scope' => 'center',
@@ -148,7 +148,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: excepcion por centro Obra Norte.',
             'metadata' => ['scenario' => 'construction', 'expected_origin' => 'center'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         $this->assignProfile($company, $warehouseProfile, [
             'assignment_scope' => 'organizational_unit',
@@ -156,7 +156,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: excepcion por unidad Almacen.',
             'metadata' => ['scenario' => 'construction', 'expected_origin' => 'organizational_unit'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         $this->assignProfile($company, $directProfile, [
             'assignment_scope' => 'employment_relationship',
@@ -164,7 +164,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: excepcion directa por relacion laboral.',
             'metadata' => ['scenario' => 'construction', 'expected_origin' => 'employment_relationship'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
 
         $this->supervisorScope($company, $users['supervisor'], $construction);
     }
@@ -215,7 +215,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: ciclo rotativo desde empresa.',
             'metadata' => ['scenario' => 'cycle', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
     }
 
     private function flexibleScenario(): void
@@ -235,7 +235,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: horario flexible desde empresa.',
             'metadata' => ['scenario' => 'flexible', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
     }
 
     private function onCallScenario(): void
@@ -255,7 +255,7 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             'effective_from' => self::EFFECTIVE_FROM,
             'reason' => 'Escenario demo: bajo demanda desde empresa.',
             'metadata' => ['scenario' => 'on_call', 'expected_origin' => 'company'],
-        ], $users['rh']);
+        ], $users['rh_admin']);
     }
 
     private function company(string $taxId, string $name): Company
@@ -283,14 +283,14 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
     }
 
     /**
-     * @return array{owner: User, admin: User, rh: User, supervisor?: User}
+     * @return array{admin: User, rh_admin: User, rh_operativo: User, supervisor?: User}
      */
     private function users(Company $company, string $slug, bool $withSupervisor = false): array
     {
         $users = [
-            'owner' => $this->user($company, RoleKey::OWNER, 'Owner '.ucfirst($slug).' Demo', "owner.{$slug}.demo@veratime.local", true),
-            'admin' => $this->user($company, RoleKey::ADMIN, 'Admin '.ucfirst($slug).' Demo', "admin.{$slug}.demo@veratime.local"),
-            'rh' => $this->user($company, RoleKey::RH, 'RH '.ucfirst($slug).' Demo', "rh.{$slug}.demo@veratime.local"),
+            'admin' => $this->user($company, RoleKey::ADMIN_EMPRESA, 'Admin '.ucfirst($slug).' Demo', "admin.{$slug}.demo@veratime.local", true),
+            'rh_admin' => $this->user($company, RoleKey::RH_ADMIN, 'RH '.ucfirst($slug).' Demo', "rh.{$slug}.demo@veratime.local"),
+            'rh_operativo' => $this->user($company, RoleKey::RH_OPERATIVO, 'RH Operativo '.ucfirst($slug).' Demo', "rh.operativo.{$slug}.demo@veratime.local"),
         ];
 
         if ($withSupervisor) {

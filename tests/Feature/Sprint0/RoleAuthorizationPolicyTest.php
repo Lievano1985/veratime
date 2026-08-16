@@ -18,9 +18,9 @@ class RoleAuthorizationPolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_rh_keeps_company_wide_operational_permissions(): void
+    public function test_rh_admin_keeps_company_wide_operational_permissions(): void
     {
-        [$user, $company] = $this->userWithCompanyRole(RoleKey::RH);
+        [$user, $company] = $this->userWithCompanyRole(RoleKey::RH_ADMIN);
 
         $this->assertTrue($user->can('update', $company));
         $this->assertTrue($user->can('create', [Center::class, $company]));
@@ -30,56 +30,66 @@ class RoleAuthorizationPolicyTest extends TestCase
         $this->assertTrue($user->can('create', [TimeEvent::class, $company]));
     }
 
-    public function test_hr_is_not_an_authorized_role_alias(): void
+    public function test_legacy_roles_are_not_authorized_aliases(): void
     {
-        [$user, $company] = $this->userWithCompanyRole('hr');
+        foreach (['owner', 'admin', 'rh', 'hr'] as $legacyRole) {
+            [$user, $company] = $this->userWithCompanyRole($legacyRole);
 
-        $this->assertFalse($user->can('update', $company));
-        $this->assertFalse($user->can('create', [Center::class, $company]));
-        $this->assertFalse($user->can('create', [Worker::class, $company]));
-        $this->assertFalse($user->can('create', [Schedule::class, $company]));
-        $this->assertFalse($user->can('create', [ScheduleAssignment::class, $company]));
-        $this->assertFalse($user->can('create', [TimeEvent::class, $company]));
-    }
-
-    public function test_owner_and_admin_keep_company_wide_permissions(): void
-    {
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN] as $roleKey) {
-            [$user, $company] = $this->userWithCompanyRole($roleKey);
-
-            $this->assertTrue($user->can('update', $company));
-            $this->assertTrue($user->can('create', [Center::class, $company]));
-            $this->assertTrue($user->can('create', [Worker::class, $company]));
-            $this->assertTrue($user->can('create', [Schedule::class, $company]));
-            $this->assertTrue($user->can('create', [ScheduleAssignment::class, $company]));
-            $this->assertTrue($user->can('create', [TimeEvent::class, $company]));
+            $this->assertFalse($user->can('update', $company));
+            $this->assertFalse($user->can('create', [Center::class, $company]));
+            $this->assertFalse($user->can('create', [Worker::class, $company]));
+            $this->assertFalse($user->can('create', [Schedule::class, $company]));
+            $this->assertFalse($user->can('create', [ScheduleAssignment::class, $company]));
+            $this->assertFalse($user->can('create', [TimeEvent::class, $company]));
         }
     }
 
-    public function test_supervisor_does_not_get_global_company_permissions(): void
+    public function test_admin_empresa_keeps_company_wide_permissions(): void
     {
-        [$user, $company] = $this->userWithCompanyRole(RoleKey::SUPERVISOR);
+        [$user, $company] = $this->userWithCompanyRole(RoleKey::ADMIN_EMPRESA);
 
-        $this->assertFalse($user->can('update', $company));
-        $this->assertFalse($user->can('create', [Center::class, $company]));
-        $this->assertFalse($user->can('create', [Worker::class, $company]));
-        $this->assertFalse($user->can('create', [Schedule::class, $company]));
-        $this->assertFalse($user->can('create', [ScheduleAssignment::class, $company]));
-        $this->assertFalse($user->can('create', [TimeEvent::class, $company]));
+        $this->assertTrue($user->can('update', $company));
+        $this->assertTrue($user->can('create', [Center::class, $company]));
+        $this->assertTrue($user->can('create', [Worker::class, $company]));
+        $this->assertTrue($user->can('create', [Schedule::class, $company]));
+        $this->assertTrue($user->can('create', [ScheduleAssignment::class, $company]));
+        $this->assertTrue($user->can('create', [TimeEvent::class, $company]));
+    }
+
+    public function test_super_admin_can_manage_tenant_companies(): void
+    {
+        [$user, $company] = $this->userWithCompanyRole(RoleKey::SUPER_ADMIN);
+
+        $this->assertTrue($user->can('create', Company::class));
+        $this->assertTrue($user->can('update', $company));
+    }
+
+    public function test_rh_operativo_and_supervisor_do_not_get_global_company_permissions(): void
+    {
+        foreach ([RoleKey::RH_OPERATIVO, RoleKey::SUPERVISOR] as $roleKey) {
+            [$user, $company] = $this->userWithCompanyRole($roleKey);
+
+            $this->assertFalse($user->can('update', $company));
+            $this->assertFalse($user->can('create', [Center::class, $company]));
+            $this->assertFalse($user->can('create', [Worker::class, $company]));
+            $this->assertFalse($user->can('create', [Schedule::class, $company]));
+            $this->assertFalse($user->can('create', [ScheduleAssignment::class, $company]));
+            $this->assertFalse($user->can('create', [TimeEvent::class, $company]));
+        }
     }
 
     public function test_other_company_inactive_company_and_inactive_membership_stay_blocked(): void
     {
-        [$user, $company] = $this->userWithCompanyRole(RoleKey::RH);
+        [$user, $company] = $this->userWithCompanyRole(RoleKey::RH_ADMIN);
         $otherCompany = Company::factory()->create();
 
         $this->assertTrue($user->can('create', [Worker::class, $company]));
         $this->assertFalse($user->can('create', [Worker::class, $otherCompany]));
 
-        [$inactiveCompanyUser, $inactiveCompany] = $this->userWithCompanyRole(RoleKey::RH, companyStatus: 'inactive');
+        [$inactiveCompanyUser, $inactiveCompany] = $this->userWithCompanyRole(RoleKey::RH_ADMIN, companyStatus: 'inactive');
         $this->assertFalse($inactiveCompanyUser->can('create', [Worker::class, $inactiveCompany]));
 
-        [$inactiveMembershipUser, $inactiveMembershipCompany] = $this->userWithCompanyRole(RoleKey::RH, membershipStatus: 'inactive');
+        [$inactiveMembershipUser, $inactiveMembershipCompany] = $this->userWithCompanyRole(RoleKey::RH_ADMIN, membershipStatus: 'inactive');
         $this->assertFalse($inactiveMembershipUser->can('create', [Worker::class, $inactiveMembershipCompany]));
     }
 

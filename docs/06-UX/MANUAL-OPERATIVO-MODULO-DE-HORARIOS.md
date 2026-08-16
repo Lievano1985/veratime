@@ -25,12 +25,12 @@ Puntos clave:
 
 | Rol | Puede consultar | Puede crear/editar | Puede publicar | No puede hacer |
 |---|---|---|---|---|
-| `owner` | Todo lo de su empresa activa | Empresas, centros, organizacion, turnos, perfiles, lotes, programacion diaria, CSV y correcciones | Programacion diaria y correcciones | Ver datos de otra empresa |
-| `admin` | Todo lo de su empresa activa | Igual que owner para operacion empresarial | Programacion diaria y correcciones | Ver datos de otra empresa |
-| `rh` | Todo lo operativo de su empresa activa | Igual que admin para el modulo de horarios | Programacion diaria y correcciones | Ver datos de otra empresa |
-| `supervisor` | Solo dentro de alcance operativo vigente, cuando la policy lo permite | No administra globalmente turnos, perfiles, lotes ni CSV | No publica | No obtiene permisos solo por tener el rol; requiere alcance explicito |
+| `admin_empresa` | Toda su empresa activa | Empresas, centros, organizacion, turnos, perfiles, lotes, programacion diaria, CSV y correcciones | Programacion diaria y correcciones | Ver datos de otra empresa |
+| `rh_admin` | Operacion RH general de su empresa activa | RH operativo, supervisores, alcances, trabajadores, turnos, perfiles, programacion, incidencias, jornadas y periodos | Programacion diaria y correcciones | Configuracion global critica si no se autoriza expresamente |
+| `rh_operativo` | Centros o unidades asignadas | Trabajadores, programacion, jornadas e incidencias dentro de su alcance | Operacion dentro de alcance | Administrar usuarios globales o ver datos fuera de alcance |
+| `supervisor` | Solo dentro de alcance operativo vigente, cuando la policy lo permite | Consulta de trabajadores, horarios, programacion e incidencias de su alcance | Solo consulta | No obtiene permisos solo por tener el rol; requiere alcance explicito |
 
-Los alcances de supervisor se definen por centro completo o por unidad organizacional. El rol por si solo no concede acceso operativo global.
+Los alcances de `rh_operativo` y `supervisor` se definen por centro completo o por unidad organizacional. El rol por si solo no concede acceso operativo global. `owner` deja de ser rol operativo diferenciado; el administrador general es `admin_empresa`.
 
 ## 3. Glosario
 
@@ -311,7 +311,7 @@ Reglas importantes:
 | Encabezados incorrectos | CSV no respeta schema v1 | Plantilla descargada | Descargar plantilla nueva | Renombrar columnas al azar |
 | Preview desactualizado | Cambio manual despues de validar | Revalidar importacion | Validar de nuevo | Forzar aplicacion |
 | Lote publicado no editable | Estado `published` | Listado de lotes | Crear correccion | Reabrir publicado |
-| Supervisor sin edicion | No tiene rol manager ni permiso | Alcances y roles | Usar owner/admin/rh | Dar acceso global por rol |
+| Supervisor sin edicion | No tiene rol manager ni permiso | Alcances y roles | Usar admin_empresa/rh_admin segun ADR-0006 | Dar acceso global por rol |
 
 ## 15. Lo que no hace todavia
 

@@ -287,7 +287,7 @@ class ScheduleProfileDomainTest extends TestCase
         $relationship = EmploymentRelationship::factory()->forCompany($company)->create(['center_id' => $center->id]);
         $profile = $this->patternProfile($company, $this->shiftTemplate($company, 'BASE'), 'BASE');
 
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $roleKey) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $roleKey) {
             $user = $this->userWithCompanyRole($company, $roleKey);
             $this->assertTrue(Gate::forUser($user)->allows('create', [ScheduleProfile::class, $company]));
             $this->assertTrue(Gate::forUser($user)->allows('assign', [ScheduleProfile::class, $company, 'company', null, '2026-08-01']));

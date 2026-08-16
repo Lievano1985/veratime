@@ -25,7 +25,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_profile_screen_shows_advanced_options_without_legacy_names(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -44,7 +44,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_creates_cycle_profile_and_manages_cycle_days(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $morning = $this->shiftTemplate($company, 'MOR', 'Manana');
         $night = $this->shiftTemplate($company, 'NIG', 'Noche', '22:00', '06:00', 0, 1);
 
@@ -75,7 +75,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_blocks_cycle_with_less_than_two_days_and_shows_error(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $template = $this->shiftTemplate($company, 'BASE', 'Base');
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
@@ -94,7 +94,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_creates_flexible_profile_with_window_and_rest_cleanup(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -125,7 +125,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_creates_on_call_profile_and_does_not_present_availability_as_work(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -151,7 +151,7 @@ class AdvancedScheduleProfileUiTest extends TestCase
     public function test_editing_loads_configuration_and_method_change_requires_confirmation(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $template = $this->shiftTemplate($company, 'BASE', 'Base');
         $profile = app(CreateScheduleProfileAction::class)->handle($company, [
             'code' => 'EDITCI',

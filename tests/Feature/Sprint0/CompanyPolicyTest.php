@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Support\RoleKey;
 use Tests\TestCase;
 
 class CompanyPolicyTest extends TestCase
@@ -22,7 +23,7 @@ class CompanyPolicyTest extends TestCase
 
     public function test_company_admin_can_update_their_company(): void
     {
-        $role = Role::factory()->create(['key' => 'admin']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
 
@@ -37,7 +38,7 @@ class CompanyPolicyTest extends TestCase
 
     public function test_non_admin_role_cannot_update_a_company(): void
     {
-        $role = Role::factory()->create(['key' => 'supervisor']);
+        $role = Role::factory()->create(['key' => RoleKey::SUPERVISOR]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
 
@@ -52,7 +53,7 @@ class CompanyPolicyTest extends TestCase
 
     public function test_inactive_company_with_active_membership_can_be_viewed_and_updated(): void
     {
-        $role = Role::factory()->create(['key' => 'admin']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create(['status' => 'inactive']);
 

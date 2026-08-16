@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\ScheduleAssignment;
 use App\Models\User;
+use App\Support\RoleKey;
 use App\Models\Worker;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
@@ -827,7 +828,7 @@ it('sprint 2b does not create jornada calculation or operational tables', functi
         ->and(Schema::hasTable('reports'))->toBeFalse();
 });
 
-function scheduleAssignmentUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function scheduleAssignmentUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

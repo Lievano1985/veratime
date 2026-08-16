@@ -26,7 +26,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_validation_detects_work_day_blockers_and_keeps_period_open(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         [$period, $worker] = $this->periodWithWorker($company, $user);
         $workDay = WorkDay::factory()->create([
             'company_id' => $company->id,
@@ -51,7 +51,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_validation_ignores_closed_absence_alerts_and_rest_days(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         [$period, $worker] = $this->periodWithWorker($company, $user);
 
         $absence = WorkDay::factory()->create([
@@ -89,7 +89,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_period_closes_with_snapshot_hash_and_base_report_when_no_blockers_exist(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         [$period, $worker] = $this->periodWithWorker($company, $user);
         $workDay = WorkDay::factory()->create([
             'company_id' => $company->id,
@@ -129,7 +129,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_closed_period_can_export_payroll_time_csv(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         [$period, $worker] = $this->periodWithWorker($company, $user);
         $worker->forceFill([
             'rfc' => 'VTDEMO260101',
@@ -195,7 +195,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_ui_can_validate_and_close_ready_period(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::OWNER);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         [$period, $worker] = $this->periodWithWorker($company, $user);
         $workDay = WorkDay::factory()->create([
             'company_id' => $company->id,
@@ -230,7 +230,7 @@ class AttendancePeriodClosingTest extends TestCase
 
     public function test_supervisor_cannot_validate_or_close_periods(): void
     {
-        [$company, $manager] = $this->companyUser(RoleKey::RH);
+        [$company, $manager] = $this->companyUser(RoleKey::RH_ADMIN);
         [$period] = $this->periodWithWorker($company, $manager);
         $supervisor = User::factory()->create(['status' => 'active']);
         $role = Role::query()->firstOrCreate(

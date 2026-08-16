@@ -28,6 +28,7 @@ use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
+use App\Support\RoleKey;
 use Livewire\Volt\Volt;
 
 function catalogDeletionCompany(): Company
@@ -50,7 +51,7 @@ function catalogDeletionBatchFor(Company $company, Center $center): ScheduleBatc
     ]);
 }
 
-function catalogDeletionUserFor(Company $company, string $roleKey = 'owner'): User
+function catalogDeletionUserFor(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create(['status' => 'active']);
@@ -295,13 +296,13 @@ it('deletes and blocks centers from the livewire screen using the same domain ru
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('centers.index')
-        ->call('delete', $unusedCenter->id)
+        ->call('deleteCenter', $unusedCenter->id)
         ->assertHasNoErrors();
 
     $this->assertModelMissing($unusedCenter);
 
     Volt::test('centers.index')
-        ->call('delete', $usedCenter->id)
+        ->call('deleteCenter', $usedCenter->id)
         ->assertHasErrors(['center']);
 
     $this->assertModelExists($usedCenter);
@@ -317,12 +318,12 @@ it('deletes company rest days from the livewire screen only when they belong to 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('mandatory-rest-days.index')
-        ->call('delete', $restDay->id)
+        ->call('deleteRestDay', $restDay->id)
         ->assertHasNoErrors();
 
     $this->assertModelMissing($restDay);
 
-    expect(fn () => Volt::test('mandatory-rest-days.index')->call('delete', $foreignRestDay->id))
+    expect(fn () => Volt::test('mandatory-rest-days.index')->call('deleteRestDay', $foreignRestDay->id))
         ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 
     $this->assertModelExists($foreignRestDay);
@@ -360,20 +361,20 @@ it('deletes and blocks schedule profiles from the livewire screen using generate
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
     Volt::test('scheduling.profiles')
-        ->call('delete', $unusedProfile->id)
+        ->call('deleteProfile', $unusedProfile->id)
         ->assertHasNoErrors();
 
     $this->assertModelMissing($unusedProfile);
 
     Volt::test('scheduling.profiles')
-        ->call('delete', $profileWithAssignment->id)
+        ->call('deleteProfile', $profileWithAssignment->id)
         ->assertHasNoErrors();
 
     $this->assertModelMissing($profileWithAssignment);
     $this->assertDatabaseMissing('schedule_profile_assignments', ['schedule_profile_id' => $profileWithAssignment->id]);
 
     Volt::test('scheduling.profiles')
-        ->call('delete', $generatedProfile->id)
+        ->call('deleteProfile', $generatedProfile->id)
         ->assertHasErrors(['profile']);
 
     $this->assertModelExists($generatedProfile);

@@ -5,6 +5,7 @@ namespace Tests\Feature\Sprint1A;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -13,9 +14,9 @@ class CompanyManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_can_create_company_and_is_attached_as_owner(): void
+    public function test_admin_empresa_can_create_company_and_is_attached_as_admin(): void
     {
-        $ownerRole = Role::factory()->create(['key' => 'owner']);
+        $ownerRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $currentCompany = Company::factory()->create();
 
@@ -50,7 +51,7 @@ class CompanyManagementTest extends TestCase
 
     public function test_admin_can_update_company_basic_data_and_status(): void
     {
-        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create(['name' => 'Nombre anterior']);
 
@@ -80,7 +81,7 @@ class CompanyManagementTest extends TestCase
 
     public function test_marking_current_company_inactive_clears_current_company_session(): void
     {
-        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create(['name' => 'Empresa activa']);
 
@@ -109,7 +110,7 @@ class CompanyManagementTest extends TestCase
 
     public function test_inactive_company_stays_available_in_company_crud_and_can_be_reactivated(): void
     {
-        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $activeCompany = Company::factory()->create(['name' => 'Empresa activa']);
         $inactiveCompany = Company::factory()->create([
@@ -148,7 +149,7 @@ class CompanyManagementTest extends TestCase
 
     public function test_companies_crud_is_available_when_user_only_has_inactive_companies(): void
     {
-        $adminRole = Role::factory()->create(['key' => 'admin']);
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create([
             'name' => 'Empresa solo administrativa',
@@ -170,7 +171,7 @@ class CompanyManagementTest extends TestCase
 
     public function test_non_admin_cannot_create_or_update_company(): void
     {
-        $role = Role::factory()->create(['key' => 'supervisor']);
+        $role = Role::factory()->create(['key' => RoleKey::SUPERVISOR]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
 

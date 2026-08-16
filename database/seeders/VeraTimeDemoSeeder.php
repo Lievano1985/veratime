@@ -55,10 +55,10 @@ class VeraTimeDemoSeeder extends Seeder
         $workers = $this->workers($company, $centers, $schedules);
         $units = $this->organizationalUnits($company, $centers);
         $this->organizationalAssignments($company, $users, $workers, $units);
-        $this->scheduleProfiles($company, $users['rh'], $centers, $workers, $units);
+        $this->scheduleProfiles($company, $users['rh_admin'], $centers, $workers, $units);
 
         $this->mandatoryRestDays($company);
-        $this->timeEvents($company, $users['rh'], $workers);
+        $this->timeEvents($company, $users['rh_admin'], $workers);
     }
 
     private function company(): Company
@@ -86,21 +86,21 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @return array{owner: User, admin: User, rh: User, supervisor: User}
+     * @return array{admin: User, rh_admin: User, rh_operativo: User, supervisor: User}
      */
     private function users(Company $company): array
     {
         $roles = [
-            'owner' => $this->role(RoleKey::OWNER, 'Propietario'),
-            'admin' => $this->role(RoleKey::ADMIN, 'Administrador'),
-            'rh' => $this->role(RoleKey::RH, 'Recursos Humanos'),
+            'admin' => $this->role(RoleKey::ADMIN_EMPRESA, 'Administrador de empresa'),
+            'rh_admin' => $this->role(RoleKey::RH_ADMIN, 'RH administrador'),
+            'rh_operativo' => $this->role(RoleKey::RH_OPERATIVO, 'RH operativo'),
             'supervisor' => $this->role(RoleKey::SUPERVISOR, 'Supervisor'),
         ];
 
         return [
-            'owner' => $this->user($company, $roles['owner'], 'Demo Owner', 'owner.demo@veratime.local', true),
-            'admin' => $this->user($company, $roles['admin'], 'Demo Admin', 'admin.demo@veratime.local'),
-            'rh' => $this->user($company, $roles['rh'], 'Demo RH', 'rh.demo@veratime.local'),
+            'admin' => $this->user($company, $roles['admin'], 'Demo Admin', 'admin.demo@veratime.local', true),
+            'rh_admin' => $this->user($company, $roles['rh_admin'], 'Demo RH', 'rh.demo@veratime.local'),
+            'rh_operativo' => $this->user($company, $roles['rh_operativo'], 'Demo RH Operativo', 'rh.operativo.demo@veratime.local'),
             'supervisor' => $this->user($company, $roles['supervisor'], 'Demo Supervisor', 'supervisor.demo@veratime.local'),
         ];
     }

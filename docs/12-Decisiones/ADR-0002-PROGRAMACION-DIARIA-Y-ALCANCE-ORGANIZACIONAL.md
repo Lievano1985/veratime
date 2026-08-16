@@ -38,7 +38,7 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - `daily_schedule_assignments` publicados y `daily_schedule_segments` son la unica fuente operativa.
 - Existira un unico resolutor operativo inicial: `ResolveDailyScheduleForRelationshipDateAction`.
 - Mexico es el unico pais operativo del MVP, pero se conserva modelo compatible con `country_code` y `jurisdiction_code`.
-- La clave oficial de Recursos Humanos es `rh`; el uso operativo de `hr` fue retirado en Bloque A.
+- La matriz de roles y alcances queda definida en ADR-0006. `owner` deja de ser rol operativo diferenciado; `admin_empresa` es el administrador general, RH se separa en `rh_admin` y `rh_operativo`, y `supervisor` solo consulta por alcance explicito.
 
 ## Modelo Organizacional
 
@@ -48,9 +48,11 @@ Esto deja al perfil o plantilla como fuente operativa indirecta. Si una plantill
 - La interfaz MVP visible se limitara a tres niveles: `department` -> `area` -> `team`.
 - Un trabajador tiene una unidad principal activa actual para segmentacion. Los apoyos temporales quedan como legado fuera del flujo operativo visible.
 - Una empresa sin unidades puede operar normalmente por centro.
-- `owner`, `admin_empresa` y `rh` tienen alcance completo de empresa.
-- `supervisor` o responsable requiere alcance explicito por centro completo o una o varias unidades organizacionales.
-- `supervisor` o responsable nunca obtiene alcance automatico solo por poseer el rol.
+- `admin_empresa` tiene alcance completo de empresa.
+- `rh_admin` administra la operacion RH y puede asignar alcances a `rh_operativo` y `supervisor`.
+- `rh_operativo` opera solo centros o unidades asignadas.
+- `supervisor` requiere alcance explicito por centro completo o una o varias unidades organizacionales.
+- `supervisor` nunca obtiene alcance automatico solo por poseer el rol.
 
 ## Modelo WFM
 

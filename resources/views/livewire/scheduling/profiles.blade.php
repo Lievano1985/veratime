@@ -308,7 +308,7 @@ new class extends Component {
         Session::flash('status', 'Modelo inactivado.');
     }
 
-    public function delete(int $profileId, CurrentCompany $currentCompany, DeleteScheduleProfileIfUnusedAction $action): void
+    public function deleteProfile(int $profileId, CurrentCompany $currentCompany, DeleteScheduleProfileIfUnusedAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         $profile = $this->authorizedProfile($profileId, $currentCompany, true);
@@ -878,7 +878,7 @@ new class extends Component {
                                     @else
                                         <flux:button size="xs" variant="primary" wire:click="reactivate({{ $profile->id }})">Reactivar</flux:button>
                                     @endif
-                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $profile->id }})" wire:confirm="Eliminar este modelo solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                    <flux:button size="xs" variant="danger" wire:click="deleteProfile({{ $profile->id }})" wire:confirm="Eliminar este modelo solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
                                 @else
                                     <span class="text-xs text-zinc-500">Solo consulta</span>
                                 @endif

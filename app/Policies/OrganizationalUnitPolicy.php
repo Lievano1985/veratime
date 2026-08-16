@@ -13,7 +13,7 @@ class OrganizationalUnitPolicy
     {
         return $company->status === 'active'
             && $user->belongsToCompany($company)
-            && in_array($user->roleKeyForCompany($company), [...RoleKey::companyManagers(), RoleKey::SUPERVISOR], true);
+            && in_array($user->roleKeyForCompany($company), [...RoleKey::companyManagers(), ...RoleKey::scopeAssignableRoles()], true);
     }
 
     public function create(User $user, Company $company): bool

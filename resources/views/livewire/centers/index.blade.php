@@ -122,7 +122,7 @@ new class extends Component {
         Session::flash('status', 'Centro inactivado.');
     }
 
-    public function delete(int $centerId, CurrentCompany $currentCompany, DeleteCenterIfUnusedAction $action): void
+    public function deleteCenter(int $centerId, CurrentCompany $currentCompany, DeleteCenterIfUnusedAction $action): void
     {
         $center = $this->authorizedCenter($centerId, $currentCompany);
 
@@ -308,7 +308,7 @@ new class extends Component {
                                         Inactivar
                                     </flux:button>
                                 @endif
-                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $center->id }})">
+                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="deleteCenter({{ $center->id }})">
                                     Eliminar
                                 </flux:button>
                             </div>

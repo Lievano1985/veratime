@@ -20,7 +20,7 @@ class AttendancePeriodManagementTest extends TestCase
 
     public function test_managers_can_create_attendance_period_for_full_center(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         $center = Center::factory()->for($company)->create(['name' => 'Operativos']);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
@@ -47,7 +47,7 @@ class AttendancePeriodManagementTest extends TestCase
 
     public function test_managers_can_create_attendance_period_for_multiple_units(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         $center = Center::factory()->for($company)->create();
         $unitA = OrganizationalUnit::factory()->forCenter($center)->create(['name' => 'Albaniles']);
         $unitB = OrganizationalUnit::factory()->forCenter($center)->create(['name' => 'Vigilancia']);
@@ -80,7 +80,7 @@ class AttendancePeriodManagementTest extends TestCase
     public function test_supervisor_and_foreign_company_are_blocked(): void
     {
         [$company, $supervisor] = $this->companyUser(RoleKey::SUPERVISOR);
-        [$otherCompany] = $this->companyUser(RoleKey::RH);
+        [$otherCompany] = $this->companyUser(RoleKey::RH_ADMIN);
         $center = Center::factory()->for($company)->create();
 
         $this->actingAs($supervisor)->withSession(['current_company_id' => $company->id]);
@@ -92,7 +92,7 @@ class AttendancePeriodManagementTest extends TestCase
 
     public function test_it_blocks_units_from_another_center_or_company(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::OWNER);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         $center = Center::factory()->for($company)->create();
         $otherCenter = Center::factory()->for($company)->create();
         $foreignUnit = OrganizationalUnit::factory()->forCenter($otherCenter)->create();
@@ -112,7 +112,7 @@ class AttendancePeriodManagementTest extends TestCase
 
     public function test_it_blocks_overlapping_periods_for_same_scope(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         $center = Center::factory()->for($company)->create();
 
         app(CreateAttendancePeriodAction::class)->handle($company, $center, [
@@ -134,7 +134,7 @@ class AttendancePeriodManagementTest extends TestCase
 
     public function test_open_period_can_be_cancelled_with_reason(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         $center = Center::factory()->for($company)->create();
         $period = app(CreateAttendancePeriodAction::class)->handle($company, $center, [
             'period_start' => '2026-08-01',
