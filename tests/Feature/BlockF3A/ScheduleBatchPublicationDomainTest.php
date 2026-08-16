@@ -35,7 +35,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
     {
         $this->seedDailyScenarios();
 
-        $this->assertSame('published', $this->publishScenario('VTSP-OFFICE', 'owner.office.demo@veratime.local')->status);
+        $this->assertSame('published', $this->publishScenario('VTSP-OFFICE', 'admin.office.demo@veratime.local')->status);
         $this->assertSame('published', $this->publishScenario('VTSP-CYCLE', 'admin.cycle.demo@veratime.local')->status);
         $this->assertSame('published', $this->publishScenario('VTSP-FLEX', 'rh.flex.demo@veratime.local')->status);
 

@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -56,7 +57,7 @@ it('unauthorized role cannot use time clock', function (): void {
 
 it('sidebar shows time clock only to authorized roles', function (): void {
     [$company] = webTimeFixture();
-    $authorized = webTimeUserWithCompany($company, 'rh');
+    $authorized = webTimeUserWithCompany($company, RoleKey::RH_ADMIN);
     $unauthorized = webTimeUserWithCompany($company, 'supervisor');
 
     $this->actingAs($authorized)->withSession(['current_company_id' => $company->id])
@@ -72,7 +73,7 @@ it('sidebar shows time clock only to authorized roles', function (): void {
 
 it('manual capture screen supports assisted registration panel', function (): void {
     [$company, $worker] = webTimeFixture();
-    $user = webTimeUserWithCompany($company, 'rh');
+    $user = webTimeUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -99,7 +100,7 @@ it('web registration action does not accept explicit occurrence time in sprint 2
 });
 it('authorized user records clock in from web', function (): void {
     [$company, $worker, $relationship, $center] = webTimeFixture();
-    $user = webTimeUserWithCompany($company, 'rh');
+    $user = webTimeUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $event = app(RegisterWebTimeEventAction::class)->handle($company, $user, $worker, 'clock_in');
 
@@ -355,7 +356,7 @@ function webTimeFixture(array $companyAttributes = [], array $centerAttributes =
     return [$company, $worker, $relationship, $center];
 }
 
-function webTimeUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function webTimeUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::query()->firstOrCreate(
         ['key' => $roleKey],

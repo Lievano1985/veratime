@@ -71,8 +71,8 @@ class AssignOperationalScopeAction
             throw new InvalidArgumentException('El usuario debe tener membresia activa en la empresa activa.');
         }
 
-        if ($user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
-            throw new InvalidArgumentException('Inicialmente solo el rol supervisor puede recibir alcances operativos.');
+        if (! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
+            throw new InvalidArgumentException('Solo RH operativo o supervisor pueden recibir alcances operativos.');
         }
 
         if (($center === null && $unit === null) || ($center !== null && $unit !== null)) {

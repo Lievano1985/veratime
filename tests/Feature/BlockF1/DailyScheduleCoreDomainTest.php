@@ -341,7 +341,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $batch = $this->batch($company, $center);
         $assignment = $this->replaceDay($company, $batch, $relationship, ['work_date' => '2026-08-03', 'day_type' => 'rest']);
 
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $role) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $role) {
             $user = $this->userWithCompanyRole($company, $role);
             $this->assertTrue(Gate::forUser($user)->allows('create', [ScheduleBatch::class, $company]));
             $this->assertTrue(Gate::forUser($user)->allows('update', $batch));
@@ -357,7 +357,7 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertTrue(Gate::forUser($supervisor)->allows('view', $assignment));
 
         $otherCompany = Company::factory()->create(['status' => 'active']);
-        $foreignUser = $this->userWithCompanyRole($otherCompany, RoleKey::RH);
+        $foreignUser = $this->userWithCompanyRole($otherCompany, RoleKey::RH_ADMIN);
         $this->assertFalse(Gate::forUser($foreignUser)->allows('view', $assignment));
     }
 

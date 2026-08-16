@@ -27,7 +27,7 @@ new class extends Component {
         $company = $currentCompany->get();
 
         abort_unless($company, 403);
-        abort_unless(auth()->user()->roleKeyForCompany($company) === RoleKey::SUPERVISOR, 403);
+        abort_unless(in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true), 403);
 
         $scope = $resolveScope->handle($company, auth()->user(), $this->date);
         $relationships = EmploymentRelationship::query()

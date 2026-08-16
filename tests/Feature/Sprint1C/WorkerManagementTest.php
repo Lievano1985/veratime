@@ -13,6 +13,7 @@ use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
+use App\Support\RoleKey;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -801,7 +802,7 @@ it('worker creation flow does not create labor conditions or worker credentials 
         ->and(WorkerCredential::query()->count())->toBe(0);
 });
 
-function workerUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function workerUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

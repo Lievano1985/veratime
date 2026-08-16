@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
+use App\Support\RoleKey;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -401,7 +402,7 @@ it('worker screen does not expose workers from another company for conditions or
         ->call('loadEditForm', $foreignWorker->id);
 });
 
-function sprint1DWorkerContext(string $roleKey = 'owner', array $companyState = []): array
+function sprint1DWorkerContext(string $roleKey = RoleKey::ADMIN_EMPRESA, array $companyState = []): array
 {
     $company = Company::factory()->create($companyState);
     $center = Center::factory()->create(['company_id' => $company->id]);
@@ -422,7 +423,7 @@ function sprint1DWorkerContext(string $roleKey = 'owner', array $companyState = 
     return [$company, $user, $worker->refresh(), $relationship];
 }
 
-function sprint1DUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function sprint1DUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

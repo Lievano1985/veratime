@@ -24,10 +24,10 @@ class CreateCompanyAction
 
             $company->setting()->create(Company::defaultSettings());
 
-            $ownerRole = Role::query()->where('key', RoleKey::OWNER)->first();
+            $adminRole = Role::query()->where('key', RoleKey::ADMIN_EMPRESA)->first();
 
             $user->companies()->attach($company, [
-                'role_id' => $ownerRole?->id,
+                'role_id' => $adminRole?->id,
                 'status' => 'active',
                 'is_default' => false,
             ]);

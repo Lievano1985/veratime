@@ -41,7 +41,7 @@ class CompanyLegalConfigurationTest extends TestCase
 
     public function test_company_can_store_allowed_internal_legal_parameter_with_actor_and_reason(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
 
         $parameter = app(UpdateCompanyLegalParameterAction::class)->handle(
             $company,
@@ -65,7 +65,7 @@ class CompanyLegalConfigurationTest extends TestCase
 
     public function test_protected_parameter_cannot_exceed_country_base_limit(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
 
         $this->expectException(ValidationException::class);
 
@@ -81,7 +81,7 @@ class CompanyLegalConfigurationTest extends TestCase
 
     public function test_new_effective_parameter_closes_previous_company_parameter_without_deleting_it(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         app(UpdateCompanyLegalParameterAction::class)->handle($company, 'late_arrival_tolerance_minutes', 5, '2026-08-01', 'Inicial', $user);
         app(UpdateCompanyLegalParameterAction::class)->handle($company, 'late_arrival_tolerance_minutes', 10, '2026-08-10', 'Cambio operativo', $user);
 
@@ -97,11 +97,11 @@ class CompanyLegalConfigurationTest extends TestCase
 
     public function test_company_legal_configuration_ui_updates_parameter_for_manager(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
+        Volt::test('company-settings.index')
             ->assertSee('Configuracion legal')
             ->set('legalParameterForm.company_daily_limit_diurnal_minutes.value', 450)
             ->set('legalParameterForm.company_daily_limit_diurnal_minutes.effective_from', '2026-08-03')
@@ -123,8 +123,7 @@ class CompanyLegalConfigurationTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
-            ->call('updateLegalParameter', 'late_arrival_tolerance_minutes')
+        $this->get(route('company-settings.index'))
             ->assertForbidden();
     }
 

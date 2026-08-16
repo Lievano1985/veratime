@@ -44,7 +44,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assignWeeklyCompanyProfile($company, $this->template($company), '2026-08-01');
         $batch = $this->batch($company, $center);
 
-        foreach ([RoleKey::OWNER, RoleKey::ADMIN, RoleKey::RH] as $role) {
+        foreach ([RoleKey::ADMIN_EMPRESA, RoleKey::RH_ADMIN] as $role) {
             $result = $this->generate($this->userWithCompanyRole($company, $role), $company, $batch);
             $this->assertGreaterThanOrEqual(1, $result->assignmentsCreated + $result->assignmentsPreserved);
         }
@@ -53,18 +53,18 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assertInvalid(fn () => $this->generate($supervisor, $company, $batch));
 
         $otherCompany = Company::factory()->create(['status' => 'active']);
-        $foreign = $this->userWithCompanyRole($otherCompany, RoleKey::RH);
+        $foreign = $this->userWithCompanyRole($otherCompany, RoleKey::RH_ADMIN);
         $this->assertInvalid(fn () => $this->generate($foreign, $company, $batch));
 
         $company->forceFill(['status' => 'inactive'])->save();
-        $this->assertInvalid(fn () => $this->generate($this->userWithCompanyRole($company->refresh(), RoleKey::RH), $company->refresh(), $batch));
+        $this->assertInvalid(fn () => $this->generate($this->userWithCompanyRole($company->refresh(), RoleKey::RH_ADMIN), $company->refresh(), $batch));
         $this->assertSame($center->id, $relationship->center_id);
     }
 
     public function test_generation_requires_draft_batch_same_company_and_center(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $batch = $this->batch($company, $center);
 
         foreach (['published', 'superseded', 'cancelled'] as $status) {
@@ -94,7 +94,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $inactive->forceFill(['status' => 'inactive'])->save();
 
         $batch = $this->batch($company, $center, '2026-08-03', '2026-08-07');
-        $result = $this->generate($this->userWithCompanyRole($company, RoleKey::RH), $company, $batch);
+        $result = $this->generate($this->userWithCompanyRole($company, RoleKey::RH_ADMIN), $company, $batch);
 
         $this->assertSame(3, $result->relationshipsConsidered);
         $this->assertSame(7 + 5 + 4, $result->assignmentsCreated);
@@ -113,7 +113,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $this->assignWeeklyCompanyProfile($company, $template, '2026-08-01');
 
         $batch = $this->batch($company, $center, '2026-08-03', '2026-08-09');
-        $result = $this->generate($this->userWithCompanyRole($company, RoleKey::RH), $company, $batch);
+        $result = $this->generate($this->userWithCompanyRole($company, RoleKey::RH_ADMIN), $company, $batch);
 
         $this->assertSame(5, $result->assignmentsShift);
         $this->assertSame(2, $result->assignmentsRest);
@@ -143,7 +143,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
         $profile = $this->cycleProfile($company, $morning, $night);
         $first = $this->relationship($company, $center, 'CYC1', '2026-08-01');
         $second = $this->relationship($company, $center, 'CYC2', '2026-08-01');
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
 
         $this->assignProfile($company, $profile, ['assignment_scope' => 'employment_relationship', 'employment_relationship_id' => $first->id, 'effective_from' => '2026-08-01'], $actor);
         $this->assignProfile($company, $profile, ['assignment_scope' => 'employment_relationship', 'employment_relationship_id' => $second->id, 'effective_from' => '2026-08-03'], $actor);
@@ -167,7 +167,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     public function test_calendar_flexible_on_call_and_missing_profile_convert_to_expected_draft_day_types(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $calendar = $this->relationship($company, $center, 'CAL', '2026-08-01');
         $flex = $this->relationship($company, $center, 'FLEX', '2026-08-01');
         $call = $this->relationship($company, $center, 'CALL', '2026-08-01');
@@ -193,7 +193,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     public function test_missing_only_is_idempotent_and_refresh_preserves_ids_and_external_sources(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $template = $this->template($company, 'DAY', '08:00', '16:00');
         $profile = $this->assignWeeklyCompanyProfile($company, $template, '2026-08-01');
         $batch = $this->batch($company, $center, '2026-08-03', '2026-08-05');
@@ -231,7 +231,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     public function test_refresh_replaces_generated_unassigned_when_profile_appears_and_preserves_system_foreign_generator(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $batch = $this->batch($company, $center, '2026-08-03', '2026-08-03');
 
         $this->generate($actor, $company, $batch);
@@ -252,7 +252,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     public function test_invalid_template_generation_is_atomic_and_keeps_existing_days(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $template = $this->template($company);
         $this->assignWeeklyCompanyProfile($company, $template, '2026-08-01');
         $batch = $this->batch($company, $center, '2026-08-03', '2026-08-05');
@@ -270,7 +270,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
     public function test_source_reference_is_stable_and_snapshot_hash_changes_after_profile_refresh(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $relationship = $this->relationship($company, $center, 'REF', '2026-08-01');
         $template = $this->template($company, 'AA', '08:00', '16:00');
         $profile = $this->assignWeeklyCompanyProfile($company, $template, '2026-08-01');
@@ -407,7 +407,7 @@ class DraftScheduleGenerationDomainTest extends TestCase
 
     private function assignWeeklyCompanyProfile(Company $company, ShiftTemplate $template, string $effectiveFrom): ScheduleProfile
     {
-        $actor = $this->userWithCompanyRole($company, RoleKey::RH);
+        $actor = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
         $profile = $this->profile($company, 'WEEKLY'.substr((string) $template->id, -4), 'pattern', 'weekly', $this->weeklyRules($template));
         $this->assignProfile($company, $profile, ['assignment_scope' => 'company', 'effective_from' => $effectiveFrom], $actor);
 

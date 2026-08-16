@@ -7,6 +7,7 @@ use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class CompanyTenancyTest extends TestCase
 
     public function test_user_can_belong_to_company_with_role(): void
     {
-        $role = Role::factory()->create(['key' => 'admin']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $company = Company::factory()->create();
         $user = User::factory()->create();
 
@@ -28,7 +29,7 @@ class CompanyTenancyTest extends TestCase
         ]);
 
         $this->assertTrue($user->belongsToCompany($company));
-        $this->assertSame('admin', $user->roleKeyForCompany($company));
+        $this->assertSame(RoleKey::ADMIN_EMPRESA, $user->roleKeyForCompany($company));
         $this->assertTrue($user->defaultCompany()->is($company));
     }
 

@@ -21,10 +21,11 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
 
     expect($company->name)->toBe('Vera Time Demo Completo')
         ->and(User::query()->whereIn('email', [
-            'owner.demo@veratime.local',
             'admin.demo@veratime.local',
             'rh.demo@veratime.local',
-        ])->count())->toBe(3)
+            'rh.operativo.demo@veratime.local',
+            'supervisor.demo@veratime.local',
+        ])->count())->toBe(4)
         ->and($company->centers()->count())->toBe(2)
         ->and($company->workers()->count())->toBe(4)
         ->and($company->employmentRelationships()->count())->toBe(4)

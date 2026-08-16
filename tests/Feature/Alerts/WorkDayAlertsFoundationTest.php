@@ -186,7 +186,7 @@ class WorkDayAlertsFoundationTest extends TestCase
         [$otherCompany, $otherWorkDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
         app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
         app(EvaluateWorkDayAlertsAction::class)->handle($otherCompany, $otherWorkDay);
-        $user = $this->userForCompany($company, RoleKey::ADMIN);
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -202,7 +202,7 @@ class WorkDayAlertsFoundationTest extends TestCase
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
         app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
-        $user = $this->userForCompany($company, RoleKey::ADMIN);
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -232,7 +232,7 @@ class WorkDayAlertsFoundationTest extends TestCase
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
         app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
-        $user = $this->userForCompany($company, RoleKey::ADMIN);
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
         $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
 
         app(ResolveAlertAction::class)->handle($company, $alert, $user, [

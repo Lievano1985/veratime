@@ -22,7 +22,7 @@ class QuickTestTimeEventsTest extends TestCase
 
     public function test_company_manager_can_create_quick_test_events_and_refresh_work_day(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         $center = Center::factory()->for($company)->create(['timezone' => 'America/Mexico_City']);
         $worker = Worker::factory()->for($company)->create(['status' => 'active']);
         EmploymentRelationship::factory()->create([
@@ -68,7 +68,7 @@ class QuickTestTimeEventsTest extends TestCase
 
     public function test_company_manager_can_delete_provisional_operational_test_data(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         $center = Center::factory()->for($company)->create();
         $worker = Worker::factory()->for($company)->create(['status' => 'active']);
         $relationship = EmploymentRelationship::factory()->create([

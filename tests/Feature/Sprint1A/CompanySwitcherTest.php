@@ -5,6 +5,7 @@ namespace Tests\Feature\Sprint1A;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -15,7 +16,7 @@ class CompanySwitcherTest extends TestCase
 
     public function test_company_switcher_changes_only_to_authorized_active_company(): void
     {
-        $role = Role::factory()->create(['key' => 'owner']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $firstCompany = Company::factory()->create(['name' => 'Primera empresa']);
         $secondCompany = Company::factory()->create(['name' => 'Segunda empresa']);
@@ -43,7 +44,7 @@ class CompanySwitcherTest extends TestCase
 
     public function test_company_switcher_rejects_foreign_or_inactive_company(): void
     {
-        $role = Role::factory()->create(['key' => 'owner']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
         $inactiveCompany = Company::factory()->create(['status' => 'inactive']);

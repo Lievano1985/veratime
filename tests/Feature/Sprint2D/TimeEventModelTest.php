@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
@@ -309,20 +310,20 @@ it('preserves time events by blocking hard deletes through foreign keys', functi
 it('policy blocks inactive company unauthorized roles and horizontal access', function (): void {
     [$company, $worker] = timeEventFixture();
     [$otherCompany] = timeEventFixture();
-    $owner = timeEventUserWithCompany($company, 'owner');
-    $rh = timeEventUserWithCompany($company, 'rh');
+    $adminEmpresa = timeEventUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
+    $rhAdmin = timeEventUserWithCompany($company, RoleKey::RH_ADMIN);
     $supervisor = timeEventUserWithCompany($company, 'supervisor');
-    $foreignOwner = timeEventUserWithCompany($otherCompany, 'owner');
+    $foreignAdmin = timeEventUserWithCompany($otherCompany, RoleKey::ADMIN_EMPRESA);
     $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload());
 
-    expect(Gate::forUser($owner)->allows('create', [TimeEvent::class, $company]))->toBeTrue()
-        ->and(Gate::forUser($rh)->allows('create', [TimeEvent::class, $company]))->toBeTrue()
+    expect(Gate::forUser($adminEmpresa)->allows('create', [TimeEvent::class, $company]))->toBeTrue()
+        ->and(Gate::forUser($rhAdmin)->allows('create', [TimeEvent::class, $company]))->toBeTrue()
         ->and(Gate::forUser($supervisor)->allows('create', [TimeEvent::class, $company]))->toBeFalse()
-        ->and(Gate::forUser($foreignOwner)->allows('view', $event))->toBeFalse();
+        ->and(Gate::forUser($foreignAdmin)->allows('view', $event))->toBeFalse();
 
     $company->update(['status' => 'inactive']);
 
-    expect(Gate::forUser($owner)->allows('view', $event->refresh()))->toBeFalse();
+    expect(Gate::forUser($adminEmpresa)->allows('view', $event->refresh()))->toBeFalse();
 });
 
 it('voids a time event logically with required reason actor timestamp and resulting status', function (): void {
@@ -331,7 +332,7 @@ it('voids a time event logically with required reason actor timestamp and result
         'source' => 'web',
         'metadata' => ['terminal' => 'front-desk'],
     ]), $relationship, $center, $sourceUser);
-    $actor = timeEventUserWithCompany($company, 'rh');
+    $actor = timeEventUserWithCompany($company, RoleKey::RH_ADMIN);
     $voidedAt = CarbonImmutable::parse('2026-08-14 20:00:00', 'UTC');
 
     $voided = app(VoidTimeEventAction::class)->handle($event, $actor, 'Registro duplicado por error operativo', $voidedAt);
@@ -354,7 +355,7 @@ it('voids a time event logically with required reason actor timestamp and result
 
 it('blocks a second logical void for the same time event', function (): void {
     [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
-    $actor = timeEventUserWithCompany($company, 'admin');
+    $actor = timeEventUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
     $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload(), $relationship, $center, $sourceUser);
 
     app(VoidTimeEventAction::class)->handle($event, $actor, 'Primera anulacion valida');
@@ -365,7 +366,7 @@ it('blocks a second logical void for the same time event', function (): void {
 
 it('excludes voided events from valid event resolution and current state', function (): void {
     [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
-    $actor = timeEventUserWithCompany($company, 'owner');
+    $actor = timeEventUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
     $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload([
         'event_type' => 'clock_in',
         'occurred_local_date' => '2026-08-14',
@@ -448,22 +449,20 @@ it('uses deterministic event type precedence when occurrence and received timest
     expect($events->pluck('event_type')->all())->toBe(['clock_in', 'break_start', 'break_end', 'clock_out']);
 });
 
-it('void permissions allow owner admin and rh but block supervisor foreign and inactive memberships', function (): void {
+it('void permissions allow company managers but block supervisor foreign and inactive memberships', function (): void {
     [$company, $worker, $relationship, $center, $sourceUser] = timeEventFixture();
     [$otherCompany] = timeEventFixture();
     $event = app(CreateTimeEventAction::class)->handle($company, $worker, timeEventPayload(), $relationship, $center, $sourceUser);
-    $owner = timeEventUserWithCompany($company, 'owner');
-    $admin = timeEventUserWithCompany($company, 'admin');
-    $rh = timeEventUserWithCompany($company, 'rh');
+    $adminEmpresa = timeEventUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
+    $rhAdmin = timeEventUserWithCompany($company, RoleKey::RH_ADMIN);
     $supervisor = timeEventUserWithCompany($company, 'supervisor');
-    $foreignOwner = timeEventUserWithCompany($otherCompany, 'owner');
-    $inactiveMember = timeEventUserWithCompany($company, 'owner', membershipStatus: 'inactive');
+    $foreignAdmin = timeEventUserWithCompany($otherCompany, RoleKey::ADMIN_EMPRESA);
+    $inactiveMember = timeEventUserWithCompany($company, RoleKey::ADMIN_EMPRESA, membershipStatus: 'inactive');
 
-    expect(Gate::forUser($owner)->allows('void', $event))->toBeTrue()
-        ->and(Gate::forUser($admin)->allows('void', $event))->toBeTrue()
-        ->and(Gate::forUser($rh)->allows('void', $event))->toBeTrue()
+    expect(Gate::forUser($adminEmpresa)->allows('void', $event))->toBeTrue()
+        ->and(Gate::forUser($rhAdmin)->allows('void', $event))->toBeTrue()
         ->and(Gate::forUser($supervisor)->allows('void', $event))->toBeFalse()
-        ->and(Gate::forUser($foreignOwner)->allows('void', $event))->toBeFalse()
+        ->and(Gate::forUser($foreignAdmin)->allows('void', $event))->toBeFalse()
         ->and(Gate::forUser($inactiveMember)->allows('void', $event))->toBeFalse();
 });
 
@@ -510,7 +509,7 @@ function timeEventFixture(array $centerAttributes = []): array
     return [$company, $worker, $relationship, $center, $sourceUser];
 }
 
-function timeEventUserWithCompany(Company $company, string $roleKey = 'owner', string $membershipStatus = 'active'): User
+function timeEventUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA, string $membershipStatus = 'active'): User
 {
     $role = Role::query()->firstOrCreate(
         ['key' => $roleKey],

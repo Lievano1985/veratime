@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\MandatoryRestDay;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
@@ -50,7 +51,7 @@ it('unauthorized role cannot manage mandatory rest days', function (): void {
 
 it('company admin cannot create national subnational or electoral catalog records', function (): void {
     $company = Company::factory()->create();
-    $user = mandatoryRestDayUserWithCompany($company, 'admin');
+    $user = mandatoryRestDayUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -112,7 +113,7 @@ it('super admin can create national and subnational catalog records', function (
 
 it('company admin cannot edit or inactivate global catalog records', function (): void {
     $company = Company::factory()->create();
-    $user = mandatoryRestDayUserWithCompany($company, 'admin');
+    $user = mandatoryRestDayUserWithCompany($company, RoleKey::ADMIN_EMPRESA);
     $restDay = MandatoryRestDay::factory()->stateScoped('MX-JAL')->create(['name' => 'Catalogo protegido']);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
@@ -682,7 +683,7 @@ it('sprint 2c does not create jornada calculation or operational tables', functi
         ->and(Schema::hasTable('reports'))->toBeFalse();
 });
 
-function mandatoryRestDayUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function mandatoryRestDayUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::factory()->create(['key' => $roleKey]);
     $user = User::factory()->create();

@@ -287,7 +287,7 @@ class WorkDayCalculationFoundationTest extends TestCase
     {
         [$company, $relationship] = $this->workDayFixture();
         $role = Role::query()->firstOrCreate(
-            ['key' => RoleKey::ADMIN],
+            ['key' => RoleKey::ADMIN_EMPRESA],
             ['name' => 'Administrador', 'description' => null, 'is_system' => true],
         );
         $user = User::factory()->create();

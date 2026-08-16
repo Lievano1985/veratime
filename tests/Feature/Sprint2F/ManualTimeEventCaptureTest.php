@@ -9,6 +9,7 @@ use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\WorkDay;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -38,7 +39,7 @@ it('unauthorized role cannot access manual capture route', function (): void {
 
 it('authorized role sees manual capture screen', function (): void {
     [$company, $worker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -50,7 +51,7 @@ it('authorized role sees manual capture screen', function (): void {
 it('manual selector only shows active company workers', function (): void {
     [$company, $worker] = sprint2fManualFixture();
     [, $otherWorker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -61,7 +62,7 @@ it('manual selector only shows active company workers', function (): void {
 
 it('manual capture validates required fields and invalid type', function (): void {
     [$company] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -83,7 +84,7 @@ it('manual capture validates required fields and invalid type', function (): voi
 it('manual capture does not allow worker from another company', function (): void {
     [$company] = sprint2fManualFixture();
     [, $otherWorker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
@@ -99,7 +100,7 @@ it('manual capture does not allow worker from another company', function (): voi
 
 it('manual action creates valid justified event with source user reason and local utc conversion', function (): void {
     [$company, $worker, $relationship, $center] = sprint2fManualFixture(centerAttributes: ['timezone' => 'America/Tijuana']);
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     $event = app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
         'event_type' => 'clock_in',
@@ -133,8 +134,8 @@ it('manual action creates valid justified event with source user reason and loca
 it('manual livewire creates event and lists only active company manual captures', function (): void {
     [$company, $worker] = sprint2fManualFixture();
     [$otherCompany, $otherWorker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
-    $otherUser = sprint2fManualUserWithCompany($otherCompany, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
+    $otherUser = sprint2fManualUserWithCompany($otherCompany, RoleKey::RH_ADMIN);
 
     app(RegisterManualTimeEventAction::class)->handle($otherCompany, $otherUser, $otherWorker, [
         'event_type' => 'clock_in',
@@ -168,7 +169,7 @@ it('manual livewire creates event and lists only active company manual captures'
 
 it('manual livewire paginates events and filters by source and status', function (): void {
     [$company, $worker, $relationship, $center] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     foreach (range(1, 12) as $index) {
         TimeEvent::factory()->create([
@@ -198,7 +199,7 @@ it('manual livewire paginates events and filters by source and status', function
 
 it('manual livewire voids a visible company event with required reason', function (): void {
     [$company, $worker, $relationship, $center] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
     $event = TimeEvent::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
@@ -236,7 +237,7 @@ it('manual livewire voids a visible company event with required reason', functio
 
 it('manual livewire approves pending manual event and refreshes work day', function (): void {
     [$company, $worker, $relationship] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
     $event = TimeEvent::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
@@ -282,7 +283,7 @@ it('manual livewire approves pending manual event and refreshes work day', funct
 
 it('manual livewire rejects pending manual event with required reason', function (): void {
     [$company, $worker, $relationship] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
     $event = TimeEvent::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
@@ -317,7 +318,7 @@ it('manual livewire rejects pending manual event with required reason', function
 
 it('manual review cannot be applied twice or by supervisor', function (): void {
     [$company, $worker, $relationship] = sprint2fManualFixture();
-    $rh = sprint2fManualUserWithCompany($company, 'rh');
+    $rh = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
     $supervisor = sprint2fManualUserWithCompany($company, 'supervisor');
     $event = TimeEvent::factory()->create([
         'company_id' => $company->id,
@@ -346,7 +347,7 @@ it('manual review cannot be applied twice or by supervisor', function (): void {
 
 it('manual capture preserves existing events and does not void replace or delete', function (): void {
     [$company, $worker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
     $action = app(RegisterManualTimeEventAction::class);
 
     $first = $action->handle($company, $user, $worker, [
@@ -370,7 +371,7 @@ it('manual capture preserves existing events and does not void replace or delete
 
 it('manual capture blocks inactive company by policy', function (): void {
     [$company, $worker] = sprint2fManualFixture(companyAttributes: ['status' => 'inactive']);
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     expect(fn () => app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
         'event_type' => 'clock_in',
@@ -382,7 +383,7 @@ it('manual capture blocks inactive company by policy', function (): void {
 
 it('manual capture blocks inactive worker by domain validation', function (): void {
     [$company, $worker] = sprint2fManualFixture(workerAttributes: ['status' => 'inactive']);
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     expect(fn () => app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
         'event_type' => 'clock_in',
@@ -394,7 +395,7 @@ it('manual capture blocks inactive worker by domain validation', function (): vo
 
 it('manual capture creates only time events and no future modules', function (): void {
     [$company, $worker] = sprint2fManualFixture();
-    $user = sprint2fManualUserWithCompany($company, 'rh');
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
 
     app(RegisterManualTimeEventAction::class)->handle($company, $user, $worker, [
         'event_type' => 'clock_in',
@@ -441,7 +442,7 @@ function sprint2fManualFixture(array $companyAttributes = [], array $workerAttri
     return [$company, $worker, $relationship, $center];
 }
 
-function sprint2fManualUserWithCompany(Company $company, string $roleKey = 'owner'): User
+function sprint2fManualUserWithCompany(Company $company, string $roleKey = RoleKey::ADMIN_EMPRESA): User
 {
     $role = Role::query()->firstOrCreate(
         ['key' => $roleKey],

@@ -46,7 +46,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_company_manager_can_create_department_area_and_team_from_ui(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('organization.units')
@@ -121,7 +121,7 @@ class OrganizationalOperationsUiTest extends TestCase
         [$company, $center] = $this->companyAndCenter();
         [$foreignCompany, $foreignCenter] = $this->companyAndCenter();
         $foreignParent = app(CreateOrganizationalUnitAction::class)->handle($foreignCompany, $foreignCenter, $this->unitData('EXT', 'Externa', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -138,7 +138,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_inactivation_error_from_domain_is_visible(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $department = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
         app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('PROD', 'Produccion', 'area'), $department);
 
@@ -154,7 +154,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_assignments_ui_assigns_and_updates_primary_unit_as_current_segmentation(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $first = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
         $second = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
 
@@ -185,7 +185,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_app_layout_uses_current_view_name_in_browser_title(): void
     {
         [$company] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -202,7 +202,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'started_at' => '2026-01-01',
             'status' => 'active',
         ]);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
@@ -235,7 +235,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'started_at' => '2026-01-01',
             'status' => 'active',
         ]);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $first = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
         $second = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('FLEX', 'Flexibles', 'department'));
 
@@ -268,7 +268,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_assignments_ui_corrects_existing_primary_unit_without_changing_published_schedule_snapshot(): void
     {
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $first = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
         $second = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
 
@@ -313,7 +313,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_assignment_worker_selector_can_show_all_active_workers_for_the_company(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         foreach (range(1, 15) as $index) {
             $worker = Worker::factory()->for($company)->create([
@@ -348,7 +348,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'started_at' => '2026-01-01',
             'status' => 'active',
         ]);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('ADM', 'Administracion', 'department'));
 
         app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $unit, ['effective_from' => '2026-08-01']);
@@ -376,7 +376,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'status' => 'active',
         ]);
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -406,7 +406,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'started_at' => '2026-01-01',
             'status' => 'active',
         ]);
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $firstUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('U-UNO', 'Unidad Uno', 'department'));
         $secondUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('U-DOS', 'Unidad Dos', 'department'));
 
@@ -428,7 +428,7 @@ class OrganizationalOperationsUiTest extends TestCase
         [$company, $center, $relationship, $worker] = $this->relationshipContext();
         [$foreignCompany, $foreignCenter] = $this->companyAndCenter();
         $foreignUnit = app(CreateOrganizationalUnitAction::class)->handle($foreignCompany, $foreignCenter, $this->unitData('EXT', 'Externa', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -444,9 +444,9 @@ class OrganizationalOperationsUiTest extends TestCase
     {
         [$company, $center] = $this->companyAndCenter();
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
-        $rh = $this->userWithCompanyRole($company, RoleKey::RH);
+        $rh = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -480,7 +480,7 @@ class OrganizationalOperationsUiTest extends TestCase
     public function test_scopes_ui_replaces_and_ends_scope_preserving_history(): void
     {
         [$company, $center] = $this->companyAndCenter();
-        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
