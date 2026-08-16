@@ -66,6 +66,8 @@
             <livewire:companies.company-switcher />
 
             @php($activeCompany = app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get())
+            @php($canManageCompanySettings = $activeCompany && auth()->user()->can('update', $activeCompany))
+            @php($canManageUsers = $activeCompany && auth()->user()->can('viewAny', [\App\Models\User::class, $activeCompany]))
 
             <flux:navlist variant="outline">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Inicio</flux:navlist.item>
@@ -118,6 +120,18 @@
                         @endcan
                         @if (in_array(auth()->user()->roleKeyForCompany($activeCompany), [...\App\Support\RoleKey::companyManagers(), \App\Support\RoleKey::SUPER_ADMIN], true))
                             <flux:navlist.item icon="beaker" :href="route('testing.quick-events')" :current="request()->routeIs('testing.quick-events')" wire:navigate>Eventos rapidos</flux:navlist.item>
+                        @endif
+                    </flux:navlist.group>
+                @endif
+
+                @if ($canManageCompanySettings || $canManageUsers)
+                    <flux:navlist.group heading="Configuración" class="grid">
+                        @if ($canManageCompanySettings)
+                            <flux:navlist.item icon="cog-6-tooth" :href="route('company-settings.index')" :current="request()->routeIs('company-settings.*')" wire:navigate>Configuración de empresa</flux:navlist.item>
+                        @endif
+
+                        @if ($canManageUsers)
+                            <flux:navlist.item icon="user-plus" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>Usuarios</flux:navlist.item>
                         @endif
                     </flux:navlist.group>
                 @endif

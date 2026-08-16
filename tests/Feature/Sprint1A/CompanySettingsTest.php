@@ -5,6 +5,7 @@ namespace Tests\Feature\Sprint1A;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -15,7 +16,7 @@ class CompanySettingsTest extends TestCase
 
     public function test_admin_can_create_or_update_company_settings(): void
     {
-        $role = Role::factory()->create(['key' => 'admin']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
 
@@ -27,7 +28,7 @@ class CompanySettingsTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
+        Volt::test('company-settings.index')
             ->set('settingsForm.payroll_period_type', 'weekly')
             ->set('settingsForm.default_timezone', 'America/Mazatlan')
             ->set('settingsForm.default_closure_day', 5)
@@ -53,7 +54,7 @@ class CompanySettingsTest extends TestCase
 
     public function test_settings_validation_rejects_invalid_closure_day(): void
     {
-        $role = Role::factory()->create(['key' => 'admin']);
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
         $user = User::factory()->create();
         $company = Company::factory()->create();
 
@@ -65,7 +66,7 @@ class CompanySettingsTest extends TestCase
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-        Volt::test('companies.index')
+        Volt::test('company-settings.index')
             ->set('settingsForm.default_closure_day', 40)
             ->call('updateSettings')
             ->assertHasErrors(['settingsForm.default_closure_day']);
