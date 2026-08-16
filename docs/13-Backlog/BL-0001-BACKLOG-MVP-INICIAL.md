@@ -462,7 +462,7 @@ Bloque Work Days base implementa `work_days` como jornada operativa unica por em
 Bloque Work Days refresco operativo agrega configuracion de hora automatica por empresa, ejecucion manual auditada desde `/work-days`, comandos `work-days:refresh` y `work-days:auto-refresh`, y scheduler cada minuto para refrescar empresas activas por hora local. No incluye `work_day_calculations`, motor legal, horas extra, alertas, incidencias, cierres, conformidad, reportes ni API.
 Bloque Work Days consulta operativa agrega `/work-days` como listado inicial de jornadas generadas, con filtros de rango, centro, horario, estado y trabajador para `owner`, `admin` y `rh`. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque revision de capturas manuales agrega aprobacion/rechazo de eventos `admin_manual` en `pending_review`. Aprobar cambia el evento a `valid` y refresca `work_days` de la fecha; rechazar cambia a `ignored` con motivo obligatorio. No incluye calculos legales, horas extra, alertas, incidencias, cierres, reportes ni API.
-Captura justificada autorizada se ajusta en `feature/work-day-incidence-board`: las capturas `admin_manual` hechas por owner/admin/rh nacen `valid` con motivo obligatorio y metadata `auto_approved`, encolan recalculo de jornada y evitan doble aprobacion. Las acciones aprobar/rechazar se conservan para eventos `pending_review` existentes o futuros.
+Captura justificada autorizada se ajusta en `feature/work-day-incidence-board`: las capturas `admin_manual` hechas por las claves operativas vigentes antes de A2 (`owner`, `admin`, `rh`) nacen `valid` con motivo obligatorio y metadata `auto_approved`, encolan recalculo de jornada y evitan doble aprobacion. ADR-0006 redefine el objetivo a `admin_empresa`, `rh_admin` y `rh_operativo` con alcances explicitos. Las acciones aprobar/rechazar se conservan para eventos `pending_review` existentes o futuros.
 Bloque Work Day Calculations base agrega `work_day_calculations` versionado, `CalculateWorkDayAction`, `CalculateWorkDaysForDateRangeAction` y accion manual desde `/work-days`. Calcula pares entrada/salida, descuenta pausas completas, conserva snapshots y deja secuencias incompletas en revision. No incluye motor legal, horas extra, alertas, incidencias, cierres, reportes ni API.
 Bloque Legal Rules versionado inicia motor legal con `legal_rules`, `legal_rule_versions`, `legal_parameters`, resolvers por fecha trabajada, seeder de reglas base y clasificacion diaria visible en `/work-days` para `work_day_calculations` activos. Clasifica como diurna, nocturna, mixta o pendiente y guarda snapshot de reglas aplicadas. No calcula todavia horas extra, dominicales, descansos obligatorios ni genera alertas.
 ADR-0005 define la linea de motor legal configurable: reglas base por pais, Mexico preconfigurado, reglas minimas protegidas, parametros internos configurables por empresa, overrides versionados y snapshots historicos. L2 agrega configuracion legal por empresa y L3 inicia calculo ordinario/extra diario y semanal.
@@ -609,10 +609,17 @@ Restricciones:
 | Bloque | Objetivo | Dependencias | Archivos esperados | Pruebas | Criterio de salida | Riesgo | Orden |
 |---|---|---|---|---|---|---|---|
 | A. Normalizacion de roles y permisos | Unificar `rh` y definir permisos base | Sprint 0/1 | `RoleSeeder`, policies, tests de roles | Pest policies | Implementado/candidato a cierre: `rh` es clave unica y `hr` no opera como alias | Romper usuarios demo | 1 |
+| A2. Matriz avanzada de roles y alcances | Normalizar `admin_empresa`, `rh_admin`, `rh_operativo`, `supervisor` y retirar `owner` operativo | Modulo de usuarios / alcances | `RoleKey`, `RoleSeeder`, policies, seeders, vistas de usuarios, tests | Pest roles y acceso horizontal | Implementado/candidato a cierre: roles canonicos, seeders, usuarios, policies y pruebas actualizados | Romper permisos existentes | 1.5 |
 | B. Unidades organizacionales y responsables | Crear departamentos/areas/equipos y alcances explicitos por centro completo o unidad | Centros/trabajadores | B1: migraciones, modelos, Actions, factories, tests. B2: pantallas Livewire/Volt | multi-tenant y alcance supervisor | B1 y B2 implementados/candidatos a cierre: modelo, dominio y UI operativa listos | Acceso horizontal | 2 |
 
 Nota Bloque A:
-h queda como clave canonica de Recursos Humanos; owner, dmin y h conservan permisos empresariales base. supervisor no recibe alcance global automatico.
+
+`rh` queda como clave canonica inicial de Recursos Humanos; `hr` no opera como alias. Esta regla queda superada por ADR-0006 para la siguiente normalizacion tecnica: `owner` deja de ser rol operativo diferenciado, `admin_empresa` sera el administrador general, RH se dividira en `rh_admin` y `rh_operativo`, y `supervisor` seguira sin alcance global automatico.
+
+Nota Bloque A2:
+
+Se implementa la matriz aceptada en ADR-0006. `admin_empresa` y `rh_admin` conservan alcance empresarial completo; `rh_operativo` y `supervisor` requieren alcance explicito por centro o unidad. No se mantienen alias historicos `owner`, `admin`, `rh` ni `hr` para operacion.
+
 Nota Bloque B1:
 Se implementa solo modelo organizacional, asignaciones de unidad y alcances operativos de dominio. No incluye pantallas, plantillas de turno, perfiles, programacion diaria ni cierres.
 

@@ -1139,11 +1139,12 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Rol RH canonico | Revisar usuarios/seeders demo con rol `rh`. | Recursos Humanos opera con clave `rh`; no existe rol inicial `hr`. |
-| Alias no permitido | Crear o simular un usuario con rol `hr`. | No obtiene permisos empresariales ni aparece como rol de sistema. |
-| Owner y admin | Entrar como owner/admin y abrir pantallas empresariales actuales. | Conservan acceso esperado. |
-| RH | Entrar como `rh` y abrir pantallas empresariales actuales. | Conserva acceso empresarial completo del MVP actual. |
-| Supervisor | Entrar como supervisor sin alcance explicito. | No obtiene acceso global a empresa, centros, trabajadores, horarios ni eventos administrativos. |
+| Roles canonicos | Revisar usuarios/seeders demo y catalogo de roles. | Existen `admin_empresa`, `rh_admin`, `rh_operativo`, `supervisor` y `trabajador`; no existen roles operativos `owner`, `admin`, `rh` ni `hr`. |
+| Administrador de empresa | Entrar como `admin_empresa` y abrir pantallas empresariales actuales. | Conserva acceso completo de administracion de empresa. |
+| RH administrador | Entrar como `rh_admin` y abrir usuarios, alcances y pantallas operativas. | Puede operar RH y administrar RH operativos, supervisores y alcances. |
+| RH operativo | Entrar como `rh_operativo` con y sin alcance explicito. | Solo opera dentro de sus centros o unidades asignadas; sin alcance no obtiene acceso global. |
+| Supervisor | Entrar como `supervisor` sin alcance explicito. | No obtiene acceso global a empresa, centros, trabajadores, horarios ni eventos administrativos. |
+| Alias no permitido | Crear o simular usuarios con roles `owner`, `admin`, `rh` o `hr`. | No obtienen permisos empresariales ni aparecen como roles de sistema. |
 | Multi-tenant | Intentar operar empresa ajena, membresia inactiva o empresa inactiva. | El sistema bloquea la accion. |
 
 ### Cubierto por Bloque B2

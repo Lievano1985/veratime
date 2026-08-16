@@ -55,6 +55,18 @@ Sprint actual:
 - Bloque F5B aprobado manualmente: interfaz de importacion CSV de programacion diaria sobre lotes draft.
 - Modulo de horarios F1-F5B aprobado manualmente sin hallazgos S1/S2 abiertos.
 
+## Decision vigente de roles
+
+- ADR-0006 acepta la matriz de roles y alcances empresariales.
+- `owner` deja de ser rol operativo diferenciado para el MVP.
+- `admin_empresa` sera el administrador general de empresa.
+- `rh_admin` sera responsable general de RH y podra administrar RH operativos, supervisores y alcances.
+- `rh_operativo` operara solo centros o unidades asignadas.
+- `supervisor` sera rol de consulta por alcance explicito; no obtiene permisos globales por rol.
+- `trabajador` queda para portal propio futuro.
+- Bloque A2 normaliza `RoleKey`, `RoleSeeder`, seeders demo, modulo de usuarios, policies y pruebas para retirar el uso operativo de `owner`, `admin`, `rh` y `hr`.
+- `admin_empresa` y `rh_admin` conservan alcance empresarial completo; `rh_operativo` y `supervisor` dependen de alcances explicitos.
+
 ## Estado de epics
 
 - EPIC-04 cerrado.
@@ -546,7 +558,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Rol canonico de Recursos Humanos: `rh`.
 - `hr` no se mantiene como alias operativo.
 - Las claves de rol se centralizan en `App\Support\RoleKey`.
-- `owner`, `admin` y `rh` conservan acceso empresarial completo en el MVP actual.
+- Estado tecnico actual antes de A2: `owner`, `admin` y `rh` conservan acceso empresarial completo. Objetivo ADR-0006: `admin_empresa`, `rh_admin` y `rh_operativo` por alcance cuando aplique.
 - `supervisor` no obtiene permisos globales; su alcance explicito se administra desde Bloque B2.
 - No se implementaron unidades organizacionales, alcances operativos ni programacion diaria en este bloque.
 ## Bloque B1 - modelo organizacional y alcances
@@ -558,7 +570,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Las unidades son opcionales; una empresa puede operar solo con centros.
 - Trabajadores tienen una unidad principal activa actual para segmentacion; apoyos temporales quedan como legado fuera del flujo visible.
 - Supervisores solo tienen alcance mediante registros explicitos por centro o unidad.
-- `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito.
+- Estado tecnico actual antes de A2: `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito. Objetivo ADR-0006: `admin_empresa` y `rh_admin` conservan alcance amplio; `rh_operativo` y `supervisor` dependen de scope explicito.
 - Las escrituras sobre `organizational_units`, `employment_unit_assignments` y `operational_scope_assignments` deben pasar por Actions de dominio.
 - B2 agrega la UI operativa; importacion, programacion diaria, perfiles de horario y cierres siguen pendientes.
 
@@ -571,7 +583,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
   - `/organization/assignments`
   - `/organization/scopes`
   - `/organization/my-scope`
-- `owner`, `admin` y `rh` administran unidades, asignaciones y alcances.
+- Estado tecnico actual antes de A2: `owner`, `admin` y `rh` administran unidades, asignaciones y alcances. Objetivo ADR-0006: administran `admin_empresa` y `rh_admin`; `rh_operativo` opera segun alcance y `supervisor` consulta sin administrar.
 - `supervisor` puede consultar unidades y ver su propio alcance, pero no administra estructura ni scopes.
 - Las pantallas reutilizan Actions B1 para crear, reemplazar, finalizar e inactivar.
 - No se implementaron plantillas de turno, perfiles de horario, programacion diaria, incidencias, alertas, reportes, API WFM ni CSV.

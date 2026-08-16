@@ -321,7 +321,6 @@ Relación usuario-empresa.
 | `company_id` | ulid fk | Empresa |
 | `user_id` | ulid fk | Usuario |
 | `status` | enum | `active`, `inactive` |
-| `scope` | JSON nullable | Centros/equipos permitidos |
 | `created_at` | timestamp |  |
 | `updated_at` | timestamp |  |
 
@@ -350,6 +349,19 @@ Regla:
 Los roles deben evaluarse dentro del contexto de empresa.
 
 No basta con un rol global si el usuario puede pertenecer a varias empresas.
+
+La matriz vigente de roles y alcances esta aceptada en ADR-0006:
+
+- `admin_empresa`: administrador general de la empresa.
+- `rh_admin`: responsable RH general; puede administrar RH operativos, supervisores y alcances.
+- `rh_operativo`: opera solo centros o unidades asignadas.
+- `supervisor`: consulta solo centros o unidades asignadas; el rol por si solo no concede acceso global.
+- `trabajador`: portal propio futuro.
+- `super_admin`: administracion de plataforma y catalogos globales.
+
+`owner` no debe conservarse como rol operativo diferenciado del MVP.
+
+Los alcances operativos no deben resolverse desde un JSON libre en `company_user`; deben evaluarse desde registros explicitos de alcance por centro o unidad organizacional.
 
 ---
 
@@ -2264,7 +2276,7 @@ Esta seccion documenta el diseno objetivo. No implica migraciones creadas todavi
 
 `employment_unit_assignments`: segmentacion organizacional actual de trabajador a unidad. Campos: `company_id`, `worker_id`, `employment_relationship_id`, `organizational_unit_id`, `assignment_type` (`primary`, `support` legado), `effective_from`, `effective_to`, `status`, `source`, `metadata`. Las columnas `effective_from` y `effective_to` se conservan por compatibilidad e historial tecnico, pero no mandan la vigencia operativa de la persona. Restriccion Bloque D: una sola unidad principal activa por relacion laboral; cambiar unidad corrige el registro activo con motivo y metadata. Los apoyos temporales quedan fuera del flujo visible y no participan en resolucion de perfil, alcance supervisor ni generacion diaria. La vigencia operativa manda desde trabajador/relacion laboral: alta, baja y estado.
 
-`operational_scope_assignments`: alcance de responsables o supervisores. Campos: `company_id`, `user_id`, `center_id nullable`, `organizational_unit_id nullable`, `scope_role`, `effective_from`, `effective_to`, `status`, `metadata`. Debe existir centro completo o unidad, pero no ambos. `owner`, `admin_empresa` y `rh` tienen alcance completo de empresa. Supervisor/responsable nunca obtiene alcance automatico solo por poseer el rol.
+`operational_scope_assignments`: alcance de responsables o supervisores. Campos: `company_id`, `user_id`, `center_id nullable`, `organizational_unit_id nullable`, `scope_role`, `effective_from`, `effective_to`, `status`, `metadata`. Debe existir centro completo o unidad, pero no ambos. `admin_empresa` tiene alcance completo de empresa. `rh_admin` tiene alcance completo para operacion RH. `rh_operativo` y `supervisor` dependen de alcances explicitos por centro o unidad. Supervisor/responsable nunca obtiene alcance automatico solo por poseer el rol.
 
 ## Turnos y perfiles
 
