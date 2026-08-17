@@ -369,7 +369,7 @@ Estado: en progreso en rama `feature/work-day-incidence-board`.
 - Al dictaminar la ultima alerta abierta de una jornada, `work_days.status` vuelve a `calculated` si conserva calculo activo.
 - La policy `AlertPolicy` limita la vista inicial a `owner`, `admin` y `rh`.
 - No se implementan comentarios multiples, adjuntos, bloqueo de cierres, conformidad, reportes ni API.
-- Siguiente paso recomendado: alcance operativo de Jornadas para supervisores/encargados por centro o unidad.
+- Alcance operativo base alineado: `rh_operativo` opera por centro/unidad asignada; `supervisor` consulta por centro/unidad asignada.
 
 ## Bloque Recalculo puntual de jornada
 
@@ -460,7 +460,7 @@ Estado: implementado/candidato a cierre en rama `feature/simplify-organization-a
 - `AssignPrimaryOrganizationalUnitAction` mantiene una sola unidad principal activa por relacion laboral.
 - `ReplacePrimaryOrganizationalUnitAction` corrige la unidad principal activa sobre el mismo registro con motivo y metadata de auditoria; no abre vigencias nuevas por fecha.
 - `ResolveEmploymentUnitsForDateAction` devuelve la unidad principal activa sin filtrar por vigencia de asignacion.
-- Los apoyos temporales quedan fuera del flujo visible y no participan en resolucion de unidad, herencia de perfiles ni alcance supervisor.
+- Los apoyos temporales quedan fuera del flujo visible y no participan en resolucion de unidad, herencia de perfiles ni alcance operativo.
 - El seeder demo ya no crea apoyos temporales activos.
 - El layout principal muestra el nombre de la vista actual en el tab del navegador.
 - El menu lateral usa scrollbar delgado y discreto.
@@ -517,7 +517,7 @@ Objetivo: seeder demo local para probar Vera Time hasta lo implementado en Sprin
 - La publicacion usa version consecutiva por centro/periodo, snapshot JSON canonico, hash SHA-256, `published_by` y `published_at`; una correccion crea nueva version y la anterior queda `superseded`.
 - Los cierres multiples tendran prioridad: relacion laboral, unidad, centro, empresa.
 - Bloque B1 implementa modelo organizacional base, asignaciones de trabajadores a unidades y alcances operativos por centro/unidad.
-- Bloque B2 implementa pantallas Livewire/Volt para areas/departamentos, asignaciones organizacionales, responsables/supervisores y consulta "Mi alcance".
+- Bloque B2 implementa pantallas Livewire/Volt para areas/departamentos, asignaciones organizacionales, responsables/supervisores y consulta "Mi alcance"; la pantalla de alcances permite asignar centro o unidad a `rh_operativo` y `supervisor`.
 - Bloque C implementa el catalogo nuevo de plantillas de turno y segmentos diarios en `/scheduling/shifts`.
 - `shift_templates` y `shift_template_segments` existen como catalogo reutilizable por empresa.
 - Las plantillas usan horas locales de reloj, sin `timezone`, sin `center_id`, sin clasificacion legal y sin ventanas flexibles.
@@ -569,7 +569,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Jerarquia soportada: `department` -> `area` -> `team` dentro de un centro.
 - Las unidades son opcionales; una empresa puede operar solo con centros.
 - Trabajadores tienen una unidad principal activa actual para segmentacion; apoyos temporales quedan como legado fuera del flujo visible.
-- Supervisores solo tienen alcance mediante registros explicitos por centro o unidad.
+- `rh_operativo` y `supervisor` solo tienen alcance mediante registros explicitos por centro o unidad.
 - Estado tecnico actual antes de A2: `owner`, `admin` y `rh` conservan alcance completo de empresa sin scope explicito. Objetivo ADR-0006: `admin_empresa` y `rh_admin` conservan alcance amplio; `rh_operativo` y `supervisor` dependen de scope explicito.
 - Las escrituras sobre `organizational_units`, `employment_unit_assignments` y `operational_scope_assignments` deben pasar por Actions de dominio.
 - B2 agrega la UI operativa; importacion, programacion diaria, perfiles de horario y cierres siguen pendientes.
@@ -583,8 +583,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
   - `/organization/assignments`
   - `/organization/scopes`
   - `/organization/my-scope`
-- Estado tecnico actual antes de A2: `owner`, `admin` y `rh` administran unidades, asignaciones y alcances. Objetivo ADR-0006: administran `admin_empresa` y `rh_admin`; `rh_operativo` opera segun alcance y `supervisor` consulta sin administrar.
-- `supervisor` puede consultar unidades y ver su propio alcance, pero no administra estructura ni scopes.
+- `admin_empresa` y `rh_admin` administran unidades, asignaciones y alcances. `rh_operativo` opera segun alcance y `supervisor` consulta sin administrar.
+- `rh_operativo` y `supervisor` pueden consultar "Mi alcance"; solo los administradores de empresa/RH administran estructura y scopes.
 - Las pantallas reutilizan Actions B1 para crear, reemplazar, finalizar e inactivar.
 - No se implementaron plantillas de turno, perfiles de horario, programacion diaria, incidencias, alertas, reportes, API WFM ni CSV.
 
@@ -618,7 +618,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La herencia se resuelve en este orden: relacion laboral -> unidad principal activa actual -> centro -> empresa.
 - `temporary_support` no altera la herencia de perfil; solo se usa la unidad principal activa actual.
 - `ResolveScheduleProfileForRelationshipAction` es el resolutor central de D1.
-- Supervisores no crean perfiles; solo pueden asignar directamente a relaciones laborales dentro de su alcance operativo.
+- Supervisores no crean ni asignan perfiles. `rh_operativo` puede asignar directamente a relaciones laborales dentro de su alcance operativo.
 - No se implementaron `pattern_mode = cycle`, `flexible`, `on_call`, generacion diaria, publicacion operativa, API WFM ni CSV. El nucleo `schedule_batches`, `daily_schedule_assignments` y `daily_schedule_segments` se implementa en Bloque F1.
 
 ## Bloque D2 - UI de perfiles y asignaciones
@@ -650,7 +650,7 @@ Actualizacion de modelo operativo visible:
 - La consulta de perfil efectivo usa `ResolveScheduleProfileForRelationshipAction` y muestra origen por relacion laboral, unidad, centro, empresa o sin perfil.
 - El sidebar muestra Horarios con catalogo de turnos, modelos de horario, aplicacion de modelos, programacion semanal y descansos obligatorios.
 - Las rutas legacy `/schedules` y `/schedule-assignments` siguen existiendo, pero ya no aparecen en la navegacion normal.
-- Supervisores solo pueden asignar perfiles directamente a relaciones laborales dentro de su alcance operativo.
+- `rh_operativo` puede asignar perfiles directamente a relaciones laborales dentro de su alcance operativo; supervisor solo consulta.
 - Existe seeder manual independiente `VeraTimeScheduleProfileScenarioSeeder` para probar aislamiento multi-tenant, perfiles `pattern` semanal, perfiles `calendar`, herencia empresa -> centro -> unidad -> relacion laboral y empresa sin perfil efectivo. Se ejecuta con `php artisan db:seed --class=VeraTimeScheduleProfileScenarioSeeder`.
 - El seeder manual no se llama desde `DatabaseSeeder` y crea escenarios D2/E1 de perfiles, incluyendo ciclo, flexible y bajo demanda, sin generar programacion diaria.
 - Bloque E2 implementa la UI de perfiles avanzados, pero no implementa generacion semanal/publicada, publicacion operativa, API WFM, CSV/XLSX, incidencias, alertas ni calculos legales.
@@ -771,7 +771,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Los lotes `draft` se pueden borrar definitivamente desde la UI; no pasan por estado intermedio `cancelled`. Los lotes ya publicados siguen protegidos y solo se corrigen/versionan.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
-- Supervisores pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; no crean, generan, editan masivamente ni publican.
+- `rh_operativo` y `supervisor` pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente. La creacion, generacion, edicion masiva y publicacion siguen reservadas a alcance empresarial completo.
 - F4 implementa correcciones versionadas en la misma pantalla; clonado de semanas desde una semana manual no publicada, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
 ## Bloque F4 - correcciones versionadas

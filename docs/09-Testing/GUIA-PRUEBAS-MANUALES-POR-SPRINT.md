@@ -728,11 +728,11 @@ Cuando se implemente, la guia manual debera cubrir:
 
 - Unidades organizacionales por centro.
 - Responsables por centro o unidad.
-- Supervisor/responsable sin alcance explicito no puede operar.
+- RH operativo/supervisor sin alcance explicito no obtiene acceso global.
 - Alcance por centro completo.
 - Alcance por una o varias unidades organizacionales.
 - Jerarquia visible `department` -> `area` -> `team`.
-- Supervisor con acceso limitado a su alcance.
+- RH operativo opera limitado a su alcance; supervisor consulta limitado a su alcance.
 - Empresas sin unidades operando solo por centro.
 - Catalogo de turnos.
 - Perfiles `pattern`, `calendar`, `flexible` y `on_call`; `pattern_mode = cycle` ya cuenta con dominio e interfaz de configuracion, sin publicacion diaria.
@@ -1170,11 +1170,12 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 | Reemplazo principal | Reemplazar unidad principal con fecha efectiva. | La anterior queda reemplazada y la nueva vigente. |
 | Apoyo temporal | Crear apoyo temporal en otro centro de la misma empresa. | Se guarda como apoyo temporal con vigencia. |
 | Finalizar apoyo | Finalizar apoyo con fecha y motivo. | Queda finalizado sin eliminar registro. |
-| Responsables | Abrir `/organization/scopes` y asignar supervisor a centro. | El supervisor recibe alcance por centro. |
-| Alcance por unidad | Asignar supervisor a departamento o area. | Incluye descendientes segun jerarquia. |
-| No supervisor | Intentar asignar scope a owner/admin/rh. | El sistema bloquea porque no requieren scope. |
-| Mi alcance | Entrar como supervisor en `/organization/my-scope`. | Ve centros, unidades y trabajadores autorizados. |
-| Supervisor sin alcance | Entrar como supervisor sin scope. | Se muestra "Sin alcance operativo". |
+| Responsables | Abrir `/organization/scopes` y asignar RH operativo a centro. | RH operativo recibe alcance por centro y puede operar dentro de ese alcance. |
+| Alcance por unidad | Asignar RH operativo o supervisor a departamento o area. | Incluye descendientes segun jerarquia. |
+| Rol no asignable | Intentar asignar scope a `admin_empresa`, `rh_admin` o `trabajador`. | El sistema bloquea porque no requieren o no pueden recibir scope operativo. |
+| Mi alcance RH operativo | Entrar como RH operativo en `/organization/my-scope`. | Ve centros, unidades y trabajadores autorizados. |
+| Mi alcance supervisor | Entrar como supervisor en `/organization/my-scope`. | Ve centros, unidades y trabajadores autorizados en modo consulta. |
+| Sin alcance | Entrar como RH operativo o supervisor sin scope. | Se muestra "Sin alcance operativo". |
 | Aislamiento tenant | Intentar usar unidad, centro, trabajador o usuario de otra empresa. | El sistema bloquea el acceso horizontal. |
 
 ### No incluido todavia
@@ -1278,7 +1279,7 @@ Credencial comun demo: `VeraDemo123!`.
 | Demo Constructora con Herencia | `owner.construction.demo@veratime.local` | Administracion. | `CONST-BASE` - Por patron semanal | Empresa |
 | Demo Constructora con Herencia | `admin.construction.demo@veratime.local` | Trabajador de Construccion en Obra Norte. | `CONST-CALENDAR` - Por calendario | Centro |
 | Demo Constructora con Herencia | `rh.construction.demo@veratime.local` | Trabajador de Almacen. | `CONST-WAREHOUSE` - Por patron semanal | Unidad organizacional |
-| Demo Constructora con Herencia | `supervisor.construction.demo@veratime.local` | Supervisor con alcance limitado a Area Construccion. | Consulta/operacion limitada a su alcance | Unidad organizacional |
+| Demo Constructora con Herencia | `supervisor.construction.demo@veratime.local` | Supervisor con alcance limitado a Area Construccion. | Consulta limitada a su alcance | Unidad organizacional |
 | Demo Constructora con Herencia | `owner.construction.demo@veratime.local` | Trabajador con excepcion directa. | `CONST-DIRECT-CAL` - Por calendario | Relacion laboral |
 | Demo Sin Perfil de Horario | `owner.noprofile.demo@veratime.local` | Empresa sin asignaciones de perfil. | Sin perfil | Sin origen |
 
@@ -1296,8 +1297,9 @@ Credencial comun demo: `VeraDemo123!`.
 | Resolver perfil efectivo | Seleccionar trabajador y fecha. | Muestra perfil efectivo, tipo, origen, unidad principal y centro. |
 | Reemplazar asignacion | Reemplazar una asignacion vigente con nueva fecha y motivo. | La anterior queda reemplazada y se conserva historial. |
 | Finalizar excepcion | Finalizar una asignacion directa. | La asignacion queda finalizada y vuelve a aplicar la herencia superior. |
-| Supervisor con alcance | Entrar como supervisor con scope vigente. | No administra perfiles y solo puede asignar relacion laboral dentro de su alcance. |
-| Supervisor sin alcance | Entrar como supervisor sin scope. | No obtiene acceso operativo por solo tener rol. |
+| RH operativo con alcance | Entrar como RH operativo con scope vigente. | No administra modelos generales y solo puede asignar relacion laboral dentro de su alcance. |
+| Supervisor con alcance | Entrar como supervisor con scope vigente. | Consulta modelos activos y no puede asignar ni editar. |
+| Sin alcance | Entrar como RH operativo o supervisor sin scope. | No obtiene acceso operativo por solo tener rol. |
 
 ### No incluido todavia
 
@@ -2094,7 +2096,7 @@ Periodo demo:
 | Revisar antes de publicar | Ejecutar la revision. | Muestra bloqueos, advertencias y resumen alineado con dominio; el panel puede ocultarse. |
 | Publicar | Confirmar publicacion de un lote completo. | Persiste `published_at`, `published_by`, SHA-256 y cambia a solo lectura. |
 | Historial e integridad | En un lote publicado, abrir Historial o Integridad. | Los paneles aparecen solo al pedirlos y se pueden ocultar; el hash no queda como aviso permanente. |
-| Supervisor con alcance | Entrar con supervisor demo con alcance vigente. | Puede consultar segun alcance; no crea, genera, edita masivo ni publica. |
+| Alcance operativo | Entrar con RH operativo o supervisor demo con alcance vigente. | Puede consultar segun alcance; no crea, genera, edita masivo ni publica. |
 | Otra empresa | Cambiar a otra empresa o manipular IDs. | No muestra ni opera lotes ajenos. |
 | Responsive | Reducir ancho de pantalla. | El calendario ofrece vista en lista usable, sin depender solo de tabla ancha. |
 
