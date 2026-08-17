@@ -17,7 +17,7 @@ class ScheduleProfilePolicy
     public function viewAny(User $user, Company $company): bool
     {
         return $this->canManageCompanyProfiles($user, $company)
-            || $this->hasSupervisorScope($user, $company);
+            || $this->hasScopedViewScope($user, $company);
     }
 
     public function view(User $user, ScheduleProfile $profile): bool
@@ -30,7 +30,7 @@ class ScheduleProfilePolicy
             return true;
         }
 
-        return $profile->status === 'active' && $this->hasSupervisorScope($user, $profile->company);
+        return $profile->status === 'active' && $this->hasScopedViewScope($user, $profile->company);
     }
 
     public function create(User $user, Company $company): bool
@@ -72,7 +72,7 @@ class ScheduleProfilePolicy
         if ($assignmentScope !== 'employment_relationship'
             || ! $relationship
             || $relationship->company_id !== $company->id
-            || $user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            || ! in_array($user->roleKeyForCompany($company), RoleKey::scopedOperators(), true)) {
             return false;
         }
 
@@ -93,12 +93,12 @@ class ScheduleProfilePolicy
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 
-    private function hasSupervisorScope(User $user, Company $company): bool
+    private function hasScopedViewScope(User $user, Company $company): bool
     {
         if ($company->status !== 'active'
             || $user->status !== 'active'
             || ! $user->belongsToCompany($company)
-            || $user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            || ! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 

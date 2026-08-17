@@ -1,13 +1,11 @@
 <?php
 
-use App\Domains\Organization\Actions\EnsureUserCanManageWorkerAction;
 use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\EmploymentRelationship;
 use App\Models\OrganizationalUnit;
 use App\Support\RoleKey;
-use Illuminate\Auth\Access\AuthorizationException;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -21,7 +19,6 @@ new class extends Component {
     public function with(
         CurrentCompany $currentCompany,
         ResolveUserOperationalScopeAction $resolveScope,
-        EnsureUserCanManageWorkerAction $ensureCanManageWorker,
         ResolveEmploymentUnitsForDateAction $resolveEmploymentUnits,
     ): array {
         $company = $currentCompany->get();
@@ -41,14 +38,21 @@ new class extends Component {
             ->orderBy('center_id')
             ->limit(150)
             ->get()
-            ->filter(function (EmploymentRelationship $relationship) use ($company, $ensureCanManageWorker): bool {
-                try {
-                    $ensureCanManageWorker->handle(auth()->user(), $company, $relationship, $this->date);
-
+            ->filter(function (EmploymentRelationship $relationship) use ($company, $scope, $resolveEmploymentUnits): bool {
+                if (in_array($relationship->center_id, $scope['center_ids'], true)) {
                     return true;
-                } catch (AuthorizationException) {
-                    return false;
                 }
+
+                $units = $resolveEmploymentUnits->handle($company, $relationship, $this->date);
+                $candidateUnitIds = [];
+                if ($units['primary']) {
+                    $candidateUnitIds[] = $units['primary']->id;
+                }
+                foreach ($units['temporary_supports'] as $support) {
+                    $candidateUnitIds[] = $support->id;
+                }
+
+                return array_intersect($candidateUnitIds, $scope['organizational_unit_ids']) !== [];
             })
             ->values();
 

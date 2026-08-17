@@ -49,7 +49,7 @@ class EnsureUserCanManageWorkerAction
             return;
         }
 
-        if ($role !== RoleKey::SUPERVISOR) {
+        if (! in_array($role, RoleKey::scopedOperators(), true)) {
             throw new AuthorizationException('No autorizado para gestionar esta persona trabajadora.');
         }
 

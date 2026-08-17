@@ -29,6 +29,11 @@ class OperationalScopeAssignmentPolicy
         return $this->update($user, $scope);
     }
 
+    public function delete(User $user, OperationalScopeAssignment $scope): bool
+    {
+        return $this->update($user, $scope);
+    }
+
     private function canManageScopes(User $user, Company $company): bool
     {
         return $company->status === 'active'

@@ -83,7 +83,7 @@
                         <flux:navlist.item icon="shield-check" :href="route('organization.scopes')" :current="request()->routeIs('organization.scopes')" wire:navigate>Responsables y supervisores</flux:navlist.item>
                     @endif
 
-                    @if ($activeCompany && auth()->user()->roleKeyForCompany($activeCompany) === \App\Support\RoleKey::SUPERVISOR)
+                    @if ($activeCompany && in_array(auth()->user()->roleKeyForCompany($activeCompany), \App\Support\RoleKey::scopeAssignableRoles(), true))
                         <flux:navlist.item icon="eye" :href="route('organization.my-scope')" :current="request()->routeIs('organization.my-scope')" wire:navigate>Mi alcance</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
