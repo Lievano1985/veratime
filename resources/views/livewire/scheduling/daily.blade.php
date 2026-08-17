@@ -927,13 +927,13 @@ new class extends Component {
             return null;
         }
 
-        if (auth()->user()->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+        if (! in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return [];
         }
 
         $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, auth()->user(), now()->toDateString());
 
-        return $this->visibleSupervisorCenterIds($company, $scope);
+        return $this->visibleScopedCenterIds($company, $scope);
     }
 
     private function selectedBatch(CurrentCompany $currentCompany, bool $forUpdate): ScheduleBatch
@@ -1112,7 +1112,7 @@ new class extends Component {
             return false;
         }
 
-        if (auth()->user()->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+        if (! in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return true;
         }
 
@@ -1130,7 +1130,7 @@ new class extends Component {
             ->contains(fn (DailyScheduleAssignment $assignment) => in_array((int) $assignment->organizational_unit_id, $scope['organizational_unit_ids'], true));
     }
 
-    private function visibleSupervisorCenterIds($company, array $scope): array
+    private function visibleScopedCenterIds($company, array $scope): array
     {
         $unitCenterIds = $scope['organizational_unit_ids'] === []
             ? []

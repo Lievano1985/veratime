@@ -1,10 +1,12 @@
 <?php
 
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
+use App\Domains\Organization\Actions\DeleteOperationalScopeAction;
 use App\Domains\Organization\Actions\EndOperationalScopeAction;
-use App\Domains\Organization\Actions\ReplaceOperationalScopeAction;
+use App\Domains\Organization\Actions\UpdateOperationalScopeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\OperationalScopeAssignment;
+use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 use Illuminate\Support\Facades\Gate;
@@ -22,13 +24,14 @@ new class extends Component {
     public array $filters = [];
     public bool $showFormPanel = false;
     public bool $showEndPanel = false;
+    public ?int $editingScopeId = null;
     public ?int $endingScopeId = null;
 
     public function mount(): void
     {
         $this->form = $this->emptyForm();
         $this->endForm = $this->emptyEndForm();
-        $this->filters = ['status' => 'all', 'search' => ''];
+        $this->filters = ['status' => 'all', 'role' => 'all', 'search' => ''];
     }
 
     public function updated($property): void
@@ -49,13 +52,32 @@ new class extends Component {
         Gate::authorize('create', [OperationalScopeAssignment::class, $company]);
 
         $this->form = $this->emptyForm();
+        $this->editingScopeId = null;
+        $this->showFormPanel = true;
+    }
+
+    public function openEditPanel(int $scopeId, CurrentCompany $currentCompany): void
+    {
+        $scope = $this->authorizedScope($scopeId, $currentCompany);
+
+        $this->editingScopeId = $scope->id;
+        $this->form = [
+            'user_id' => (string) $scope->user_id,
+            'scope_kind' => $scope->center_id ? 'center' : 'unit',
+            'center_id' => $scope->center_id ? (string) $scope->center_id : '',
+            'organizational_unit_id' => $scope->organizational_unit_id ? (string) $scope->organizational_unit_id : '',
+            'responsibility_type' => $scope->responsibility_type,
+            'effective_from' => $scope->effective_from?->toDateString() ?? now()->toDateString(),
+            'effective_to' => $scope->effective_to?->toDateString() ?? '',
+            'reason' => $scope->reason ?? '',
+        ];
         $this->showFormPanel = true;
     }
 
     public function save(
         CurrentCompany $currentCompany,
         AssignOperationalScopeAction $assignAction,
-        ReplaceOperationalScopeAction $replaceAction,
+        UpdateOperationalScopeAction $updateAction,
     ): void {
         $company = $this->currentCompanyOrFail($currentCompany);
         Gate::authorize('create', [OperationalScopeAssignment::class, $company]);
@@ -80,7 +102,6 @@ new class extends Component {
                 Rule::exists('organizational_units', 'id')->where('company_id', $company->id)->where('status', 'active'),
             ],
             'form.responsibility_type' => ['required', Rule::in(['supervisor', 'responsible'])],
-            'form.operation' => ['required', Rule::in(['assign', 'replace'])],
             'form.effective_from' => ['required', 'date'],
             'form.effective_to' => ['nullable', 'date', 'after_or_equal:form.effective_from'],
             'form.reason' => ['required', 'string', 'max:1000'],
@@ -104,17 +125,36 @@ new class extends Component {
                 'created_by' => auth()->id(),
             ];
 
-            $validated['operation'] === 'replace'
-                ? $replaceAction->handle($company, $user, $data, $center, $unit)
+            $this->editingScopeId
+                ? $updateAction->handle($company, $this->authorizedScope($this->editingScopeId, $currentCompany), $user, $data, $center, $unit)
                 : $assignAction->handle($company, $user, $data, $center, $unit);
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['form.user_id' => $exception->getMessage()]);
         }
 
+        $message = $this->editingScopeId ? 'Alcance operativo actualizado.' : 'Alcance operativo guardado.';
         $this->showFormPanel = false;
+        $this->editingScopeId = null;
         $this->form = $this->emptyForm();
         $this->resetPage();
-        Session::flash('status', 'Alcance operativo guardado.');
+        Session::flash('status', $message);
+    }
+
+    public function deleteScope(int $scopeId, CurrentCompany $currentCompany, DeleteOperationalScopeAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $scope = $this->authorizedScope($scopeId, $currentCompany);
+
+        Gate::authorize('delete', $scope);
+
+        try {
+            $action->handle($company, $scope);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['form.user_id' => $exception->getMessage()]);
+        }
+
+        $this->resetPage();
+        Session::flash('status', 'Alcance operativo borrado.');
     }
 
     public function openEndPanel(int $scopeId, CurrentCompany $currentCompany): void
@@ -155,6 +195,7 @@ new class extends Component {
     {
         $this->showFormPanel = false;
         $this->showEndPanel = false;
+        $this->editingScopeId = null;
         $this->endingScopeId = null;
         $this->resetValidation();
     }
@@ -167,7 +208,7 @@ new class extends Component {
         return [
             'currentCompany' => $company,
             'scopes' => $this->scopeQuery($company)->paginate(12),
-            'supervisors' => $this->supervisorUsers($company),
+            'scopeUsers' => $this->scopeAssignableUsers($company),
             'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
             'units' => $company->organizationalUnits()->with('center')->where('status', 'active')->orderBy('name')->get(),
         ];
@@ -176,11 +217,23 @@ new class extends Component {
     private function scopeQuery($company)
     {
         $status = trim((string) ($this->filters['status'] ?? 'all'));
+        $role = trim((string) ($this->filters['role'] ?? 'all'));
         $search = trim((string) ($this->filters['search'] ?? ''));
+        $roleIds = $role !== 'all'
+            ? Role::query()->where('key', $role)->pluck('id')
+            : collect();
 
         return $company->operationalScopeAssignments()
             ->with(['user', 'center', 'organizationalUnit.center'])
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($role !== 'all', function ($query) use ($company, $roleIds): void {
+                $query->whereHas('user.companies', function ($companyQuery) use ($company, $roleIds): void {
+                    $companyQuery
+                        ->whereKey($company->id)
+                        ->wherePivot('status', 'active')
+                        ->wherePivotIn('role_id', $roleIds);
+                });
+            })
             ->when($search !== '', function ($query) use ($search): void {
                 $query->whereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
             })
@@ -188,12 +241,12 @@ new class extends Component {
             ->orderByDesc('id');
     }
 
-    private function supervisorUsers($company)
+    private function scopeAssignableUsers($company)
     {
         return $company->activeUsers()
             ->where('users.status', 'active')
             ->get()
-            ->filter(fn (User $user) => $user->roleKeyForCompany($company) === RoleKey::SUPERVISOR)
+            ->filter(fn (User $user) => in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true))
             ->sortBy('name')
             ->values();
     }
@@ -225,7 +278,6 @@ new class extends Component {
             'center_id' => '',
             'organizational_unit_id' => '',
             'responsibility_type' => 'supervisor',
-            'operation' => 'assign',
             'effective_from' => now()->toDateString(),
             'effective_to' => '',
             'reason' => '',
@@ -245,7 +297,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Responsables y supervisores</flux:heading>
-            <flux:subheading>Asigna alcance explicito por centro completo o unidad organizacional.</flux:subheading>
+            <flux:subheading>Asigna alcance explicito por centro completo o unidad organizacional a RH operativo y supervisores.</flux:subheading>
         </div>
 
         <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
@@ -260,12 +312,17 @@ new class extends Component {
     @endif
 
     <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-        Owner, administrador y RH ya tienen alcance empresarial completo. Solo los usuarios con rol supervisor requieren alcances explicitos.
+        Administrador de empresa y RH administrador tienen alcance empresarial completo. RH operativo opera solo dentro de sus alcances; supervisor consulta dentro de sus alcances.
     </div>
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-2">
-            <flux:input label="Buscar supervisor" placeholder="Nombre o email" wire:model.live.debounce.350ms="filters.search" />
+        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
+            <flux:input label="Buscar usuario" placeholder="Nombre o email" wire:model.live.debounce.350ms="filters.search" />
+            <flux:select label="Rol" wire:model.live="filters.role">
+                <flux:select.option value="all">Todos</flux:select.option>
+                <flux:select.option value="{{ RoleKey::RH_OPERATIVO }}">RH operativo</flux:select.option>
+                <flux:select.option value="{{ RoleKey::SUPERVISOR }}">Supervisor</flux:select.option>
+            </flux:select>
             <flux:select label="Estado" wire:model.live="filters.status">
                 <flux:select.option value="all">Todos</flux:select.option>
                 <flux:select.option value="active">Vigentes</flux:select.option>
@@ -292,6 +349,13 @@ new class extends Component {
                             <td class="px-4 py-3">
                                 <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $scope->user?->name }}</span>
                                 <span class="text-xs text-zinc-500">{{ $scope->user?->email }}</span>
+                                <span class="block text-xs text-zinc-500">
+                                    {{ match ($scope->user?->roleKeyForCompany($currentCompany)) {
+                                        RoleKey::RH_OPERATIVO => 'RH operativo',
+                                        RoleKey::SUPERVISOR => 'Supervisor',
+                                        default => 'Rol no operativo',
+                                    } }}
+                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 @if ($scope->center)
@@ -309,13 +373,21 @@ new class extends Component {
                                 </x-ui.badge>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                @if ($scope->status === 'active')
-                                    <flux:button type="button" size="sm" variant="ghost" wire:click="openEndPanel({{ $scope->id }})">
-                                        Finalizar
+                                <div class="flex flex-wrap justify-end gap-2">
+                                    <flux:button type="button" size="sm" variant="ghost" wire:click="openEditPanel({{ $scope->id }})">
+                                        Editar
                                     </flux:button>
-                                @else
-                                    <span class="text-xs text-zinc-500">Historial</span>
-                                @endif
+
+                                    @if ($scope->status === 'active')
+                                        <flux:button type="button" size="sm" variant="ghost" wire:click="openEndPanel({{ $scope->id }})">
+                                        Finalizar
+                                        </flux:button>
+                                    @endif
+
+                                    <flux:button type="button" size="sm" variant="danger" wire:click="deleteScope({{ $scope->id }})" wire:confirm="Esta accion borrara la asignacion de alcance. ¿Deseas continuar?">
+                                        Borrar
+                                    </flux:button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -332,19 +404,17 @@ new class extends Component {
         {{ $scopes->links() }}
     </section>
 
-    <x-side-panel wire:model="showFormPanel" title="Alcance operativo" subheading="El usuario debe tener rol supervisor." labelledby="operational-scope-form-title">
+    <x-side-panel wire:model="showFormPanel" title="{{ $editingScopeId ? 'Editar alcance operativo' : 'Nuevo alcance operativo' }}" subheading="El usuario debe tener rol RH operativo o supervisor." labelledby="operational-scope-form-title">
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
-                <flux:select label="Supervisor" wire:model="form.user_id">
-                    <flux:select.option value="">Selecciona un supervisor</flux:select.option>
-                    @foreach ($supervisors as $supervisor)
-                        <flux:select.option value="{{ $supervisor->id }}">{{ $supervisor->name }} - {{ $supervisor->email }}</flux:select.option>
+                <flux:select label="Usuario operativo" wire:model="form.user_id">
+                    <flux:select.option value="">Selecciona RH operativo o supervisor</flux:select.option>
+                    @foreach ($scopeUsers as $scopeUser)
+                        <flux:select.option value="{{ $scopeUser->id }}">
+                            {{ $scopeUser->name }} - {{ $scopeUser->email }}
+                            ({{ $scopeUser->roleKeyForCompany($currentCompany) === RoleKey::RH_OPERATIVO ? 'RH operativo' : 'Supervisor' }})
+                        </flux:select.option>
                     @endforeach
-                </flux:select>
-
-                <flux:select label="Operacion" wire:model="form.operation">
-                    <flux:select.option value="assign">Asignar alcance</flux:select.option>
-                    <flux:select.option value="replace">Reemplazar alcance vigente</flux:select.option>
                 </flux:select>
 
                 <flux:select label="Tipo de alcance" wire:model.live="form.scope_kind">
@@ -388,7 +458,7 @@ new class extends Component {
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
                 <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar alcance</flux:button>
+                <flux:button type="submit" variant="primary">{{ $editingScopeId ? 'Actualizar alcance' : 'Guardar alcance' }}</flux:button>
             </div>
         </form>
     </x-side-panel>

@@ -174,10 +174,10 @@ class OrganizationalScopeTest extends TestCase
         ]);
     }
 
-    public function test_supervisor_scopes_resolve_by_center_department_area_and_team(): void
+    public function test_scoped_operator_without_scope_cannot_manage_workers(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $create = app(CreateOrganizationalUnitAction::class);
         $department = $create->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
         $area = $create->handle($company, $center, $this->unitData('PROD', 'Produccion', 'area'), $department);
@@ -186,33 +186,33 @@ class OrganizationalScopeTest extends TestCase
         app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $team, ['effective_from' => '2026-08-01']);
 
         $this->expectException(AuthorizationException::class);
-        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-02');
+        app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-02');
     }
 
-    public function test_supervisor_can_manage_by_unit_descendants_and_not_sibling_units(): void
+    public function test_rh_operativo_can_manage_by_unit_descendants_and_not_sibling_units(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
-        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $create = app(CreateOrganizationalUnitAction::class);
         $department = $create->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
         $area = $create->handle($company, $center, $this->unitData('PROD', 'Produccion', 'area'), $department);
         $team = $create->handle($company, $center, $this->unitData('TA', 'Turno A', 'team'), $area);
         $otherArea = $create->handle($company, $center, $this->unitData('ALM', 'Almacen', 'area'), $department);
         app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $team, ['effective_from' => '2026-08-01']);
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], unit: $area);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], unit: $area);
 
-        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-02');
-        $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, $supervisor, '2026-08-02');
+        app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-02');
+        $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, $rhOperativo, '2026-08-02');
         $this->assertContains($team->id, $scope['organizational_unit_ids']);
         $this->assertNotContains($otherArea->id, $scope['organizational_unit_ids']);
     }
 
-    public function test_supervisor_scope_does_not_use_legacy_temporary_support(): void
+    public function test_rh_operativo_scope_does_not_use_legacy_temporary_support(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $supportCenter = Center::factory()->for($company)->create();
         $supportUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $supportCenter, $this->unitData('SUP', 'Soporte', 'department'));
-        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         EmploymentUnitAssignment::query()->forceCreate([
             'company_id' => $company->id,
             'employment_relationship_id' => $relationship->id,
@@ -222,10 +222,10 @@ class OrganizationalScopeTest extends TestCase
             'effective_to' => '2026-08-10',
             'status' => 'active',
         ]);
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], unit: $supportUnit);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], unit: $supportUnit);
 
         $this->expectException(AuthorizationException::class);
-        app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-06');
+        app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-06');
     }
 
     public function test_company_managers_can_manage_any_worker_and_inactive_contexts_are_blocked(): void
@@ -241,23 +241,23 @@ class OrganizationalScopeTest extends TestCase
         app(EnsureUserCanManageWorkerAction::class)->handle($inactiveUser, $company, $relationship, '2026-08-01');
     }
 
-    public function test_scope_assignment_requires_supervisor_and_blocks_duplicates(): void
+    public function test_scope_assignment_requires_scope_assignable_role_and_blocks_duplicates(): void
     {
         [$company, $center] = $this->companyAndCenter();
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
-        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
 
         try {
             app(AssignOperationalScopeAction::class)->handle($company, $admin, ['effective_from' => '2026-08-01'], center: $center);
-            $this->fail('Expected non supervisor scope assignment to be blocked.');
+            $this->fail('Expected non scope assignable role to be blocked.');
         } catch (InvalidArgumentException) {
             $this->assertTrue(true);
         }
 
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], center: $center);
 
         $this->expectException(InvalidArgumentException::class);
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-02'], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-02'], center: $center);
     }
 
     public function test_scope_replacement_and_end_preserve_history(): void
@@ -314,15 +314,26 @@ class OrganizationalScopeTest extends TestCase
         app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('BAD', 'Area invalida', 'area'), $foreignParent);
     }
 
-    public function test_supervisor_with_center_scope_can_manage_workers_in_that_center(): void
+    public function test_rh_operativo_with_center_scope_can_manage_workers_in_that_center(): void
+    {
+        [$company, $center, $relationship] = $this->relationshipContext();
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
+
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], center: $center);
+
+        app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-02');
+        $this->assertTrue(true);
+    }
+
+    public function test_supervisor_with_center_scope_cannot_manage_workers(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
 
         app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], center: $center);
 
+        $this->expectException(AuthorizationException::class);
         app(EnsureUserCanManageWorkerAction::class)->handle($supervisor, $company, $relationship, '2026-08-02');
-        $this->assertTrue(true);
     }
     private function unitData(string $code, string $name, string $type): array
     {

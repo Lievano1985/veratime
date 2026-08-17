@@ -440,12 +440,13 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertHasErrors(['primaryForm.organizational_unit_id']);
     }
 
-    public function test_scopes_ui_assigns_unit_scope_and_blocks_non_supervisor(): void
+    public function test_scopes_ui_assigns_scope_to_rh_operativo_and_supervisor_and_blocks_non_assignable_roles(): void
     {
         [$company, $center] = $this->companyAndCenter();
         $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $rh = $this->userWithCompanyRole($company, RoleKey::RH_ADMIN);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
@@ -458,6 +459,18 @@ class OrganizationalOperationsUiTest extends TestCase
             ->set('form.effective_from', '2026-08-01')
             ->set('form.reason', 'Responsable del area')
             ->call('save');
+
+        Volt::test('organization.scopes')
+            ->assertSee('RH operativo')
+            ->assertSee('Supervisor')
+            ->set('form.user_id', (string) $rhOperativo->id)
+            ->set('form.scope_kind', 'center')
+            ->set('form.center_id', (string) $center->id)
+            ->set('form.responsibility_type', 'responsible')
+            ->set('form.effective_from', '2026-08-01')
+            ->set('form.reason', 'RH operativo del centro')
+            ->call('save')
+            ->assertHasNoErrors();
 
         Volt::test('organization.scopes')
             ->set('form.user_id', (string) $rh->id)
@@ -475,13 +488,22 @@ class OrganizationalOperationsUiTest extends TestCase
             'responsibility_type' => 'responsible',
             'status' => 'active',
         ]);
+        $this->assertDatabaseHas('operational_scope_assignments', [
+            'company_id' => $company->id,
+            'user_id' => $rhOperativo->id,
+            'center_id' => $center->id,
+            'responsibility_type' => 'responsible',
+            'status' => 'active',
+        ]);
     }
 
-    public function test_scopes_ui_replaces_and_ends_scope_preserving_history(): void
+    public function test_scopes_ui_filters_edits_ends_and_deletes_scope_assignments(): void
     {
         [$company, $center] = $this->companyAndCenter();
+        $otherCenter = Center::factory()->for($company)->create(['name' => 'Centro secundario']);
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
@@ -489,33 +511,54 @@ class OrganizationalOperationsUiTest extends TestCase
             ->set('form.user_id', (string) $supervisor->id)
             ->set('form.scope_kind', 'center')
             ->set('form.center_id', (string) $center->id)
-            ->set('form.operation', 'assign')
             ->set('form.effective_from', '2026-08-01')
             ->set('form.reason', 'Alta')
             ->call('save');
 
-        Volt::test('organization.scopes')
-            ->set('form.user_id', (string) $supervisor->id)
-            ->set('form.scope_kind', 'center')
-            ->set('form.center_id', (string) $center->id)
-            ->set('form.operation', 'replace')
-            ->set('form.effective_from', '2026-08-15')
-            ->set('form.reason', 'Cambio de vigencia')
-            ->call('save');
-
-        $active = OperationalScopeAssignment::query()->where('status', 'active')->firstOrFail();
+        $scope = OperationalScopeAssignment::query()->where('user_id', $supervisor->id)->firstOrFail();
 
         Volt::test('organization.scopes')
-            ->call('openEndPanel', $active->id)
+            ->set('filters.role', RoleKey::RH_OPERATIVO)
+            ->assertSee('No hay alcances operativos que coincidan con los filtros.')
+            ->set('filters.role', RoleKey::SUPERVISOR)
+            ->assertSee($supervisor->email);
+
+        Volt::test('organization.scopes')
+            ->call('openEditPanel', $scope->id)
+            ->assertSet('form.user_id', (string) $supervisor->id)
+            ->set('form.user_id', (string) $rhOperativo->id)
+            ->set('form.center_id', (string) $otherCenter->id)
+            ->set('form.responsibility_type', 'responsible')
+            ->set('form.reason', 'Cambio de responsable operativo')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('operational_scope_assignments', [
+            'id' => $scope->id,
+            'user_id' => $rhOperativo->id,
+            'center_id' => $otherCenter->id,
+            'responsibility_type' => 'responsible',
+            'status' => 'active',
+        ]);
+
+        Volt::test('organization.scopes')
+            ->call('openEndPanel', $scope->id)
             ->set('endForm.effective_to', '2026-08-20')
             ->set('endForm.reason', 'Fin de responsabilidad')
             ->call('endScope');
 
-        $this->assertDatabaseHas('operational_scope_assignments', ['status' => 'replaced']);
         $this->assertDatabaseHas('operational_scope_assignments', [
-            'id' => $active->id,
+            'id' => $scope->id,
             'status' => 'inactive',
             'reason' => 'Fin de responsabilidad',
+        ]);
+
+        Volt::test('organization.scopes')
+            ->call('deleteScope', $scope->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('operational_scope_assignments', [
+            'id' => $scope->id,
         ]);
     }
 

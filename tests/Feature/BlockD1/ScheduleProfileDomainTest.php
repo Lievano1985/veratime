@@ -280,7 +280,7 @@ class ScheduleProfileDomainTest extends TestCase
         $this->assertNull($resolver->handle($emptyCompany, $emptyRelationship, '2026-08-01')['schedule_profile']);
     }
 
-    public function test_policies_allow_managers_and_limit_supervisor_assignment_to_relationship_scope(): void
+    public function test_policies_allow_managers_and_limit_scoped_operator_assignment_to_relationship_scope(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $center = Center::factory()->for($company)->create(['status' => 'active']);
@@ -294,22 +294,27 @@ class ScheduleProfileDomainTest extends TestCase
         }
 
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $this->assertFalse(Gate::forUser($supervisor)->allows('create', [ScheduleProfile::class, $company]));
         $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'company', null, '2026-08-01']));
         $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
+        $this->assertFalse(Gate::forUser($rhOperativo)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
 
         app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], center: $center);
 
         $this->assertTrue(Gate::forUser($supervisor)->allows('view', $profile));
-        $this->assertTrue(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
-        $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'center', null, '2026-08-01']));
+        $this->assertFalse(Gate::forUser($supervisor)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
+        $this->assertTrue(Gate::forUser($rhOperativo)->allows('view', $profile));
+        $this->assertTrue(Gate::forUser($rhOperativo)->allows('assign', [ScheduleProfile::class, $company, 'employment_relationship', $relationship, '2026-08-01']));
+        $this->assertFalse(Gate::forUser($rhOperativo)->allows('assign', [ScheduleProfile::class, $company, 'center', null, '2026-08-01']));
 
         $this->expectException(InvalidArgumentException::class);
         app(AssignScheduleProfileAction::class)->handle($company, $profile, [
             'assignment_scope' => 'center',
             'center_id' => $center->id,
             'effective_from' => '2026-08-01',
-        ], $supervisor);
+        ], $rhOperativo);
     }
 
     public function test_invalid_rules_or_failed_replacement_do_not_leave_partial_state(): void

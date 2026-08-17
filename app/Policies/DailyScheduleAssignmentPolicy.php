@@ -2,13 +2,11 @@
 
 namespace App\Policies;
 
-use App\Domains\Organization\Actions\EnsureUserCanManageWorkerAction;
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
 use App\Models\User;
 use App\Support\RoleKey;
-use Illuminate\Auth\Access\AuthorizationException;
 use InvalidArgumentException;
 
 class DailyScheduleAssignmentPolicy
@@ -23,7 +21,7 @@ class DailyScheduleAssignmentPolicy
             return true;
         }
 
-        if ($user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+        if (! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 
@@ -47,17 +45,23 @@ class DailyScheduleAssignmentPolicy
             return true;
         }
 
-        if ($user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+        if (! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 
         try {
-            app(EnsureUserCanManageWorkerAction::class)->handle($user, $company, $assignment->employmentRelationship, $assignment->work_date->toDateString());
-        } catch (AuthorizationException|InvalidArgumentException) {
+            $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, $user, $assignment->work_date->toDateString());
+        } catch (InvalidArgumentException) {
             return false;
         }
 
-        return true;
+        if (in_array($assignment->employmentRelationship?->center_id, $scope['center_ids'], true)) {
+            return true;
+        }
+
+        $unitId = $assignment->organizational_unit_id;
+
+        return $unitId !== null && in_array($unitId, $scope['organizational_unit_ids'], true);
     }
 
     public function create(User $user, Company $company): bool

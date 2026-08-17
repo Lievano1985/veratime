@@ -26,7 +26,7 @@ class AssignScheduleProfileAction
         $this->assertCompanyAndProfile($company, $profile);
 
         $normalized = $this->normalizeAssignment($company, $data);
-        $this->authorizeSupervisorScope($company, $normalized, $createdBy);
+        $this->authorizeScopedOperator($company, $normalized, $createdBy);
 
         return DB::transaction(function () use ($company, $profile, $normalized, $createdBy): ScheduleProfileAssignment {
             $this->lockScopeRows($company, $normalized);
@@ -131,7 +131,7 @@ class AssignScheduleProfileAction
         return $to !== null && $relationship->ended_at->toDateString() >= $to;
     }
 
-    private function authorizeSupervisorScope(Company $company, array $normalized, ?User $user): void
+    private function authorizeScopedOperator(Company $company, array $normalized, ?User $user): void
     {
         if (! $user) {
             return;
@@ -146,7 +146,7 @@ class AssignScheduleProfileAction
             return;
         }
 
-        if ($role !== RoleKey::SUPERVISOR || $normalized['assignment_scope'] !== 'employment_relationship') {
+        if (! in_array($role, RoleKey::scopedOperators(), true) || $normalized['assignment_scope'] !== 'employment_relationship') {
             throw new InvalidArgumentException('El usuario solo puede asignar perfiles dentro de su alcance permitido.');
         }
 

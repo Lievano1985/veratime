@@ -202,19 +202,19 @@ class ScheduleProfileUiTest extends TestCase
         $this->assertDatabaseHas('schedule_profile_assignments', ['status' => 'inactive', 'id' => $replacement->id]);
     }
 
-    public function test_supervisor_can_only_assign_direct_relationship_inside_scope(): void
+    public function test_rh_operativo_can_only_assign_direct_relationship_inside_scope(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $center = Center::factory()->for($company)->create(['status' => 'active']);
         $otherCenter = Center::factory()->for($company)->create(['status' => 'active']);
         $relationship = EmploymentRelationship::factory()->forCompany($company)->create(['center_id' => $center->id]);
         $foreignRelationship = EmploymentRelationship::factory()->forCompany($company)->create(['center_id' => $otherCenter->id]);
-        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $profile = $this->patternProfile($company, 'BASE', 'Base');
 
-        app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => now()->toDateString()], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => now()->toDateString()], center: $center);
 
-        $this->actingAs($supervisor)->withSession(['current_company_id' => $company->id]);
+        $this->actingAs($rhOperativo)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('scheduling.profile-assignments')
             ->call('openAssignmentPanel')

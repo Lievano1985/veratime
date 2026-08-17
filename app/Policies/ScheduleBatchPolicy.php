@@ -15,7 +15,7 @@ class ScheduleBatchPolicy
     public function viewAny(User $user, Company $company): bool
     {
         return $this->canManageCompanyScheduling($user, $company)
-            || $this->hasSupervisorScope($user, $company);
+            || $this->hasScopedViewScope($user, $company);
     }
 
     public function view(User $user, ScheduleBatch $batch): bool
@@ -28,7 +28,7 @@ class ScheduleBatchPolicy
             return true;
         }
 
-        return $this->supervisorCanSeeCenter($user, $batch->company, $batch->center_id, $batch->period_start->toDateString());
+        return $this->scopedUserCanSeeCenter($user, $batch->company, $batch->center_id, $batch->period_start->toDateString());
     }
 
     public function create(User $user, Company $company): bool
@@ -93,12 +93,12 @@ class ScheduleBatchPolicy
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 
-    private function hasSupervisorScope(User $user, Company $company): bool
+    private function hasScopedViewScope(User $user, Company $company): bool
     {
         if ($company->status !== 'active'
             || $user->status !== 'active'
             || ! $user->belongsToCompany($company)
-            || $user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            || ! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 
@@ -111,12 +111,12 @@ class ScheduleBatchPolicy
         return $scope['center_ids'] !== [] || $scope['organizational_unit_ids'] !== [];
     }
 
-    private function supervisorCanSeeCenter(User $user, Company $company, int $centerId, string $date): bool
+    private function scopedUserCanSeeCenter(User $user, Company $company, int $centerId, string $date): bool
     {
         if ($company->status !== 'active'
             || $user->status !== 'active'
             || ! $user->belongsToCompany($company)
-            || $user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            || ! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 

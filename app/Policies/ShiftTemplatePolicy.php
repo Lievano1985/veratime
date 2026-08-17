@@ -14,7 +14,7 @@ class ShiftTemplatePolicy
     public function viewAny(User $user, Company $company): bool
     {
         return $this->canManageCompanyTemplates($user, $company)
-            || $this->hasSupervisorScope($user, $company);
+            || $this->hasScopedViewScope($user, $company);
     }
 
     public function view(User $user, ShiftTemplate $template): bool
@@ -27,7 +27,7 @@ class ShiftTemplatePolicy
             return true;
         }
 
-        return $template->status === 'active' && $this->hasSupervisorScope($user, $template->company);
+        return $template->status === 'active' && $this->hasScopedViewScope($user, $template->company);
     }
 
     public function create(User $user, Company $company): bool
@@ -63,12 +63,12 @@ class ShiftTemplatePolicy
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 
-    private function hasSupervisorScope(User $user, Company $company): bool
+    private function hasScopedViewScope(User $user, Company $company): bool
     {
         if ($company->status !== 'active'
             || $user->status !== 'active'
             || ! $user->belongsToCompany($company)
-            || $user->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            || ! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
 
