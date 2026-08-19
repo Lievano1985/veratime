@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -24,6 +25,7 @@ class RegisterManualTimeEventAction
 
     public function __construct(
         private readonly CreateTimeEventAction $createTimeEvent,
+        private readonly ScopedOperationalAccess $scopedAccess,
     ) {}
 
     public function handle(Company $company, User $sourceUser, Worker $worker, array $data): TimeEvent
@@ -36,6 +38,7 @@ class RegisterManualTimeEventAction
         $reason = $this->validateReason($data['reason'] ?? null);
         $employmentRelationship = $this->resolveActiveEmploymentRelationship($company, $worker);
         $center = $employmentRelationship?->center;
+        $this->assertActorCanCaptureForCenter($company, $sourceUser, $center);
         $timezone = $this->validateTimezone($data['timezone'] ?? $center?->timezone ?? $company->timezone);
         $local = $this->validateLocalDateTime($data['occurred_local_date'] ?? null, $data['occurred_local_time'] ?? null, $timezone);
         $capturedAt = CarbonImmutable::now('UTC');
@@ -141,5 +144,12 @@ class RegisterManualTimeEventAction
         }
 
         return $relationship;
+    }
+
+    private function assertActorCanCaptureForCenter(Company $company, User $sourceUser, ?Center $center): void
+    {
+        if (! $this->scopedAccess->canOperateFullCenter($sourceUser, $company, $center)) {
+            throw new InvalidArgumentException('El usuario no puede capturar eventos para este centro.');
+        }
     }
 }

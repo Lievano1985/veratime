@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\LaborCondition;
@@ -13,12 +14,13 @@ class LaborConditionPolicy
     public function create(User $user, Company $company, EmploymentRelationship $relationship): bool
     {
         return $relationship->company_id === $company->id
-            && $this->canManageCompanyLaborConditions($user, $company);
+            && app(ScopedOperationalAccess::class)->canOperateRelationship($user, $company, $relationship);
     }
 
     public function update(User $user, LaborCondition $condition): bool
     {
-        return $this->canManageCompanyLaborConditions($user, $condition->company);
+        return $condition->employmentRelationship
+            && app(ScopedOperationalAccess::class)->canOperateRelationship($user, $condition->company, $condition->employmentRelationship);
     }
 
     private function canManageCompanyLaborConditions(User $user, Company $company): bool

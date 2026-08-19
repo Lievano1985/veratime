@@ -3,6 +3,7 @@
 namespace App\Domains\Scheduling\Actions;
 
 use App\Domains\Organization\Actions\EnsureUserCanManageWorkerAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -146,12 +147,32 @@ class AssignScheduleProfileAction
             return;
         }
 
-        if (! in_array($role, RoleKey::scopedOperators(), true) || $normalized['assignment_scope'] !== 'employment_relationship') {
+        if (! in_array($role, RoleKey::scopedOperators(), true)) {
             throw new InvalidArgumentException('El usuario solo puede asignar perfiles dentro de su alcance permitido.');
         }
 
-        $relationship = EmploymentRelationship::query()->findOrFail($normalized['employment_relationship_id']);
-        $this->ensureUserCanManageWorker->handle($user, $company, $relationship, $normalized['effective_from']);
+        if ($normalized['assignment_scope'] === 'center') {
+            $center = Center::query()->findOrFail($normalized['center_id']);
+            if (app(ScopedOperationalAccess::class)->canOperateFullCenter($user, $company, $center, $normalized['effective_from'])) {
+                return;
+            }
+        }
+
+        if ($normalized['assignment_scope'] === 'organizational_unit') {
+            $unit = OrganizationalUnit::query()->findOrFail($normalized['organizational_unit_id']);
+            if (app(ScopedOperationalAccess::class)->canOperateUnit($user, $company, $unit, $normalized['effective_from'])) {
+                return;
+            }
+        }
+
+        if ($normalized['assignment_scope'] === 'employment_relationship') {
+            $relationship = EmploymentRelationship::query()->findOrFail($normalized['employment_relationship_id']);
+            $this->ensureUserCanManageWorker->handle($user, $company, $relationship, $normalized['effective_from']);
+
+            return;
+        }
+
+        throw new InvalidArgumentException('El usuario solo puede asignar perfiles dentro de su alcance permitido.');
     }
 
     private function lockScopeRows(Company $company, array $normalized): void

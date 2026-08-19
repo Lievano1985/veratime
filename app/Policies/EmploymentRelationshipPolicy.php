@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -13,12 +14,12 @@ class EmploymentRelationshipPolicy
     public function create(User $user, Company $company, Center $center): bool
     {
         return $center->company_id === $company->id
-            && $this->canManageCompanyRelationships($user, $company);
+            && app(ScopedOperationalAccess::class)->canOperateFullCenter($user, $company, $center);
     }
 
     public function update(User $user, EmploymentRelationship $relationship): bool
     {
-        return $this->canManageCompanyRelationships($user, $relationship->company);
+        return app(ScopedOperationalAccess::class)->canOperateRelationship($user, $relationship->company, $relationship);
     }
 
     public function end(User $user, EmploymentRelationship $relationship): bool

@@ -79,6 +79,10 @@ class AssignOperationalScopeAction
             throw new InvalidArgumentException('El alcance requiere exactamente un centro o una unidad organizacional.');
         }
 
+        if ($unit && $user->roleKeyForCompany($company) === RoleKey::RH_OPERATIVO) {
+            throw new InvalidArgumentException('RH operativo debe recibir alcance por centro completo.');
+        }
+
         if (! in_array($data['responsibility_type'] ?? 'supervisor', ['supervisor', 'responsible'], true)) {
             throw new InvalidArgumentException('El tipo de responsabilidad no es valido.');
         }

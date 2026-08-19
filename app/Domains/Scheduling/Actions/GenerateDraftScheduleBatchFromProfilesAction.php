@@ -3,6 +3,7 @@
 namespace App\Domains\Scheduling\Actions;
 
 use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\Scheduling\Data\GenerateDraftScheduleBatchFromProfilesResult;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
@@ -120,8 +121,14 @@ class GenerateDraftScheduleBatchFromProfilesAction
             || $actor->status !== 'active'
             || $batch->company_id !== $company->id
             || $batch->center?->company_id !== $company->id
-            || ! $actor->belongsToCompany($company)
-            || ! in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
+            || ! $actor->belongsToCompany($company)) {
+            throw new InvalidArgumentException('El usuario no puede generar programacion diaria para este lote.');
+        }
+
+        $canGenerate = in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)
+            || app(ScopedOperationalAccess::class)->canOperateFullCenter($actor, $company, $batch->center);
+
+        if (! $canGenerate) {
             throw new InvalidArgumentException('El usuario no puede generar programacion diaria para este lote.');
         }
 

@@ -11,7 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListWorkDaysAction
 {
     /**
-     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, search?: ?string} $filters
+     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, search?: ?string} $filters
      * @return LengthAwarePaginator<int, WorkDay>
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
@@ -54,6 +54,25 @@ class ListWorkDaysAction
             })
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('work_date', '<=', $date))
+            ->when(array_key_exists('center_ids', $filters) && $filters['center_ids'] !== null, function ($query) use ($filters): void {
+                $centerIds = $filters['center_ids'] ?? [];
+                $relationshipIds = $filters['relationship_ids'] ?? [];
+
+                $query->where(function ($accessQuery) use ($centerIds, $relationshipIds): void {
+                    if ($centerIds !== []) {
+                        $accessQuery->whereIn('center_id', $centerIds);
+                    }
+
+                    if ($relationshipIds !== []) {
+                        $method = $centerIds === [] ? 'whereIn' : 'orWhereIn';
+                        $accessQuery->{$method}('employment_relationship_id', $relationshipIds);
+                    }
+
+                    if ($centerIds === [] && $relationshipIds === []) {
+                        $accessQuery->whereRaw('1 = 0');
+                    }
+                });
+            })
             ->when($filters['center_id'] ?? null, fn ($query, $centerId) => $query->where('center_id', $centerId))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['schedule_status'] ?? null, fn ($query, $status) => $query->where('schedule_status', $status))

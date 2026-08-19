@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Company;
 use App\Models\User;
 use App\Support\RoleKey;
@@ -13,12 +14,13 @@ class WorkerCredentialPolicy
     public function create(User $user, Company $company, Worker $worker): bool
     {
         return $worker->company_id === $company->id
-            && $this->canManageCompanyCredentials($user, $company);
+            && $this->canManageWorkerCredential($user, $worker);
     }
 
     public function update(User $user, WorkerCredential $credential): bool
     {
-        return $this->canManageCompanyCredentials($user, $credential->company);
+        return $credential->worker
+            && $this->canManageWorkerCredential($user, $credential->worker);
     }
 
     public function reset(User $user, WorkerCredential $credential): bool
@@ -36,5 +38,15 @@ class WorkerCredentialPolicy
         return $company->status === 'active'
             && $user->belongsToCompany($company)
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
+    }
+
+    private function canManageWorkerCredential(User $user, Worker $worker): bool
+    {
+        $company = $worker->company;
+        $relationship = $worker->activeEmploymentRelationship;
+
+        return $company
+            && $relationship
+            && app(ScopedOperationalAccess::class)->canOperateRelationship($user, $company, $relationship);
     }
 }

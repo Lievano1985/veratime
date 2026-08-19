@@ -2,6 +2,7 @@
 
 namespace App\Domains\Scheduling\Actions;
 
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\Scheduling\Data\ScheduleBatchPublicationValidationResult;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
@@ -103,9 +104,12 @@ class ValidateScheduleBatchForPublicationAction
             $result->addError('La empresa debe estar activa para publicar programacion.');
         }
 
-        if ($actor->status !== 'active'
-            || ! $actor->belongsToCompany($company)
-            || ! in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
+        $canPublish = $actor->status === 'active'
+            && $actor->belongsToCompany($company)
+            && (in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)
+                || app(ScopedOperationalAccess::class)->canOperateFullCenter($actor, $company, $batch->center));
+
+        if (! $canPublish) {
             $result->addError('El usuario no puede publicar programacion diaria para esta empresa.');
         }
 

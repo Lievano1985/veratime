@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
 use App\Models\User;
@@ -45,6 +46,11 @@ class DailyScheduleAssignmentPolicy
             return true;
         }
 
+        if ($user->roleKeyForCompany($company) === RoleKey::SUPERVISOR
+            && $assignment->scheduleBatch()->value('status') !== 'published') {
+            return false;
+        }
+
         if (! in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true)) {
             return false;
         }
@@ -74,8 +80,19 @@ class DailyScheduleAssignmentPolicy
 
     public function update(User $user, DailyScheduleAssignment $assignment): bool
     {
-        return $assignment->scheduleBatch?->status === 'draft'
-            && $this->create($user, $assignment->company);
+        if ($assignment->scheduleBatch?->status !== 'draft' || ! $assignment->company) {
+            return false;
+        }
+
+        if ($this->create($user, $assignment->company)) {
+            return true;
+        }
+
+        return app(ScopedOperationalAccess::class)->canOperateFullCenter(
+            $user,
+            $assignment->company,
+            $assignment->scheduleBatch?->center,
+        );
     }
 
     public function deleteDraft(User $user, DailyScheduleAssignment $assignment): bool

@@ -3,6 +3,8 @@
 namespace App\Policies;
 
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
+use App\Models\Center;
 use App\Models\Company;
 use App\Models\OrganizationalUnit;
 use App\Models\ScheduleBatch;
@@ -28,6 +30,14 @@ class ScheduleBatchPolicy
             return true;
         }
 
+        if ($user->roleKeyForCompany($batch->company) === RoleKey::SUPERVISOR && $batch->status !== 'published') {
+            return false;
+        }
+
+        if ($user->roleKeyForCompany($batch->company) === RoleKey::RH_OPERATIVO) {
+            return app(ScopedOperationalAccess::class)->canOperateFullCenter($user, $batch->company, $batch->center);
+        }
+
         return $this->scopedUserCanSeeCenter($user, $batch->company, $batch->center_id, $batch->period_start->toDateString());
     }
 
@@ -38,7 +48,9 @@ class ScheduleBatchPolicy
 
     public function update(User $user, ScheduleBatch $batch): bool
     {
-        return $batch->status === 'draft' && $this->canManageCompanyScheduling($user, $batch->company);
+        return $batch->status === 'draft'
+            && ($this->canManageCompanyScheduling($user, $batch->company)
+                || $this->canOperateDraftBatchCenter($user, $batch));
     }
 
     public function generate(User $user, ScheduleBatch $batch): bool
@@ -48,7 +60,9 @@ class ScheduleBatchPolicy
 
     public function publish(User $user, ScheduleBatch $batch): bool
     {
-        return $this->update($user, $batch);
+        return $batch->status === 'draft'
+            && ($this->canManageCompanyScheduling($user, $batch->company)
+                || $this->canOperateDraftBatchCenter($user, $batch));
     }
 
     public function createCorrection(User $user, ScheduleBatch $batch): bool
@@ -91,6 +105,21 @@ class ScheduleBatchPolicy
             && $user->status === 'active'
             && $user->belongsToCompany($company)
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
+    }
+
+    public function createForCenter(User $user, Company $company, Center $center, ?string $date = null): bool
+    {
+        return $center->company_id === $company->id
+            && $center->status === 'active'
+            && ($this->canManageCompanyScheduling($user, $company)
+                || app(ScopedOperationalAccess::class)->canOperateFullCenter($user, $company, $center, $date));
+    }
+
+    private function canOperateDraftBatchCenter(User $user, ScheduleBatch $batch): bool
+    {
+        return $batch->company
+            && $batch->center
+            && app(ScopedOperationalAccess::class)->canOperateFullCenter($user, $batch->company, $batch->center);
     }
 
     private function hasScopedViewScope(User $user, Company $company): bool
