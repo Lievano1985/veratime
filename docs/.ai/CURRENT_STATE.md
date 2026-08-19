@@ -58,14 +58,20 @@ Sprint actual:
 ## Decision vigente de roles
 
 - ADR-0006 acepta la matriz de roles y alcances empresariales.
+- ADR-0006 es la fuente viva para actualizar permisos por rol, pantalla y tipo de accion cada vez que se agregue un nuevo alcance.
+- `super_admin` pertenece a la capa de plataforma: no necesita pertenecer a una empresa, puede listar/crear/editar empresas y crear administradores empresariales iniciales; no debe operar jornadas, horarios, incidencias o periodos como personal interno de una empresa.
 - `owner` deja de ser rol operativo diferenciado para el MVP.
 - `admin_empresa` sera el administrador general de empresa.
 - `rh_admin` sera responsable general de RH y podra administrar RH operativos, supervisores y alcances.
-- `rh_operativo` operara solo centros o unidades asignadas.
-- `supervisor` sera rol de consulta por alcance explicito; no obtiene permisos globales por rol.
+- `rh_operativo` operara solo centros completos asignados; no recibe alcance por unidad organizacional.
+- `supervisor` sera rol de consulta por alcance explicito de centro o unidad; no obtiene permisos globales por rol.
 - `trabajador` queda para portal propio futuro.
 - Bloque A2 normaliza `RoleKey`, `RoleSeeder`, seeders demo, modulo de usuarios, policies y pruebas para retirar el uso operativo de `owner`, `admin`, `rh` y `hr`.
-- `admin_empresa` y `rh_admin` conservan alcance empresarial completo; `rh_operativo` y `supervisor` dependen de alcances explicitos.
+- `admin_empresa` y `rh_admin` conservan alcance empresarial completo.
+- `rh_operativo` depende de alcance explicito por centro completo: administra trabajadores, unidades, turnos, modelos, jornadas, incidencias y programacion semanal dentro de sus centros.
+- `rh_operativo` puede publicar programacion semanal solo cuando el lote pertenece a uno de sus centros completos.
+- `rh_operativo` puede asignar supervisores dentro de sus centros completos; no puede asignar otros RH operativo ni alcances fuera de sus centros.
+- `supervisor` depende de alcance explicito por centro o unidad: solo consulta su alcance, programacion publicada y jornadas de su alcance; no ve catalogo de turnos, modelos, borradores ni publica/dictamina.
 
 ## Estado de epics
 
@@ -771,7 +777,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Los lotes `draft` se pueden borrar definitivamente desde la UI; no pasan por estado intermedio `cancelled`. Los lotes ya publicados siguen protegidos y solo se corrigen/versionan.
 - La publicacion usa `ValidateScheduleBatchForPublicationAction` y `PublishScheduleBatchAction`; despues de publicar el lote queda solo lectura.
 - La consulta de lotes publicados permite verificar integridad con `VerifyPublishedScheduleBatchSnapshotAction`; el hash se consulta en el panel de integridad, no como aviso permanente.
-- `rh_operativo` y `supervisor` pueden consultar lotes segun `ScheduleBatchPolicy` y alcance operativo vigente. La creacion, generacion, edicion masiva y publicacion siguen reservadas a alcance empresarial completo.
+- `rh_operativo` consulta y opera lotes segun `ScheduleBatchPolicy` y alcance operativo vigente; `supervisor` solo consulta programacion publicada dentro de su alcance.
 - F4 implementa correcciones versionadas en la misma pantalla; clonado de semanas desde una semana manual no publicada, CSV/XLSX, API WFM, `work_days`, calculos legales, alertas, incidencias, cierres, conformidad y reportes siguen pendientes.
 
 ## Bloque F4 - correcciones versionadas
