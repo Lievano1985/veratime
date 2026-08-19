@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\BlockF3B;
 
+use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
 use App\Domains\Scheduling\Actions\ReplaceDraftDailyScheduleAssignmentAction;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
+use App\Models\Role;
 use App\Models\ScheduleBatch;
 use App\Models\User;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Database\Seeders\VeraTimeDailyScheduleScenarioSeeder;
 use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
@@ -452,6 +455,72 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', (string) $batch->snapshot_sha256);
     }
 
+    public function test_rh_operativo_with_full_center_scope_can_create_generate_and_publish_center_week(): void
+    {
+        $this->seedDailyScenarios();
+        [$company] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $center = $company->centers()->firstOrFail();
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
+
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, [
+            'effective_from' => '2026-08-01',
+            'reason' => 'RH operativo por centro completo',
+        ], center: $center);
+
+        $this->actingAs($rhOperativo)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('scheduling.daily')
+            ->assertSee('Nueva semana')
+            ->call('openCreatePanel')
+            ->set('batchForm.center_id', (string) $center->id)
+            ->set('batchForm.period_start', '2026-09-15')
+            ->set('batchForm.period_end', '2026-09-21')
+            ->call('createAndGenerate')
+            ->assertHasNoErrors();
+
+        $batch = ScheduleBatch::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->whereDate('period_start', '2026-09-14')
+            ->where('status', 'draft')
+            ->firstOrFail();
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->assertHasNoErrors()
+            ->assertSet('selectedBatchId', $batch->id);
+
+        $relationship = EmploymentRelationship::query()
+            ->where('company_id', $company->id)
+            ->where('center_id', $center->id)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        Volt::test('scheduling.daily')
+            ->call('selectBatch', $batch->id)
+            ->call('openDayEditor', $relationship->id, '2026-09-15')
+            ->set('dayForm.day_type', 'rest')
+            ->set('dayForm.reason', 'Ajuste de RH operativo')
+            ->call('saveDay')
+            ->assertHasNoErrors()
+            ->call('reviewBatch')
+            ->assertSee('Listo para publicar')
+            ->set('confirmPublish', true)
+            ->call('publishBatch')
+            ->assertHasNoErrors()
+            ->assertSee('Programacion publicada');
+
+        $batch->refresh();
+        $this->assertSame('published', $batch->status);
+
+        $this->assertDatabaseHas('daily_schedule_assignments', [
+            'schedule_batch_id' => $batch->id,
+            'employment_relationship_id' => $relationship->id,
+            'day_type' => 'rest',
+            'source_type' => 'manual',
+        ]);
+    }
+
     public function test_unassigned_batch_cannot_be_published(): void
     {
         $this->seedDailyScenarios();
@@ -711,6 +780,18 @@ class DailyScheduleCalendarUiTest extends TestCase
             'source_reference' => ['schema_version' => 1, 'reason' => 'Supervisor scope fixture'],
         ]);
 
+        $this->assertFalse($supervisor->can('view', $batch));
+
+        $batch->forceFill([
+            'status' => 'published',
+            'version' => 1,
+            'published_by' => $supervisor->id,
+            'published_at' => now(),
+            'snapshot_schema_version' => 'daily_schedule_batch_v1',
+            'snapshot_canonical_json' => '{"demo":true}',
+            'snapshot_sha256' => str_repeat('b', 64),
+        ])->save();
+
         $this->actingAs($supervisor)->withSession(['current_company_id' => $company->id]);
 
         $this->get(route('scheduling.daily'))
@@ -779,5 +860,21 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->where('status', 'active')
             ->orderBy('id')
             ->firstOrFail();
+    }
+
+    private function userWithCompanyRole(Company $company, string $roleKey): User
+    {
+        $role = Role::query()->firstOrCreate(
+            ['key' => $roleKey],
+            ['name' => strtoupper($roleKey), 'description' => 'Rol prueba', 'is_system' => true],
+        );
+        $user = User::factory()->create(['status' => 'active']);
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        return $user->refresh();
     }
 }

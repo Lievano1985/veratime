@@ -464,6 +464,16 @@ class OrganizationalOperationsUiTest extends TestCase
             ->assertSee('RH operativo')
             ->assertSee('Supervisor')
             ->set('form.user_id', (string) $rhOperativo->id)
+            ->set('form.scope_kind', 'unit')
+            ->set('form.organizational_unit_id', (string) $unit->id)
+            ->set('form.responsibility_type', 'responsible')
+            ->set('form.effective_from', '2026-08-01')
+            ->set('form.reason', 'RH operativo no debe operar por area')
+            ->call('save')
+            ->assertHasErrors(['form.user_id']);
+
+        Volt::test('organization.scopes')
+            ->set('form.user_id', (string) $rhOperativo->id)
             ->set('form.scope_kind', 'center')
             ->set('form.center_id', (string) $center->id)
             ->set('form.responsibility_type', 'responsible')
@@ -485,7 +495,7 @@ class OrganizationalOperationsUiTest extends TestCase
             'company_id' => $company->id,
             'user_id' => $supervisor->id,
             'organizational_unit_id' => $unit->id,
-            'responsibility_type' => 'responsible',
+            'responsibility_type' => 'supervisor',
             'status' => 'active',
         ]);
         $this->assertDatabaseHas('operational_scope_assignments', [
@@ -560,6 +570,73 @@ class OrganizationalOperationsUiTest extends TestCase
         $this->assertDatabaseMissing('operational_scope_assignments', [
             'id' => $scope->id,
         ]);
+    }
+
+    public function test_rh_operativo_manages_supervisor_scopes_only_inside_assigned_center(): void
+    {
+        [$company, $center] = $this->companyAndCenter();
+        $otherCenter = Center::factory()->for($company)->create(['name' => 'Centro fuera de alcance']);
+        $unit = app(CreateOrganizationalUnitAction::class)->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
+        $foreignUnit = app(CreateOrganizationalUnitAction::class)->handle($company, $otherCenter, $this->unitData('FIN', 'Finanzas', 'department'));
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
+        $otherRhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
+        $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $otherSupervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, [
+            'effective_from' => '2026-08-01',
+            'reason' => 'RH operativo del centro',
+        ], center: $center);
+        app(AssignOperationalScopeAction::class)->handle($company, $otherSupervisor, [
+            'effective_from' => '2026-08-01',
+            'reason' => 'Supervisor externo',
+        ], center: $otherCenter);
+
+        $this->actingAs($rhOperativo)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('organization.scopes'))
+            ->assertOk()
+            ->assertSee('Responsables y supervisores')
+            ->assertDontSee('Centro fuera de alcance');
+
+        Volt::test('organization.scopes')
+            ->assertSee($supervisor->email)
+            ->assertDontSee($otherRhOperativo->email)
+            ->assertSee($center->name)
+            ->assertDontSee($otherCenter->name)
+            ->assertDontSee($foreignUnit->name)
+            ->set('form.user_id', (string) $supervisor->id)
+            ->set('form.scope_kind', 'unit')
+            ->assertSee($unit->name)
+            ->set('form.organizational_unit_id', (string) $unit->id)
+            ->set('form.effective_from', '2026-08-10')
+            ->set('form.reason', 'Supervisor dentro del alcance')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('operational_scope_assignments', [
+            'company_id' => $company->id,
+            'user_id' => $supervisor->id,
+            'organizational_unit_id' => $unit->id,
+            'status' => 'active',
+        ]);
+
+        Volt::test('organization.scopes')
+            ->set('form.user_id', (string) $supervisor->id)
+            ->set('form.scope_kind', 'center')
+            ->set('form.center_id', (string) $otherCenter->id)
+            ->set('form.effective_from', '2026-08-10')
+            ->set('form.reason', 'Centro fuera de alcance')
+            ->call('save')
+            ->assertHasErrors(['form.center_id']);
+
+        Volt::test('organization.scopes')
+            ->set('form.user_id', (string) $otherRhOperativo->id)
+            ->set('form.scope_kind', 'center')
+            ->set('form.center_id', (string) $center->id)
+            ->set('form.effective_from', '2026-08-10')
+            ->set('form.reason', 'No puede asignar RH operativo')
+            ->call('save')
+            ->assertHasErrors(['form.user_id']);
     }
 
     public function test_my_scope_shows_only_authorized_workers_and_empty_state(): void

@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
+use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -58,6 +59,57 @@ it('manual selector only shows active company workers', function (): void {
     Volt::test('time-events.manual')
         ->assertSee($worker->full_name)
         ->assertDontSee($otherWorker->full_name);
+});
+
+it('rh operativo can capture and list events only for assigned center', function (): void {
+    [$company, $worker, $relationship, $center] = sprint2fManualFixture(workerAttributes: ['full_name' => 'Ana Centro Permitido']);
+    [, $otherWorker, $otherRelationship, $otherCenter] = sprint2fManualFixture(workerAttributes: ['full_name' => 'Bruno Otro Centro']);
+    $otherWorker->forceFill(['company_id' => $company->id])->save();
+    $otherCenter->forceFill(['company_id' => $company->id])->save();
+    $otherRelationship->forceFill([
+        'company_id' => $company->id,
+        'worker_id' => $otherWorker->id,
+        'center_id' => $otherCenter->id,
+    ])->save();
+
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_OPERATIVO);
+    app(AssignOperationalScopeAction::class)->handle($company, $user, [
+        'effective_from' => '2026-08-01',
+        'reason' => 'RH operativo por centro completo',
+    ], center: $center);
+
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+    Volt::test('time-events.manual')
+        ->assertSee('Ana Centro Permitido')
+        ->assertDontSee('Bruno Otro Centro')
+        ->set('workerId', (string) $worker->id)
+        ->set('eventType', 'clock_in')
+        ->set('occurredLocalDate', '2026-08-16')
+        ->set('occurredLocalTime', '08:05')
+        ->set('reason', 'Captura justificada por RH operativo')
+        ->call('capture')
+        ->assertHasNoErrors()
+        ->assertSee('Captura justificada guardada')
+        ->set('workerId', (string) $otherWorker->id)
+        ->set('eventType', 'clock_out')
+        ->set('occurredLocalDate', '2026-08-16')
+        ->set('occurredLocalTime', '17:05')
+        ->set('reason', 'Intento fuera de alcance')
+        ->call('capture')
+        ->assertHasErrors(['workerId']);
+
+    $this->assertDatabaseHas('time_events', [
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $center->id,
+        'source' => 'admin_manual',
+    ]);
+    $this->assertDatabaseMissing('time_events', [
+        'company_id' => $company->id,
+        'worker_id' => $otherWorker->id,
+        'source' => 'admin_manual',
+    ]);
 });
 
 it('manual capture validates required fields and invalid type', function (): void {

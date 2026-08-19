@@ -353,6 +353,19 @@ class DailyScheduleCoreDomainTest extends TestCase
         $this->assertFalse(Gate::forUser($supervisor)->allows('view', $assignment));
 
         app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => '2026-08-01'], center: $center);
+        $this->assertFalse(Gate::forUser($supervisor)->allows('view', $batch));
+        $this->assertFalse(Gate::forUser($supervisor)->allows('view', $assignment));
+
+        $batch->forceFill([
+            'status' => 'published',
+            'version' => 1,
+            'published_by' => $supervisor->id,
+            'published_at' => now(),
+            'snapshot_schema_version' => 'daily_schedule_batch_v1',
+            'snapshot_canonical_json' => '{"demo":true}',
+            'snapshot_sha256' => str_repeat('c', 64),
+        ])->save();
+
         $this->assertTrue(Gate::forUser($supervisor)->allows('view', $batch));
         $this->assertTrue(Gate::forUser($supervisor)->allows('view', $assignment));
 

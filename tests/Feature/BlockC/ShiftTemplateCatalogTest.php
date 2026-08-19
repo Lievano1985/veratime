@@ -57,31 +57,37 @@ class ShiftTemplateCatalogTest extends TestCase
         }
 
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
+        $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
 
+        $this->assertTrue(Gate::forUser($rhOperativo)->allows('create', [ShiftTemplate::class, $company]));
         $this->assertFalse(Gate::forUser($supervisor)->allows('create', [ShiftTemplate::class, $company]));
         $this->assertDatabaseCount('shift_templates', 2);
+
+        $template = app(CreateShiftTemplateAction::class)->handle($company, [
+            'code' => 'ROP',
+            'name' => 'Turno RH operativo',
+        ], $this->simpleWorkSegments());
+
+        $this->assertTrue(Gate::forUser($rhOperativo)->allows('update', $template));
+        $this->assertTrue(Gate::forUser($rhOperativo)->allows('inactivate', $template));
+        $this->assertFalse(Gate::forUser($supervisor)->allows('update', $template));
     }
 
-    public function test_supervisor_needs_active_operational_scope_to_consult_active_templates(): void
+    public function test_supervisor_cannot_consult_shift_template_catalog_even_with_scope(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
         $center = Center::factory()->for($company)->create(['status' => 'active']);
         $supervisor = $this->userWithCompanyRole($company, RoleKey::SUPERVISOR);
 
         app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'ACT', 'name' => 'Activo'], $this->simpleWorkSegments());
-        app(CreateShiftTemplateAction::class)->handle($company, ['code' => 'INA', 'name' => 'Inactivo', 'status' => 'inactive'], $this->simpleWorkSegments());
 
         $this->actingAs($supervisor)->withSession(['current_company_id' => $company->id]);
         $this->get(route('scheduling.shifts'))->assertForbidden();
 
         app(AssignOperationalScopeAction::class)->handle($company, $supervisor, ['effective_from' => now()->toDateString()], center: $center);
 
-        $this->get(route('scheduling.shifts'))
-            ->assertOk()
-            ->assertSee('Activo')
-            ->assertDontSee('Inactivo')
-            ->assertSee('Solo consulta')
-            ->assertDontSee('Nueva plantilla');
+        $this->assertFalse(Gate::forUser($supervisor)->allows('viewAny', [ShiftTemplate::class, $company]));
+        $this->get(route('scheduling.shifts'))->assertForbidden();
     }
 
     public function test_code_is_unique_per_company_and_same_code_is_allowed_in_another_company(): void

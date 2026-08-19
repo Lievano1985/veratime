@@ -11,7 +11,6 @@ use App\Domains\Organization\Actions\InactivateOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ReplaceOperationalScopeAction;
 use App\Domains\Organization\Actions\ReplacePrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
-use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -189,25 +188,19 @@ class OrganizationalScopeTest extends TestCase
         app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-02');
     }
 
-    public function test_rh_operativo_can_manage_by_unit_descendants_and_not_sibling_units(): void
+    public function test_rh_operativo_cannot_receive_unit_scope(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $rhOperativo = $this->userWithCompanyRole($company, RoleKey::RH_OPERATIVO);
         $create = app(CreateOrganizationalUnitAction::class);
         $department = $create->handle($company, $center, $this->unitData('OPS', 'Operaciones', 'department'));
         $area = $create->handle($company, $center, $this->unitData('PROD', 'Produccion', 'area'), $department);
-        $team = $create->handle($company, $center, $this->unitData('TA', 'Turno A', 'team'), $area);
-        $otherArea = $create->handle($company, $center, $this->unitData('ALM', 'Almacen', 'area'), $department);
-        app(AssignPrimaryOrganizationalUnitAction::class)->handle($company, $relationship, $team, ['effective_from' => '2026-08-01']);
-        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], unit: $area);
 
-        app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-02');
-        $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, $rhOperativo, '2026-08-02');
-        $this->assertContains($team->id, $scope['organizational_unit_ids']);
-        $this->assertNotContains($otherArea->id, $scope['organizational_unit_ids']);
+        $this->expectException(InvalidArgumentException::class);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], unit: $area);
     }
 
-    public function test_rh_operativo_scope_does_not_use_legacy_temporary_support(): void
+    public function test_rh_operativo_center_scope_does_not_use_legacy_temporary_support_as_extra_scope(): void
     {
         [$company, $center, $relationship] = $this->relationshipContext();
         $supportCenter = Center::factory()->for($company)->create();
@@ -222,7 +215,7 @@ class OrganizationalScopeTest extends TestCase
             'effective_to' => '2026-08-10',
             'status' => 'active',
         ]);
-        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], unit: $supportUnit);
+        app(AssignOperationalScopeAction::class)->handle($company, $rhOperativo, ['effective_from' => '2026-08-01'], center: $supportCenter);
 
         $this->expectException(AuthorizationException::class);
         app(EnsureUserCanManageWorkerAction::class)->handle($rhOperativo, $company, $relationship, '2026-08-06');
