@@ -2,10 +2,12 @@
 
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\ReplacePrimaryOrganizationalUnitAction;
+use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -50,7 +52,7 @@ new class extends Component {
     public function openPrimaryPanel(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [EmploymentUnitAssignment::class, $company]);
+        Gate::authorize('viewAny', [EmploymentUnitAssignment::class, $company]);
 
         $this->primaryForm = $this->emptyPrimaryForm();
         $this->showPrimaryPanel = true;
@@ -62,7 +64,7 @@ new class extends Component {
         ReplacePrimaryOrganizationalUnitAction $replaceAction,
     ): void {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [EmploymentUnitAssignment::class, $company]);
+        Gate::authorize('viewAny', [EmploymentUnitAssignment::class, $company]);
 
         $validated = $this->validate([
             'primaryForm.worker_ids' => ['required', 'array', 'min:1'],
@@ -92,6 +94,7 @@ new class extends Component {
             DB::transaction(function () use ($company, $validated, $unit, $data, $replaceAction, $assignAction): void {
                 foreach ($validated['worker_ids'] as $workerId) {
                     $relationship = $this->activeRelationshipForWorker($company, (int) $workerId);
+                    Gate::authorize('assignToUnit', [EmploymentUnitAssignment::class, $company, $relationship, $unit]);
 
                     $validated['operation'] === 'replace'
                         ? $replaceAction->handle($company, $relationship, $unit, $data)
@@ -115,22 +118,25 @@ new class extends Component {
         $this->resetValidation();
     }
 
-    public function with(CurrentCompany $currentCompany): array
+    public function with(CurrentCompany $currentCompany, ResolveUserOperationalScopeAction $resolveUserScope): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         Gate::authorize('viewAny', [EmploymentUnitAssignment::class, $company]);
+        $scope = in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopedOperators(), true)
+            ? $resolveUserScope->handle($company, auth()->user(), now()->toDateString())
+            : null;
 
         return [
             'currentCompany' => $company,
-            'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
-            'organizationalUnits' => $this->organizationalUnitFilterOptions($company),
-            'assignments' => $this->assignmentQuery($company)->paginate(12),
-            'primaryUnits' => $this->primaryUnitOptions($company),
+            'centers' => $this->centerOptions($company, $scope),
+            'organizationalUnits' => $this->organizationalUnitFilterOptions($company, $scope),
+            'assignments' => $this->assignmentQuery($company, $scope)->paginate(12),
+            'primaryUnits' => $this->primaryUnitOptions($company, $scope),
             'primaryUnitHelp' => $this->primaryUnitHelp($company),
         ];
     }
 
-    private function assignmentQuery($company)
+    private function assignmentQuery($company, ?array $scope = null)
     {
         $search = trim((string) ($this->filters['search'] ?? ''));
         $centerId = trim((string) ($this->filters['center_id'] ?? ''));
@@ -139,6 +145,13 @@ new class extends Component {
 
         return $company->employmentUnitAssignments()
             ->with(['employmentRelationship.worker', 'employmentRelationship.center', 'organizationalUnit.center', 'replacedBy'])
+            ->when($scope !== null, function ($query) use ($scope): void {
+                $query->where(function ($scopeQuery) use ($scope): void {
+                    $scopeQuery
+                        ->whereHas('employmentRelationship', fn ($relationshipQuery) => $relationshipQuery->whereIn('center_id', $scope['center_ids']))
+                        ->orWhereIn('organizational_unit_id', $scope['organizational_unit_ids']);
+                });
+            })
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($unitId !== '', fn ($query) => $query->where('organizational_unit_id', (int) $unitId))
             ->when($centerId !== '', function ($query) use ($centerId): void {
@@ -154,23 +167,52 @@ new class extends Component {
             ->orderByDesc('id');
     }
 
-    private function organizationalUnitFilterOptions($company)
+    private function centerOptions($company, ?array $scope)
+    {
+        return $company->centers()
+            ->where('status', 'active')
+            ->when($scope !== null, function ($query) use ($scope): void {
+                $query->where(function ($scopeQuery) use ($scope): void {
+                    $scopeQuery
+                        ->whereIn('id', $scope['center_ids'])
+                        ->orWhereHas('organizationalUnits', fn ($unitQuery) => $unitQuery->whereIn('id', $scope['organizational_unit_ids']));
+                });
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function organizationalUnitFilterOptions($company, ?array $scope = null)
     {
         $centerId = trim((string) ($this->filters['center_id'] ?? ''));
 
         return $company->organizationalUnits()
             ->where('status', 'active')
+            ->when($scope !== null, function ($query) use ($scope): void {
+                $query->where(function ($scopeQuery) use ($scope): void {
+                    $scopeQuery
+                        ->whereIn('center_id', $scope['center_ids'])
+                        ->orWhereIn('id', $scope['organizational_unit_ids']);
+                });
+            })
             ->when($centerId !== '', fn ($query) => $query->where('center_id', (int) $centerId))
             ->orderBy('name')
             ->get();
     }
 
-    private function primaryUnitOptions($company)
+    private function primaryUnitOptions($company, ?array $scope = null)
     {
         $centerIds = $this->selectedPrimaryCenterIds($company);
 
         return $company->organizationalUnits()
             ->where('status', 'active')
+            ->when($scope !== null, function ($query) use ($scope): void {
+                $query->where(function ($scopeQuery) use ($scope): void {
+                    $scopeQuery
+                        ->whereIn('center_id', $scope['center_ids'])
+                        ->orWhereIn('id', $scope['organizational_unit_ids']);
+                });
+            })
             ->when($centerIds !== null, fn ($query) => $query->whereIn('center_id', $centerIds))
             ->orderBy('name')
             ->get();

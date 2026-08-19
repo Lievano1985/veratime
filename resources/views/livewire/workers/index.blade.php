@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Workers\Actions\BlockWorkerCredentialAction;
 use App\Domains\Workers\Actions\CreateOrReplaceLaborConditionAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
@@ -12,6 +13,7 @@ use App\Models\EmploymentRelationship;
 use App\Models\LaborCondition;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
+use App\Support\RoleKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -38,7 +40,7 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
-        Gate::authorize('create', [Worker::class, $company]);
+        Gate::authorize('viewAny', [Worker::class, $company]);
 
         $this->editingWorkerId = null;
         $this->resetWorkerForms();
@@ -96,10 +98,6 @@ new class extends Component {
             ? $this->authorizedWorker($this->editingWorkerId, $currentCompany)
             : null;
 
-        $worker
-            ? Gate::authorize('update', $worker)
-            : Gate::authorize('create', [Worker::class, $company]);
-
         $validated = $this->validate([
             'form.employee_code' => [
                 'required',
@@ -130,6 +128,10 @@ new class extends Component {
             ->whereKey($validated['center_id'])
             ->where('status', 'active')
             ->firstOrFail();
+
+        $worker
+            ? Gate::authorize('update', $worker)
+            : Gate::authorize('createForCenter', [Worker::class, $company, $center]);
 
         Gate::authorize('create', [EmploymentRelationship::class, $company, $center]);
 
@@ -326,13 +328,16 @@ new class extends Component {
         $this->clearCredentialTemporalPin();
     }
 
-    public function with(CurrentCompany $currentCompany): array
+    public function with(CurrentCompany $currentCompany, ResolveUserOperationalScopeAction $resolveUserScope): array
     {
         $company = $currentCompany->get();
 
         abort_unless($company, 403);
 
         Gate::authorize('viewAny', [Worker::class, $company]);
+        $scope = in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopedOperators(), true)
+            ? $resolveUserScope->handle($company, auth()->user(), now()->toDateString())
+            : null;
 
         return [
             'workers' => $company->workers()
@@ -341,6 +346,17 @@ new class extends Component {
                     'activeEmploymentRelationship.activeLaborCondition',
                     'credential',
                 ])
+                ->when($scope !== null, function ($query) use ($scope): void {
+                    $query->whereHas('activeEmploymentRelationship', function ($relationshipQuery) use ($scope): void {
+                        $relationshipQuery->where(function ($scopeQuery) use ($scope): void {
+                            $scopeQuery
+                                ->whereIn('center_id', $scope['center_ids'])
+                                ->orWhereHas('employmentUnitAssignments', fn ($unitQuery) => $unitQuery
+                                    ->where('status', 'active')
+                                    ->whereIn('organizational_unit_id', $scope['organizational_unit_ids']));
+                        });
+                    });
+                })
                 ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
                 ->when($this->search !== '', function ($query): void {
                     $search = '%'.$this->search.'%';
@@ -356,10 +372,17 @@ new class extends Component {
                 ->get(),
             'centers' => $company->centers()
                 ->where('status', 'active')
+                ->when($scope !== null, function ($query) use ($scope): void {
+                    $query->where(function ($scopeQuery) use ($scope): void {
+                        $scopeQuery
+                            ->whereIn('id', $scope['center_ids'])
+                            ->orWhereHas('organizationalUnits', fn ($unitQuery) => $unitQuery->whereIn('id', $scope['organizational_unit_ids']));
+                    });
+                })
                 ->orderBy('name')
                 ->get(),
             'currentCompany' => $company,
-            'canManageWorkers' => Gate::allows('create', [Worker::class, $company]),
+            'canManageWorkers' => Gate::allows('viewAny', [Worker::class, $company]),
             'editingWorker' => $this->editingWorkerId
                 ? $company->workers()
                     ->with([

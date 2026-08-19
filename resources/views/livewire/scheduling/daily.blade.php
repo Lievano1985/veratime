@@ -37,6 +37,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -139,7 +140,7 @@ new class extends Component {
     public function openCreatePanel(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [ScheduleBatch::class, $company]);
+        Gate::authorize('viewAny', [ScheduleBatch::class, $company]);
 
         $this->batchForm = $this->emptyBatchForm();
         $this->showCreatePanel = true;
@@ -200,15 +201,19 @@ new class extends Component {
         GenerateDraftScheduleBatchFromProfilesAction $generateAction,
     ): void {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $batches = $this->createBatches($currentCompany, $createAction);
-        $lastResult = null;
+        try {
+            [$batches, $lastResult] = DB::transaction(function () use ($currentCompany, $createAction, $generateAction, $company): array {
+                $batches = $this->createBatches($currentCompany, $createAction);
+                $lastResult = null;
 
-        foreach ($batches as $batch) {
-            try {
-                $lastResult = $generateAction->handle(auth()->user(), $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY);
-            } catch (\InvalidArgumentException $exception) {
-                throw ValidationException::withMessages(['batchForm.center_id' => $exception->getMessage()]);
-            }
+                foreach ($batches as $batch) {
+                    $lastResult = $generateAction->handle(auth()->user(), $company, $batch, GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY);
+                }
+
+                return [$batches, $lastResult];
+            });
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['batchForm.center_id' => $exception->getMessage()]);
         }
 
         $batch = $batches[array_key_last($batches)];
@@ -782,7 +787,7 @@ new class extends Component {
 
         return [
             'company' => $company,
-            'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
+            'centers' => $this->batchCreatableCenters($company),
             'units' => $company->organizationalUnits()->with('center')->where('status', 'active')->orderBy('name')->get(),
             'shiftTemplates' => $company->shiftTemplates()->with('segments')->where('status', 'active')->orderBy('name')->get(),
             'batches' => $this->batchQuery($company)->paginate(8),
@@ -790,7 +795,7 @@ new class extends Component {
             'selectedSummary' => $selectedBatch ? $this->batchSummary($selectedBatch) : null,
             'weekDates' => $selectedBatch ? $this->weekDates($selectedBatch) : [],
             'calendarRows' => $selectedBatch ? $this->calendarRows($company, $selectedBatch) : [],
-            'canCreateBatch' => Gate::allows('create', [ScheduleBatch::class, $company]),
+            'canCreateBatch' => $this->canCreateAnyBatch($company),
             'canEditSelectedBatch' => $selectedBatch ? Gate::allows('update', $selectedBatch) : false,
             'canPublishSelectedBatch' => $selectedBatch ? Gate::allows('publish', $selectedBatch) : false,
             'canCreateCorrection' => $selectedBatch ? Gate::allows('createCorrection', $selectedBatch) : false,
@@ -818,7 +823,6 @@ new class extends Component {
     private function createBatches(CurrentCompany $currentCompany, CreateScheduleBatchAction $action): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [ScheduleBatch::class, $company]);
 
         $validated = $this->validate([
             'batchForm.center_id' => ['required', 'integer', Rule::exists('centers', 'id')->where('company_id', $company->id)->where('status', 'active')],
@@ -828,6 +832,7 @@ new class extends Component {
         ])['batchForm'];
         [$validated['period_start'], $validated['period_end']] = $this->naturalWeekForDate($validated['period_start']);
         $center = $company->centers()->where('status', 'active')->whereKey((int) $validated['center_id'])->firstOrFail();
+        Gate::authorize('createForCenter', [ScheduleBatch::class, $company, $center]);
         $weeks = (int) $validated['weeks'];
         $batches = [];
         $periodStarts = [];
@@ -863,6 +868,21 @@ new class extends Component {
         }
 
         return $batches;
+    }
+
+    private function canCreateAnyBatch($company): bool
+    {
+        return $this->batchCreatableCenters($company)->isNotEmpty();
+    }
+
+    private function batchCreatableCenters($company)
+    {
+        return $company->centers()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->filter(fn ($center): bool => Gate::allows('createForCenter', [ScheduleBatch::class, $company, $center]))
+            ->values();
     }
 
     private function generateFromProfiles(CurrentCompany $currentCompany, GenerateDraftScheduleBatchFromProfilesAction $action, string $mode): void

@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterWebTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
@@ -10,6 +11,7 @@ use App\Domains\TimeRecords\Actions\VoidTimeEventAction;
 use App\Domains\WorkDays\Actions\RefreshWorkDaysForDateRangeAction;
 use App\Models\TimeEvent;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
@@ -96,6 +98,7 @@ new class extends Component {
             ->where('company_id', $company->id)
             ->where('status', 'active')
             ->findOrFail((int) $validated['workerId']);
+        $this->assertWorkerWithinVisibleCenters($company, $worker);
 
         try {
             $event = $action->handle($company, auth()->user(), $worker, [
@@ -172,6 +175,7 @@ new class extends Component {
             ->where('company_id', $company->id)
             ->where('status', 'active')
             ->findOrFail((int) $validated['assistedWorkerId']);
+        $this->assertWorkerWithinVisibleCenters($company, $worker);
 
         try {
             $event = $action->handle($company, auth()->user(), $worker, $eventType);
@@ -225,6 +229,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         $event = TimeEvent::query()
+            ->with('center')
             ->where('company_id', $company->id)
             ->findOrFail($eventId);
 
@@ -245,6 +250,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         $event = TimeEvent::query()
+            ->with('center')
             ->where('company_id', $company->id)
             ->findOrFail($eventId);
 
@@ -303,6 +309,7 @@ new class extends Component {
         ]);
 
         $event = TimeEvent::query()
+            ->with('center')
             ->where('company_id', $company->id)
             ->findOrFail((int) $validated['rejectingEventId']);
 
@@ -333,6 +340,7 @@ new class extends Component {
         ]);
 
         $event = TimeEvent::query()
+            ->with('center')
             ->where('company_id', $company->id)
             ->findOrFail((int) $validated['voidingEventId']);
 
@@ -356,8 +364,13 @@ new class extends Component {
 
         Gate::authorize('create', [TimeEvent::class, $company]);
 
+        $visibleCenterIds = $this->visibleCenterIds($company);
+
         $workers = $company->workers()
             ->where('status', 'active')
+            ->when($visibleCenterIds !== null, function ($query) use ($visibleCenterIds): void {
+                $query->whereHas('activeEmploymentRelationship', fn ($relationshipQuery) => $relationshipQuery->whereIn('center_id', $visibleCenterIds));
+            })
             ->orderBy('full_name')
             ->get();
         $assistedWorker = filled($this->assistedWorkerId)
@@ -368,6 +381,7 @@ new class extends Component {
 
         $events = $company->timeEvents()
             ->with(['worker', 'sourceUser', 'voidedBy'])
+            ->when($visibleCenterIds !== null, fn ($query) => $query->whereIn('center_id', $visibleCenterIds))
             ->when($this->dateFromFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '>=', $this->dateFromFilter))
             ->when($this->dateToFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '<=', $this->dateToFilter))
             ->when($this->sourceFilter !== '', fn ($query) => $query->where('source', $this->sourceFilter))
@@ -405,6 +419,36 @@ new class extends Component {
         abort_unless($company, 403);
 
         return $company;
+    }
+
+    private function visibleCenterIds($company): ?array
+    {
+        if (in_array(auth()->user()->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
+            return null;
+        }
+
+        if (! in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopedOperators(), true)) {
+            return [];
+        }
+
+        return app(ScopedOperationalAccess::class)->scope(auth()->user(), $company)['center_ids'];
+    }
+
+    private function assertWorkerWithinVisibleCenters($company, Worker $worker): void
+    {
+        $visibleCenterIds = $this->visibleCenterIds($company);
+
+        if ($visibleCenterIds === null) {
+            return;
+        }
+
+        $centerId = $worker->activeEmploymentRelationship()->value('center_id');
+
+        if (! $centerId || ! in_array($centerId, $visibleCenterIds, true)) {
+            throw ValidationException::withMessages([
+                'workerId' => 'No puedes capturar eventos para trabajadores fuera de tu centro asignado.',
+            ]);
+        }
     }
 
     private function eventLabel(string $eventType): string

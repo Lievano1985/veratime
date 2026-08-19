@@ -7,6 +7,8 @@ use App\Domains\Scheduling\Actions\ReplaceScheduleProfileAssignmentAction;
 use App\Domains\Scheduling\Actions\ResolveScheduleProfileForRelationshipAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\EmploymentRelationship;
+use App\Models\Center;
+use App\Models\OrganizationalUnit;
 use App\Models\ScheduleProfile;
 use App\Models\ScheduleProfileAssignment;
 use App\Models\Worker;
@@ -115,7 +117,7 @@ new class extends Component {
             $relationship = $company->employmentRelationships()->whereKey((int) $validated['employment_relationship_id'])->firstOrFail();
         }
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $validated['assignment_scope'], $relationship, $validated['effective_from']]);
+        $this->authorizeAssignmentScope($company, $validated, $validated['effective_from']);
 
         try {
             $action->handle($company, $profile, [
@@ -139,7 +141,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
         $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, now()->toDateString()]);
+        $this->authorizeExistingAssignmentScope($company, $assignment, now()->toDateString());
 
         $this->selectedAssignmentId = $assignment->id;
         $this->replaceForm = $this->emptyReplaceForm();
@@ -162,7 +164,7 @@ new class extends Component {
         ])['replaceForm'];
         $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, $validated['effective_from']]);
+        $this->authorizeExistingAssignmentScope($company, $assignment, $validated['effective_from']);
 
         $profile = $company->scheduleProfiles()->where('status', 'active')->whereKey((int) $validated['schedule_profile_id'])->firstOrFail();
 
@@ -190,7 +192,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
         $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, now()->toDateString()]);
+        $this->authorizeExistingAssignmentScope($company, $assignment, now()->toDateString());
 
         $this->selectedAssignmentId = $assignment->id;
         $this->endForm = $this->emptyEndForm();
@@ -207,7 +209,7 @@ new class extends Component {
         ])['endForm'];
         $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, $validated['effective_to']]);
+        $this->authorizeExistingAssignmentScope($company, $assignment, $validated['effective_to']);
 
         try {
             $action->handle($company, $assignment, $validated['effective_to']);
@@ -228,7 +230,7 @@ new class extends Component {
         $assignment = $this->authorizedAssignment($assignmentId, $currentCompany);
         $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
 
-        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, now()->toDateString()]);
+        $this->authorizeExistingAssignmentScope($company, $assignment, now()->toDateString());
 
         try {
             $action->handle($company, $assignment);
@@ -327,6 +329,47 @@ new class extends Component {
         }
 
         return $validated;
+    }
+
+    private function authorizeAssignmentScope($company, array $data, string $date): void
+    {
+        if ($data['assignment_scope'] === 'center') {
+            $center = $company->centers()->whereKey((int) $data['center_id'])->firstOrFail();
+            Gate::authorize('assignToCenter', [ScheduleProfile::class, $company, $center, $date]);
+
+            return;
+        }
+
+        if ($data['assignment_scope'] === 'organizational_unit') {
+            $unit = $company->organizationalUnits()->whereKey((int) $data['organizational_unit_id'])->firstOrFail();
+            Gate::authorize('assignToUnit', [ScheduleProfile::class, $company, $unit, $date]);
+
+            return;
+        }
+
+        $relationship = $data['assignment_scope'] === 'employment_relationship'
+            ? $company->employmentRelationships()->whereKey((int) $data['employment_relationship_id'])->firstOrFail()
+            : null;
+
+        Gate::authorize('assign', [ScheduleProfile::class, $company, $data['assignment_scope'], $relationship, $date]);
+    }
+
+    private function authorizeExistingAssignmentScope($company, $assignment, string $date): void
+    {
+        if ($assignment->assignment_scope === 'center') {
+            Gate::authorize('assignToCenter', [ScheduleProfile::class, $company, $assignment->center, $date]);
+
+            return;
+        }
+
+        if ($assignment->assignment_scope === 'organizational_unit') {
+            Gate::authorize('assignToUnit', [ScheduleProfile::class, $company, $assignment->organizationalUnit, $date]);
+
+            return;
+        }
+
+        $relationship = $assignment->assignment_scope === 'employment_relationship' ? $assignment->employmentRelationship : null;
+        Gate::authorize('assign', [ScheduleProfile::class, $company, $assignment->assignment_scope, $relationship, $date]);
     }
 
     private function assignmentQuery($company)

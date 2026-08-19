@@ -4,8 +4,11 @@ use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Organization\Actions\DeleteOperationalScopeAction;
 use App\Domains\Organization\Actions\EndOperationalScopeAction;
 use App\Domains\Organization\Actions\UpdateOperationalScopeAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\Tenancy\Support\CurrentCompany;
+use App\Models\Center;
 use App\Models\OperationalScopeAssignment;
+use App\Models\OrganizationalUnit;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
@@ -36,6 +39,10 @@ new class extends Component {
 
     public function updated($property): void
     {
+        if (str_starts_with((string) $property, 'form.')) {
+            $this->resetValidation((string) $property);
+        }
+
         if (str_starts_with((string) $property, 'filters.')) {
             $this->resetPage();
         }
@@ -44,12 +51,21 @@ new class extends Component {
             $this->form['center_id'] = '';
             $this->form['organizational_unit_id'] = '';
         }
+
+        if ($property === 'form.user_id' && $this->selectedUserRoleKey() === RoleKey::RH_OPERATIVO) {
+            $this->form['scope_kind'] = 'center';
+            $this->form['organizational_unit_id'] = '';
+        }
+
+        if ($property === 'form.user_id') {
+            $this->form['responsibility_type'] = $this->responsibilityTypeForSelectedUser();
+        }
     }
 
     public function openCreatePanel(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [OperationalScopeAssignment::class, $company]);
+        Gate::authorize('viewAny', [OperationalScopeAssignment::class, $company]);
 
         $this->form = $this->emptyForm();
         $this->editingScopeId = null;
@@ -80,7 +96,7 @@ new class extends Component {
         UpdateOperationalScopeAction $updateAction,
     ): void {
         $company = $this->currentCompanyOrFail($currentCompany);
-        Gate::authorize('create', [OperationalScopeAssignment::class, $company]);
+        Gate::authorize('viewAny', [OperationalScopeAssignment::class, $company]);
 
         $validated = $this->validate([
             'form.user_id' => [
@@ -93,31 +109,36 @@ new class extends Component {
                 'required_if:form.scope_kind,center',
                 'nullable',
                 'integer',
-                Rule::exists('centers', 'id')->where('company_id', $company->id)->where('status', 'active'),
             ],
             'form.organizational_unit_id' => [
                 'required_if:form.scope_kind,unit',
                 'nullable',
                 'integer',
-                Rule::exists('organizational_units', 'id')->where('company_id', $company->id)->where('status', 'active'),
             ],
-            'form.responsibility_type' => ['required', Rule::in(['supervisor', 'responsible'])],
             'form.effective_from' => ['required', 'date'],
             'form.effective_to' => ['nullable', 'date', 'after_or_equal:form.effective_from'],
             'form.reason' => ['required', 'string', 'max:1000'],
         ])['form'];
 
         $user = User::query()->whereKey((int) $validated['user_id'])->firstOrFail();
+
+        if ($user->roleKeyForCompany($company) === RoleKey::RH_OPERATIVO && $validated['scope_kind'] !== 'center') {
+            throw ValidationException::withMessages([
+                'form.user_id' => 'RH operativo debe recibir alcance por centro completo.',
+            ]);
+        }
+
         $center = $validated['scope_kind'] === 'center'
-            ? $company->centers()->whereKey((int) $validated['center_id'])->firstOrFail()
+            ? $this->resolveFormCenter($company, (int) $validated['center_id'])
             : null;
         $unit = $validated['scope_kind'] === 'unit'
-            ? $company->organizationalUnits()->whereKey((int) $validated['organizational_unit_id'])->firstOrFail()
+            ? $this->resolveFormUnit($company, (int) $validated['organizational_unit_id'])
             : null;
+        $this->assertCanWriteScope($company, $user, $center, $unit);
 
         try {
             $data = [
-                'responsibility_type' => $validated['responsibility_type'],
+                'responsibility_type' => $this->responsibilityTypeForUser($user, $company),
                 'effective_from' => $validated['effective_from'],
                 'effective_to' => $validated['effective_to'] ?? null,
                 'source' => 'manual',
@@ -209,8 +230,8 @@ new class extends Component {
             'currentCompany' => $company,
             'scopes' => $this->scopeQuery($company)->paginate(12),
             'scopeUsers' => $this->scopeAssignableUsers($company),
-            'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
-            'units' => $company->organizationalUnits()->with('center')->where('status', 'active')->orderBy('name')->get(),
+            'centers' => $this->visibleCenters($company),
+            'units' => $this->visibleUnits($company),
         ];
     }
 
@@ -225,13 +246,29 @@ new class extends Component {
 
         return $company->operationalScopeAssignments()
             ->with(['user', 'center', 'organizationalUnit.center'])
+            ->when($this->isScopedRhOperativo($company), function ($query) use ($company): void {
+                $centerIds = $this->visibleCenterIds($company);
+
+                $query
+                    ->whereHas('user.companies', function ($companyQuery) use ($company): void {
+                        $companyQuery
+                            ->whereKey($company->id)
+                            ->where('company_user.status', 'active')
+                            ->whereIn('company_user.role_id', Role::query()->where('key', RoleKey::SUPERVISOR)->pluck('id'));
+                    })
+                    ->where(function ($scopeQuery) use ($centerIds): void {
+                        $scopeQuery
+                            ->whereIn('center_id', $centerIds)
+                            ->orWhereHas('organizationalUnit', fn ($unitQuery) => $unitQuery->whereIn('center_id', $centerIds));
+                    });
+            })
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($role !== 'all', function ($query) use ($company, $roleIds): void {
                 $query->whereHas('user.companies', function ($companyQuery) use ($company, $roleIds): void {
                     $companyQuery
                         ->whereKey($company->id)
-                        ->wherePivot('status', 'active')
-                        ->wherePivotIn('role_id', $roleIds);
+                        ->where('company_user.status', 'active')
+                        ->whereIn('company_user.role_id', $roleIds);
                 });
             })
             ->when($search !== '', function ($query) use ($search): void {
@@ -246,9 +283,50 @@ new class extends Component {
         return $company->activeUsers()
             ->where('users.status', 'active')
             ->get()
-            ->filter(fn (User $user) => in_array($user->roleKeyForCompany($company), RoleKey::scopeAssignableRoles(), true))
+            ->filter(function (User $user) use ($company): bool {
+                $role = $user->roleKeyForCompany($company);
+
+                if ($this->isScopedRhOperativo($company)) {
+                    return $role === RoleKey::SUPERVISOR;
+                }
+
+                return in_array($role, RoleKey::scopeAssignableRoles(), true);
+            })
             ->sortBy('name')
             ->values();
+    }
+
+    private function selectedUserRoleKey(): ?string
+    {
+        $company = app(CurrentCompany::class)->get();
+
+        if (! $company || blank($this->form['user_id'] ?? null)) {
+            return null;
+        }
+
+        $user = User::query()->whereKey((int) $this->form['user_id'])->first();
+
+        return $user?->roleKeyForCompany($company);
+    }
+
+    private function responsibilityTypeForSelectedUser(): string
+    {
+        $company = app(CurrentCompany::class)->get();
+
+        if (! $company || blank($this->form['user_id'] ?? null)) {
+            return 'supervisor';
+        }
+
+        $user = User::query()->whereKey((int) $this->form['user_id'])->first();
+
+        return $user ? $this->responsibilityTypeForUser($user, $company) : 'supervisor';
+    }
+
+    private function responsibilityTypeForUser(User $user, $company): string
+    {
+        return $user->roleKeyForCompany($company) === RoleKey::RH_OPERATIVO
+            ? 'responsible'
+            : 'supervisor';
     }
 
     private function authorizedScope(int $scopeId, CurrentCompany $currentCompany): OperationalScopeAssignment
@@ -268,6 +346,101 @@ new class extends Component {
         abort_unless($company, 403);
 
         return $company;
+    }
+
+    private function assertCanWriteScope($company, User $targetUser, ?Center $center, ?OrganizationalUnit $unit): void
+    {
+        if (! $this->isScopedRhOperativo($company)) {
+            Gate::authorize('create', [OperationalScopeAssignment::class, $company]);
+
+            return;
+        }
+
+        if ($targetUser->roleKeyForCompany($company) !== RoleKey::SUPERVISOR) {
+            throw ValidationException::withMessages([
+                'form.user_id' => 'RH operativo solo puede asignar supervisores dentro de su alcance.',
+            ]);
+        }
+
+        if ($center && ! app(ScopedOperationalAccess::class)->canOperateFullCenter(auth()->user(), $company, $center)) {
+            throw ValidationException::withMessages([
+                'form.center_id' => 'Solo puedes asignar supervisores a centros dentro de tu alcance.',
+            ]);
+        }
+
+        if ($unit && ! app(ScopedOperationalAccess::class)->canOperateFullCenter(auth()->user(), $company, $unit->center_id)) {
+            throw ValidationException::withMessages([
+                'form.organizational_unit_id' => 'Solo puedes asignar supervisores a unidades dentro de tu alcance.',
+            ]);
+        }
+    }
+
+    private function resolveFormCenter($company, int $centerId): Center
+    {
+        $center = $company->centers()
+            ->where('status', 'active')
+            ->whereKey($centerId)
+            ->first();
+
+        if (! $center || ($this->isScopedRhOperativo($company) && ! app(ScopedOperationalAccess::class)->canOperateFullCenter(auth()->user(), $company, $center))) {
+            throw ValidationException::withMessages([
+                'form.center_id' => 'Selecciona un centro activo dentro de tu alcance.',
+            ]);
+        }
+
+        return $center;
+    }
+
+    private function resolveFormUnit($company, int $unitId): OrganizationalUnit
+    {
+        $unit = $company->organizationalUnits()
+            ->where('status', 'active')
+            ->whereKey($unitId)
+            ->first();
+
+        if (! $unit || ($this->isScopedRhOperativo($company) && ! app(ScopedOperationalAccess::class)->canOperateFullCenter(auth()->user(), $company, $unit->center_id))) {
+            throw ValidationException::withMessages([
+                'form.organizational_unit_id' => 'Selecciona una unidad activa dentro de tu alcance.',
+            ]);
+        }
+
+        return $unit;
+    }
+
+    private function visibleCenters($company)
+    {
+        $query = $company->centers()->where('status', 'active')->orderBy('name');
+
+        if ($this->isScopedRhOperativo($company)) {
+            $query->whereIn('id', $this->visibleCenterIds($company));
+        }
+
+        return $query->get();
+    }
+
+    private function visibleUnits($company)
+    {
+        $query = $company->organizationalUnits()->with('center')->where('status', 'active')->orderBy('name');
+
+        if ($this->isScopedRhOperativo($company)) {
+            $query->whereIn('center_id', $this->visibleCenterIds($company));
+        }
+
+        return $query->get();
+    }
+
+    private function visibleCenterIds($company): array
+    {
+        if (! $this->isScopedRhOperativo($company)) {
+            return [];
+        }
+
+        return app(ScopedOperationalAccess::class)->scope(auth()->user(), $company)['center_ids'];
+    }
+
+    private function isScopedRhOperativo($company): bool
+    {
+        return auth()->user()?->roleKeyForCompany($company) === RoleKey::RH_OPERATIVO;
     }
 
     private function emptyForm(): array
@@ -297,7 +470,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Responsables y supervisores</flux:heading>
-            <flux:subheading>Asigna alcance explicito por centro completo o unidad organizacional a RH operativo y supervisores.</flux:subheading>
+            <flux:subheading>Asigna centros completos a RH operativo o centros/unidades a supervisores.</flux:subheading>
         </div>
 
         <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
@@ -312,7 +485,7 @@ new class extends Component {
     @endif
 
     <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-        Administrador de empresa y RH administrador tienen alcance empresarial completo. RH operativo opera solo dentro de sus alcances; supervisor consulta dentro de sus alcances.
+        Administrador de empresa y RH administrador tienen alcance empresarial completo. RH operativo opera por centro completo; supervisor consulta dentro de sus centros o unidades asignadas.
     </div>
 
     <section class="space-y-4">
@@ -407,7 +580,18 @@ new class extends Component {
     <x-side-panel wire:model="showFormPanel" title="{{ $editingScopeId ? 'Editar alcance operativo' : 'Nuevo alcance operativo' }}" subheading="El usuario debe tener rol RH operativo o supervisor." labelledby="operational-scope-form-title">
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
-                <flux:select label="Usuario operativo" wire:model="form.user_id">
+                @if ($errors->any())
+                    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                        <p class="font-medium">Revisa los datos del alcance.</p>
+                        <ul class="mt-2 list-disc space-y-1 pl-5">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <flux:select label="Usuario operativo" wire:model.change="form.user_id">
                     <flux:select.option value="">Selecciona RH operativo o supervisor</flux:select.option>
                     @foreach ($scopeUsers as $scopeUser)
                         <flux:select.option value="{{ $scopeUser->id }}">
@@ -417,41 +601,66 @@ new class extends Component {
                     @endforeach
                 </flux:select>
 
-                <flux:select label="Tipo de alcance" wire:model.live="form.scope_kind">
-                    <flux:select.option value="center">Centro completo</flux:select.option>
-                    <flux:select.option value="unit">Unidad organizacional</flux:select.option>
-                </flux:select>
+                @if ($this->selectedUserRoleKey() === RoleKey::RH_OPERATIVO)
+                    <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                        RH operativo solo puede recibir alcance por centro completo.
+                    </div>
+                @else
+                    <label class="block text-sm font-medium text-zinc-800 dark:text-zinc-100" for="operational-scope-kind">
+                        Tipo de alcance
+                    </label>
+                    <select
+                        id="operational-scope-kind"
+                        wire:model.live="form.scope_kind"
+                        class="mt-2 block h-10 w-full rounded-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 py-2 text-sm text-zinc-700 shadow-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300"
+                    >
+                        <option value="center">Centro completo</option>
+                        <option value="unit">Unidad organizacional</option>
+                    </select>
+                @endif
 
-                @if ($form['scope_kind'] === 'center')
-                    <flux:select label="Centro" wire:model="form.center_id">
+                @error('form.scope_kind')
+                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                @enderror
+
+                @if (($form['scope_kind'] ?? 'center') === 'center')
+                    <div wire:key="scope-center-field">
+                    <flux:select label="Centro" wire:model.change="form.center_id">
                         <flux:select.option value="">Selecciona un centro</flux:select.option>
                         @foreach ($centers as $center)
                             <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
+                    @error('form.center_id')
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                    </div>
                 @else
-                    <flux:select label="Unidad" wire:model="form.organizational_unit_id">
+                    <div wire:key="scope-unit-field">
+                    <flux:select label="Unidad" wire:model.change="form.organizational_unit_id">
                         <flux:select.option value="">Selecciona una unidad</flux:select.option>
                         @foreach ($units as $unit)
                             <flux:select.option value="{{ $unit->id }}">{{ $unit->name }} - {{ $unit->center?->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
                     <p class="text-xs text-zinc-500">Una unidad incluye sus descendientes dentro del mismo centro.</p>
+                    @error('form.organizational_unit_id')
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                    </div>
                 @endif
 
-                <flux:select label="Responsabilidad" wire:model="form.responsibility_type">
-                    <flux:select.option value="supervisor">Supervisor</flux:select.option>
-                    <flux:select.option value="responsible">Responsable</flux:select.option>
-                </flux:select>
-
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:input type="date" label="Desde" wire:model="form.effective_from" />
-                    <flux:input type="date" label="Hasta" wire:model="form.effective_to" />
+                    <flux:input type="date" label="Desde" wire:model.live="form.effective_from" />
+                    <flux:input type="date" label="Hasta" wire:model.live="form.effective_to" />
                 </div>
 
-                <flux:textarea label="Motivo" wire:model="form.reason" required />
+                <flux:textarea label="Motivo" wire:model.live="form.reason" required />
 
                 @error('form.user_id')
+                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                @enderror
+                @error('form.reason')
                     <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
             </div>

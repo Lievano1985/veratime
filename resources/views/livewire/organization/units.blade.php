@@ -44,7 +44,7 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
-        Gate::authorize('create', [OrganizationalUnit::class, $company]);
+        Gate::authorize('viewAny', [OrganizationalUnit::class, $company]);
 
         $this->editingUnitId = null;
         $this->form = $this->emptyForm();
@@ -75,10 +75,6 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
         $unit = $this->editingUnitId ? $this->authorizedUnit($this->editingUnitId, $currentCompany) : null;
 
-        $unit
-            ? Gate::authorize('update', $unit)
-            : Gate::authorize('create', [OrganizationalUnit::class, $company]);
-
         $validated = $this->validate([
             'form.center_id' => [
                 'required',
@@ -100,6 +96,10 @@ new class extends Component {
         $parent = filled($validated['parent_id'] ?? null)
             ? $company->organizationalUnits()->whereKey((int) $validated['parent_id'])->firstOrFail()
             : null;
+
+        $unit
+            ? Gate::authorize('update', $unit)
+            : Gate::authorize('createInScope', [OrganizationalUnit::class, $company, $center, $parent]);
 
         try {
             $unit
@@ -172,7 +172,9 @@ new class extends Component {
             'centers' => $this->centerQuery($company, $scope)->get(),
             'units' => $this->unitQuery($company, $scope)->paginate(12),
             'parentOptions' => $this->parentOptions($company),
-            'canManageUnits' => Gate::allows('create', [OrganizationalUnit::class, $company]),
+            'canManageUnits' => Gate::allows('create', [OrganizationalUnit::class, $company])
+                || (in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopedOperators(), true)
+                    && (($scope['center_ids'] ?? []) !== [] || ($scope['organizational_unit_ids'] ?? []) !== [])),
             'visibleOrganizationalUnitIds' => $scope['organizational_unit_ids'] ?? null,
         ];
     }
@@ -232,6 +234,14 @@ new class extends Component {
             ->where('center_id', $centerId)
             ->where('status', 'active')
             ->whereIn('type', $type === 'area' ? ['department'] : ['area'])
+            ->when(in_array(auth()->user()->roleKeyForCompany($company), RoleKey::scopedOperators(), true), function ($query) use ($company): void {
+                $scope = app(ResolveUserOperationalScopeAction::class)->handle($company, auth()->user(), now()->toDateString());
+                $query->where(function ($scopeQuery) use ($scope): void {
+                    $scopeQuery
+                        ->whereIn('center_id', $scope['center_ids'])
+                        ->orWhereIn('id', $scope['organizational_unit_ids']);
+                });
+            })
             ->when($this->editingUnitId, fn ($query) => $query->whereKeyNot($this->editingUnitId))
             ->orderBy('name')
             ->get();

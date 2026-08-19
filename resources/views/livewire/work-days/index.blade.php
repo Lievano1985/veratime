@@ -1,12 +1,14 @@
 <?php
 
 use App\Domains\Alerts\Actions\ResolveAlertAction;
+use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
 use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Models\Alert;
 use App\Models\WorkDayCalculation;
 use App\Models\WorkDay;
+use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
@@ -77,7 +79,7 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
-        Gate::authorize('viewAny', [WorkDay::class, $company]);
+        abort_unless($this->canProcessCompanyWorkDays($company), 403);
 
         $this->loadProcessForm($company, $action);
         $this->showProcessPanel = true;
@@ -131,6 +133,12 @@ new class extends Component {
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
+        $alertForAuthorization = Alert::query()
+            ->where('company_id', $company->id)
+            ->where('work_day_id', $this->selectedWorkDayId)
+            ->findOrFail((int) $this->selectedAlertId);
+        Gate::authorize('resolve', $alertForAuthorization);
+
         $validated = $this->validate([
             'selectedAlertId' => [
                 'required',
@@ -145,6 +153,8 @@ new class extends Component {
             ->where('company_id', $company->id)
             ->where('work_day_id', $this->selectedWorkDayId)
             ->findOrFail((int) $validated['selectedAlertId']);
+
+        Gate::authorize('resolve', $alert);
 
         try {
             $action->handle($company, $alert, auth()->user(), $validated['alertResolutionForm']);
@@ -178,7 +188,7 @@ new class extends Component {
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
-        Gate::authorize('viewAny', [WorkDay::class, $company]);
+        abort_unless($this->canProcessCompanyWorkDays($company), 403);
 
         $validated = $this->validate([
             'processForm.date_from' => ['nullable', 'date', 'required_with:processForm.date_to'],
@@ -277,9 +287,13 @@ new class extends Component {
 
         $this->capDateFiltersToToday($company);
 
+        $visibleWorkDayAccess = $this->visibleWorkDayAccess($company);
+
         $workDays = $listWorkDays->handle($company, [
             'date_from' => $this->dateFrom,
             'date_to' => $this->dateTo,
+            'center_ids' => $visibleWorkDayAccess['center_ids'],
+            'relationship_ids' => $visibleWorkDayAccess['relationship_ids'],
             'center_id' => $this->centerId === '' ? null : (int) $this->centerId,
             'status' => $this->statusFilter === '' ? null : $this->statusFilter,
             'schedule_status' => $this->scheduleStatusFilter === '' ? null : $this->scheduleStatusFilter,
@@ -301,12 +315,25 @@ new class extends Component {
                 ->find($this->selectedWorkDayId)
             : null;
 
+        if ($selectedWorkDay && ! Gate::allows('view', $selectedWorkDay)) {
+            $selectedWorkDay = null;
+            $this->selectedWorkDayId = null;
+        }
+
+        $visibleCenterIds = $visibleWorkDayAccess['filter_center_ids'];
+
         return [
             'company' => $company,
-            'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
+            'centers' => $company->centers()
+                ->where('status', 'active')
+                ->when($visibleCenterIds !== null, fn ($query) => $query->whereIn('id', $visibleCenterIds))
+                ->orderBy('name')
+                ->get(),
             'workDays' => $workDays,
             'selectedWorkDay' => $selectedWorkDay,
             'todayDate' => $this->todayForCompany($company)->toDateString(),
+            'canProcessWorkDays' => $this->canProcessCompanyWorkDays($company),
+            'canResolveAlerts' => $this->canResolveAlerts($company),
         ];
     }
 
@@ -335,6 +362,74 @@ new class extends Component {
         if ($this->dateFrom !== '' && CarbonImmutable::parse($this->dateFrom)->toDateString() > $this->dateTo) {
             $this->dateFrom = $this->dateTo;
         }
+    }
+
+    private function visibleWorkDayAccess($company): array
+    {
+        if (in_array(auth()->user()->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
+            return [
+                'center_ids' => null,
+                'relationship_ids' => null,
+                'filter_center_ids' => null,
+            ];
+        }
+
+        if (! in_array(auth()->user()->roleKeyForCompany($company), [...RoleKey::scopedOperators(), ...RoleKey::scopedViewers()], true)) {
+            return [
+                'center_ids' => [],
+                'relationship_ids' => [],
+                'filter_center_ids' => [],
+            ];
+        }
+
+        $scope = app(ScopedOperationalAccess::class)->scope(auth()->user(), $company, $this->dateTo ?: now()->toDateString());
+        $unitIds = $scope['organizational_unit_ids'];
+        $relationshipIds = [];
+
+        if ($unitIds !== []) {
+            $relationshipIds = \App\Models\EmploymentUnitAssignment::query()
+                ->where('company_id', $company->id)
+                ->where('status', 'active')
+                ->whereIn('organizational_unit_id', $unitIds)
+                ->when($this->dateTo !== '', fn ($query) => $query->whereDate('effective_from', '<=', $this->dateTo))
+                ->when($this->dateFrom !== '', function ($query): void {
+                    $query->where(function ($dateQuery): void {
+                        $dateQuery->whereNull('effective_to')->orWhereDate('effective_to', '>=', $this->dateFrom);
+                    });
+                })
+                ->pluck('employment_relationship_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $unitCenterIds = $unitIds === []
+            ? []
+            : \App\Models\OrganizationalUnit::query()
+                ->where('company_id', $company->id)
+                ->whereIn('id', $unitIds)
+                ->pluck('center_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+        return [
+            'center_ids' => $scope['center_ids'],
+            'relationship_ids' => $relationshipIds,
+            'filter_center_ids' => array_values(array_unique([...$scope['center_ids'], ...$unitCenterIds])),
+        ];
+    }
+
+    private function canResolveAlerts($company): bool
+    {
+        return in_array(auth()->user()->roleKeyForCompany($company), [...RoleKey::companyManagers(), ...RoleKey::scopedOperators()], true);
+    }
+
+    private function canProcessCompanyWorkDays($company): bool
+    {
+        return in_array(auth()->user()->roleKeyForCompany($company), RoleKey::companyManagers(), true);
     }
 
     private function statusLabel(?string $status): string
@@ -844,11 +939,13 @@ new class extends Component {
             <flux:subheading>Revisa jornadas e identifica solo las incidencias que requieren dictamen operativo.</flux:subheading>
         </div>
 
-        <div class="flex flex-wrap gap-2">
-            <flux:button type="button" variant="primary" wire:click="openProcessPanel">
-                Recalcular jornadas
-            </flux:button>
-        </div>
+        @if ($canProcessWorkDays)
+            <div class="flex flex-wrap gap-2">
+                <flux:button type="button" variant="primary" wire:click="openProcessPanel">
+                    Recalcular jornadas
+                </flux:button>
+            </div>
+        @endif
     </div>
 
     @if (session('status'))
@@ -970,7 +1067,7 @@ new class extends Component {
                                         class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition focus:outline-none focus:ring-2 {{ $hasPendingIncidents ? 'border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-300 hover:bg-blue-100 focus:ring-blue-200 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60' : 'border-emerald-300 bg-emerald-100 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-200 focus:ring-emerald-200 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/70' }}"
                                         title="Abrir detalle de jornada"
                                     >
-                                        {{ $hasPendingIncidents ? 'Dictaminar' : 'Ver' }}
+                                        {{ $hasPendingIncidents && $canResolveAlerts ? 'Dictaminar' : 'Ver' }}
                                     </button>
                                 </td>
                             </tr>
@@ -990,7 +1087,7 @@ new class extends Component {
     <x-side-panel
         wire:model="showAlertsPanel"
         title="Incidencias de jornada"
-        subheading="Revisa solo lo fuera de comun y deja dictamen con trazabilidad."
+        subheading="Revisa solo lo fuera de comun y consulta el seguimiento operativo."
         labelledby="work-day-alerts-title"
         maxWidth="max-w-3xl"
         closeMethod="closeAlertsPanel"
@@ -1083,7 +1180,7 @@ new class extends Component {
                         @forelse ($selectedWorkDay->alerts as $alert)
                             <label class="block rounded-md border border-zinc-200 p-4 dark:border-zinc-700 {{ $selectedAlertId === $alert->id ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-zinc-900' }}">
                                 <div class="flex items-start gap-3">
-                                    @if (in_array($alert->status, Alert::OPEN_STATUSES, true))
+                                    @if ($canResolveAlerts && in_array($alert->status, Alert::OPEN_STATUSES, true))
                                         <input type="radio" class="mt-1" wire:model.live="selectedAlertId" value="{{ $alert->id }}">
                                     @else
                                         <span class="mt-1 h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700"></span>
@@ -1125,7 +1222,7 @@ new class extends Component {
                         @endforelse
                     </section>
 
-                    @if ($selectedWorkDay->alerts->contains(fn ($alert) => in_array($alert->status, Alert::OPEN_STATUSES, true)))
+                    @if ($canResolveAlerts && $selectedWorkDay->alerts->contains(fn ($alert) => in_array($alert->status, Alert::OPEN_STATUSES, true)))
                         <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
                             <flux:select label="Dictamen" wire:model="alertResolutionForm.status">
                                 <flux:select.option value="justified">Aprobar</flux:select.option>
