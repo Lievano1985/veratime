@@ -103,10 +103,7 @@ new class extends Component {
         $canManageCurrentCompany = $company ? Gate::allows('update', $company) : false;
 
         return [
-            'companies' => auth()->user()
-                ->companiesWithActiveMembership()
-                ->orderBy('name')
-                ->get(),
+            'companies' => $this->companyList(),
             'currentCompany' => $company,
             'canCreateCompany' => Gate::allows('create', Company::class),
             'canManageCurrentCompany' => $canManageCurrentCompany,
@@ -114,14 +111,29 @@ new class extends Component {
         ];
     }
 
+    private function companyList()
+    {
+        if (auth()->user()->isSuperAdmin()) {
+            return Company::query()
+                ->orderBy('name')
+                ->get();
+        }
+
+        return auth()->user()
+            ->companiesWithActiveMembership()
+            ->orderBy('name')
+            ->get();
+    }
     private function authorizedCompany(?int $companyId, string $ability): Company
     {
         abort_unless($companyId, 404);
 
-        $company = auth()->user()
-            ->companiesWithActiveMembership()
-            ->whereKey($companyId)
-            ->firstOrFail();
+        $company = auth()->user()->isSuperAdmin()
+            ? Company::query()->whereKey($companyId)->firstOrFail()
+            : auth()->user()
+                ->companiesWithActiveMembership()
+                ->whereKey($companyId)
+                ->firstOrFail();
 
         Gate::authorize($ability, $company);
 
@@ -175,7 +187,7 @@ new class extends Component {
             <section class="rounded-lg border border-primary-border bg-primary-soft p-5 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="mb-4">
                     <flux:heading>Empresas autorizadas</flux:heading>
-                    <flux:subheading>Se listan las empresas donde tu relacion esta activa; las inactivas no aparecen en el selector operativo.</flux:subheading>
+                    <flux:subheading>Se listan las empresas disponibles para administracion. Las inactivas no aparecen en el selector operativo.</flux:subheading>
                 </div>
 
                 <div class="divide-y divide-zinc-200 dark:divide-zinc-700">

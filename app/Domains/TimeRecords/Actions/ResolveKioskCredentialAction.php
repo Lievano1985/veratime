@@ -2,13 +2,14 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Models\Company;
 use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
 
 class ResolveKioskCredentialAction
 {
-    public function handle(string $accessCode, string $pin): WorkerCredential
+    public function handle(Company $company, string $accessCode, string $pin): WorkerCredential
     {
         $accessCode = trim($accessCode);
 
@@ -16,7 +17,11 @@ class ResolveKioskCredentialAction
             throw new InvalidArgumentException('No se pudo validar la credencial.');
         }
 
-        $credential = $this->findCredential($accessCode);
+        if ($company->status !== 'active') {
+            throw new InvalidArgumentException('No se pudo validar la credencial.');
+        }
+
+        $credential = $this->findCredential($company, $accessCode);
 
         if (! $credential) {
             throw new InvalidArgumentException('No se pudo validar la credencial.');
@@ -40,10 +45,11 @@ class ResolveKioskCredentialAction
         return $credential->refresh()->load(['company', 'worker']);
     }
 
-    private function findCredential(string $accessCode): ?WorkerCredential
+    private function findCredential(Company $company, string $accessCode): ?WorkerCredential
     {
         $credentials = WorkerCredential::query()
             ->with(['company', 'worker'])
+            ->where('company_id', $company->id)
             ->where(function ($query) use ($accessCode): void {
                 $query->where('access_code', $accessCode)
                     ->orWhereHas('worker', fn ($workerQuery) => $workerQuery->where('employee_code', $accessCode));

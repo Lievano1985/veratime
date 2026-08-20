@@ -52,18 +52,13 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Super Admin Vera Time',
                 'password' => Hash::make($superAdminPassword),
                 'status' => 'active',
+                'global_role' => RoleKey::SUPER_ADMIN,
             ],
         );
 
-        $superAdminRole = Role::query()->where('key', RoleKey::SUPER_ADMIN)->first();
-
-        $superAdmin->companies()->syncWithoutDetaching([
-            $company->id => [
-                'role_id' => $superAdminRole?->id,
-                'status' => 'active',
-                'is_default' => true,
-            ],
-        ]);
+        if (! $superAdmin->global_role) {
+            $superAdmin->forceFill(['global_role' => RoleKey::SUPER_ADMIN])->save();
+        }
 
         if ($superAdmin->wasRecentlyCreated && ! env('VERA_TIME_SUPER_ADMIN_PASSWORD')) {
             $this->command?->warn('Super admin creado: superadmin@veratime.local / '.$superAdminPassword);

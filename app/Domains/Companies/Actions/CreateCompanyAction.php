@@ -24,13 +24,15 @@ class CreateCompanyAction
 
             $company->setting()->create(Company::defaultSettings());
 
-            $adminRole = Role::query()->where('key', RoleKey::ADMIN_EMPRESA)->first();
+            if (! $user->isSuperAdmin()) {
+                $adminRole = Role::query()->where('key', RoleKey::ADMIN_EMPRESA)->first();
 
-            $user->companies()->attach($company, [
-                'role_id' => $adminRole?->id,
-                'status' => 'active',
-                'is_default' => false,
-            ]);
+                $user->companies()->attach($company, [
+                    'role_id' => $adminRole?->id,
+                    'status' => 'active',
+                    'is_default' => false,
+                ]);
+            }
 
             return $company;
         });

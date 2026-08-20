@@ -2,7 +2,9 @@
 
 use App\Domains\TimeRecords\Actions\RegisterKioskTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
+use App\Domains\TimeRecords\Actions\ResolveKioskCompanyAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
+use App\Models\Company;
 use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
@@ -12,6 +14,14 @@ use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
     private const TOKEN_TTL_MINUTES = 5;
+
+    private const KIOSK_COMPANY_SESSION_KEY = 'kiosk_company_id';
+
+    public string $kioskKey = '';
+
+    public ?int $kioskCompanyId = null;
+
+    public ?string $kioskCompanyName = null;
 
     public string $accessCode = '';
 
@@ -31,15 +41,55 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public ?string $confirmationTime = null;
 
+    public function mount(): void
+    {
+        $this->loadKioskCompanyFromSession();
+    }
+
+    public function activateKiosk(ResolveKioskCompanyAction $resolveCompany): void
+    {
+        $this->validate([
+            'kioskKey' => ['required', 'string', 'max:80'],
+        ]);
+
+        try {
+            $company = $resolveCompany->handle($this->kioskKey);
+        } catch (\InvalidArgumentException) {
+            $this->kioskKey = '';
+
+            throw ValidationException::withMessages([
+                'kioskKey' => 'No se pudo activar el kiosco.',
+            ]);
+        }
+
+        session([self::KIOSK_COMPANY_SESSION_KEY => $company->id]);
+
+        $this->kioskCompanyId = $company->id;
+        $this->kioskCompanyName = $company->name;
+        $this->kioskKey = '';
+        $this->resetKioskState(keepConfirmation: false);
+    }
+
+    public function clearKioskCompany(): void
+    {
+        session()->forget(self::KIOSK_COMPANY_SESSION_KEY);
+        $this->kioskCompanyId = null;
+        $this->kioskCompanyName = null;
+        $this->kioskKey = '';
+        $this->resetKioskState(keepConfirmation: false);
+    }
+
     public function identify(ResolveKioskCredentialAction $resolveCredential, ResolveCurrentTimeRecordStateAction $resolveState): void
     {
+        $company = $this->kioskCompanyOrFail();
+
         $this->validate([
             'accessCode' => ['required', 'string', 'max:50'],
             'pin' => ['required', 'string', 'max:20'],
         ]);
 
         try {
-            $credential = $resolveCredential->handle($this->accessCode, $this->pin);
+            $credential = $resolveCredential->handle($company, $this->accessCode, $this->pin);
         } catch (\InvalidArgumentException) {
             $this->pin = '';
 
@@ -51,6 +101,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $state = $this->stateForCredential($credential, $resolveState);
 
         $this->credentialToken = Crypt::encryptString(json_encode([
+            'company_id' => $credential->company_id,
             'credential_id' => $credential->id,
             'worker_id' => $credential->worker_id,
             'issued_at' => now()->timestamp,
@@ -81,11 +132,54 @@ new #[Layout('components.layouts.auth')] class extends Component {
         Session::flash('status', $this->confirmationMessage);
 
         $this->resetKioskState(keepConfirmation: true);
+        $this->loadKioskCompanyFromSession();
     }
 
     public function resetKiosk(): void
     {
         $this->resetKioskState(keepConfirmation: false);
+        $this->loadKioskCompanyFromSession();
+    }
+
+    private function loadKioskCompanyFromSession(): void
+    {
+        $companyId = session(self::KIOSK_COMPANY_SESSION_KEY);
+
+        if (! $companyId) {
+            return;
+        }
+
+        $company = Company::query()
+            ->whereKey($companyId)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $company) {
+            session()->forget(self::KIOSK_COMPANY_SESSION_KEY);
+            $this->kioskCompanyId = null;
+            $this->kioskCompanyName = null;
+
+            return;
+        }
+
+        $this->kioskCompanyId = $company->id;
+        $this->kioskCompanyName = $company->name;
+    }
+
+    private function kioskCompanyOrFail(): Company
+    {
+        $this->loadKioskCompanyFromSession();
+
+        if (! $this->kioskCompanyId) {
+            throw ValidationException::withMessages([
+                'kioskKey' => 'Activa el kiosco para continuar.',
+            ]);
+        }
+
+        return Company::query()
+            ->whereKey($this->kioskCompanyId)
+            ->where('status', 'active')
+            ->firstOrFail();
     }
 
     private function credentialFromToken(): WorkerCredential
@@ -116,8 +210,19 @@ new #[Layout('components.layouts.auth')] class extends Component {
             ]);
         }
 
+        $company = $this->kioskCompanyOrFail();
+
+        if ((int) ($payload['company_id'] ?? 0) !== $company->id) {
+            $this->resetKioskState();
+
+            throw ValidationException::withMessages([
+                'accessCode' => 'Vuelve a identificarte para continuar.',
+            ]);
+        }
+
         $credential = WorkerCredential::query()
             ->with(['company', 'worker'])
+            ->where('company_id', $company->id)
             ->find((int) ($payload['credential_id'] ?? 0));
 
         if (! $credential || $credential->worker_id !== (int) ($payload['worker_id'] ?? 0)) {
@@ -180,8 +285,27 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
     @endif
 
-    @if (! $credentialToken)
+    @if (! $kioskCompanyId)
+        <form wire:submit="activateKiosk" class="space-y-4 rounded-md border border-zinc-200 p-5 dark:border-zinc-700">
+            <div>
+                <flux:heading>Activar kiosco</flux:heading>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Ingresa la clave de kiosco de la empresa para configurar este dispositivo.</p>
+            </div>
+
+            <flux:input wire:model="kioskKey" label="Clave de kiosco" type="password" autocomplete="off" autofocus />
+
+            <flux:button variant="primary" type="submit" class="w-full">Activar kiosco</flux:button>
+        </form>
+    @elseif (! $credentialToken)
         <form wire:submit="identify" class="space-y-4 rounded-md border border-zinc-200 p-5 dark:border-zinc-700">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Empresa del kiosco</p>
+                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $kioskCompanyName }}</p>
+                </div>
+                <flux:button type="button" size="sm" variant="ghost" wire:click="clearKioskCompany">Cambiar</flux:button>
+            </div>
+
             <flux:input wire:model="accessCode" label="Codigo de acceso o numero de empleado" autocomplete="off" autofocus />
             <flux:input wire:model="pin" label="NIP" type="password" autocomplete="off" />
 
@@ -190,8 +314,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
     @else
         <section class="space-y-5 rounded-md border border-zinc-200 p-5 dark:border-zinc-700">
             <div class="text-center">
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ $kioskCompanyName }}</p>
                 <flux:heading>{{ $workerName }}</flux:heading>
-                <p class="text-sm text-zinc-600 dark:text-zinc-400">{{ $localDate }} · {{ $timezone }}</p>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400">{{ $localDate }} - {{ $timezone }}</p>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2">

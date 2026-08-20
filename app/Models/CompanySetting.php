@@ -23,6 +23,7 @@ class CompanySetting extends Model
         'work_days_last_refresh_summary',
         'allow_worker_corrections',
         'require_pin_for_kiosk',
+        'kiosk_key_hash',
         'require_pin_for_confirmation',
         'metadata',
     ];

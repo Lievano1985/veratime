@@ -188,4 +188,67 @@ class CompanyManagementTest extends TestCase
 
         $this->get(route('companies.index'))->assertOk();
     }
+    public function test_global_super_admin_can_open_company_crud_and_edit_any_company_without_membership(): void
+    {
+        $activeCompany = Company::factory()->create(['name' => 'Empresa activa global', 'status' => 'active']);
+        $inactiveCompany = Company::factory()->create(['name' => 'Empresa inactiva global', 'status' => 'inactive']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin)->withSession(['current_company_id' => $activeCompany->id]);
+
+        $this->get(route('companies.index'))
+            ->assertOk()
+            ->assertSee('Empresa activa global')
+            ->assertSee('Empresa inactiva global');
+
+        Volt::test('companies.index')
+            ->call('loadEditForm', $inactiveCompany->id)
+            ->set('editForm.name', 'Empresa inactiva editada')
+            ->set('editForm.legal_name', $inactiveCompany->legal_name)
+            ->set('editForm.tax_id', $inactiveCompany->tax_id)
+            ->set('editForm.timezone', $inactiveCompany->timezone)
+            ->set('editForm.status', 'inactive')
+            ->call('update')
+            ->assertSee('Empresa actualizada');
+
+        $this->assertFalse($superAdmin->companies()->whereKey($inactiveCompany->id)->exists());
+        $this->assertDatabaseHas('companies', [
+            'id' => $inactiveCompany->id,
+            'name' => 'Empresa inactiva editada',
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function test_global_super_admin_creates_company_without_creating_company_membership_for_itself(): void
+    {
+        $currentCompany = Company::factory()->create(['status' => 'active']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin)->withSession(['current_company_id' => $currentCompany->id]);
+
+        Volt::test('companies.index')
+            ->set('createForm.name', 'Tenant Nuevo')
+            ->set('createForm.legal_name', 'Tenant Nuevo SA de CV')
+            ->set('createForm.tax_id', 'TEN260818AA1')
+            ->set('createForm.timezone', 'America/Mexico_City')
+            ->call('create')
+            ->assertSee('Empresa creada');
+
+        $company = Company::query()->where('tax_id', 'TEN260818AA1')->firstOrFail();
+
+        $this->assertDatabaseHas('company_settings', [
+            'company_id' => $company->id,
+            'payroll_period_type' => 'biweekly',
+        ]);
+        $this->assertDatabaseMissing('company_user', [
+            'company_id' => $company->id,
+            'user_id' => $superAdmin->id,
+        ]);
+    }
 }

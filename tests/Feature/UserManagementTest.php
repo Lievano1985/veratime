@@ -7,8 +7,8 @@ use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 use Database\Seeders\RoleSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -69,9 +69,13 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'admin.no@veratime.local']);
     }
 
-    public function test_super_admin_can_create_company_admin_user(): void
+    public function test_global_super_admin_can_create_company_admin_user_without_company_membership(): void
     {
-        [$company, $superAdmin] = $this->companyUser(RoleKey::SUPER_ADMIN);
+        $company = Company::factory()->create(['status' => 'active']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
 
         $this->actingAs($superAdmin)->withSession(['current_company_id' => $company->id]);
 
@@ -87,6 +91,8 @@ class UserManagementTest extends TestCase
 
         $user = User::query()->where('email', 'admin.empresa.nuevo@veratime.local')->firstOrFail();
 
+        $this->assertTrue($superAdmin->isSuperAdmin());
+        $this->assertFalse($superAdmin->companies()->whereKey($company->id)->exists());
         $this->assertSame(RoleKey::ADMIN_EMPRESA, $user->roleKeyForCompany($company));
     }
 

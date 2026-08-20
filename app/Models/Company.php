@@ -189,6 +189,7 @@ class Company extends Model
             'work_days_last_refresh_summary' => null,
             'allow_worker_corrections' => false,
             'require_pin_for_kiosk' => true,
+            'kiosk_key_hash' => null,
             'require_pin_for_confirmation' => true,
             'metadata' => [],
         ];

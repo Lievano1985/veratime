@@ -37,6 +37,7 @@ new class extends Component {
             'settingsForm.work_days_auto_refresh_time' => ['nullable', 'date_format:H:i'],
             'settingsForm.allow_worker_corrections' => ['boolean'],
             'settingsForm.require_pin_for_kiosk' => ['boolean'],
+            'settingsForm.kiosk_key' => ['nullable', 'string', 'min:8', 'max:80', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
             'settingsForm.require_pin_for_confirmation' => ['boolean'],
         ])['settingsForm'];
 
@@ -106,6 +107,8 @@ new class extends Component {
                 : null,
             'allow_worker_corrections' => (bool) $settings['allow_worker_corrections'],
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
+            'kiosk_key' => '',
+            'kiosk_key_configured' => filled($settings['kiosk_key_hash'] ?? null),
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
         ];
     }
@@ -187,6 +190,19 @@ new class extends Component {
                 <flux:input wire:model="settingsForm.default_timezone" label="Zona horaria" required />
                 <flux:input wire:model="settingsForm.default_closure_day" label="Dia de cierre" type="number" min="1" max="31" />
                 <flux:input wire:model="settingsForm.work_days_auto_refresh_time" label="Hora automatica de jornadas" type="time" />
+
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
+                    <flux:input wire:model="settingsForm.kiosk_key" label="Clave de kiosco" type="password" autocomplete="new-password" placeholder="Dejar vacio para conservar la actual" />
+                    <p class="mt-2 text-xs text-zinc-500">Esta clave activa el kiosco en un dispositivo y fija el contexto de la empresa. Debe tener minimo 8 caracteres, una mayuscula, un numero y un simbolo. No se muestra despues de guardarla.</p>
+                    @if ($settingsForm['kiosk_key_configured'] ?? false)
+                        <x-ui.badge variant="success" class="mt-2">Clave configurada</x-ui.badge>
+                    @else
+                        <x-ui.badge variant="warning" class="mt-2">Sin clave configurada</x-ui.badge>
+                    @endif
+                    @error('settingsForm.kiosk_key')
+                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 <div class="space-y-3">
                     <flux:checkbox wire:model="settingsForm.allow_worker_corrections" label="Permitir solicitudes de correccion" />

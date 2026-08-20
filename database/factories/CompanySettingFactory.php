@@ -20,6 +20,7 @@ class CompanySettingFactory extends Factory
             'default_closure_day' => 15,
             'allow_worker_corrections' => false,
             'require_pin_for_kiosk' => true,
+            'kiosk_key_hash' => null,
             'require_pin_for_confirmation' => true,
             'metadata' => [],
         ];

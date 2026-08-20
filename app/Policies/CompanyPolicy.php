@@ -10,25 +10,31 @@ class CompanyPolicy
 {
     public function create(User $user): bool
     {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         return $user->companiesWithActiveMembership()
             ->get()
-            ->contains(fn (Company $company) => in_array($user->roleKeyForCompanyMembership($company), [
-                ...RoleKey::companyManagers(),
-                RoleKey::SUPER_ADMIN,
-            ], true));
+            ->contains(fn (Company $company) => in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true));
     }
 
     public function view(User $user, Company $company): bool
     {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         return $user->hasActiveMembershipInCompany($company);
     }
 
     public function update(User $user, Company $company): bool
     {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         return $user->hasActiveMembershipInCompany($company)
-            && in_array($user->roleKeyForCompanyMembership($company), [
-                ...RoleKey::companyManagers(),
-                RoleKey::SUPER_ADMIN,
-            ], true);
+            && in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true);
     }
 }
