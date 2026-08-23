@@ -37,7 +37,8 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
             ->assertHasNoErrors()
             ->assertSee('Correccion creada')
             ->assertSee('Correccion de programacion')
-            ->assertDontSee('Generar faltantes')
+            ->assertSee('Agregar faltantes')
+            ->assertDontSee('Actualizar')
             ->assertSee('Comparar con version anterior');
 
         $this->assertTrue(ScheduleBatch::query()

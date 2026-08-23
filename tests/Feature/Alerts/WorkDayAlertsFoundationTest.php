@@ -198,6 +198,51 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame(1, Alert::query()->where('company_id', $otherCompany->id)->count());
     }
 
+    public function test_absence_resolution_panel_uses_contextual_labels(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay();
+        $workDay->activeCalculation()->dissociate();
+        $workDay->forceFill([
+            'active_calculation_id' => null,
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 0,
+            'valid_time_event_ids' => [],
+        ])->save();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay->refresh());
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('work-days.index')
+            ->set('dateFrom', '2026-08-03')
+            ->set('dateTo', '2026-08-03')
+            ->call('openAlertsPanel', $workDay->id)
+            ->assertSee('Justificar falta')
+            ->assertSee('Confirmar falta')
+            ->assertSee('No procede')
+            ->assertDontSee('No aprobar');
+    }
+
+    public function test_overtime_resolution_panel_uses_contextual_labels(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('work-days.index')
+            ->set('dateFrom', '2026-08-03')
+            ->set('dateTo', '2026-08-03')
+            ->call('openAlertsPanel', $workDay->id)
+            ->assertSee('Autorizar tiempo extra')
+            ->assertSee('No autorizar')
+            ->assertSee('No procede')
+            ->assertDontSee('No aprobar');
+    }
     public function test_work_days_alert_badge_opens_resolution_panel_and_updates_status(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);

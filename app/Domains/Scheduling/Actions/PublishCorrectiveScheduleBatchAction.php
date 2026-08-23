@@ -41,7 +41,7 @@ class PublishCorrectiveScheduleBatchAction
 
             $validation = $this->validator->handle($actor, $company, $corrective);
             if (! $validation->valid()) {
-                if ($validation->changedDays < 1) {
+                if (($validation->changedDays + $validation->assignmentsAdded) < 1) {
                     throw new ScheduleCorrectionHasNoChangesException();
                 }
 
@@ -49,7 +49,7 @@ class PublishCorrectiveScheduleBatchAction
             }
 
             $comparison = $this->compareVersions->handle($previous, $corrective);
-            if ($comparison->changedDays < 1) {
+            if (($comparison->changedDays + $comparison->addedDays) < 1) {
                 throw new ScheduleCorrectionHasNoChangesException();
             }
 

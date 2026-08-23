@@ -9,30 +9,53 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Marca - extraido directo del logo Vera Time */
+    --color-brand-navy: #021939;
+    --color-brand-navy-soft: #0a2a52;
+    --color-brand-blue: #0067e4;
+    --color-brand-blue-bright: #0c86ff;
+    --color-brand-sky: #29b6f6;
+    --color-brand-deep: #0d47a1;
 
-    --color-vera-time-50: #eff7ff;
-    --color-vera-time-100: #dceeff;
-    --color-vera-time-200: #b9ddff;
-    --color-vera-time-300: #86c4ff;
-    --color-vera-time-400: #4aa5ff;
-    --color-vera-time-500: #1f84f2;
-    --color-vera-time-600: #1269d8;
-    --color-vera-time-700: #1055af;
-    --color-vera-time-800: #12498f;
-    --color-vera-time-900: #153e76;
+    /* Neutrales de interfaz */
+    --color-surface-bg: #f5f8fc;
+    --color-surface-card: #ffffff;
+    --color-surface-line: #e4eaf2;
+    --color-surface-muted: #6b7a90;
+    --color-surface-text: #0b1b2b;
 
-    --color-vera-accent-400: #2dd4c8;
-    --color-vera-accent-500: #18bdb5;
-    --color-vera-accent-600: #0f9c98;
+    /* Estados - matriz de horarios / badges */
+    --color-status-pending-bg: #fdecec;
+    --color-status-pending-line: #f6cfcf;
+    --color-status-pending-text: #c43d3d;
 
-    --color-primary: var(--color-vera-time-600);
-    --color-primary-hover: var(--color-vera-time-700);
-    --color-primary-soft: var(--color-vera-time-50);
-    --color-primary-border: var(--color-vera-time-200);
-    --color-accent: var(--color-vera-accent-500);
+    --color-status-shift-bg: #eaf3fe;
+    --color-status-shift-line: #cfe2fb;
+    --color-status-shift-text: #0b4ea8;
 
-    --color-surface-muted: #f5f5f5;
+    --color-status-rest-bg: #eafbf2;
+    --color-status-rest-line: #cff3de;
+    --color-status-rest-text: #0f7a47;
+
+    --color-status-warn-bg: #fff6e4;
+    --color-status-warn-line: #fbe3ae;
+    --color-status-warn-text: #93650b;
+
+    --color-status-good: #16b26a;
+    --color-status-good-soft: #5fe3a1;
+
+    /* Tipografia */
+    --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Space Mono", ui-monospace, monospace;
+
+    /* Alias semanticos usados por componentes compartidos */
+    --color-primary: var(--color-brand-blue);
+    --color-primary-hover: var(--color-brand-deep);
+    --color-primary-soft: var(--color-surface-bg);
+    --color-primary-border: var(--color-surface-line);
+    --color-accent: var(--color-brand-sky);
+
     --color-vera-sidebar: #2a3131;
     --color-vera-sidebar-border: #202626;
 
@@ -51,7 +74,6 @@
     --color-accent-content: var(--color-primary);
     --color-accent-foreground: var(--color-white);
 }
-
 @layer theme {
     .dark {
         --color-accent-content: var(--color-primary-soft);
@@ -85,6 +107,125 @@ select:focus[data-flux-control] {
 }
 
 @layer components {
+    .btn {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-surface-line bg-white px-3.5 py-2.5 text-[13px] font-semibold text-brand-navy transition hover:border-brand-blue hover:bg-surface-bg hover:text-brand-blue;
+    }
+
+    .btn-ghost {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-transparent bg-transparent px-3.5 py-2.5 text-[13px] font-semibold text-surface-muted transition hover:border-transparent hover:bg-zinc-100 hover:text-brand-navy;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-transparent bg-gradient-to-r from-brand-blue-bright to-brand-blue px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_18px_-8px_rgba(0,103,228,0.5)] transition hover:text-white hover:opacity-95;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-status-pending-line bg-white px-3.5 py-2.5 text-[13px] font-semibold text-status-pending-text transition hover:border-status-pending-line hover:bg-status-pending-bg;
+    }
+
+    .stat-item {
+        @apply flex items-baseline gap-1.5 border-r border-surface-line px-4 text-[13px] text-surface-muted;
+    }
+
+    .stat-item b {
+        @apply font-display text-sm font-bold text-brand-navy;
+    }
+
+    .cell-head {
+        @apply border-b border-r border-surface-line bg-surface-bg px-3.5 py-3 text-xs font-bold text-brand-navy;
+    }
+
+    .row-emp {
+        @apply sticky left-0 z-[2] flex items-center gap-2.5 border-b border-r border-surface-line bg-white px-3.5 py-3.5;
+    }
+
+    .emp-avatar {
+        @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] font-display text-[13px] font-bold text-white;
+    }
+
+    .emp-name {
+        @apply text-[13.5px] font-bold leading-tight text-brand-navy;
+    }
+
+    .emp-code {
+        @apply font-mono text-[11px] text-surface-muted;
+    }
+
+    .emp-role {
+        @apply mt-0.5 text-[11.5px] text-surface-muted;
+    }
+
+    .day-cell {
+        @apply border-b border-r border-surface-line p-2;
+    }
+
+    .shift-pendiente {
+        @apply h-full rounded-xl border border-status-pending-line bg-status-pending-bg p-2.5;
+    }
+
+    .shift-pendiente .shift-label,
+    .shift-pendiente .shift-link {
+        @apply text-status-pending-text;
+    }
+
+    .shift-pendiente .shift-detail {
+        color: #b25050;
+    }
+
+    .shift-turno {
+        @apply h-full rounded-xl border border-status-shift-line bg-status-shift-bg p-2.5;
+    }
+
+    .shift-turno .shift-label,
+    .shift-turno .shift-link {
+        @apply text-status-shift-text;
+    }
+
+    .shift-turno .shift-time {
+        @apply text-brand-navy;
+    }
+
+    .shift-turno .shift-detail {
+        color: #3c6ea8;
+    }
+
+    .shift-descanso {
+        @apply h-full rounded-xl border border-status-rest-line bg-status-rest-bg p-2.5;
+    }
+
+    .shift-descanso .shift-label,
+    .shift-descanso .shift-link {
+        @apply text-status-rest-text;
+    }
+
+    .shift-label {
+        @apply flex items-center gap-1.5 text-[12.5px] font-bold;
+    }
+
+    .shift-detail {
+        @apply mt-1 text-[11px] leading-snug;
+    }
+
+    .shift-time {
+        @apply mt-1.5 font-mono text-[11.5px] font-bold;
+    }
+
+    .shift-link {
+        @apply mt-1.5 inline-block text-[11px] font-semibold no-underline;
+    }
+
+    .code-tag {
+        @apply mr-1.5 inline-block rounded bg-brand-blue/10 px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-status-shift-text;
+    }
+
+    .kiosk-key {
+        @apply select-none rounded-2xl border-[1.5px] border-surface-line bg-surface-card py-4 font-display text-lg font-semibold text-brand-navy transition hover:border-brand-blue hover:bg-surface-bg active:scale-95 active:bg-status-shift-bg;
+    }
+
+    .kiosk-key-action {
+        @apply border-status-pending-line bg-status-pending-bg text-status-pending-text hover:bg-status-pending-bg;
+    }
+
     [data-flux-button][class*="bg-[var(--color-accent)]"] {
         background: var(--color-primary) !important;
         border-color: var(--color-primary) !important;
