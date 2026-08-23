@@ -88,11 +88,7 @@ class ValidateCorrectiveScheduleBatchForPublicationAction
             $result->addError('Falta programacion que estaba incluida en la version anterior.');
         }
 
-        if ($result->assignmentsAdded > 0) {
-            $result->addError('La correccion contiene programacion adicional fuera de la cobertura historica.');
-        }
-
-        if ($result->changedDays < 1) {
+        if (($result->changedDays + $result->assignmentsAdded) < 1) {
             $result->addError('La correccion no contiene cambios respecto de la version publicada.');
         }
 
@@ -130,9 +126,9 @@ class ValidateCorrectiveScheduleBatchForPublicationAction
         }
 
         $result->snapshotReady = $result->valid()
-            && $result->assignmentsExpected === $result->assignmentsFound
+            && $result->assignmentsFound >= $result->assignmentsExpected
             && $result->assignmentsUnassigned === 0
-            && $result->changedDays > 0;
+            && ($result->changedDays + $result->assignmentsAdded) > 0;
 
         return $result;
     }

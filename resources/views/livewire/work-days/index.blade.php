@@ -501,8 +501,78 @@ new class extends Component {
             'pending_information' => 'Pendiente info',
             'justified' => 'Aprobada',
             'corrected' => 'No aprobada',
-            'closed' => 'Cerrada / no procede',
+            'closed' => 'No procede',
             default => ucfirst($status),
+        };
+    }
+
+    private function alertResolutionOptions(?Alert $alert): array
+    {
+        return match ($alert?->rule_code) {
+            'scheduled_absence' => [
+                Alert::STATUS_JUSTIFIED => 'Justificar falta',
+                Alert::STATUS_CORRECTED => 'Confirmar falta',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'overtime_detected' => [
+                Alert::STATUS_JUSTIFIED => 'Autorizar tiempo extra',
+                Alert::STATUS_CORRECTED => 'No autorizar',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'incomplete_work_day' => [
+                Alert::STATUS_JUSTIFIED => 'Justificar jornada incompleta',
+                Alert::STATUS_CORRECTED => 'Confirmar incidencia',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'weekly_rest_missing' => [
+                Alert::STATUS_JUSTIFIED => 'Justificar descanso',
+                Alert::STATUS_CORRECTED => 'Confirmar incidencia',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            default => [
+                Alert::STATUS_JUSTIFIED => 'Aprobar',
+                Alert::STATUS_CORRECTED => 'No aprobar',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+        };
+    }
+
+    private function alertResolutionOptionLabel(?Alert $alert, string $status): string
+    {
+        return $this->alertResolutionOptions($alert)[$status] ?? $this->alertStatusLabel($status);
+    }
+    private function contextualAlertStatusLabel(Alert $alert): string
+    {
+        if (! in_array($alert->status, [Alert::STATUS_JUSTIFIED, Alert::STATUS_CORRECTED, Alert::STATUS_CLOSED], true)) {
+            return $this->alertStatusLabel($alert->status);
+        }
+
+        return match ($alert->rule_code) {
+            'scheduled_absence' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Falta justificada',
+                Alert::STATUS_CORRECTED => 'Falta confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'overtime_detected' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Tiempo extra autorizado',
+                Alert::STATUS_CORRECTED => 'Tiempo extra no autorizado',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'incomplete_work_day' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Jornada incompleta justificada',
+                Alert::STATUS_CORRECTED => 'Incidencia confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'weekly_rest_missing' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Descanso justificado',
+                Alert::STATUS_CORRECTED => 'Incidencia confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            default => $this->alertStatusLabel($alert->status),
         };
     }
 
@@ -1193,7 +1263,7 @@ new class extends Component {
                                                 {{ $this->alertSeverityLabel($alert->severity) }}
                                             </x-ui.badge>
                                             <x-ui.badge variant="{{ $this->alertStatusVariant($alert->status) }}">
-                                                {{ $this->alertStatusLabel($alert->status) }}
+                                                {{ $this->contextualAlertStatusLabel($alert) }}
                                             </x-ui.badge>
                                         </div>
 
@@ -1225,9 +1295,9 @@ new class extends Component {
                     @if ($canResolveAlerts && $selectedWorkDay->alerts->contains(fn ($alert) => in_array($alert->status, Alert::OPEN_STATUSES, true)))
                         <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
                             <flux:select label="Dictamen" wire:model="alertResolutionForm.status">
-                                <flux:select.option value="justified">Aprobar</flux:select.option>
-                                <flux:select.option value="corrected">No aprobar</flux:select.option>
-                                <flux:select.option value="closed">Cerrada / no procede</flux:select.option>
+                                <flux:select.option value="{{ Alert::STATUS_JUSTIFIED }}">{{ $this->alertResolutionOptionLabel($selectedWorkDay->alerts->firstWhere('id', $selectedAlertId), Alert::STATUS_JUSTIFIED) }}</flux:select.option>
+                                <flux:select.option value="{{ Alert::STATUS_CORRECTED }}">{{ $this->alertResolutionOptionLabel($selectedWorkDay->alerts->firstWhere('id', $selectedAlertId), Alert::STATUS_CORRECTED) }}</flux:select.option>
+                                <flux:select.option value="{{ Alert::STATUS_CLOSED }}">{{ $this->alertResolutionOptionLabel($selectedWorkDay->alerts->firstWhere('id', $selectedAlertId), Alert::STATUS_CLOSED) }}</flux:select.option>
                             </flux:select>
 
                             <flux:textarea label="Comentario obligatorio" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe la razon del dictamen operativo." />

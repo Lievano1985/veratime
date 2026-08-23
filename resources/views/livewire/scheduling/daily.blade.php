@@ -1919,8 +1919,12 @@ new class extends Component {
 
             <div class="flex justify-end">
                 <div class="flex flex-wrap items-center justify-end gap-2">
+                    @if ($canEditSelectedBatch)
+                        <flux:button size="xs" variant="ghost" wire:click="generateMissing">
+                            {{ $selectedBatch->previous_batch_id ? 'Agregar faltantes' : 'Generar' }}
+                        </flux:button>
+                    @endif
                     @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
-                        <flux:button size="xs" variant="ghost" wire:click="generateMissing">Generar</flux:button>
                         <flux:button size="xs" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</flux:button>
                     @endif
                     @if ($canPrepareNextWeek)

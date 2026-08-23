@@ -40,7 +40,7 @@ class GenerateDraftScheduleBatchFromProfilesAction
             throw new InvalidArgumentException('El modo de regeneracion no es valido.');
         }
 
-        $this->authorize($actor, $company, $batch);
+        $this->authorize($actor, $company, $batch, $regenerationMode);
 
         return DB::transaction(function () use ($actor, $company, $batch, $regenerationMode): GenerateDraftScheduleBatchFromProfilesResult {
             $lockedBatch = ScheduleBatch::query()
@@ -48,7 +48,7 @@ class GenerateDraftScheduleBatchFromProfilesAction
                 ->lockForUpdate()
                 ->findOrFail($batch->id);
 
-            $this->authorize($actor, $company, $lockedBatch);
+            $this->authorize($actor, $company, $lockedBatch, $regenerationMode);
             $this->batchValidator->assertDraft($lockedBatch);
             $this->assertTimezone((string) $lockedBatch->center->timezone);
 
@@ -115,7 +115,7 @@ class GenerateDraftScheduleBatchFromProfilesAction
         });
     }
 
-    private function authorize(User $actor, Company $company, ScheduleBatch $batch): void
+    private function authorize(User $actor, Company $company, ScheduleBatch $batch, string $regenerationMode): void
     {
         if ($company->status !== 'active'
             || $actor->status !== 'active'
@@ -132,8 +132,8 @@ class GenerateDraftScheduleBatchFromProfilesAction
             throw new InvalidArgumentException('El usuario no puede generar programacion diaria para este lote.');
         }
 
-        if ($batch->previous_batch_id !== null) {
-            throw new InvalidArgumentException('Una correccion versionada no puede regenerarse desde perfiles.');
+        if ($batch->previous_batch_id !== null && $regenerationMode !== self::MODE_MISSING_ONLY) {
+            throw new InvalidArgumentException('Una correccion versionada solo puede agregar dias faltantes para relaciones laborales nuevas.');
         }
     }
 

@@ -14,8 +14,10 @@ use App\Domains\Scheduling\Exceptions\ScheduleCorrectionAlreadyExistsException;
 use App\Domains\Scheduling\Exceptions\ScheduleCorrectionHasNoChangesException;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
+use App\Models\EmploymentRelationship;
 use App\Models\ScheduleBatch;
 use App\Models\User;
+use App\Models\Worker;
 use Database\Seeders\VeraTimeCorrectedScheduleScenarioSeeder;
 use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -95,16 +97,79 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
         app(CreateCorrectiveScheduleBatchAction::class)->handle($foreignRh, $company, $published, 'Intento desde otra empresa.');
     }
 
-    public function test_corrective_draft_cannot_regenerate_from_profiles(): void
+    public function test_corrective_draft_can_add_missing_days_for_new_worker_but_cannot_refresh_from_profiles(): void
     {
         $this->seedPublishedScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->publishedBatch($company);
         $draft = app(CreateCorrectiveScheduleBatchAction::class)
-            ->handle($rh, $company, $this->publishedBatch($company), 'Correccion para validar bloqueo de regeneracion.')
+            ->handle($rh, $company, $published, 'Correccion para agregar trabajador nuevo.')
             ->correctiveBatch;
+        $worker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'NEW-001',
+            'full_name' => 'Trabajador Nuevo',
+            'status' => 'active',
+        ]);
+        $relationship = EmploymentRelationship::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $worker->id,
+            'center_id' => $published->center_id,
+            'started_at' => '2026-08-05',
+            'ended_at' => null,
+            'status' => 'active',
+        ]);
+
+        $result = app(GenerateDraftScheduleBatchFromProfilesAction::class)->handle(
+            $rh,
+            $company,
+            $draft,
+            GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY,
+        );
+
+        $this->assertGreaterThan(0, $result->assignmentsCreated);
+        $this->assertSame(5, DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $draft->id)
+            ->where('employment_relationship_id', $relationship->id)
+            ->count());
+
+        $validation = app(ValidateCorrectiveScheduleBatchForPublicationAction::class)->handle($rh, $company, $draft);
+        $this->assertTrue($validation->valid(), implode(' | ', $validation->errors));
+        $this->assertSame(5, $validation->assignmentsAdded);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Una correccion versionada no puede regenerarse desde perfiles.');
+        $this->expectExceptionMessage('Una correccion versionada solo puede agregar dias faltantes para relaciones laborales nuevas.');
+
+        app(GenerateDraftScheduleBatchFromProfilesAction::class)->handle(
+            $rh,
+            $company,
+            $draft,
+            GenerateDraftScheduleBatchFromProfilesAction::MODE_REFRESH_PROFILE_GENERATED,
+        );
+    }
+
+    public function test_corrective_publication_can_contain_only_new_worker_days(): void
+    {
+        $this->seedPublishedScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $published = $this->publishedBatch($company);
+        $draft = app(CreateCorrectiveScheduleBatchAction::class)
+            ->handle($rh, $company, $published, 'Correccion por trabajador nuevo.')
+            ->correctiveBatch;
+        $worker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'NEW-002',
+            'full_name' => 'Trabajador Solo Agregado',
+            'status' => 'active',
+        ]);
+        $relationship = EmploymentRelationship::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $worker->id,
+            'center_id' => $published->center_id,
+            'started_at' => '2026-08-06',
+            'ended_at' => null,
+            'status' => 'active',
+        ]);
 
         app(GenerateDraftScheduleBatchFromProfilesAction::class)->handle(
             $rh,
@@ -112,6 +177,21 @@ class VersionedScheduleCorrectionsDomainTest extends TestCase
             $draft,
             GenerateDraftScheduleBatchFromProfilesAction::MODE_MISSING_ONLY,
         );
+
+        $validation = app(ValidateCorrectiveScheduleBatchForPublicationAction::class)->handle($rh, $company, $draft);
+        $this->assertTrue($validation->valid(), implode(' | ', $validation->errors));
+        $this->assertSame(0, $validation->changedDays);
+        $this->assertSame(4, $validation->assignmentsAdded);
+
+        $result = app(PublishCorrectiveScheduleBatchAction::class)->handle($rh, $company, $draft);
+
+        $this->assertSame('superseded', $result->previousBatch->status);
+        $this->assertSame('published', $result->correctiveBatch->status);
+        $this->assertSame(2, $result->correctiveBatch->version);
+        $this->assertSame(4, DailyScheduleAssignment::query()
+            ->where('schedule_batch_id', $draft->id)
+            ->where('employment_relationship_id', $relationship->id)
+            ->count());
     }
 
     public function test_corrective_publication_supersedes_previous_and_resolver_uses_new_version(): void
