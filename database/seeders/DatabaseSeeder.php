@@ -21,8 +21,8 @@ class DatabaseSeeder extends Seeder
         $this->call(RoleSeeder::class);
         $this->call(LegalRuleSeeder::class);
         $this->call(AlertTypeSeeder::class);
-        $this->call(VeraTimeDemoSeeder::class);
-        $this->call(VeraTimeOperationalVerificationSeeder::class);
+/*         $this->call(VeraTimeDemoSeeder::class);
+ */        $this->call(VeraTimeOperationalVerificationSeeder::class);
 
         $user = User::factory()->create([
             'name' => 'Test User',

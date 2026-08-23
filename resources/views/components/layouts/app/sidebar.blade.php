@@ -74,10 +74,18 @@
             <flux:navlist variant="outline">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Inicio</flux:navlist.item>
 
+                @if (auth()->user()->isSuperAdmin())
+                    <flux:navlist.group heading="Plataforma" class="grid">
+                        <flux:navlist.item icon="identification" :href="route('customer-accounts.index')" :current="request()->routeIs('customer-accounts.*')" wire:navigate>Cuentas cliente</flux:navlist.item>
+                    </flux:navlist.group>
+                @endif
+
                 <flux:navlist.group heading="Organización" class="grid">
                     @unless ($isSupervisor)
                         <flux:navlist.item icon="building-office" :href="route('companies.index')" :current="request()->routeIs('companies.*')" wire:navigate>Empresas</flux:navlist.item>
-                        <flux:navlist.item icon="map-pin" :href="route('centers.index')" :current="request()->routeIs('centers.*')" wire:navigate>Centros</flux:navlist.item>
+                        @if ($activeCompany)
+                            <flux:navlist.item icon="map-pin" :href="route('centers.index')" :current="request()->routeIs('centers.*')" wire:navigate>Centros</flux:navlist.item>
+                        @endif
                     @endunless
 
                     @if (! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\OrganizationalUnit::class, $activeCompany]))
@@ -92,6 +100,7 @@
                     @endif
                 </flux:navlist.group>
 
+                @if ($activeCompany)
                 <flux:navlist.group heading="Horarios" class="grid">
                     @if (! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\ShiftTemplate::class, $activeCompany]))
                         <flux:navlist.item icon="calendar-days" :href="route('scheduling.shifts')" :current="request()->routeIs('scheduling.shifts')" wire:navigate>Catálogo de turnos</flux:navlist.item>
@@ -110,6 +119,7 @@
                         <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
                     @endunless
                 </flux:navlist.group>
+                @endif
 
                 @if ($activeCompany && ($isSupervisor || auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompany]) || auth()->user()->can('viewAny', [\App\Models\WorkDay::class, $activeCompany])))
                     <flux:navlist.group heading="Registro de jornada" class="grid">
@@ -165,7 +175,7 @@
                     icon-trailing="chevrons-up-down"
                 />
 
-                <flux:menu class="w-[220px]">
+                <flux:menu class="vera-user-menu w-[220px] border border-zinc-200 bg-white text-zinc-900 shadow-lg">
                     <flux:menu.radio.group>
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -188,14 +198,14 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item href="/settings/profile" icon="cog" wire:navigate>Configuracion</flux:menu.item>
+                        <flux:menu.item href="/settings/profile" icon="cog" class="text-zinc-700 hover:bg-primary-soft hover:text-primary" wire:navigate>Configuracion</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
 
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
+                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full text-zinc-700 hover:bg-primary-soft hover:text-primary">
                             {{ __('Cerrar sesion') }}
                         </flux:menu.item>
                     </form>
@@ -215,7 +225,7 @@
                     icon-trailing="chevron-down"
                 />
 
-                <flux:menu>
+                <flux:menu class="vera-user-menu border border-zinc-200 bg-white text-zinc-900 shadow-lg">
                     <flux:menu.radio.group>
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -238,14 +248,14 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item href="/settings/profile" icon="cog" wire:navigate>Configuracion</flux:menu.item>
+                        <flux:menu.item href="/settings/profile" icon="cog" class="text-zinc-700 hover:bg-primary-soft hover:text-primary" wire:navigate>Configuracion</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
 
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
+                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full text-zinc-700 hover:bg-primary-soft hover:text-primary">
                             {{ __('Cerrar sesion') }}
                         </flux:menu.item>
                     </form>

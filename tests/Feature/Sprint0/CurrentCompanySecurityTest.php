@@ -5,6 +5,7 @@ namespace Tests\Feature\Sprint0;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use App\Models\User;
+use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -91,5 +92,33 @@ class CurrentCompanySecurityTest extends TestCase
 
         $response->assertForbidden();
         $this->assertFalse(session()->has('current_company_id'));
+    }
+
+    public function test_super_admin_without_active_companies_can_access_dashboard(): void
+    {
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Sin empresas activas')
+            ->assertSee('Empresas')
+            ->assertDontSee('Centros')
+            ->assertDontSee('Descansos obligatorios');
+    }
+
+    public function test_super_admin_without_active_companies_is_redirected_from_operational_routes_to_companies(): void
+    {
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->get('/centers')
+            ->assertRedirect(route('companies.index'));
     }
 }

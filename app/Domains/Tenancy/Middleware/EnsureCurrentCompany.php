@@ -44,6 +44,16 @@ class EnsureCurrentCompany
         session()->forget('current_company_id');
         $this->currentCompany->clear();
 
+        if ($user->isSuperAdmin()) {
+            if ($request->routeIs('dashboard') || $request->routeIs('settings.*')) {
+                return $next($request);
+            }
+
+            return redirect()
+                ->route('companies.index')
+                ->with('status', 'Crea o selecciona una empresa activa para operar.');
+        }
+
         throw new HttpException(403, 'No active company is assigned to this user.');
     }
 }

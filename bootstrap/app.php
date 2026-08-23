@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Tenancy\Middleware\EnsureCurrentCompany;
+use App\Http\Middleware\EnsureActiveUser;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            EnsureActiveUser::class,
+        ]);
+
         $middleware->alias([
             'current.company' => EnsureCurrentCompany::class,
         ]);

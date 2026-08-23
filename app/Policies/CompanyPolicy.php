@@ -25,7 +25,8 @@ class CompanyPolicy
             return true;
         }
 
-        return $user->hasActiveMembershipInCompany($company);
+        return $company->hasActiveCustomerAccount()
+            && $user->hasActiveMembershipInCompany($company);
     }
 
     public function update(User $user, Company $company): bool
@@ -34,7 +35,13 @@ class CompanyPolicy
             return true;
         }
 
-        return $user->hasActiveMembershipInCompany($company)
+        return $company->hasActiveCustomerAccount()
+            && $user->hasActiveMembershipInCompany($company)
             && in_array($user->roleKeyForCompanyMembership($company), RoleKey::companyManagers(), true);
+    }
+
+    public function delete(User $user, Company $company): bool
+    {
+        return $user->isSuperAdmin();
     }
 }

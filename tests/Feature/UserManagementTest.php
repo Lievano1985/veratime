@@ -136,6 +136,113 @@ class UserManagementTest extends TestCase
         $this->assertTrue(Hash::check('NuevaTemporal123', $target->refresh()->password));
     }
 
+    public function test_company_admin_can_suspend_membership_but_not_global_user(): void
+    {
+        [$company, $admin] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        [, $target] = $this->companyUser(RoleKey::RH_OPERATIVO, $company);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('users.index')
+            ->call('openEditPanel', $target->id)
+            ->set('editForm.name', $target->name)
+            ->set('editForm.role_key', RoleKey::RH_OPERATIVO)
+            ->set('editForm.user_status', 'inactive')
+            ->set('editForm.membership_status', 'inactive')
+            ->call('update')
+            ->assertSee('Usuario actualizado');
+
+        $this->assertSame('active', $target->refresh()->status);
+        $this->assertDatabaseHas('company_user', [
+            'company_id' => $company->id,
+            'user_id' => $target->id,
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function test_inactive_company_membership_remains_visible_for_reactivation(): void
+    {
+        [$company, $admin] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        $role = Role::query()->where('key', RoleKey::RH_OPERATIVO)->firstOrFail();
+        $user = User::factory()->create([
+            'name' => 'Usuario Reactivable',
+            'status' => 'active',
+        ]);
+
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'inactive',
+            'is_default' => false,
+        ]);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('users.index')
+            ->assertSee('Usuario Reactivable')
+            ->assertSee('Inactivo')
+            ->call('openEditPanel', $user->id)
+            ->set('editForm.membership_status', 'active')
+            ->call('update')
+            ->assertSee('Usuario actualizado');
+
+        $this->assertDatabaseHas('company_user', [
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_super_admin_can_suspend_global_user(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        [, $target] = $this->companyUser(RoleKey::ADMIN_EMPRESA, $company);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('users.index')
+            ->call('openEditPanel', $target->id)
+            ->set('editForm.name', $target->name)
+            ->set('editForm.role_key', RoleKey::ADMIN_EMPRESA)
+            ->set('editForm.user_status', 'inactive')
+            ->set('editForm.membership_status', 'active')
+            ->call('update')
+            ->assertSee('Usuario actualizado');
+
+        $this->assertSame('inactive', $target->refresh()->status);
+        $this->assertDatabaseHas('company_user', [
+            'company_id' => $company->id,
+            'user_id' => $target->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_inactive_membership_blocks_only_that_company(): void
+    {
+        $role = Role::query()->where('key', RoleKey::RH_OPERATIVO)->firstOrFail();
+        $firstCompany = Company::factory()->create(['status' => 'active']);
+        $secondCompany = Company::factory()->create(['status' => 'active']);
+        $user = User::factory()->create(['status' => 'active']);
+
+        $user->companies()->attach($firstCompany, [
+            'role_id' => $role->id,
+            'status' => 'inactive',
+            'is_default' => true,
+        ]);
+        $user->companies()->attach($secondCompany, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => false,
+        ]);
+
+        $this->assertFalse($user->activeCompanies()->whereKey($firstCompany->id)->exists());
+        $this->assertTrue($user->activeCompanies()->whereKey($secondCompany->id)->exists());
+        $this->assertSame($secondCompany->id, $user->defaultCompany()?->id);
+    }
+
     /**
      * @return array{0: Company, 1: User}
      */

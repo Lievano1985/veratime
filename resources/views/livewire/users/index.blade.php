@@ -31,7 +31,12 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->filters = ['search' => '', 'role_key' => '', 'status' => 'active'];
+        $this->filters = [
+            'search' => '',
+            'role_key' => '',
+            'user_status' => '',
+            'membership_status' => '',
+        ];
         $this->form = $this->emptyForm();
         $this->editForm = $this->emptyEditForm();
         $this->resetForm = ['password' => ''];
@@ -103,12 +108,21 @@ new class extends Component {
 
         Gate::authorize('update', [$user, $company]);
 
-        $validated = $this->validate([
+        $rules = [
             'editForm.name' => ['required', 'string', 'max:255'],
             'editForm.role_key' => ['required', Rule::in($this->assignableRoleKeys($company))],
-            'editForm.user_status' => ['required', Rule::in(['active', 'inactive'])],
             'editForm.membership_status' => ['required', Rule::in(['active', 'inactive'])],
-        ])['editForm'];
+        ];
+
+        if (auth()->user()->isSuperAdmin()) {
+            $rules['editForm.user_status'] = ['required', Rule::in(['active', 'inactive'])];
+        }
+
+        $validated = $this->validate($rules)['editForm'];
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $validated['user_status'] = $user->status;
+        }
 
         $action->handle($company, auth()->user(), $user, $validated);
 
@@ -186,7 +200,8 @@ new class extends Component {
 
         $search = trim((string) ($this->filters['search'] ?? ''));
         $roleKey = trim((string) ($this->filters['role_key'] ?? ''));
-        $status = trim((string) ($this->filters['status'] ?? ''));
+        $userStatus = trim((string) ($this->filters['user_status'] ?? ''));
+        $membershipStatus = trim((string) ($this->filters['membership_status'] ?? ''));
         $roleIdsByKey = Role::query()->pluck('id', 'key');
 
         $users = $company->users()
@@ -197,7 +212,8 @@ new class extends Component {
                         ->orWhere('users.email', 'like', "%{$search}%");
                 });
             })
-            ->when($status !== '', fn ($query) => $query->where('company_user.status', $status))
+            ->when($userStatus !== '', fn ($query) => $query->where('users.status', $userStatus))
+            ->when($membershipStatus !== '', fn ($query) => $query->where('company_user.status', $membershipStatus))
             ->when($roleKey !== '' && isset($roleIdsByKey[$roleKey]), fn ($query) => $query->where('company_user.role_id', $roleIdsByKey[$roleKey]))
             ->orderBy('users.name')
             ->paginate(15);
@@ -205,6 +221,7 @@ new class extends Component {
         return [
             'users' => $users,
             'roles' => Role::query()->whereIn('key', $this->assignableRoleKeys($company))->orderBy('name')->get(),
+            'isSuperAdmin' => auth()->user()->isSuperAdmin(),
         ];
     }
 
@@ -296,7 +313,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Usuarios</flux:heading>
-            <flux:subheading>Administra accesos, roles y estado de usuarios de la empresa activa.</flux:subheading>
+            <flux:subheading>Administra usuarios, roles y membresias de la empresa activa.</flux:subheading>
         </div>
 
         <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
@@ -321,7 +338,7 @@ new class extends Component {
     @endif
 
     <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-4">
             <flux:input label="Buscar" placeholder="Nombre o correo" wire:model.live.debounce.400ms="filters.search" />
             <flux:select label="Rol" wire:model.live="filters.role_key">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -329,7 +346,12 @@ new class extends Component {
                     <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:select label="Estado de acceso" wire:model.live="filters.status">
+            <flux:select label="Estado usuario" wire:model.live="filters.user_status">
+                <flux:select.option value="">Todos</flux:select.option>
+                <flux:select.option value="active">Activos</flux:select.option>
+                <flux:select.option value="inactive">Inactivos</flux:select.option>
+            </flux:select>
+            <flux:select label="Acceso empresa" wire:model.live="filters.membership_status">
                 <flux:select.option value="">Todos</flux:select.option>
                 <flux:select.option value="active">Activos</flux:select.option>
                 <flux:select.option value="inactive">Inactivos</flux:select.option>
@@ -423,10 +445,20 @@ new class extends Component {
                         <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
-                <flux:select label="Estado del usuario" wire:model="editForm.user_status">
-                    <flux:select.option value="active">Activo</flux:select.option>
-                    <flux:select.option value="inactive">Inactivo</flux:select.option>
-                </flux:select>
+                @if ($isSuperAdmin)
+                    <flux:select label="Estado global del usuario" wire:model="editForm.user_status">
+                        <flux:select.option value="active">Activo</flux:select.option>
+                        <flux:select.option value="inactive">Inactivo</flux:select.option>
+                    </flux:select>
+                @else
+                    <div>
+                        <div class="mb-1 block text-sm font-medium text-zinc-700">Estado global del usuario</div>
+                        <x-ui.badge variant="{{ ($editForm['user_status'] ?? 'active') === 'active' ? 'success' : 'neutral' }}">
+                            {{ $this->statusLabel($editForm['user_status'] ?? 'active') }}
+                        </x-ui.badge>
+                        <p class="mt-1 text-xs text-zinc-500">Solo el super administrador puede cambiar el estado global.</p>
+                    </div>
+                @endif
                 <flux:select label="Acceso a esta empresa" wire:model="editForm.membership_status">
                     <flux:select.option value="active">Activo</flux:select.option>
                     <flux:select.option value="inactive">Inactivo</flux:select.option>

@@ -69,12 +69,23 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function activeCompanies()
     {
         if ($this->isSuperAdmin()) {
-            return Company::query()->where('status', 'active');
+            return Company::query()
+                ->where('status', 'active')
+                ->where(function ($query): void {
+                    $query
+                        ->whereDoesntHave('customerAccount')
+                        ->orWhereHas('customerAccount', fn ($account) => $account->where('status', 'active'));
+                });
         }
 
         return $this->companies()
             ->wherePivot('status', 'active')
-            ->where('companies.status', 'active');
+            ->where('companies.status', 'active')
+            ->where(function ($query): void {
+                $query
+                    ->whereDoesntHave('customerAccount')
+                    ->orWhereHas('customerAccount', fn ($account) => $account->where('status', 'active'));
+            });
     }
 
     public function companiesWithActiveMembership(): BelongsToMany
@@ -86,7 +97,8 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function belongsToCompany(Company $company): bool
     {
         if ($this->isSuperAdmin()) {
-            return $company->status === 'active';
+            return $company->status === 'active'
+                && $company->hasActiveCustomerAccount();
         }
 
         return $this->activeCompanies()->whereKey($company->id)->exists();
@@ -104,8 +116,7 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function defaultCompany(): ?Company
     {
         if ($this->isSuperAdmin()) {
-            return Company::query()
-                ->where('status', 'active')
+            return $this->activeCompanies()
                 ->orderBy('name')
                 ->first();
         }
@@ -119,7 +130,7 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function roleKeyForCompany(Company $company): ?string
     {
         if ($this->isSuperAdmin()) {
-            return $company->status === 'active' ? RoleKey::SUPER_ADMIN : null;
+            return $this->belongsToCompany($company) ? RoleKey::SUPER_ADMIN : null;
         }
 
         $company = $this->activeCompanies()
@@ -136,7 +147,7 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function roleKeyForCompanyMembership(Company $company): ?string
     {
         if ($this->isSuperAdmin()) {
-            return $company->status === 'active' ? RoleKey::SUPER_ADMIN : null;
+            return $this->belongsToCompany($company) ? RoleKey::SUPER_ADMIN : null;
         }
 
         $company = $this->companiesWithActiveMembership()
