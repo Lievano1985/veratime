@@ -1228,3 +1228,88 @@ Reglas arquitectonicas F5B:
 - la aplicacion de una importacion exige el hash de validacion esperado;
 - los lotes publicados no pueden importarse;
 - F5B no agrega API WFM, XLSX, jobs asincronos ni publicacion automatica.
+
+## Nota Admin A1/A2 - administracion de plataforma y alta de tenants
+
+### A1 - alta guiada empresa + admin principal
+
+El alta guiada de empresa debe implementarse como flujo de plataforma, no como operacion ordinaria dentro de un tenant.
+
+Arquitectura esperada:
+
+```text
+Super admin UI
+        ?
+CreateTenantWithAdminAction
+        ?
+CreateCompanyAction
+CreateCompanySettingsAction / configuracion inicial
+CreateOrAttachCompanyAdminAction
+        ?
+customer_accounts / companies / company_settings / users / company_user
+```
+
+Reglas arquitectonicas:
+
+- La orquestacion debe vivir en una Action de dominio/aplicacion, no en Livewire.
+- La Action debe ejecutar todo dentro de una transaccion.
+- Si falla crear empresa, configuracion, usuario o membresia, se revierte todo.
+- El `super_admin` no se agrega como miembro de la empresa creada.
+- El `admin_empresa` inicial queda como usuario operativo de la empresa.
+- El flujo debe validar tenant, correo, estado de empresa y rol canonico en servidor.
+- No aceptar `company_id` externo para decidir el tenant creado; la empresa nace desde los datos del formulario y queda aislada por su propio ID.
+- Cualquier acceso posterior de soporte del `super_admin` a datos internos de una empresa debe tratarse como soporte auditado, no como operacion ordinaria.
+
+### A2 - cuentas cliente
+
+A2 separa cuenta cliente y empresa operativa. La suscripcion completa queda como extension posterior.
+
+Modelo conceptual recomendado:
+
+```text
+customer_account
+        ?
+companies
+        ?
+operacion tenant por company_id
+```
+
+Durante el MVP, el flujo normal sera una cuenta cliente con una sola empresa. La opcion multiempresa queda preparada como capacidad comercial especial para despachos o grupos empresariales, sin mezclar datos ni permisos entre empresas.
+
+No implementar en A1/A2:
+
+- cobro automatico;
+- facturacion;
+- portal publico de compra;
+- limites automaticos por plan;
+- multiempresa comercial completa;
+- suspension formal por cuenta cliente.
+
+### A3 - suspension por niveles
+
+A3 agrega bloqueo operativo por cuenta cliente sin mezclarlo con el estado individual de empresa.
+
+Orden de validacion recomendado:
+
+```text
+User activo
+        ↓
+CustomerAccount activa
+        ↓
+Company activa
+        ↓
+company_user activa
+        ↓
+Policy / alcance
+```
+
+`CurrentCompany` y `User::activeCompanies()` deben excluir empresas cuya cuenta cliente no este activa. El `super_admin` administra cuentas desde `/customer-accounts`, ruta de plataforma que no depende de `current.company`.
+
+### A4 - usuarios y membresias
+
+La autorizacion debe tratar `users.status` y `company_user.status` como niveles distintos:
+
+- `users.status` controla identidad global y solo puede ser modificado por `super_admin`.
+- `company_user.status` controla acceso a una empresa y puede ser administrado por roles autorizados dentro de esa empresa.
+- Las Actions de usuarios deben ignorar o rechazar cambios de estado global enviados por usuarios no `super_admin`.
+- Las Policies deben seguir validando cuenta cliente, empresa, usuario, membresia y rol/alcance.

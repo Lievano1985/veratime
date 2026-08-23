@@ -753,3 +753,81 @@ Sprint 0 — Base técnica
 ```
 
 No se recomienda crear más documentos grandes antes de iniciar código, salvo que aparezca una decisión técnica nueva que pueda bloquear el avance.
+
+## Bloque Admin A1 - alta guiada de empresa y administrador principal
+
+Estado: implementado / candidato a cierre.
+
+Historias:
+
+| ID | Historia | Prioridad | Criterio de aceptacion |
+|---|---|---:|---|
+| BL-ADM-A1-001 | Alta guiada de empresa | P0 | `super_admin` crea empresa desde flujo guiado sin crear registros parciales |
+| BL-ADM-A1-002 | Crear administrador principal | P0 | El flujo crea o asigna usuario con rol `admin_empresa` activo en la empresa creada |
+| BL-ADM-A1-003 | Configuracion inicial de empresa | P0 | Se crea `company_settings` base y estado inicial de empresa |
+| BL-ADM-A1-004 | Validaciones y seguridad | P0 | Correo unico, empresa valida, rol canonico y transaccion atomica |
+| BL-ADM-A1-005 | Pruebas de plataforma | P0 | Super admin puede crear tenant; usuarios no autorizados no pueden; no hay datos parciales |
+
+Nota de cierre A1/A2 parcial: se implemento alta guiada desde Empresas para crear cuenta cliente, empresa, configuracion inicial y administrador principal `admin_empresa` sin asociar al `super_admin` como miembro operativo. A2 queda parcial: existe cuenta cliente monoempresa/multiempresa, pero no cobro, facturacion ni limites automaticos.
+
+Fuera de A1:
+
+- cobro automatico;
+- facturacion;
+- portal publico de compra;
+- suscripcion multiempresa operativa;
+- soporte auditado avanzado.
+
+## Bloque Admin A2 - cuenta cliente, planes y suscripciones
+
+Estado: implementado parcial / candidato a cierre.
+
+Historias propuestas:
+
+| ID | Historia | Prioridad | Criterio de aceptacion |
+|---|---|---:|---|
+| BL-ADM-A2-001 | Cuenta cliente comercial | P1 | Implementado/candidato a cierre: `customer_accounts` separa cuenta cliente de empresa operativa |
+| BL-ADM-A2-002 | Planes y limites | P1 | Definir limites por trabajadores, empresas y funcionalidades |
+| BL-ADM-A2-003 | Suscripcion simple | P1 | Implementado parcial: cuenta cliente con una empresa operativa sin cobro automatico |
+| BL-ADM-A2-004 | Suscripcion multiempresa especial | P2 | Preparado: cuenta cliente puede agrupar varias empresas sin mezclar tenants |
+| BL-ADM-A2-005 | Estado comercial | P1 | Piloto, activa, suspendida o cancelada sin borrar historial |
+
+Decision:
+
+- El flujo comercial principal del MVP sera una cuenta con una empresa.
+- Multiempresa queda reservado para despachos contables, grupos o casos especiales.
+- La suspension formal de cuenta cliente, empresa, usuario y membresia queda en Admin A3.
+
+## Bloque Admin A3 - suspensiones y acceso
+
+Estado: implementado / candidato a cierre.
+
+| ID | Historia | Prioridad | Criterio de aceptacion |
+|---|---|---:|---|
+| BL-ADM-A3-001 | Suspender cuenta cliente | P1 | `super_admin` suspende/reactiva cuenta y bloquea todas sus empresas operativas |
+| BL-ADM-A3-002 | Suspender empresa | P1 | Estado de empresa bloquea solo esa empresa sin cambiar la cuenta cliente |
+| BL-ADM-A3-003 | Suspender usuario global | P1 | Usuario inactivo no puede ingresar ni operar en ninguna empresa |
+| BL-ADM-A3-004 | Suspender membresia | P1 | Membresia inactiva bloquea acceso solo a una empresa |
+| BL-ADM-A3-005 | Pruebas de acceso | P1 | Se validan bloqueo por cuenta, empresa, usuario y membresia |
+
+Regla de acceso A3:
+
+Un usuario puede operar una empresa solo si la cuenta cliente, la empresa, el usuario, la membresia y el rol/alcance aplicable estan activos.
+
+## Bloque Admin A4 - usuarios y membresias
+
+Estado: implementado / candidato a cierre.
+
+| ID | Historia | Prioridad | Criterio de aceptacion |
+|---|---|---:|---|
+| BL-ADM-A4-001 | Separar estado global y membresia | P1 | Usuarios muestra estado global y acceso a empresa como conceptos distintos |
+| BL-ADM-A4-002 | Suspender usuario global | P1 | Solo `super_admin` puede cambiar `users.status` |
+| BL-ADM-A4-003 | Suspender membresia | P1 | Admin/RH pueden inactivar acceso solo dentro de su empresa segun permisos |
+| BL-ADM-A4-004 | Usuario multiempresa controlado | P1 | Una membresia inactiva no bloquea otras empresas activas |
+| BL-ADM-A4-005 | Pruebas de usuarios | P1 | Se validan permisos, estado global y membresia por empresa |
+
+Pendiente posterior:
+
+- vista global de identidades si se requiere gestionar usuarios sin entrar a una empresa activa;
+- invitaciones por correo;
+- recuperacion operativa de accesos multiempresa desde soporte.

@@ -227,3 +227,66 @@ El cambio tecnico posterior debera actualizar:
 - documentacion operativa.
 
 No se implementa en este ADR el refactor tecnico.
+
+## Decision complementaria - alta guiada y suscripciones
+
+### Alta guiada A1
+
+El `super_admin` podra crear una empresa y su administrador principal desde un flujo guiado de plataforma.
+
+Reglas:
+
+- El flujo crea empresa, configuracion inicial, usuario administrador y membresia `admin_empresa` en una sola operacion atomica.
+- El `super_admin` no queda como miembro operativo de la empresa creada.
+- El administrador principal creado si pertenece a la empresa mediante `company_user`.
+- Este flujo no concede al `super_admin` permisos de operacion diaria; solo crea y administra tenants desde plataforma.
+
+### Suscripciones A2
+
+Vera Time se vendera por suscripcion. La suscripcion simple del MVP se orienta a una empresa por cuenta cliente.
+
+A2 queda implementado parcialmente para separar formalmente:
+
+- cuenta cliente;
+- empresa operativa.
+
+Queda pendiente para bloques posteriores:
+
+- suscripcion;
+- plan;
+- limites;
+- reglas formales de suspension por cuenta cliente.
+
+La suscripcion multiempresa para despachos o grupos queda permitida como plan especial futuro, pero no debe relajar aislamiento por `company_id` ni convertir a un usuario de despacho en usuario global sin permisos por empresa.
+
+### Suspensiones A3
+
+| Nivel | Que representa | Pregunta que responde | Efecto al suspender |
+|---|---|---|---|
+| Cuenta cliente | Contrato comercial con quien paga | Este cliente sigue teniendo contrato vigente? | Bloquea todas las empresas de la cuenta sin borrar datos |
+| Empresa | Tenant operativo de una razon social | Esta empresa sigue operando en Vera Time? | Bloquea solo esa empresa |
+| Usuario global | Identidad unica de la persona | Esta persona puede entrar a Vera Time? | Bloquea al usuario en todas sus empresas |
+| Membresia | Vinculo usuario-empresa | Esta persona atiende esta empresa? | Bloquea solo el acceso a esa empresa |
+
+Regla de acceso:
+
+```text
+customer_account.status = active
+company.status = active
+users.status = active
+company_user.status = active
+rol/alcance autorizado
+```
+
+Si cualquiera de esos niveles falla, el acceso operativo se bloquea.
+
+### Usuarios y membresias A4
+
+Decision:
+
+- `users.status` es estado global de identidad.
+- `company_user.status` es estado de membresia por empresa.
+- Solo `super_admin` puede cambiar el estado global de un usuario.
+- `admin_empresa` y `rh_admin` pueden administrar membresias y roles dentro de su empresa segun la matriz de permisos.
+- Una membresia inactiva no debe bloquear otras empresas activas del mismo usuario.
+- Un usuario global inactivo no debe operar en ninguna empresa.

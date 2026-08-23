@@ -822,3 +822,52 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - El reporte base de periodo distingue faltas sin justificar de ausencias justificadas y ausencias no pagadas como hechos operativos.
 - No calcula nomina, descuentos, subsidios, prima vacacional, CFDI, claves SAT obligatorias ni percepciones/deducciones.
 - Pendiente: exportar estas incidencias en CSV/API del periodo y definir si se agregaran referencias/folios mas formales por tipo documental.
+
+## Bloque Admin A1 - alta guiada de empresa
+
+Estado: implementado / candidato a cierre.
+
+- Objetivo: que `super_admin` cree empresa, configuracion inicial y administrador principal `admin_empresa` en un solo flujo guiado.
+- El flujo debe ser transaccional y no dejar empresa, usuario o membresia parcial.
+- El `super_admin` no queda agregado automaticamente a `company_user` de la empresa creada.
+- El administrador principal si queda como miembro activo de la empresa con rol `admin_empresa`.
+- La pantalla Empresas permite el alta guiada desde `super_admin` y muestra la contrasena temporal generada/capturada para entregarla fuera del sistema.
+- El alta guiada crea una `customer_account` formal y registra ahi el tipo de cuenta cliente: `single_company` o `multi_company`.
+- No incluye cobro automatico, facturacion, portal publico de compra ni suscripcion multiempresa operativa.
+
+## Bloque Admin A2 - cuenta cliente y suscripciones
+
+Estado: implementado parcial / candidato a cierre.
+
+- Vera Time se vendera por suscripcion.
+- El caso principal del MVP es una cuenta cliente con una empresa operativa.
+- Se agrega `customer_accounts` como separacion formal entre cuenta cliente y empresa operativa.
+- `companies.customer_account_id` permite asociar una o varias empresas a una cuenta cliente sin relajar el aislamiento por `company_id`.
+- El flujo guiado de `super_admin` crea cuenta cliente, empresa y administrador principal en una transaccion.
+- Multiempresa queda preparado a nivel de cuenta cliente, pero sin cobro, facturacion, limites automaticos ni autoservicio comercial.
+- A1/A2 no sincroniza automaticamente estado de empresa con estado de cuenta cliente.
+
+## Bloque Admin A3 - suspensiones y acceso
+
+Estado: implementado / candidato a cierre.
+
+- Se agrega pantalla `/customer-accounts` para `super_admin`.
+- `super_admin` puede suspender, reactivar o cancelar una cuenta cliente.
+- Una cuenta cliente suspendida o cancelada bloquea la resolucion de empresa activa para usuarios normales y para `super_admin` en contexto operativo.
+- Una empresa suspendida/inactiva/cancelada bloquea solo esa empresa.
+- Un usuario inactivo queda bloqueado globalmente desde login y policies.
+- Una membresia `company_user.status = inactive` bloquea el acceso del usuario solo a esa empresa.
+- La cuenta cliente no borra empresas, usuarios, membresias ni historial.
+- Pendiente: pantalla comercial mas completa con planes, limites, cobro y facturacion.
+
+## Bloque Admin A4 - usuarios y membresias
+
+Estado: implementado / candidato a cierre.
+
+- La vista Usuarios separa estado global del usuario y estado de acceso a la empresa activa.
+- `super_admin` puede cambiar el estado global del usuario.
+- `admin_empresa` y `rh_admin` administran roles/membresias dentro de su empresa, pero no suspenden globalmente al usuario.
+- Una membresia inactiva bloquea solo esa empresa.
+- Un usuario global inactivo no puede iniciar sesion ni operar en ninguna empresa.
+- Un usuario puede tener membresias distintas por empresa sin mezclar permisos.
+- Pendiente: vista global de usuarios de plataforma si se requiere administrar identidades fuera del contexto de empresa.
