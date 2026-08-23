@@ -2158,3 +2158,91 @@ Ahí se definirá:
 - Errores estándar.
 - Ejemplos request/response.
 - Webhooks o integraciones futuras.
+
+## Nota Admin A1/A2 - flujo de alta comercial
+
+### A1 - Nueva empresa
+
+La pantalla de super administracion debe ofrecer un flujo guiado "Nueva empresa" para crear el tenant inicial.
+
+Flujo esperado:
+
+```text
+Admin Global -> Empresas -> Nueva empresa
+        -> Datos de empresa
+        -> Administrador principal
+        -> Configuracion inicial
+        -> Confirmar alta
+```
+
+La interfaz debe mostrar claramente que el administrador principal sera quien opere la empresa como `admin_empresa`.
+
+Campos visibles sugeridos:
+
+- Nombre comercial.
+- Razon social.
+- RFC.
+- Zona horaria principal.
+- Estado inicial.
+- Nombre del administrador principal.
+- Correo del administrador principal.
+- Contrasena temporal o generacion segura.
+
+Reglas UX:
+
+- No pedir `company_id`.
+- No mostrar terminos tecnicos como `company_user` al usuario.
+- Mostrar resumen antes de confirmar.
+- Si falla el alta, explicar que no se creo la empresa ni el usuario parcialmente.
+- Despues de crear, permitir abrir la empresa o volver al listado.
+
+### A2 - suscripcion
+
+Estado: implementado parcial / candidato a cierre.
+
+El alta guiada ya solicita el tipo de cuenta cliente:
+
+- Monoempresa.
+- Multiempresa.
+
+La seleccion se guarda en la cuenta cliente formal y no en la configuracion operativa de la empresa.
+
+Pendiente para bloques posteriores:
+
+- pantalla dedicada de Cuentas cliente;
+- planes;
+- limites;
+- cobro;
+- facturacion;
+- reglas formales de suspension por cuenta cliente.
+
+### A3 - Cuentas cliente
+
+Pantalla:
+
+```text
+Super admin -> Cuentas cliente
+```
+
+Funciones visibles:
+
+- listar cuentas cliente;
+- filtrar por nombre, empresa, RFC, tipo y estado;
+- ver empresas asociadas;
+- suspender cuenta;
+- reactivar cuenta;
+- cancelar cuenta.
+
+La pantalla no elimina datos ni administra cobro/facturacion.
+
+### A4 - Usuarios
+
+La pantalla Usuarios debe distinguir:
+
+- Estado global del usuario.
+- Acceso a la empresa activa.
+- Rol dentro de la empresa activa.
+
+Para usuarios que no son `super_admin`, el estado global se muestra como informacion y no como control editable.
+
+El control operativo para `admin_empresa` y `rh_admin` es el acceso a la empresa activa.

@@ -43,6 +43,58 @@ class CompanyTenancyTest extends TestCase
         app(SetCurrentCompanyAction::class)->handle($user, $company);
     }
 
+    public function test_global_super_admin_can_select_any_active_company_without_membership(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        $otherCompany = Company::factory()->create(['status' => 'active']);
+        $inactiveCompany = Company::factory()->create(['status' => 'inactive']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $this->actingAs($superAdmin);
+
+        app(SetCurrentCompanyAction::class)->handle($superAdmin, $otherCompany);
+
+        $this->assertTrue($superAdmin->belongsToCompany($company));
+        $this->assertTrue($superAdmin->belongsToCompany($otherCompany));
+        $this->assertFalse($superAdmin->belongsToCompany($inactiveCompany));
+        $this->assertSame($otherCompany->id, session('current_company_id'));
+        $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->roleKeyForCompany($company));
+        $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->roleKeyForCompany($otherCompany));
+        $this->assertNull($superAdmin->roleKeyForCompany($inactiveCompany));
+    }
+
+    public function test_global_super_admin_cannot_select_inactive_company(): void
+    {
+        $this->expectException(AuthorizationException::class);
+
+        $inactiveCompany = Company::factory()->create(['status' => 'inactive']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        app(SetCurrentCompanyAction::class)->handle($superAdmin, $inactiveCompany);
+    }
+
+    public function test_global_super_admin_active_companies_are_all_active_tenants(): void
+    {
+        $companyA = Company::factory()->create(['name' => 'A Empresa', 'status' => 'active']);
+        $companyB = Company::factory()->create(['name' => 'B Empresa', 'status' => 'active']);
+        Company::factory()->create(['name' => 'C Inactiva', 'status' => 'inactive']);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+
+        $companyIds = $superAdmin->activeCompanies()->pluck('id')->all();
+
+        $this->assertEqualsCanonicalizing([$companyA->id, $companyB->id], $companyIds);
+        $this->assertTrue($superAdmin->defaultCompany()->is($companyA));
+    }
+
     public function test_current_company_is_stored_only_for_available_company(): void
     {
         $company = Company::factory()->create();

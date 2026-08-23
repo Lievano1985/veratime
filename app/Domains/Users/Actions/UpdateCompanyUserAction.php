@@ -37,10 +37,17 @@ class UpdateCompanyUserAction
                 throw ValidationException::withMessages(['editForm.membership_status' => 'No puedes quitar tu propio acceso administrativo.']);
             }
 
-            $targetUser->forceFill([
-                'name' => trim($data['name']),
-                'status' => $userStatus,
-            ])->save();
+            $targetUser->forceFill(['name' => trim($data['name'])]);
+
+            if ($actor->isSuperAdmin()) {
+                $targetUser->forceFill(['status' => $userStatus]);
+            } elseif ($userStatus !== $targetUser->status) {
+                throw ValidationException::withMessages([
+                    'editForm.user_status' => 'Solo el super administrador puede cambiar el estado global del usuario.',
+                ]);
+            }
+
+            $targetUser->save();
 
             $targetUser->companies()->updateExistingPivot($company->id, [
                 'role_id' => $role->id,

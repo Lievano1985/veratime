@@ -177,6 +177,33 @@ select:focus[data-flux-control] {
         color: var(--color-zinc-50) !important;
     }
 
+    .vera-user-menu {
+        background: var(--color-white) !important;
+        border-color: var(--color-zinc-200) !important;
+        color: var(--color-zinc-900) !important;
+    }
+
+    .vera-user-menu [data-flux-menu-item],
+    .vera-user-menu [data-flux-menu-item] * {
+        color: var(--color-zinc-700) !important;
+    }
+
+    .vera-user-menu [data-flux-menu-item]:hover,
+    .vera-user-menu [data-flux-menu-item][data-active] {
+        background: var(--color-primary-soft) !important;
+        color: var(--color-primary) !important;
+    }
+
+    .vera-user-menu [data-flux-menu-item]:hover *,
+    .vera-user-menu [data-flux-menu-item][data-active] * {
+        color: var(--color-primary) !important;
+    }
+
+    .vera-user-menu [data-flux-menu-item]:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
     .app-shell-close-toggle,
     .app-shell-open-toggle {
         background: var(--color-vera-sidebar);

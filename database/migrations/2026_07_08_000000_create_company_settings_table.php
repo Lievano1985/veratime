@@ -17,6 +17,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('default_closure_day')->nullable();
             $table->boolean('allow_worker_corrections')->default(false);
             $table->boolean('require_pin_for_kiosk')->default(true);
+            $table->string('kiosk_key_hash')->nullable()->unique();
             $table->boolean('require_pin_for_confirmation')->default(true);
             $table->json('metadata')->nullable();
             $table->timestamps();

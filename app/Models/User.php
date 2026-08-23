@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\RoleKey;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -26,6 +27,7 @@ class User extends Authenticatable // implements MustVerifyEmail
         'email',
         'password',
         'status',
+        'global_role',
     ];
 
     /**
@@ -58,11 +60,32 @@ class User extends Authenticatable // implements MustVerifyEmail
             ->withTimestamps();
     }
 
-    public function activeCompanies(): BelongsToMany
+    public function isSuperAdmin(): bool
     {
+        return $this->status === 'active'
+            && $this->global_role === RoleKey::SUPER_ADMIN;
+    }
+
+    public function activeCompanies()
+    {
+        if ($this->isSuperAdmin()) {
+            return Company::query()
+                ->where('status', 'active')
+                ->where(function ($query): void {
+                    $query
+                        ->whereDoesntHave('customerAccount')
+                        ->orWhereHas('customerAccount', fn ($account) => $account->where('status', 'active'));
+                });
+        }
+
         return $this->companies()
             ->wherePivot('status', 'active')
-            ->where('companies.status', 'active');
+            ->where('companies.status', 'active')
+            ->where(function ($query): void {
+                $query
+                    ->whereDoesntHave('customerAccount')
+                    ->orWhereHas('customerAccount', fn ($account) => $account->where('status', 'active'));
+            });
     }
 
     public function companiesWithActiveMembership(): BelongsToMany
@@ -73,16 +96,31 @@ class User extends Authenticatable // implements MustVerifyEmail
 
     public function belongsToCompany(Company $company): bool
     {
+        if ($this->isSuperAdmin()) {
+            return $company->status === 'active'
+                && $company->hasActiveCustomerAccount();
+        }
+
         return $this->activeCompanies()->whereKey($company->id)->exists();
     }
 
     public function hasActiveMembershipInCompany(Company $company): bool
     {
+        if ($this->isSuperAdmin()) {
+            return $company->status === 'active';
+        }
+
         return $this->companiesWithActiveMembership()->whereKey($company->id)->exists();
     }
 
     public function defaultCompany(): ?Company
     {
+        if ($this->isSuperAdmin()) {
+            return $this->activeCompanies()
+                ->orderBy('name')
+                ->first();
+        }
+
         return $this->activeCompanies()
             ->wherePivot('is_default', true)
             ->first()
@@ -91,6 +129,10 @@ class User extends Authenticatable // implements MustVerifyEmail
 
     public function roleKeyForCompany(Company $company): ?string
     {
+        if ($this->isSuperAdmin()) {
+            return $this->belongsToCompany($company) ? RoleKey::SUPER_ADMIN : null;
+        }
+
         $company = $this->activeCompanies()
             ->whereKey($company->id)
             ->first();
@@ -104,6 +146,10 @@ class User extends Authenticatable // implements MustVerifyEmail
 
     public function roleKeyForCompanyMembership(Company $company): ?string
     {
+        if ($this->isSuperAdmin()) {
+            return $this->belongsToCompany($company) ? RoleKey::SUPER_ADMIN : null;
+        }
+
         $company = $this->companiesWithActiveMembership()
             ->whereKey($company->id)
             ->first();
@@ -130,6 +176,7 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(TimeEvent::class, 'source_user_id');
     }
+
     public function operationalScopeAssignments(): HasMany
     {
         return $this->hasMany(OperationalScopeAssignment::class);

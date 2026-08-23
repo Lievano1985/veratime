@@ -2167,3 +2167,60 @@ php artisan test tests/Feature/BlockF3A/ScheduleBatchPublicationDomainTest.php -
 - `work_day_calculations`.
 - Activaciones on-call.
 - Motor legal, calculos, alertas, incidencias y reportes.
+
+## Admin A1 - pruebas manuales de alta guiada
+
+Estado: implementado / candidato a cierre.
+
+Para cerrar A1, validar manualmente:
+
+1. Entrar como `super_admin`.
+2. Abrir Empresas.
+3. Usar "Nueva empresa".
+4. Capturar datos minimos de empresa y seleccionar tipo de cuenta cliente: monoempresa o multiempresa.
+5. Capturar administrador principal.
+6. Confirmar el alta.
+7. Verificar que la empresa aparece en listado global.
+8. Verificar que el administrador principal puede iniciar sesion y operar como `admin_empresa`.
+9. Verificar que el `super_admin` no quedo como miembro operativo en `company_user`.
+10. Probar error de correo duplicado y confirmar que no quedan registros parciales.
+11. Verificar en base de datos que se creo `customer_accounts` y que la empresa quedo ligada por `companies.customer_account_id`.
+12. Editar una empresa como `super_admin` y cambiar el tipo de cuenta cliente sin agregar al super admin como miembro operativo.
+
+A2 queda cubierto solo en cuenta cliente y tipo monoempresa/multiempresa. Cobro, facturacion, planes y limites siguen fuera de estas pruebas.
+
+## Admin A3 - pruebas manuales de suspensiones
+
+Estado: implementado / candidato a cierre.
+
+Validar:
+
+1. Entrar como `super_admin`.
+2. Abrir "Cuentas cliente".
+3. Suspender una cuenta cliente.
+4. Confirmar que las empresas de esa cuenta desaparecen del selector operativo.
+5. Confirmar que un usuario normal de esa cuenta no puede abrir `/dashboard`.
+6. Reactivar la cuenta cliente.
+7. Confirmar que la empresa vuelve a estar disponible si tambien esta activa.
+8. Suspender solo una empresa desde Empresas y confirmar que no cambia el estado de la cuenta cliente.
+9. Inactivar un usuario desde Usuarios y confirmar que no puede iniciar sesion.
+10. Inactivar una membresia y confirmar que el usuario pierde acceso solo a esa empresa.
+
+No validar todavia cobro, facturacion, planes ni limites automaticos.
+
+## Admin A4 - pruebas manuales de usuarios y membresias
+
+Estado: implementado / candidato a cierre.
+
+Validar:
+
+1. Entrar como `admin_empresa`.
+2. Abrir Usuarios.
+3. Confirmar que se muestran columnas separadas para estado global del usuario y acceso a empresa.
+4. Editar un usuario y cambiar solo "Acceso a esta empresa".
+5. Confirmar que el usuario sigue activo globalmente.
+6. Entrar como `super_admin`.
+7. Editar un usuario y cambiar "Estado global del usuario".
+8. Confirmar que un usuario global inactivo no puede iniciar sesion.
+9. Confirmar que una membresia inactiva bloquea solo esa empresa.
+10. Confirmar que `rh_admin` no puede asignar rol `admin_empresa`.

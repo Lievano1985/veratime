@@ -19,6 +19,7 @@ final class RoleKey
     public static function companyManagers(): array
     {
         return [
+            self::SUPER_ADMIN,
             self::ADMIN_EMPRESA,
             self::RH_ADMIN,
         ];

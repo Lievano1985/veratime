@@ -39,7 +39,7 @@ class RoleSeederTest extends TestCase
         }
     }
 
-    public function test_database_seeder_creates_super_admin_user(): void
+    public function test_database_seeder_creates_global_super_admin_user(): void
     {
         $this->seed(DatabaseSeeder::class);
 
@@ -49,7 +49,12 @@ class RoleSeederTest extends TestCase
 
         $company = $superAdmin->defaultCompany();
 
+        $this->assertTrue($superAdmin->isSuperAdmin());
+        $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->global_role);
         $this->assertNotNull($company);
         $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->roleKeyForCompany($company));
+        $this->assertDatabaseMissing('company_user', [
+            'user_id' => $superAdmin->id,
+        ]);
     }
 }

@@ -2235,3 +2235,109 @@ Ahí se definirán:
 - `/time-events/manual` permite anular eventos recientes de la empresa a `owner`, `admin` y `rh`.
 - Bloque 5 no implementa `work_days`, motor legal, horas extra, alertas, incidencias, reportes ni API.
 - Siguiente bloque pendiente: `work_days`.
+
+## Nota Admin A1/A2 - alta guiada y suscripciones
+
+### Admin A1 - alta guiada de empresa y administrador principal
+
+Estado: implementado / candidato a cierre.
+
+Objetivo:
+
+- Permitir que `super_admin` cree una empresa cliente y su administrador principal en un solo flujo guiado.
+- Reducir pasos manuales separados entre alta de empresa, configuracion inicial, creacion de usuario y asignacion `admin_empresa`.
+- Dejar listo el tenant para iniciar configuracion operativa sin intervencion directa en base de datos.
+
+Reglas funcionales:
+
+- Solo `super_admin` puede ejecutar el alta guiada A1.
+- El flujo debe crear la empresa, su configuracion inicial y el usuario administrador principal dentro de una transaccion.
+- El usuario administrador principal queda asociado a la empresa con rol `admin_empresa`, membresia activa y empresa activa.
+- El `super_admin` no queda agregado automaticamente a `company_user` de la empresa creada.
+- El flujo no debe permitir operar jornadas, horarios, incidencias o periodos como si el `super_admin` fuera personal interno de la empresa.
+- La creacion debe validar correo unico, datos minimos de empresa, zona horaria y estado inicial.
+- Si falla cualquier paso, no debe quedar empresa, usuario o membresia parcial.
+
+Datos minimos sugeridos:
+
+- Nombre comercial.
+- Razon social.
+- RFC, cuando aplique.
+- Zona horaria principal.
+- Estado inicial de empresa.
+- Nombre del administrador principal.
+- Correo del administrador principal.
+- Contrasena temporal generada o capturada bajo reglas seguras.
+
+No incluye en A1:
+
+- Cobro automatico.
+- Stripe u otro proveedor de pago.
+- Facturacion automatica.
+- Portal publico de compra.
+- Invitaciones por correo, salvo decision posterior.
+- Suscripcion multiempresa operativa.
+
+### Admin A2 - cuenta cliente, planes y suscripciones
+
+Estado: implementado parcial / candidato a cierre.
+
+Decision de producto:
+
+- Vera Time se vendera como suscripcion.
+- La venta normal inicial sera una cuenta cliente con una empresa operativa.
+- Debe prepararse el modelo para una suscripcion multiempresa especial, util para despachos contables, grupos empresariales o administradores externos, sin convertirlo en el flujo principal del MVP.
+
+Conceptos a separar:
+
+- Cuenta cliente: entidad comercial que contrata y paga.
+- Empresa operativa: tenant donde viven trabajadores, horarios, jornadas, periodos y evidencias.
+- Suscripcion: plan, limites, vigencia y estado comercial.
+
+Reglas A2:
+
+- Una cuenta cliente podra tener una o varias empresas segun el plan.
+- Una empresa operativa siempre conserva aislamiento por `company_id`.
+- La suscripcion multiempresa no debe mezclar datos entre empresas.
+- Los usuarios con acceso a varias empresas siguen usando permisos por empresa y selector de empresa activa.
+- A1/A2 crea la cuenta cliente formal y registra el tipo `single_company` o `multi_company`.
+- El cobro, limites automaticos, facturacion y suspension formal por cuenta cliente quedan para bloques posteriores.
+
+Riesgo a controlar:
+
+- No amarrar irrevocablemente la suscripcion solo a `companies`, porque eso dificultaria cuentas multiempresa futuras.
+- No implementar complejidad multiempresa comercial, cobro o limites antes de validar el flujo simple de una empresa por cuenta cliente.
+
+### Admin A3 - suspensiones y acceso
+
+Estado: implementado / candidato a cierre.
+
+El acceso operativo a una empresa requiere que esten activos:
+
+- cuenta cliente;
+- empresa;
+- usuario global;
+- membresia usuario-empresa;
+- rol y alcance aplicable.
+
+Reglas:
+
+- Suspender una cuenta cliente bloquea todas sus empresas sin borrar datos.
+- Suspender una empresa bloquea solo esa empresa.
+- Suspender un usuario bloquea su identidad en todo Vera Time.
+- Suspender una membresia bloquea solo el acceso del usuario a esa empresa.
+- Solo `super_admin` administra cuentas cliente.
+- Planes, cobro, facturacion y limites automaticos quedan fuera de A3.
+
+### Admin A4 - usuarios y membresias
+
+Estado: implementado / candidato a cierre.
+
+Reglas:
+
+- El estado global del usuario (`users.status`) controla si la persona puede ingresar a Vera Time.
+- La membresia (`company_user.status`) controla si la persona puede operar una empresa concreta.
+- Solo `super_admin` puede cambiar el estado global del usuario.
+- Administradores de empresa y RH administrador pueden cambiar membresias y roles permitidos dentro de la empresa activa.
+- Un usuario con membresia inactiva en una empresa puede conservar acceso a otra empresa donde su membresia siga activa.
+- La UI debe mostrar ambos conceptos de forma separada para evitar confundir suspension global con suspension por empresa.

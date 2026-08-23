@@ -17,6 +17,7 @@ Route::view('dashboard', 'dashboard')
     ->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
+    Volt::route('customer-accounts', 'customer-accounts.index')->name('customer-accounts.index');
     Volt::route('companies', 'companies.index')->name('companies.index');
 });
 

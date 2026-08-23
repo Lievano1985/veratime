@@ -68,7 +68,8 @@ it('sidebar shows time clock only to authorized roles', function (): void {
     $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertDontSee('Registro de jornada');
+        ->assertSee('Kiosco')
+        ->assertDontSee('Eventos');
 });
 
 it('manual capture screen supports assisted registration panel', function (): void {

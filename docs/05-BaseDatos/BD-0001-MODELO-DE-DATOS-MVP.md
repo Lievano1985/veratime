@@ -179,9 +179,31 @@ No todas las tablas requieren pantalla propia en el MVP, pero síura mínima par
 
 # 5. Tenancy, empresas y planes
 
+## 5.0 `customer_accounts`
+
+Representa la cuenta cliente comercial que contrata Vera Time.
+
+| Campo | Tipo sugerido | Notas |
+|---|---|---|
+| `id` | bigint pk | Identificador |
+| `name` | string | Nombre de la cuenta cliente |
+| `account_type` | enum/string | `single_company` o `multi_company` |
+| `status` | enum/string | Estado comercial base. La suspension formal se define en Admin A3 |
+| `metadata` | JSON nullable | Datos adicionales |
+| `created_at` | timestamp |  |
+| `updated_at` | timestamp |  |
+
+Indices:
+
+```text
+index(account_type, status)
+```
+
 ## 5.1 `companies`
 
 Representa una empresa cliente del SaaS.
+
+Nota de implementacion A1/A2: la tabla real incluye `customer_account_id` para relacionar la empresa operativa con `customer_accounts`. A1/A2 no sincroniza automaticamente `companies.status` con `customer_accounts.status`; la suspension formal se definira en Admin A3.
 
 | Campo | Tipo sugerido | Notas |
 |---|---|---|
@@ -2388,3 +2410,64 @@ Ese documento definirá:
 - Reportes.
 - Importaciones.
 - Administración.
+
+## Nota Admin A1/A2 - alta de tenant y suscripciones
+
+### A1 - alta guiada
+
+A1 reutilizara tablas existentes:
+
+- `customer_accounts` para la cuenta cliente comercial.
+- `companies` para la empresa operativa.
+- `company_settings` para configuracion inicial.
+- `users` para el administrador principal.
+- `company_user` para la membresia activa con rol `admin_empresa`.
+- `roles` para resolver el rol canonico.
+
+Reglas de datos:
+
+- `users.global_role = super_admin` identifica administradores de plataforma sin membresia empresarial obligatoria.
+- El administrador principal de la empresa no usa `global_role`; debe quedar ligado por `company_user` a la empresa creada.
+- El `super_admin` no se inserta en `company_user` por crear una empresa.
+- El alta guiada debe evitar registros parciales mediante transaccion.
+- El correo del usuario administrador debe ser unico segun la regla vigente de `users.email`.
+- `customer_accounts.account_type` define `single_company` o `multi_company`.
+- `companies.customer_account_id` relaciona la empresa operativa con su cuenta cliente.
+
+### A2 - cuenta cliente y suscripcion
+
+A2 queda implementado parcialmente para modelar formalmente:
+
+- cuenta cliente comercial;
+- relacion cuenta cliente -> una o varias empresas.
+
+Queda pendiente:
+
+- suscripcion;
+- plan;
+- limites;
+- estado comercial;
+
+Decision provisional:
+
+- No amarrar definitivamente la suscripcion solo a `companies`.
+- Preparar el modelo para que una cuenta cliente pueda tener una empresa en el flujo normal o varias empresas en planes especiales para despachos/grupos.
+- Mantener `company_id` como frontera operativa innegociable aunque exista una cuenta cliente multiempresa.
+
+### A3 - estados y suspension
+
+Estados operativos actuales:
+
+- `customer_accounts.status`: controla bloqueo comercial de todas las empresas asociadas.
+- `companies.status`: controla bloqueo de una empresa especifica.
+- `users.status`: controla bloqueo global de la identidad.
+- `company_user.status`: controla bloqueo de membresia en una empresa.
+
+No se borran datos al suspender. La eliminacion destructiva de tenants no forma parte de A3.
+
+### A4 - usuarios y membresias
+
+- `users.status` representa el estado global de la identidad.
+- `company_user.status` representa el estado del acceso a una empresa.
+- `company_user.role_id` conserva el rol del usuario dentro de esa empresa.
+- El mismo usuario puede tener membresias con estados distintos en empresas distintas.

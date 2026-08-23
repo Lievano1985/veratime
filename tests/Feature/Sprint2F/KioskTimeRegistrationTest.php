@@ -4,6 +4,7 @@ use App\Domains\TimeRecords\Actions\RegisterKioskTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\CompanySetting;
 use App\Models\EmploymentRelationship;
 use App\Models\TimeEvent;
 use App\Models\Worker;
@@ -11,6 +12,7 @@ use App\Models\WorkerCredential;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use App\Support\KioskKey;
 use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
@@ -25,11 +27,15 @@ it('loads kiosk screen without authenticated user', function (): void {
     $this->get(route('kiosk.index'))
         ->assertOk()
         ->assertSee('Kiosco')
-        ->assertSee('Codigo de acceso');
+        ->assertSee('Clave de kiosco');
 });
 
 it('unknown code fails with neutral message', function (): void {
+    sprint2fKioskFixture(pin: '1234');
+
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', 'NO-EXISTE')
         ->set('pin', '1234')
         ->call('identify')
@@ -41,6 +47,8 @@ it('wrong pin fails increments attempts and never exposes pin or hash', function
     [, , , , $credential] = sprint2fKioskFixture(pin: '1234');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '9999')
         ->call('identify')
@@ -55,6 +63,8 @@ it('correct pin identifies worker and clears pin from component state', function
     [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -72,6 +82,8 @@ it('can identify by employee code when access code is not used', function (): vo
     [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $worker->employee_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -84,6 +96,8 @@ it('blocked and reset required credentials cannot register', function (string $s
     [, , , , $credential] = sprint2fKioskFixture(pin: '1234', credentialAttributes: ['status' => $status]);
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -91,13 +105,13 @@ it('blocked and reset required credentials cannot register', function (string $s
 })->with(['blocked', 'reset_required']);
 
 it('inactive worker or inactive company cannot register from kiosk', function (array $companyAttributes, array $workerAttributes): void {
-    [, , , , $credential] = sprint2fKioskFixture(
+    [$company, , , , $credential] = sprint2fKioskFixture(
         pin: '1234',
         companyAttributes: $companyAttributes,
         workerAttributes: $workerAttributes,
     );
 
-    expect(fn () => app(ResolveKioskCredentialAction::class)->handle($credential->access_code, '1234'))
+    expect(fn () => app(ResolveKioskCredentialAction::class)->handle($company, $credential->access_code, '1234'))
         ->toThrow(InvalidArgumentException::class);
 })->with([
     [['status' => 'inactive'], []],
@@ -159,6 +173,8 @@ it('kiosk livewire records event then returns to safe start state', function ():
     [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -172,9 +188,11 @@ it('kiosk livewire records event then returns to safe start state', function ():
 });
 
 it('kiosk temporary token allows current registration and expires safely', function (): void {
-    [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [$company, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -187,6 +205,7 @@ it('kiosk temporary token allows current registration and expires safely', funct
 
     Volt::test('kiosk.index')
         ->set('credentialToken', encrypt(json_encode([
+            'company_id' => $company->id,
             'credential_id' => $credential->id,
             'worker_id' => $credential->worker_id,
             'issued_at' => CarbonImmutable::parse('2026-08-17 15:00:00', 'UTC')->timestamp,
@@ -203,21 +222,49 @@ it('kiosk temporary token allows current registration and expires safely', funct
         ->assertSet('workerName', null)
         ->assertSet('allowedActions', []);
 });
+
 it('kiosk blocks manipulated credential token for another worker', function (): void {
-    [, , , , $credential] = sprint2fKioskFixture(pin: '1234');
-    [, , , , $otherCredential] = sprint2fKioskFixture(pin: '1234');
+    [$company, , , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [, , , , $otherCredential] = sprint2fKioskFixture(pin: '1234', kioskKey: 'KIOSK-OTHER1!');
 
     Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
         ->set('credentialToken', encrypt(json_encode([
+            'company_id' => $company->id,
             'credential_id' => $otherCredential->id,
             'worker_id' => $credential->worker_id,
             'issued_at' => now()->timestamp,
         ], JSON_THROW_ON_ERROR)))
         ->call('record', 'clock_in')
         ->assertHasErrors(['accessCode']);
+});
+
+
+it('uses kiosk company context when access code and pin exist in multiple companies', function (): void {
+    [$companyA, $workerA, , , $credentialA] = sprint2fKioskFixture(pin: '1234');
+    [$companyB, $workerB, , , $credentialB] = sprint2fKioskFixture(pin: '1234', kioskKey: 'KIOSK-B1!');
+
+    $credentialB->forceFill(['access_code' => $credentialA->access_code])->save();
+    $workerB->forceFill(['employee_code' => $workerA->employee_code])->save();
+    $companyB->setting()->update(['kiosk_key_hash' => KioskKey::hash('KIOSK-B1!')]);
+
+    Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-B1!')
+        ->call('activateKiosk')
+        ->set('accessCode', $credentialA->access_code)
+        ->set('pin', '1234')
+        ->call('identify')
+        ->assertHasNoErrors()
+        ->assertSet('workerName', $workerB->full_name)
+        ->assertDontSee($credentialA->pin_hash)
+        ->assertDontSee($credentialB->pin_hash);
+
+    expect($credentialA->refresh()->last_used_at)->toBeNull()
+        ->and($credentialB->refresh()->last_used_at)->not->toBeNull();
 });
 
 it('sprint 2f kiosk creates only time events and no future modules', function (): void {
@@ -242,6 +289,7 @@ function sprint2fKioskFixture(
     array $companyAttributes = [],
     array $workerAttributes = [],
     array $credentialAttributes = [],
+    string $kioskKey = 'KIOSK-KEY1!',
 ): array {
     $company = Company::factory()->create(array_replace([
         'status' => 'active',
@@ -262,6 +310,14 @@ function sprint2fKioskFixture(
         'center_id' => $center->id,
         'status' => 'active',
     ]);
+    CompanySetting::query()->updateOrCreate(
+        ['company_id' => $company->id],
+        array_replace(Company::defaultSettings(), [
+            'company_id' => $company->id,
+            'kiosk_key_hash' => KioskKey::hash($kioskKey),
+        ]),
+    );
+
     $credential = WorkerCredential::factory()->create(array_replace([
         'company_id' => $company->id,
         'worker_id' => $worker->id,

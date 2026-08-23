@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -15,6 +16,7 @@ class Company extends Model
     use HasFactory;
 
     protected $fillable = [
+        'customer_account_id',
         'name',
         'legal_name',
         'tax_id',
@@ -35,6 +37,16 @@ class Company extends Model
         return $this->belongsToMany(User::class)
             ->withPivot(['role_id', 'status', 'is_default'])
             ->withTimestamps();
+    }
+
+    public function customerAccount(): BelongsTo
+    {
+        return $this->belongsTo(CustomerAccount::class);
+    }
+
+    public function hasActiveCustomerAccount(): bool
+    {
+        return ($this->customerAccount?->status ?? 'active') === 'active';
     }
 
     public function activeUsers(): BelongsToMany
@@ -189,6 +201,7 @@ class Company extends Model
             'work_days_last_refresh_summary' => null,
             'allow_worker_corrections' => false,
             'require_pin_for_kiosk' => true,
+            'kiosk_key_hash' => null,
             'require_pin_for_confirmation' => true,
             'metadata' => [],
         ];
