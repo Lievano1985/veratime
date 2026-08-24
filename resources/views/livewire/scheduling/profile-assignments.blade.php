@@ -183,7 +183,7 @@ new class extends Component {
         $this->selectedAssignmentId = null;
         $this->replaceForm = $this->emptyReplaceForm();
         $this->resetPage();
-        Session::flash('status', 'Aplicacion reemplazada sin borrar historial.');
+        Session::flash('status', 'Aplicación reemplazada sin borrar historial.');
     }
 
     public function openEndPanel(int $assignmentId, CurrentCompany $currentCompany): void
@@ -221,7 +221,7 @@ new class extends Component {
         $this->selectedAssignmentId = null;
         $this->endForm = $this->emptyEndForm();
         $this->resetPage();
-        Session::flash('status', 'Aplicacion finalizada. Se volvera a utilizar la configuracion heredada.');
+        Session::flash('status', 'Aplicación finalizada. Se volverá a utilizar la configuración heredada.');
     }
 
     public function delete(int $assignmentId, CurrentCompany $currentCompany, DeleteScheduleProfileAssignmentIfUnusedAction $action): void
@@ -239,7 +239,7 @@ new class extends Component {
         }
 
         $this->resetPage();
-        Session::flash('status', 'Aplicacion eliminada.');
+        Session::flash('status', 'Aplicación eliminada.');
     }
 
     public function closePanels(): void
@@ -490,7 +490,7 @@ new class extends Component {
             'company' => 'Empresa',
             'center' => 'Centro',
             'organizational_unit' => 'Unidad organizacional',
-            'employment_relationship' => 'Relacion laboral',
+            'employment_relationship' => 'Relación laboral',
             default => 'Sin modelo',
         };
     }
@@ -513,21 +513,21 @@ new class extends Component {
     private function profileApplicationHint(?ScheduleProfile $profile): string
     {
         if (! $profile) {
-            return 'Selecciona un modelo para ver como se interpretara la fecha.';
+            return 'Selecciona un modelo para ver cómo se interpretará la fecha.';
         }
 
         if ($profile->profile_type === 'pattern' && $profile->pattern_mode === 'weekly') {
-            return 'Este horario se repite cada semana desde la fecha indicada. Solo aplica a trabajadores vigentes por dia.';
+            return 'Este horario se repite cada semana desde la fecha indicada. Solo aplica a trabajadores vigentes por día.';
         }
 
         if ($profile->profile_type === 'pattern' && $profile->pattern_mode === 'cycle') {
-            return 'La fecha indicada sera el Dia 1 del ciclo. Desde ahi el rol se repite automaticamente.';
+            return 'La fecha indicada será el Día 1 del ciclo. Desde ahí el rol se repite automáticamente.';
         }
 
         return match ($profile->profile_type) {
-            'calendar' => 'Este modelo deja dias pendientes para armar la programacion semanal por demanda o CSV.',
+            'calendar' => 'Este modelo deja días pendientes para armar la programación semanal por demanda o CSV.',
             'flexible' => 'Este modelo genera jornadas flexibles esperadas, sin turno fijo.',
-            'on_call' => 'Este modelo genera disponibilidad de guardia; no cuenta tiempo trabajado automaticamente.',
+            'on_call' => 'Este modelo genera disponibilidad de guardia; no cuenta tiempo trabajado automáticamente.',
             default => 'Modelo de horario.',
         };
     }
@@ -535,7 +535,7 @@ new class extends Component {
     private function assignmentDateLabel(?ScheduleProfile $profile): string
     {
         return $profile && $profile->profile_type === 'pattern' && $profile->pattern_mode === 'cycle'
-            ? 'Inicio del ciclo (Dia 1)'
+            ? 'Inicio del ciclo (Día 1)'
             : 'Vigente desde';
     }
 
@@ -596,49 +596,50 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Aplicacion de modelos</flux:heading>
-            <flux:subheading>Indica donde aplica cada modelo: empresa, centro, unidad o trabajador. El horario semanal se repite; el ciclo usa la fecha inicial como Dia 1.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Aplicación de modelos</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Indica dónde aplica cada modelo: empresa, centro, unidad o trabajador. El horario semanal se repite; el ciclo usa la fecha inicial como Día 1.</p>
         </div>
 
         @if ($canAssignCompanyScopes || $canAssignRelationshipScope)
-            <flux:button type="button" variant="primary" wire:click="openAssignmentPanel" icon="plus" class="w-full sm:w-auto">
+            <button type="button" class="btn-primary" wire:click="openAssignmentPanel">
+                <span class="text-base leading-none">+</span>
                 Aplicar modelo
-            </flux:button>
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{{ session('status') }}</div>
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">{{ session('status') }}</div>
     @endif
 
     @error('assignment')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">{{ $message }}</div>
     @enderror
 
-    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/60">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(180px,1fr)_minmax(150px,.7fr)_minmax(220px,1.1fr)_auto] xl:items-end">
             <flux:input label="Resolver trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="resolveWorkerSearch" />
             <flux:input type="date" label="Fecha" wire:model.live="resolveForm.date" />
             <flux:input label="Buscar aplicaciones" placeholder="Modelo, clave o trabajador" wire:model.live.debounce.350ms="filters.search" />
-            <flux:button type="button" variant="ghost" wire:click="$toggle('showAdvancedFilters')" class="w-full self-end lg:w-auto">
-                <span class="inline-flex items-center gap-1.5 leading-none">
-                    <span class="text-base leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
+            <button type="button" wire:click="$toggle('showAdvancedFilters')" class="btn-outline h-[42px] self-end justify-center">
+                <span class="inline-flex items-center gap-2 leading-none">
+                    <span class="text-lg leading-none">{{ $showAdvancedFilters ? '-' : '+' }}</span>
                     <span>Filtros</span>
                 </span>
-            </flux:button>
+            </button>
         </div>
 
         @if ($showAdvancedFilters)
-            <div class="mt-3 grid gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800 md:grid-cols-2 lg:max-w-2xl">
+            <div class="mt-4 grid gap-3 border-t border-surface-line pt-4 md:grid-cols-2 lg:max-w-2xl">
                 <flux:select label="Alcance" wire:model.live="filters.scope">
                     <flux:select.option value="all">Todos</flux:select.option>
                     <flux:select.option value="company">Empresa</flux:select.option>
                     <flux:select.option value="center">Centro</flux:select.option>
                     <flux:select.option value="organizational_unit">Unidad</flux:select.option>
-                    <flux:select.option value="employment_relationship">Relacion laboral</flux:select.option>
+                    <flux:select.option value="employment_relationship">Relación laboral</flux:select.option>
                 </flux:select>
                 <flux:select label="Estado" wire:model.live="filters.status">
                     <flux:select.option value="active">Vigentes</flux:select.option>
@@ -652,90 +653,88 @@ new class extends Component {
         @if ($resolveWorkerSearch !== '')
             <div class="mt-3 grid gap-2 md:grid-cols-2">
                 @forelse ($resolveWorkerResults as $worker)
-                    <button type="button" wire:click="selectResolveWorker({{ $worker->id }})" class="rounded-md border border-zinc-200 p-3 text-left text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                    <button type="button" wire:click="selectResolveWorker({{ $worker->id }})" class="rounded-xl border border-surface-line bg-white p-3 text-left text-sm transition hover:border-brand-blue hover:bg-[#F5F9FF]">
                         <span class="block font-medium">{{ $worker->employee_code }} - {{ $worker->full_name }}</span>
-                        <span class="text-xs text-zinc-500">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
+                        <span class="text-xs text-surface-muted">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
                     </button>
                 @empty
-                    <p class="text-sm text-zinc-500">No hay trabajadores disponibles.</p>
+                    <p class="text-sm text-surface-muted">No hay trabajadores disponibles.</p>
                 @endforelse
             </div>
         @endif
 
         @if ($resolveWorker)
-            <div class="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+            <div class="mt-4 rounded-2xl border border-surface-line bg-[#F7F9FC] p-4 text-sm">
                 <div class="grid gap-3 md:grid-cols-3">
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Trabajador</p>
-                        <p class="font-medium">{{ $resolveWorker->employee_code }} - {{ $resolveWorker->full_name }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Trabajador</p>
+                        <p class="font-semibold text-brand-navy">{{ $resolveWorker->employee_code }} - {{ $resolveWorker->full_name }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Modelo efectivo</p>
-                        <p class="font-medium">{{ $resolvedProfile['schedule_profile']?->name ?? 'Sin modelo' }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Modelo efectivo</p>
+                        <p class="font-semibold text-brand-navy">{{ $resolvedProfile['schedule_profile']?->name ?? 'Sin modelo' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Origen</p>
-                        <p class="font-medium">{{ $this->scopeLabel($resolvedProfile['assignment_scope'] ?? null) }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Origen</p>
+                        <p class="font-semibold text-brand-navy">{{ $this->scopeLabel($resolvedProfile['assignment_scope'] ?? null) }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Fecha resuelta</p>
-                        <p class="font-medium">{{ $resolvedProfile['date'] ?? $resolveForm['date'] }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Fecha resuelta</p>
+                        <p class="font-semibold text-brand-navy">{{ $resolvedProfile['date'] ?? $resolveForm['date'] }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Unidad principal usada</p>
-                        <p class="font-medium">{{ $resolvedProfile['organizational_unit']?->name ?? 'Sin unidad principal' }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Unidad principal usada</p>
+                        <p class="font-semibold text-brand-navy">{{ $resolvedProfile['organizational_unit']?->name ?? 'Sin unidad principal' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-zinc-500">Centro</p>
-                        <p class="font-medium">{{ $resolvedProfile['center']?->name ?? 'Sin centro' }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-surface-muted">Centro</p>
+                        <p class="font-semibold text-brand-navy">{{ $resolvedProfile['center']?->name ?? 'Sin centro' }}</p>
                     </div>
                 </div>
             </div>
         @endif
     </section>
 
-    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                <tr>
-                    <th class="px-4 py-3">Modelo</th>
-                    <th class="px-4 py-3">Alcance</th>
-                    <th class="px-4 py-3">Destino</th>
-                    <th class="px-4 py-3">Vigencia</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+    <div class="table-wrap">
+        <table class="w-full min-w-[920px] border-collapse">
+            <thead>
+                <tr class="table-row">
+                    <th class="table-head-cell">Modelo</th>
+                    <th class="table-head-cell">Alcance</th>
+                    <th class="table-head-cell">Destino</th>
+                    <th class="table-head-cell">Vigencia</th>
+                    <th class="table-head-cell">Estado</th>
+                    <th class="table-head-cell text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+            <tbody>
                 @forelse ($assignments as $assignment)
-                    <tr>
-                        <td class="px-4 py-3">
-                            <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $assignment->scheduleProfile?->code }} - {{ $assignment->scheduleProfile?->name }}</span>
-                            <span class="text-xs text-zinc-500">{{ $this->profileTypeLabel($assignment->scheduleProfile) }}</span>
+                    <tr class="table-row">
+                        <td class="table-cell">
+                            <span class="block font-semibold text-brand-navy">{{ $assignment->scheduleProfile?->code }} - {{ $assignment->scheduleProfile?->name }}</span>
+                            <span class="text-xs text-surface-muted">{{ $this->profileTypeLabel($assignment->scheduleProfile) }}</span>
                         </td>
-                        <td class="px-4 py-3">{{ $this->scopeLabel($assignment->assignment_scope) }}</td>
-                        <td class="px-4 py-3">{{ $this->assignmentTarget($assignment) }}</td>
-                        <td class="px-4 py-3">{{ $this->assignmentPeriodLabel($assignment) }}</td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $assignment->status === 'active' ? 'success' : ($assignment->status === 'replaced' ? 'warning' : 'neutral') }}">
-                                {{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}
-                            </x-ui.badge>
+                        <td class="table-cell">{{ $this->scopeLabel($assignment->assignment_scope) }}</td>
+                        <td class="table-cell">{{ $this->assignmentTarget($assignment) }}</td>
+                        <td class="table-cell">{{ $this->assignmentPeriodLabel($assignment) }}</td>
+                        <td class="table-cell">
+                            <span class="{{ $assignment->status === 'active' ? 'badge-success' : ($assignment->status === 'replaced' ? 'badge-warn' : 'badge-muted') }}"><span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="table-cell">
                             <div class="flex justify-end gap-2">
                                 @if ($assignment->status === 'active')
-                                    <flux:button size="xs" variant="ghost" wire:click="openReplacePanel({{ $assignment->id }})">Reemplazar</flux:button>
-                                    <flux:button size="xs" variant="danger" wire:click="openEndPanel({{ $assignment->id }})">Finalizar</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="openReplacePanel({{ $assignment->id }})" aria-label="Reemplazar aplicación" title="Reemplazar"><svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                    <button type="button" class="btn-icon" wire:click="openEndPanel({{ $assignment->id }})" aria-label="Finalizar aplicación" title="Finalizar"><svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                 @else
-                                    <span class="text-xs text-zinc-500">Historial</span>
+                                    <span class="text-xs text-surface-muted">Historial</span>
                                 @endif
-                                <flux:button size="xs" variant="danger" wire:click="delete({{ $assignment->id }})" wire:confirm="Eliminar esta aplicacion solo si no genero horarios? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                <button type="button" class="btn-icon" wire:click="delete({{ $assignment->id }})" wire:confirm="Eliminar esta aplicación solo si no generó horarios? Esta acción no se puede deshacer." aria-label="Eliminar aplicación" title="Eliminar"><svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">No hay aplicaciones de modelos con los filtros actuales.</td>
+                    <tr class="table-row">
+                        <td colspan="6" class="table-cell py-8 text-center text-surface-muted">No hay aplicaciones de modelos con los filtros actuales.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -744,16 +743,16 @@ new class extends Component {
 
     {{ $assignments->links() }}
 
-    <x-side-panel wire:model="showAssignmentPanel" title="Aplicar modelo de horario" subheading="El modelo genera borradores semanales; los horarios publicados conservan su version." maxWidth="max-w-3xl">
+    <x-side-panel wire:model="showAssignmentPanel" title="Aplicar modelo de horario" subheading="El modelo genera borradores semanales; los horarios publicados conservan su versión." maxWidth="max-w-3xl">
         <form wire:submit="saveAssignment" class="space-y-5 p-6">
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:select label="Alcance" wire:model.live="assignmentForm.assignment_scope">
                     @if ($canAssignCompanyScopes)
                         <flux:select.option value="company">Empresa</flux:select.option>
                         <flux:select.option value="center">Centro</flux:select.option>
-                        <flux:select.option value="organizational_unit">Area, departamento o equipo</flux:select.option>
+                        <flux:select.option value="organizational_unit">Área, departamento o equipo</flux:select.option>
                     @endif
-                    <flux:select.option value="employment_relationship">Relacion laboral</flux:select.option>
+                    <flux:select.option value="employment_relationship">Relación laboral</flux:select.option>
                 </flux:select>
 
                 <flux:select label="Modelo activo" wire:model="assignmentForm.schedule_profile_id">
@@ -764,7 +763,7 @@ new class extends Component {
                 </flux:select>
             </div>
 
-            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+            <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
                 {{ $this->profileApplicationHint($selectedAssignmentProfile) }}
             </div>
 
@@ -808,19 +807,19 @@ new class extends Component {
 
                     <div class="grid gap-2">
                         @forelse ($workerResults as $worker)
-                            <button type="button" wire:click="selectWorker({{ $worker->id }})" class="rounded-md border border-zinc-200 p-3 text-left text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                            <button type="button" wire:click="selectWorker({{ $worker->id }})" class="rounded-xl border border-surface-line bg-white p-3 text-left text-sm transition hover:border-brand-blue hover:bg-[#F5F9FF]">
                                 <span class="block font-medium">{{ $worker->employee_code }} - {{ $worker->full_name }}</span>
-                                <span class="text-xs text-zinc-500">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
+                                <span class="text-xs text-surface-muted">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
                             </button>
                         @empty
-                            <p class="rounded-md border border-dashed border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-700">No hay trabajadores activos disponibles.</p>
+                            <p class="rounded-xl border border-dashed border-surface-line p-4 text-sm text-surface-muted">No hay trabajadores activos disponibles.</p>
                         @endforelse
                     </div>
 
                     @if ($selectedWorker)
-                        <div class="flex items-center justify-between rounded-md bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+                        <div class="flex items-center justify-between rounded-xl border border-status-rest-line bg-status-rest-bg p-3 text-sm text-status-rest-text">
                             <span>{{ $selectedWorker->employee_code }} - {{ $selectedWorker->full_name }}</span>
-                            <flux:button type="button" size="xs" variant="ghost" wire:click="clearSelectedWorker">Quitar</flux:button>
+                            <button type="button" class="btn-ghost btn-sm" wire:click="clearSelectedWorker">Quitar</button>
                         </div>
                     @endif
                 </div>
@@ -833,17 +832,17 @@ new class extends Component {
             <flux:textarea label="Motivo" wire:model="assignmentForm.reason" />
 
             @error('assignmentForm.assignment_scope')
-                <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
 
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showReplacePanel" title="Reemplazar aplicacion" subheading="La aplicacion anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
+    <x-side-panel wire:model="showReplacePanel" title="Reemplazar aplicación" subheading="La aplicación anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
         <form wire:submit="replaceAssignment" class="space-y-5 p-6">
             <flux:select label="Nuevo modelo" wire:model="replaceForm.schedule_profile_id">
                 <flux:select.option value="">Selecciona modelo</flux:select.option>
@@ -851,32 +850,32 @@ new class extends Component {
                     <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+            <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
                 {{ $this->profileApplicationHint($selectedReplaceProfile) }}
             </div>
             <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedReplaceProfile) }}" wire:model="replaceForm.effective_from" />
             <flux:input type="date" label="Hasta opcional" wire:model="replaceForm.effective_to" />
             <flux:textarea label="Motivo" wire:model="replaceForm.reason" required />
             @error('replaceForm.effective_from')
-                <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Reemplazar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-primary">Reemplazar</button>
             </div>
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showEndPanel" title="Finalizar excepcion" subheading="Al finalizar esta excepcion, se volvera a utilizar la configuracion heredada." maxWidth="max-w-md">
+    <x-side-panel wire:model="showEndPanel" title="Finalizar excepción" subheading="Al finalizar esta excepción, se volverá a utilizar la configuración heredada." maxWidth="max-w-md">
         <form wire:submit="endAssignment" class="space-y-5 p-6">
             <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
             <flux:textarea label="Motivo" wire:model="endForm.reason" required />
             @error('endForm.effective_to')
-                <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Finalizar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-danger">Finalizar</button>
             </div>
         </form>
     </x-side-panel>

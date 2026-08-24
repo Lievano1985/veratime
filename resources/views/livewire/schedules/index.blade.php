@@ -411,9 +411,10 @@ new class extends Component {
         </div>
 
         @if ($canManageSchedules)
-            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
                 Nuevo horario
-            </flux:button>
+            </button>
         @endif
     </div>
 
@@ -522,9 +523,9 @@ new class extends Component {
                     </div>
 
                     <div class="flex justify-end">
-                        <flux:button type="submit" variant="primary">
+                        <button type="submit" class="btn-primary">
                             Guardar horario
-                        </flux:button>
+                        </button>
                     </div>
                 </form>
 
@@ -549,9 +550,9 @@ new class extends Component {
                             @endforeach
 
                             <div class="flex justify-end">
-                                <flux:button type="submit" variant="primary">
+                                <button type="submit" class="btn-primary">
                                     Guardar dias
-                                </flux:button>
+                                </button>
                             </div>
                         </form>
                     </section>
@@ -582,9 +583,9 @@ new class extends Component {
                             </div>
 
                             <div class="flex justify-end">
-                                <flux:button type="submit" variant="primary">
+                                <button type="submit" class="btn-primary">
                                     Guardar pausa
-                                </flux:button>
+                                </button>
                             </div>
                         </form>
 

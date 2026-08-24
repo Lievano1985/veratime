@@ -56,6 +56,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
             />
         </div>
 
-        <flux:button variant="primary" type="submit" class="w-full">{{ __('Confirm') }}</flux:button>
+        <button type="submit" class="btn-primary w-full justify-center">{{ __('Confirm') }}</button>
     </form>
 </div>

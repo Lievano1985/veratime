@@ -21,6 +21,7 @@ new class extends Component {
 
     #[Url(as: 'status')]
     public string $statusFilter = '';
+    public bool $showCreatePanel = false;
 
     public array $form = [
         'worker_id' => '',
@@ -68,8 +69,27 @@ new class extends Component {
         }
 
         $this->resetForm();
+        $this->showCreatePanel = false;
         $this->resetPage();
         Session::flash('status', 'Incidencia registrada. Recalcula jornadas para aplicar el efecto operativo.');
+    }
+
+    public function openCreatePanel(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [AttendanceIncident::class, $company]);
+
+        $this->resetForm();
+        $this->resetValidation();
+        $this->showCreatePanel = true;
+    }
+
+    public function closeCreatePanel(): void
+    {
+        $this->showCreatePanel = false;
+        $this->resetForm();
+        $this->resetValidation();
     }
 
     public function cancelIncident(int $incidentId, CancelAttendanceIncidentAction $action, CurrentCompany $currentCompany): void
@@ -82,7 +102,7 @@ new class extends Component {
         Gate::authorize('cancel', $incident);
 
         try {
-            $action->handle($company, $incident, auth()->user(), 'Cancelacion operativa desde pantalla.');
+        $action->handle($company, $incident, auth()->user(), 'Cancelación operativa desde pantalla.');
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages([
                 'form.worker_id' => $exception->getMessage(),
@@ -90,7 +110,7 @@ new class extends Component {
         }
 
         $this->resetPage();
-        Session::flash('status', 'Incidencia cancelada. Recalcula jornadas si el rango ya habia sido procesado.');
+        Session::flash('status', 'Incidencia cancelada. Recalcula jornadas si el rango ya había sido procesado.');
     }
 
     public function updatedSearch(): void
@@ -204,67 +224,29 @@ new class extends Component {
     }
 }; ?>
 
-<section class="space-y-6">
+<section class="space-y-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Incidencias y ausencias</flux:heading>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-                Registra causas operativas por fecha para que las jornadas y periodos no traten esos dias como faltas pendientes.
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Incidencias y ausencias</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">
+                Registra causas operativas por fecha para que las jornadas y periodos no traten esos días como faltas pendientes.
             </p>
         </div>
+
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
+            Agregar incidencia
+        </button>
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
-    <form wire:submit="createIncident" class="rounded-md border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="mb-4">
-            <flux:heading>Registrar incidencia</flux:heading>
-            <p class="mt-1 text-sm text-zinc-500">
-                Esto no calcula nomina. Solo clasifica la asistencia del periodo para cierre y exportacion posterior.
-            </p>
-        </div>
-
-        <div class="grid gap-4 lg:grid-cols-3">
-            <flux:select label="Trabajador" wire:model="form.worker_id">
-                <flux:select.option value="">Selecciona trabajador</flux:select.option>
-                @foreach ($workers as $worker)
-                    <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} - {{ $worker->full_name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-
-            <flux:input label="Desde" type="date" wire:model="form.start_date" />
-            <flux:input label="Hasta" type="date" wire:model="form.end_date" />
-
-            <flux:select label="Tipo" wire:model="form.incident_type">
-                @foreach (AttendanceIncident::types() as $type)
-                    <flux:select.option value="{{ $type }}">{{ $this->typeLabel($type) }}</flux:select.option>
-                @endforeach
-            </flux:select>
-
-            <flux:select label="Pago operativo" wire:model="form.payment_status">
-                @foreach (AttendanceIncident::paymentStatuses() as $paymentStatus)
-                    <flux:select.option value="{{ $paymentStatus }}">{{ $this->paymentLabel($paymentStatus) }}</flux:select.option>
-                @endforeach
-            </flux:select>
-
-            <flux:input label="Referencia o folio opcional" wire:model="form.reference" placeholder="Ej. IMSS, autorizacion interna o folio RH" />
-        </div>
-
-        <div class="mt-4">
-            <flux:textarea label="Comentario" wire:model="form.notes" rows="3" placeholder="Contexto operativo para RH. No captures datos sensibles innecesarios." />
-        </div>
-
-        <div class="mt-4 flex justify-end">
-            <flux:button type="submit" variant="primary">Guardar incidencia</flux:button>
-        </div>
-    </form>
-
-    <section class="rounded-md border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="border-b border-zinc-200 p-4 dark:border-zinc-700">
+    <section class="rounded-2xl border border-surface-line bg-surface-card shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
+        <div class="border-b border-surface-line p-5">
             <div class="grid gap-3 md:grid-cols-[1fr_220px_auto]">
                 <flux:input label="Buscar" wire:model.live.debounce.300ms="search" placeholder="Clave o nombre" />
                 <flux:select label="Estado" wire:model.live="statusFilter">
@@ -273,69 +255,113 @@ new class extends Component {
                     <flux:select.option value="cancelled">Canceladas</flux:select.option>
                 </flux:select>
                 <div class="flex items-end">
-                    <flux:button type="button" variant="ghost" wire:click="clearFilters">Limpiar</flux:button>
+                    <button type="button" class="btn-ghost" wire:click="clearFilters">Limpiar</button>
                 </div>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-                <thead class="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap rounded-none border-x-0 border-t-0">
+            <table class="w-full min-w-[1100px] border-collapse text-left text-sm">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Trabajador</th>
-                        <th class="px-4 py-3">Rango</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Pago</th>
-                        <th class="px-4 py-3">Referencia</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Accion</th>
+                        <th class="table-head-cell">Trabajador</th>
+                        <th class="table-head-cell">Rango</th>
+                        <th class="table-head-cell">Tipo</th>
+                        <th class="table-head-cell">Pago</th>
+                        <th class="table-head-cell">Referencia</th>
+                        <th class="table-head-cell">Estado</th>
+                        <th class="table-head-cell text-right">Acción</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                <tbody>
                     @forelse ($incidents as $incident)
-                        <tr>
-                            <td class="px-4 py-3">
-                                <div class="font-medium">{{ $incident->worker?->employee_code }} - {{ $incident->worker?->full_name }}</div>
-                                <div class="text-xs text-zinc-500">{{ $incident->employmentRelationship?->center?->name ?? 'Sin centro vigente' }}</div>
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <div class="font-semibold text-brand-navy">{{ $incident->worker?->employee_code }} - {{ $incident->worker?->full_name }}</div>
+                                <div class="text-xs text-surface-muted">{{ $incident->employmentRelationship?->center?->name ?? 'Sin centro vigente' }}</div>
                             </td>
-                            <td class="whitespace-nowrap px-4 py-3">
+                            <td class="table-cell whitespace-nowrap">
                                 {{ $incident->start_date?->toDateString() }} a {{ $incident->end_date?->toDateString() }}
                             </td>
-                            <td class="px-4 py-3">{{ $this->typeLabel($incident->incident_type) }}</td>
-                            <td class="px-4 py-3">{{ $this->paymentLabel($incident->payment_status) }}</td>
-                            <td class="px-4 py-3">{{ $incident->reference ?: 'Sin referencia' }}</td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">{{ $this->typeLabel($incident->incident_type) }}</td>
+                            <td class="table-cell">{{ $this->paymentLabel($incident->payment_status) }}</td>
+                            <td class="table-cell">{{ $incident->reference ?: 'Sin referencia' }}</td>
+                            <td class="table-cell">
                                 <x-ui.badge variant="{{ $this->statusVariant($incident->status) }}">
                                     {{ $this->statusLabel($incident->status) }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="table-cell text-right">
                                 @if ($incident->status === AttendanceIncident::STATUS_APPROVED)
-                                    <flux:button
+                                    <button
                                         type="button"
-                                        size="xs"
-                                        variant="danger"
+                                        class="btn-icon"
                                         wire:click="cancelIncident({{ $incident->id }})"
-                                        wire:confirm="Cancelar esta incidencia no borra jornadas ya calculadas. Deberas recalcular el rango si aplica. ¿Continuar?"
+                                        wire:confirm="Cancelar esta incidencia no borra jornadas ya calculadas. Deberás recalcular el rango si aplica. ¿Continuar?"
+                                        aria-label="Cancelar incidencia"
+                                        title="Cancelar"
                                     >
-                                        Cancelar
-                                    </flux:button>
+                                        <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
                                 @else
-                                    <span class="text-xs text-zinc-500">Sin accion</span>
+                                    <span class="text-xs text-surface-muted">Sin acción</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-8 text-center text-zinc-500">Sin incidencias registradas.</td>
+                            <td colspan="7" class="table-cell py-8 text-center text-surface-muted">Sin incidencias registradas.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
-        <div class="border-t border-zinc-200 p-4 dark:border-zinc-700">
+        <div class="border-t border-surface-line p-4">
             {{ $incidents->links() }}
         </div>
     </section>
+
+    <x-side-panel wire:model="showCreatePanel" title="Registrar incidencia" subheading="Clasifica ausencias o permisos para el cierre operativo." labelledby="attendance-incident-create-title" max-width="max-w-3xl">
+        <form wire:submit="createIncident" class="flex flex-1 flex-col overflow-y-auto">
+            <div class="flex-1 space-y-5 p-6">
+                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                    Esto no calcula nómina. Solo clasifica la asistencia del periodo para cierre y exportación posterior.
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <flux:select label="Trabajador" wire:model="form.worker_id">
+                        <flux:select.option value="">Selecciona trabajador</flux:select.option>
+                        @foreach ($workers as $worker)
+                            <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} - {{ $worker->full_name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:select label="Tipo" wire:model="form.incident_type">
+                        @foreach (AttendanceIncident::types() as $type)
+                            <flux:select.option value="{{ $type }}">{{ $this->typeLabel($type) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:input label="Desde" type="date" wire:model="form.start_date" />
+                    <flux:input label="Hasta" type="date" wire:model="form.end_date" />
+
+                    <flux:select label="Pago operativo" wire:model="form.payment_status">
+                        @foreach (AttendanceIncident::paymentStatuses() as $paymentStatus)
+                            <flux:select.option value="{{ $paymentStatus }}">{{ $this->paymentLabel($paymentStatus) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:input label="Referencia o folio opcional" wire:model="form.reference" placeholder="Ej. IMSS, autorización interna o folio RH" />
+                </div>
+
+                <flux:textarea label="Comentario" wire:model="form.notes" rows="4" placeholder="Contexto operativo para RH. No captures datos sensibles innecesarios." />
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar incidencia</button>
+            </div>
+        </form>
+    </x-side-panel>
 </section>

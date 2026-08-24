@@ -236,94 +236,109 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full space-y-8 p-6">
+<section class="w-full space-y-8 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Centros</flux:heading>
-            <flux:subheading>Administra los centros de trabajo de la empresa activa.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Centros</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra los centros de trabajo de la empresa activa.</p>
         </div>
 
         @if ($canManageCenters)
-            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
                 Nuevo centro
-            </flux:button>
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @error('center')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">
             {{ $message }}
         </div>
     @enderror
 
-    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <flux:heading>Centros de {{ $currentCompany->name }}</flux:heading>
-                <flux:subheading>Solo se muestran centros asociados a la empresa activa.</flux:subheading>
+                <h2 class="font-display text-lg font-bold text-brand-navy">Centros de {{ $currentCompany->name }}</h2>
+                <p class="mt-1 text-[13px] text-surface-muted">Solo se muestran centros asociados a la empresa activa.</p>
             </div>
 
             <div class="w-full lg:max-w-sm">
                 <flux:input wire:model.live.debounce.300ms="search" label="Buscar" placeholder="Codigo o nombre de centro" />
             </div>
         </div>
-    </section>
 
-    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap mt-5">
+        <table class="w-full border-collapse">
+            <colgroup>
+                <col class="w-[14%]">
+                <col class="w-[34%]">
+                <col class="w-[24%]">
+                <col class="w-[14%]">
+                <col class="w-[14%]">
+            </colgroup>
+            <thead>
                 <tr>
-                    <th class="px-4 py-3">Codigo</th>
-                    <th class="px-4 py-3">Nombre</th>
-                    <th class="px-4 py-3">Zona horaria</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+                    <th class="table-head-cell">Codigo</th>
+                    <th class="table-head-cell">Nombre</th>
+                    <th class="table-head-cell">Zona horaria</th>
+                    <th class="table-head-cell">Estado</th>
+                    <th class="table-head-cell text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+            <tbody>
                 @forelse ($centers as $center)
-                    <tr>
-                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $center->code }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->name }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $center->timezone }}</td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $center->status === 'active' ? 'success' : 'neutral' }}">
+                    <tr class="table-row">
+                        <td class="table-cell font-mono text-brand-navy">{{ $center->code }}</td>
+                        <td class="table-cell font-semibold text-brand-navy">{{ $center->name }}</td>
+                        <td class="table-cell text-surface-muted">{{ $center->timezone }}</td>
+                        <td class="table-cell">
+                            <span class="{{ $center->status === 'active' ? 'badge-success' : 'badge-muted' }}">
+                                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                 {{ $center->status }}
-                            </x-ui.badge>
+                            </span>
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-2">
-                                <flux:button type="button" size="sm" wire:click="loadEditForm({{ $center->id }})">
-                                    Editar
-                                </flux:button>
+                        <td class="table-cell">
+                            <div class="flex justify-end gap-1.5">
+                                <button type="button" class="btn-icon" wire:click="loadEditForm({{ $center->id }})" aria-label="Editar centro" title="Editar">
+                                    <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
 
                                 @if ($center->status === 'active')
-                                    <flux:button type="button" size="sm" variant="danger" wire:click="inactivate({{ $center->id }})">
-                                        Inactivar
-                                    </flux:button>
+                                    <button type="button" class="btn-icon" wire:click="inactivate({{ $center->id }})" aria-label="Inactivar centro" title="Inactivar">
+                                        <svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
                                 @endif
-                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="deleteCenter({{ $center->id }})">
-                                    Eliminar
-                                </flux:button>
+                                <button type="button" class="btn-icon" wire:confirm="Eliminar este centro solo si no tiene uso? Esta accion no se puede deshacer." wire:click="deleteCenter({{ $center->id }})" aria-label="Eliminar centro" title="Eliminar">
+                                    <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                        <td colspan="5" class="table-cell py-8 text-center text-surface-muted">
                             Aun no hay centros registrados para esta empresa.
                         </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
-    </div>
+        </div>
+    </section>
 
     @if ($canManageCenters)
         <x-side-panel
@@ -339,20 +354,20 @@ new class extends Component {
                     <flux:input wire:model="form.timezone" label="Zona horaria" required />
 
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
-                        <select wire:model="form.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                        <label class="form-label">Estado</label>
+                        <select wire:model="form.status" class="form-select">
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
                         </select>
                         @error('form.status')
-                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                            <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <section class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+                    <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                         <div>
-                            <flux:heading>Dirección</flux:heading>
-                            <flux:subheading>Campos opcionales del centro de trabajo.</flux:subheading>
+                            <h3 class="font-display text-sm font-bold text-brand-navy">Dirección</h3>
+                            <p class="text-xs text-surface-muted">Campos opcionales del centro de trabajo.</p>
                         </div>
 
                         <flux:input wire:model="form.address.street" label="Calle" />
@@ -381,13 +396,13 @@ new class extends Component {
                     </section>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                    <flux:button type="button" variant="ghost" wire:click="closeFormPanel">
+                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                    <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                         Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
+                    </button>
+                    <button type="submit" class="btn-primary">
                         Guardar centro
-                    </flux:button>
+                    </button>
                 </div>
             </form>
         </x-side-panel>

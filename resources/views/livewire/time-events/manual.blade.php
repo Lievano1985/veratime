@@ -514,12 +514,12 @@ new class extends Component {
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <flux:button type="button" variant="primary" wire:click="openAssistedPanel">
+            <button type="button" class="btn-primary" wire:click="openAssistedPanel">
                 Captura asistida
-            </flux:button>
-            <flux:button type="button" variant="primary" wire:click="openCapturePanel">
+            </button>
+            <button type="button" class="btn-primary" wire:click="openCapturePanel">
                 Captura justificada
-            </flux:button>
+            </button>
         </div>
     </div>
 
@@ -611,7 +611,7 @@ new class extends Component {
                             <td class="px-4 py-3 text-right">
                                 @if ($event->source === 'admin_manual' && $event->status === 'pending_review')
                                     <div class="flex justify-end gap-2">
-                                        <flux:button type="button" size="xs" variant="primary" wire:click="approveManualEvent({{ $event->id }})">Aprobar</flux:button>
+                                        <button type="button" class="btn-primary btn-sm" wire:click="approveManualEvent({{ $event->id }})">Aprobar</button>
                                         <flux:button type="button" size="xs" variant="ghost" wire:click="startReject({{ $event->id }})">Rechazar</flux:button>
                                     </div>
                                 @elseif ($event->status !== 'voided')
@@ -627,7 +627,7 @@ new class extends Component {
                                     <form wire:submit="rejectManualEvent" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
                                         <flux:textarea label="Motivo de rechazo" wire:model="rejectReason" rows="2" />
                                         <div class="flex gap-2">
-                                            <flux:button type="submit" variant="primary">Confirmar rechazo</flux:button>
+                                            <button type="submit" class="btn-primary">Confirmar rechazo</button>
                                             <flux:button type="button" variant="ghost" wire:click="cancelReject">Cancelar</flux:button>
                                         </div>
                                     </form>
@@ -640,7 +640,7 @@ new class extends Component {
                                     <form wire:submit="voidEvent" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
                                         <flux:textarea label="Motivo de anulacion" wire:model="voidReason" rows="2" />
                                         <div class="flex gap-2">
-                                            <flux:button type="submit" variant="primary">Confirmar anulacion</flux:button>
+                                            <button type="submit" class="btn-primary">Confirmar anulación</button>
                                             <flux:button type="button" variant="ghost" wire:click="cancelVoid">Cancelar</flux:button>
                                         </div>
                                     </form>
@@ -710,16 +710,16 @@ new class extends Component {
 
                 <div class="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
                     @if (in_array('clock_in', $assistedState['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="recordAssisted('clock_in')">Registrar entrada</flux:button>
+                        <button type="button" class="btn-primary" wire:click="recordAssisted('clock_in')">Registrar entrada</button>
                     @endif
                     @if (in_array('break_start', $assistedState['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="recordAssisted('break_start')">Iniciar pausa</flux:button>
+                        <button type="button" class="btn-primary" wire:click="recordAssisted('break_start')">Iniciar pausa</button>
                     @endif
                     @if (in_array('break_end', $assistedState['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="recordAssisted('break_end')">Terminar pausa</flux:button>
+                        <button type="button" class="btn-primary" wire:click="recordAssisted('break_end')">Terminar pausa</button>
                     @endif
                     @if (in_array('clock_out', $assistedState['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="recordAssisted('clock_out')">Registrar salida</flux:button>
+                        <button type="button" class="btn-primary" wire:click="recordAssisted('clock_out')">Registrar salida</button>
                     @endif
                     @if (empty($assistedState['allowed_actions']))
                         <span class="text-sm text-zinc-500">No hay acciones disponibles para el estado actual.</span>
@@ -755,8 +755,8 @@ new class extends Component {
             <flux:textarea label="Motivo" wire:model="reason" rows="5" placeholder="Describe por que se captura manualmente este evento." />
 
             <div class="flex justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closeCapturePanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar captura manual</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closeCapturePanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar captura manual</button>
             </div>
         </form>
     </x-side-panel>

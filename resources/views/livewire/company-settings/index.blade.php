@@ -210,7 +210,7 @@ new class extends Component {
                     <flux:checkbox wire:model="settingsForm.require_pin_for_confirmation" label="Requerir NIP para conformidad" />
                 </div>
 
-                <flux:button type="submit" variant="primary">Guardar configuracion</flux:button>
+                <button type="submit" class="btn-primary">Guardar configuración</button>
             </form>
         </section>
 
@@ -287,9 +287,9 @@ new class extends Component {
                                     <flux:input wire:model="legalParameterForm.{{ $code }}.reason" label="Motivo" />
 
                                     <div class="flex justify-end">
-                                        <flux:button type="button" variant="primary" wire:click="updateLegalParameter('{{ $code }}')">
+                                        <button type="button" class="btn-primary btn-sm" wire:click="updateLegalParameter('{{ $code }}')">
                                             Guardar
-                                        </flux:button>
+                                        </button>
                                     </div>
                                 </div>
 

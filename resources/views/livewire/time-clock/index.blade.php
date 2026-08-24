@@ -229,16 +229,16 @@ new class extends Component {
 
                 <div class="flex flex-wrap gap-2">
                     @if (in_array('clock_in', $state['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="record('clock_in')">Registrar entrada</flux:button>
+                        <button type="button" class="btn-primary" wire:click="record('clock_in')">Registrar entrada</button>
                     @endif
                     @if (in_array('break_start', $state['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="record('break_start')">Iniciar pausa</flux:button>
+                        <button type="button" class="btn-primary" wire:click="record('break_start')">Iniciar pausa</button>
                     @endif
                     @if (in_array('break_end', $state['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="record('break_end')">Terminar pausa</flux:button>
+                        <button type="button" class="btn-primary" wire:click="record('break_end')">Terminar pausa</button>
                     @endif
                     @if (in_array('clock_out', $state['allowed_actions'], true))
-                        <flux:button type="button" variant="primary" wire:click="record('clock_out')">Registrar salida</flux:button>
+                        <button type="button" class="btn-primary" wire:click="record('clock_out')">Registrar salida</button>
                     @endif
                     @if (empty($state['allowed_actions']))
                         <span class="text-sm text-zinc-500">No hay acciones disponibles para el estado actual.</span>

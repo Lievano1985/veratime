@@ -467,44 +467,45 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full space-y-8 p-6">
+<section class="w-full space-y-8 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Trabajadores</flux:heading>
-            <flux:subheading>Administra trabajadores y su relacion laboral inicial en la empresa activa.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Trabajadores</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra trabajadores y su relación laboral inicial en la empresa activa.</p>
         </div>
 
         @if ($canManageWorkers)
-            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
                 Nuevo trabajador
-            </flux:button>
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @error('worker')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">
             {{ $message }}
         </div>
     @enderror
 
-    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-900/60">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <flux:heading>Trabajadores de {{ $currentCompany->name }}</flux:heading>
-                <flux:subheading>Solo se muestran trabajadores asociados a la empresa activa.</flux:subheading>
+                <h2 class="font-display text-lg font-bold text-brand-navy">Trabajadores de {{ $currentCompany->name }}</h2>
+                <p class="mt-1 text-[13px] text-surface-muted">Solo se muestran trabajadores asociados a la empresa activa.</p>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-[minmax(0,220px)_160px]">
-                <flux:input wire:model.live.debounce.300ms="search" label="Buscar" placeholder="Codigo, nombre o RFC" />
+                <flux:input wire:model.live.debounce.300ms="search" label="Buscar" placeholder="Código, nombre o RFC" />
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
+                    <label class="form-label">Estado</label>
                     <x-ui.select wire:model.live="statusFilter" class="h-10 border-primary-border dark:border-primary-border">
                         <option value="">Todos</option>
                         <option value="active">Activo</option>
@@ -515,70 +516,77 @@ new class extends Component {
                 </div>
             </div>
         </div>
-    </section>
-
-    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap mt-5">
+        <table class="w-full border-collapse">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3">Codigo</th>
-                    <th class="px-4 py-3">Nombre</th>
-                    <th class="px-4 py-3">Centro actual</th>
-                    <th class="px-4 py-3">Puesto</th>
-                    <th class="px-4 py-3">Condicion</th>
-                    <th class="px-4 py-3">Credencial</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+                    <th class="table-head-cell">Código</th>
+                    <th class="table-head-cell">Nombre</th>
+                    <th class="table-head-cell">Centro actual</th>
+                    <th class="table-head-cell">Puesto</th>
+                    <th class="table-head-cell">Condición</th>
+                    <th class="table-head-cell">Credencial</th>
+                    <th class="table-head-cell">Estado</th>
+                    <th class="table-head-cell text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+            <tbody>
                 @forelse ($workers as $worker)
                     @php($relationship = $worker->activeEmploymentRelationship)
                     @php($condition = $relationship?->activeLaborCondition)
                     @php($credential = $worker->credential)
-                    <tr>
-                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $worker->employee_code }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $worker->full_name }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->center?->name ?? 'Sin centro activo' }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $relationship?->position_name ?: 'Sin puesto' }}</td>
-                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $condition?->work_modality ?? 'Sin condicion' }}</td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $credential?->status === 'active' ? 'success' : ($credential?->status === 'reset_required' ? 'warning' : ($credential?->status === 'blocked' ? 'danger' : 'neutral')) }}">
+                    <tr class="table-row">
+                        <td class="table-cell font-mono text-brand-navy">{{ $worker->employee_code }}</td>
+                        <td class="table-cell font-semibold text-brand-navy">{{ $worker->full_name }}</td>
+                        <td class="table-cell text-surface-muted">{{ $relationship?->center?->name ?? 'Sin centro activo' }}</td>
+                        <td class="table-cell text-surface-muted">{{ $relationship?->position_name ?: 'Sin puesto' }}</td>
+                        <td class="table-cell text-surface-muted">{{ $condition?->work_modality ?? 'Sin condición' }}</td>
+                        <td class="table-cell">
+                            <span class="{{ $credential?->status === 'active' ? 'badge-success' : ($credential?->status === 'reset_required' ? 'badge-warn' : ($credential?->status === 'blocked' ? 'badge-danger' : 'badge-muted')) }}">
+                                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                 {{ $credential?->status === 'active' ? 'Activa' : ($credential?->status === 'reset_required' ? 'Requiere reinicio' : ($credential?->status === 'blocked' ? 'Bloqueada' : 'Sin credencial')) }}
-                            </x-ui.badge>
+                            </span>
                         </td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $worker->status === 'active' ? 'success' : ($worker->status === 'terminated' ? 'danger' : ($worker->status === 'suspended' ? 'warning' : 'neutral')) }}">
+                        <td class="table-cell">
+                            <span class="{{ $worker->status === 'active' ? 'badge-success' : ($worker->status === 'terminated' ? 'badge-danger' : ($worker->status === 'suspended' ? 'badge-warn' : 'badge-muted')) }}">
+                                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                 {{ $worker->status }}
-                            </x-ui.badge>
+                            </span>
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-2">
-                                <flux:button type="button" size="sm" wire:click="loadEditForm({{ $worker->id }})">
-                                    Editar
-                                </flux:button>
+                        <td class="table-cell">
+                            <div class="flex justify-end gap-1.5">
+                                <button type="button" class="btn-icon" wire:click="loadEditForm({{ $worker->id }})" aria-label="Editar trabajador" title="Editar">
+                                    <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
 
                                 @if ($worker->status !== 'terminated')
-                                    <flux:button type="button" size="sm" variant="danger" wire:click="terminate({{ $worker->id }})">
-                                        Baja
-                                    </flux:button>
+                                    <button type="button" class="btn-icon" wire:click="terminate({{ $worker->id }})" aria-label="Dar de baja" title="Baja">
+                                        <svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
                                 @endif
-                                <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este trabajador solo si no tiene horarios ni asistencias? Esta accion no se puede deshacer." wire:click="delete({{ $worker->id }})">
-                                    Eliminar
-                                </flux:button>
+                                <button type="button" class="btn-icon" wire:confirm="Eliminar este trabajador solo si no tiene horarios ni asistencias? Esta accion no se puede deshacer." wire:click="delete({{ $worker->id }})" aria-label="Eliminar trabajador" title="Eliminar">
+                                    <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                            Aun no hay trabajadores registrados para esta empresa.
+                        <td colspan="8" class="table-cell py-8 text-center text-surface-muted">
+                            Aún no hay trabajadores registrados para esta empresa.
                         </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
-    </div>
+        </div>
+    </section>
 
     @if ($canManageWorkers)
         <x-side-panel
@@ -589,29 +597,29 @@ new class extends Component {
         >
             <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
                 <div class="flex-1 space-y-5 p-6">
-                    <section class="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900/60">
+                    <section class="space-y-4 rounded-2xl border border-surface-line bg-[#F7F9FC] p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
                         <div>
                             <flux:heading size="sm">Datos generales</flux:heading>
                             <flux:subheading>Identificación y relación laboral base.</flux:subheading>
                         </div>
 
-                        <flux:input wire:model="form.employee_code" label="Codigo interno" required />
+                        <flux:input wire:model="form.employee_code" label="Código interno" required />
                         <flux:input wire:model="form.full_name" label="Nombre completo" required />
                         <flux:input wire:model="form.email" label="Email" type="email" />
-                        <flux:input wire:model="form.phone" label="Telefono" />
+                        <flux:input wire:model="form.phone" label="Teléfono" />
                         <flux:input wire:model="form.rfc" label="RFC" />
                         <flux:input wire:model="form.curp" label="CURP" />
 
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
-                            <select wire:model="form.center_id" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            <label class="form-label">Centro</label>
+                            <select wire:model="form.center_id" class="form-select">
                                 <option value="">Selecciona un centro</option>
                                 @foreach ($centers as $center)
                                     <option value="{{ $center->id }}">{{ $center->code }} - {{ $center->name }}</option>
                                 @endforeach
                             </select>
                             @error('form.center_id')
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                <p class="form-error">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -628,15 +636,15 @@ new class extends Component {
                         @endif
 
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
-                            <select wire:model="form.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            <label class="form-label">Estado</label>
+                            <select wire:model="form.status" class="form-select">
                                 <option value="active">Activo</option>
                                 <option value="inactive">Inactivo</option>
                                 <option value="suspended">Suspendido</option>
                                 <option value="terminated">Baja</option>
                             </select>
                             @error('form.status')
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                <p class="form-error">{{ $message }}</p>
                             @enderror
                         </div>
                     </section>
@@ -646,26 +654,26 @@ new class extends Component {
                         @php($activeCondition = $relationship?->activeLaborCondition)
                         @php($credential = $editingWorker?->credential)
 
-                        <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
+                        <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
                             <div class="mb-4">
-                                <flux:heading size="sm">Condicion laboral vigente</flux:heading>
+                                <flux:heading size="sm">Condición laboral vigente</flux:heading>
                                 <flux:subheading>
-                                    {{ $activeCondition ? $activeCondition->work_modality.' desde '.$activeCondition->effective_from->format('Y-m-d') : 'Sin condicion activa' }}
+                                    {{ $activeCondition ? $activeCondition->work_modality.' desde '.$activeCondition->effective_from->format('Y-m-d') : 'Sin condición activa' }}
                                 </flux:subheading>
                             </div>
 
                             @if ($relationship)
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Modalidad</label>
-                                        <select wire:model="conditionForm.work_modality" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                        <label class="form-label">Modalidad</label>
+                                        <select wire:model="conditionForm.work_modality" class="form-select">
                                             <option value="onsite">Presencial</option>
-                                            <option value="hybrid">Hibrido</option>
+                                            <option value="hybrid">Híbrido</option>
                                             <option value="remote">Remoto</option>
                                             <option value="field">Campo</option>
                                         </select>
                                         @error('conditionForm.work_modality')
-                                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                            <p class="form-error">{{ $message }}</p>
                                         @enderror
                                     </div>
 
@@ -673,19 +681,19 @@ new class extends Component {
                                         <flux:input wire:model="conditionForm.weekly_hours" label="Horas semanales" type="number" step="0.5" min="0" />
 
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Dia de descanso</label>
-                                            <select wire:model="conditionForm.rest_day_of_week" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                            <label class="form-label">Día de descanso</label>
+                                            <select wire:model="conditionForm.rest_day_of_week" class="form-select">
                                                 <option value="">Sin definir</option>
                                                 <option value="0">Domingo</option>
                                                 <option value="1">Lunes</option>
                                                 <option value="2">Martes</option>
-                                                <option value="3">Miercoles</option>
+                                                <option value="3">Miércoles</option>
                                                 <option value="4">Jueves</option>
                                                 <option value="5">Viernes</option>
-                                                <option value="6">Sabado</option>
+                                                <option value="6">Sábado</option>
                                             </select>
                                             @error('conditionForm.rest_day_of_week')
-                                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                                <p class="form-error">{{ $message }}</p>
                                             @enderror
                                         </div>
                                     </div>
@@ -696,35 +704,33 @@ new class extends Component {
                                     </div>
 
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado condicion</label>
-                                        <select wire:model="conditionForm.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                        <label class="form-label">Estado condición</label>
+                                        <select wire:model="conditionForm.status" class="form-select">
                                             <option value="active">Activa</option>
                                             <option value="inactive">Inactiva</option>
                                             <option value="replaced">Reemplazada</option>
                                         </select>
                                         @error('conditionForm.status')
-                                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                            <p class="form-error">{{ $message }}</p>
                                         @enderror
                                     </div>
 
                                     @error('conditionForm.effective_from')
-                                        <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                        <p class="form-error">{{ $message }}</p>
                                     @enderror
 
                                     <div class="flex justify-end">
-                                        <flux:button type="button" size="sm" wire:click="saveLaborCondition">
-                                            Guardar condicion
-                                        </flux:button>
+                                        <button type="button" class="btn-primary btn-sm" wire:click="saveLaborCondition">Guardar condición</button>
                                     </div>
 
                                     @if ($relationship->laborConditions->isNotEmpty())
-                                        <div class="rounded-md border border-zinc-200 dark:border-zinc-700">
-                                            <div class="border-b border-zinc-200 px-3 py-2 text-xs font-medium uppercase text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                                        <div class="rounded-xl border border-surface-line bg-white">
+                                            <div class="border-b border-surface-line px-3 py-2 text-xs font-bold uppercase tracking-wide text-surface-muted">
                                                 Historial
                                             </div>
-                                            <div class="divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                                            <div class="divide-y divide-surface-line text-sm">
                                                 @foreach ($relationship->laborConditions as $condition)
-                                                    <div class="px-3 py-2 text-zinc-700 dark:text-zinc-300">
+                                                    <div class="px-3 py-2 text-surface-text">
                                                         {{ $condition->work_modality }} · {{ $condition->effective_from->format('Y-m-d') }} - {{ $condition->effective_to?->format('Y-m-d') ?? 'Actual' }} · {{ $condition->status }}
                                                     </div>
                                                 @endforeach
@@ -733,51 +739,45 @@ new class extends Component {
                                     @endif
                                 </div>
                             @else
-                                <p class="text-sm text-zinc-500 dark:text-zinc-400">Primero guarda una relacion laboral activa.</p>
+                                <p class="text-sm text-surface-muted">Primero guarda una relación laboral activa.</p>
                             @endif
                         </section>
 
-                        <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
+                        <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
                             <div class="mb-4">
                                 <flux:heading size="sm">Credencial kiosco</flux:heading>
                                 <flux:subheading>{{ $credential ? 'Estado: '.$credential->status : 'Sin credencial creada' }}</flux:subheading>
                             </div>
 
                             <div class="space-y-4">
-                                <flux:input wire:model="credentialForm.access_code" label="Codigo de acceso" required />
+                                <flux:input wire:model="credentialForm.access_code" label="Código de acceso" required />
                                 <flux:input wire:model="credentialForm.temporal_pin" label="NIP temporal" type="password" />
 
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado credencial</label>
-                                    <select wire:model="credentialForm.status" class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                    <label class="form-label">Estado credencial</label>
+                                    <select wire:model="credentialForm.status" class="form-select">
                                         <option value="active">Activa</option>
                                         <option value="blocked">Bloqueada</option>
                                         <option value="reset_required">Requiere reset</option>
                                     </select>
                                     @error('credentialForm.status')
-                                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                        <p class="form-error">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 @error('credentialForm.access_code')
-                                    <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                    <p class="form-error">{{ $message }}</p>
                                 @enderror
                                 @error('credentialForm.temporal_pin')
-                                    <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                    <p class="form-error">{{ $message }}</p>
                                 @enderror
 
                                 <div class="flex flex-wrap justify-end gap-2">
-                                    <flux:button type="button" size="sm" wire:click="saveCredential">
-                                        Guardar credencial
-                                    </flux:button>
+                                    <button type="button" class="btn-primary btn-sm" wire:click="saveCredential">Guardar credencial</button>
                                     @if ($credential)
-                                        <flux:button type="button" size="sm" wire:click="resetCredentialPin">
-                                            Reset NIP
-                                        </flux:button>
+                                        <button type="button" class="btn-outline btn-sm" wire:click="resetCredentialPin">Reset NIP</button>
                                         @if ($credential->status !== 'blocked')
-                                            <flux:button type="button" size="sm" variant="danger" wire:click="blockCredential">
-                                                Bloquear
-                                            </flux:button>
+                                            <button type="button" class="btn-danger btn-sm" wire:click="blockCredential">Bloquear</button>
                                         @endif
                                     @endif
                                 </div>
@@ -786,13 +786,9 @@ new class extends Component {
                     @endif
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                    <flux:button type="button" variant="ghost" wire:click="closeFormPanel">
-                        Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
-                        Guardar trabajador
-                    </flux:button>
+                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                    <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar trabajador</button>
                 </div>
             </form>
         </x-side-panel>

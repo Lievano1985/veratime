@@ -177,9 +177,9 @@ new class extends Component {
                             <td class="px-4 py-3 text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     @if ($customerAccount->status !== 'active')
-                                        <flux:button type="button" size="sm" variant="primary" wire:click="updateStatus({{ $customerAccount->id }}, 'active')">
+                                        <button type="button" class="btn-primary btn-sm" wire:click="updateStatus({{ $customerAccount->id }}, 'active')">
                                             Reactivar
-                                        </flux:button>
+                                        </button>
                                     @endif
 
                                     @if ($customerAccount->status !== 'suspended')

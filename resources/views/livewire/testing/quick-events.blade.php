@@ -340,9 +340,9 @@ new class extends Component {
                             @enderror
                         </td>
                         <td class="px-4 py-3 text-right">
-                            <flux:button type="button" size="sm" variant="primary" wire:click="createEvents({{ $worker->id }})">
+                            <button type="button" class="btn-primary btn-sm" wire:click="createEvents({{ $worker->id }})">
                                 Cargar eventos
-                            </flux:button>
+                            </button>
                         </td>
                     </tr>
                 @empty

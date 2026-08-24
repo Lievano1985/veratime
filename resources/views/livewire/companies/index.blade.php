@@ -380,58 +380,60 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full space-y-8 p-6">
+<section class="w-full space-y-8 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Empresas</flux:heading>
-            <flux:subheading>Administra empresas y datos generales. La configuración operativa vive en Configuración de empresa.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Empresas</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra empresas y datos generales. La configuración operativa vive en Configuración de empresa.</p>
         </div>
 
         @if ($canCreateCompany)
-            <flux:button type="button" variant="primary" wire:click="openCreateDrawer">
+            <button type="button" class="btn-primary" wire:click="openCreateDrawer">
+                <span class="text-base leading-none">+</span>
                 Nueva empresa
-            </flux:button>
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @if ($temporaryPassword)
-        <div class="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 rounded-xl border border-status-warn-line bg-status-warn-bg px-4 py-3 text-sm text-status-warn-text sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <div class="font-semibold">Contraseña temporal del administrador principal</div>
                 <div class="font-mono text-base">{{ $temporaryPassword }}</div>
             </div>
-            <flux:button type="button" size="sm" variant="ghost" wire:click="clearTemporaryPassword">Ocultar</flux:button>
+            <button type="button" class="btn-ghost btn-sm" wire:click="clearTemporaryPassword">Ocultar</button>
         </div>
     @endif
 
     <div class="space-y-6">
         @if (! $showCompanyDirectory && $singleCompanySummary)
-            <section class="rounded-lg border border-primary-border bg-primary-soft p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <flux:heading>Empresa actual</flux:heading>
-                        <p class="mt-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">{{ $singleCompanySummary->name }}</p>
-                        <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ $singleCompanySummary->tax_id ?: 'Sin RFC' }}</p>
+                        <h2 class="font-display text-lg font-bold text-brand-navy">Empresa actual</h2>
+                        <p class="mt-2 text-base font-semibold text-surface-text">{{ $singleCompanySummary->name }}</p>
+                        <p class="text-sm text-surface-muted">{{ $singleCompanySummary->tax_id ?: 'Sin RFC' }}</p>
                     </div>
 
-                    <x-ui.badge variant="{{ $singleCompanySummary->status === 'active' ? 'success' : 'neutral' }}">
+                    <span class="{{ $singleCompanySummary->status === 'active' ? 'badge-success' : 'badge-muted' }}">
+                        <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                         {{ $singleCompanySummary->status }}
-                    </x-ui.badge>
+                    </span>
                 </div>
             </section>
         @endif
 
         @if ($showCompanyDirectory)
-            <section class="rounded-lg border border-primary-border bg-primary-soft p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                 <div class="mb-4">
-                    <flux:heading>Empresas autorizadas</flux:heading>
-                    <flux:subheading>Se listan las empresas disponibles para administración. Las inactivas no aparecen en el selector operativo.</flux:subheading>
+                    <h2 class="font-display text-lg font-bold text-brand-navy">Empresas autorizadas</h2>
+                    <p class="mt-1 text-[13px] text-surface-muted">Se listan las empresas disponibles para administración. Las inactivas no aparecen en el selector operativo.</p>
                 </div>
 
                 <div class="mb-4 grid gap-3 md:grid-cols-2">
@@ -447,41 +449,64 @@ new class extends Component {
                     />
                 </div>
 
-                <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="table-wrap">
                     <div class="max-h-[360px] overflow-y-auto">
-                        <div class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                            @forelse ($companies as $company)
-                                @php($principalAdmin = $company->users->first())
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr>
+                                    <th class="table-head-cell">Empresa</th>
+                                    <th class="table-head-cell">Administrador</th>
+                                    <th class="table-head-cell">Estado</th>
+                                    <th class="table-head-cell text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($companies as $company)
+                                    @php($principalAdmin = $company->users->first())
 
-                                <div class="flex w-full items-center justify-between gap-4 px-4 py-3 text-left">
-                                    <span>
-                                        <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</span>
-                                        <span class="block text-sm text-zinc-500 dark:text-zinc-400">{{ $company->tax_id ?: 'Sin RFC' }}</span>
-                                        <span class="block text-xs text-zinc-500 dark:text-zinc-400">
-                                            {{ $principalAdmin?->email ? 'Admin: '.$principalAdmin->email : 'Sin administrador principal activo' }}
-                                        </span>
-                                    </span>
+                                    <tr class="table-row">
+                                        <td class="table-cell">
+                                            <div class="font-semibold text-brand-navy">{{ $company->name }}</div>
+                                            <div class="text-xs text-surface-muted">{{ $company->tax_id ?: 'Sin RFC' }}</div>
+                                        </td>
+                                        <td class="table-cell text-surface-muted">
+                                            {{ $principalAdmin?->email ?: 'Sin administrador principal activo' }}
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="{{ $company->status === 'active' ? 'badge-success' : 'badge-muted' }}">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                                {{ $company->status }}
+                                            </span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <div class="flex items-center justify-end gap-1.5">
+                                                @can('update', $company)
+                                                    <button type="button" class="btn-icon" wire:click="loadEditForm({{ $company->id }})" aria-label="Editar empresa" title="Editar">
+                                                        <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                            <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        </svg>
+                                                    </button>
+                                                @endcan
 
-                                    <span class="flex shrink-0 items-center gap-3">
-                                        <x-ui.badge variant="{{ $company->status === 'active' ? 'success' : 'neutral' }}">
-                                            {{ $company->status }}
-                                        </x-ui.badge>
-
-                                        @can('update', $company)
-                                            <flux:button type="button" size="sm" wire:click="loadEditForm({{ $company->id }})">Editar</flux:button>
-                                        @endcan
-
-                                        @can('delete', $company)
-                                            <flux:button type="button" size="sm" variant="danger" wire:click="openDeleteDrawer({{ $company->id }})">Eliminar</flux:button>
-                                        @endcan
-                                    </span>
-                                </div>
-                            @empty
-                                <div class="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                                    No hay empresas que coincidan con los filtros.
-                                </div>
-                            @endforelse
-                        </div>
+                                                @can('delete', $company)
+                                                    <button type="button" class="btn-icon" wire:click="openDeleteDrawer({{ $company->id }})" aria-label="Eliminar empresa" title="Eliminar">
+                                                        <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        </svg>
+                                                    </button>
+                                                @endcan
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="table-cell py-8 text-center text-surface-muted">
+                                            No hay empresas que coincidan con los filtros.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -492,10 +517,10 @@ new class extends Component {
         @endif
 
             @if ($editingCompanyId && $canManageEditingCompany)
-                <section class="rounded-lg border border-zinc-200 bg-zinc-50/60 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
+                <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                     <div class="mb-4">
-                        <flux:heading>Datos basicos</flux:heading>
-                        <flux:subheading>Editar informacion general y estado operativo de la empresa.</flux:subheading>
+                        <h2 class="font-display text-lg font-bold text-brand-navy">Datos basicos</h2>
+                        <p class="mt-1 text-[13px] text-surface-muted">Editar informacion general y estado operativo de la empresa.</p>
                     </div>
 
                     <form wire:submit="update" class="space-y-4">
@@ -505,7 +530,7 @@ new class extends Component {
                         <flux:input wire:model="editForm.timezone" label="Zona horaria" required />
 
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Estado</label>
+                            <label class="form-label">Estado</label>
                             <x-ui.select wire:model="editForm.status">
                                 <option value="active">Activa</option>
                                 <option value="inactive">Inactiva</option>
@@ -515,7 +540,7 @@ new class extends Component {
                                 @endif
                             </x-ui.select>
                             @error('editForm.status')
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                <p class="form-error">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -527,12 +552,12 @@ new class extends Component {
                         @endif
 
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <flux:button type="submit" variant="primary">Guardar empresa</flux:button>
+                            <button type="submit" class="btn-primary">Guardar empresa</button>
 
                             @if ($isSuperAdmin)
-                                <flux:button type="button" variant="danger" wire:click="openDeleteDrawer({{ $editingCompanyId }})">
+                                <button type="button" class="btn-danger" wire:click="openDeleteDrawer({{ $editingCompanyId }})">
                                     Eliminar empresa
-                                </flux:button>
+                                </button>
                             @endif
                         </div>
                     </form>
@@ -550,10 +575,10 @@ new class extends Component {
         >
             <form wire:submit="create" class="flex flex-1 flex-col overflow-y-auto">
                 <div class="flex-1 space-y-6 p-6">
-                    <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
+                    <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                         <div>
-                            <h3 class="text-sm font-semibold text-zinc-900">Datos de empresa</h3>
-                            <p class="text-xs text-zinc-500">Información base del tenant operativo.</p>
+                            <h3 class="font-display text-sm font-bold text-brand-navy">Datos de empresa</h3>
+                            <p class="text-xs text-surface-muted">Información base del tenant operativo.</p>
                         </div>
                         <flux:input wire:model="createForm.name" label="Nombre comercial" required />
                         <flux:input wire:model="createForm.legal_name" label="Razón social" />
@@ -573,20 +598,20 @@ new class extends Component {
                                 <flux:select.option value="single_company">Monoempresa</flux:select.option>
                                 <flux:select.option value="multi_company">Multiempresa</flux:select.option>
                             </flux:select>
-                            <p class="text-xs text-zinc-500">Define si esta cuenta cliente operara una sola empresa o podra agrupar varias empresas bajo la misma cuenta.</p>
+                            <p class="form-hint">Define si esta cuenta cliente operara una sola empresa o podra agrupar varias empresas bajo la misma cuenta.</p>
                         @endif
                     </section>
 
                     @if ($isSuperAdmin)
-                        <section class="space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
+                        <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                             <div>
-                                <h3 class="text-sm font-semibold text-zinc-900">Administrador principal</h3>
-                                <p class="text-xs text-zinc-500">Este usuario quedara como administrador general de la empresa. El super admin no se agrega como miembro operativo.</p>
+                                <h3 class="font-display text-sm font-bold text-brand-navy">Administrador principal</h3>
+                                <p class="text-xs text-surface-muted">Este usuario quedara como administrador general de la empresa. El super admin no se agrega como miembro operativo.</p>
                             </div>
                             <flux:input wire:model="createForm.admin_name" label="Nombre" required />
                             <flux:input wire:model="createForm.admin_email" type="email" label="Correo" required />
                             <flux:input wire:model="createForm.admin_password" label="Contraseña temporal" required />
-                            <p class="text-xs text-zinc-500">Debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.</p>
+                            <p class="form-hint">Debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.</p>
                             <flux:select wire:model="createForm.admin_status" label="Estado inicial del usuario">
                                 <flux:select.option value="active">Activo</flux:select.option>
                                 <flux:select.option value="inactive">Inactivo</flux:select.option>
@@ -595,13 +620,13 @@ new class extends Component {
                     @endif
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                    <flux:button type="button" variant="ghost" wire:click="closeCreateDrawer">
+                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                    <button type="button" class="btn-ghost" wire:click="closeCreateDrawer">
                         Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
+                    </button>
+                    <button type="submit" class="btn-primary">
                         {{ $isSuperAdmin ? 'Crear empresa y admin' : 'Crear empresa' }}
-                    </flux:button>
+                    </button>
                 </div>
             </form>
         </x-side-panel>
@@ -618,7 +643,7 @@ new class extends Component {
             <form wire:submit="delete" class="flex flex-1 flex-col">
                 <div class="flex-1 space-y-5 p-6">
                     @if ($deletingCompany)
-                        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                        <div class="rounded-2xl border border-status-pending-line bg-status-pending-bg p-4 text-sm text-status-pending-text">
                             <p class="font-semibold">Eliminacion destructiva</p>
                             <p class="mt-2">
                                 Se eliminaran los datos asociados a <strong>{{ $deletingCompany->name }}</strong>,
@@ -639,13 +664,13 @@ new class extends Component {
                     @endif
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                    <flux:button type="button" variant="ghost" wire:click="closeDeleteDrawer">
+                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                    <button type="button" class="btn-ghost" wire:click="closeDeleteDrawer">
                         Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="danger">
+                    </button>
+                    <button type="submit" class="btn-danger">
                         Eliminar definitivamente
-                    </flux:button>
+                    </button>
                 </div>
             </form>
         </x-side-panel>

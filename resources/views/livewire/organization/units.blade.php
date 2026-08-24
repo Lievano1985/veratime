@@ -279,34 +279,35 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Areas y departamentos</flux:heading>
-            <flux:subheading>Administra departamentos, areas y equipos por centro.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Areas y departamentos</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra departamentos, areas y equipos por centro.</p>
         </div>
 
         @if ($canManageUnits)
-            <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
                 Nueva unidad
-            </flux:button>
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @error('unit')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">
             {{ $message }}
         </div>
     @enderror
 
-    <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
+        <div class="grid gap-4 md:grid-cols-3">
             <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
 
             <flux:select label="Centro" wire:model.live="filters.center_id">
@@ -323,32 +324,40 @@ new class extends Component {
             </flux:select>
         </div>
 
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap mt-5">
+            <table class="w-full border-collapse">
+                <colgroup>
+                    <col class="w-[26%]">
+                    <col class="w-[14%]">
+                    <col class="w-[20%]">
+                    <col class="w-[18%]">
+                    <col class="w-[10%]">
+                    <col class="w-[12%]">
+                </colgroup>
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Unidad</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Centro</th>
-                        <th class="px-4 py-3">Padre</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
+                        <th class="table-head-cell">Unidad</th>
+                        <th class="table-head-cell">Tipo</th>
+                        <th class="table-head-cell">Centro</th>
+                        <th class="table-head-cell">Padre</th>
+                        <th class="table-head-cell">Estado</th>
+                        <th class="table-head-cell text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                <tbody>
                     @forelse ($units as $unit)
-                        <tr>
-                            <td class="px-4 py-3">
-                                <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $unit->code }} - {{ $unit->name }}</span>
-                                <span class="text-xs text-zinc-500">{{ $unit->type === 'department' ? 'Departamento' : ($unit->type === 'area' ? 'Area' : 'Equipo') }}</span>
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <span class="block font-semibold text-brand-navy">{{ $unit->code }} - {{ $unit->name }}</span>
+                                <span class="text-xs text-surface-muted">{{ $unit->type === 'department' ? 'Departamento' : ($unit->type === 'area' ? 'Area' : 'Equipo') }}</span>
                             </td>
-                            <td class="px-4 py-3">
-                                <x-ui.badge variant="info">
+                            <td class="table-cell">
+                                <span class="badge-muted">
                                     {{ $unit->type === 'department' ? 'Departamento' : ($unit->type === 'area' ? 'Area' : 'Equipo') }}
-                                </x-ui.badge>
+                                </span>
                             </td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $unit->center?->name }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                            <td class="table-cell text-surface-muted">{{ $unit->center?->name }}</td>
+                            <td class="table-cell text-surface-muted">
                                 @if (! $unit->parent_id)
                                     Centro directo
                                 @elseif ($visibleOrganizationalUnitIds === null || in_array($unit->parent_id, $visibleOrganizationalUnitIds, true))
@@ -357,34 +366,41 @@ new class extends Component {
                                     Fuera del alcance
                                 @endif
                             </td>
-                            <td class="px-4 py-3">
-                                <x-ui.badge variant="{{ $unit->status === 'active' ? 'success' : 'neutral' }}">
+                            <td class="table-cell">
+                                <span class="{{ $unit->status === 'active' ? 'badge-success' : 'badge-muted' }}">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                     {{ $unit->status === 'active' ? 'Activa' : 'Inactiva' }}
-                                </x-ui.badge>
+                                </span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">
                                 @if ($canManageUnits)
-                                    <div class="flex justify-end gap-2">
-                                        <flux:button type="button" size="sm" wire:click="loadEditForm({{ $unit->id }})">
-                                            Editar
-                                        </flux:button>
+                                    <div class="flex justify-end gap-1.5">
+                                        <button type="button" class="btn-icon" wire:click="loadEditForm({{ $unit->id }})" aria-label="Editar unidad" title="Editar">
+                                            <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
                                         @if ($unit->status === 'active')
-                                            <flux:button type="button" size="sm" variant="danger" wire:confirm="Esta accion inactivara la unidad si no tiene hijos, asignaciones o alcances vigentes." wire:click="inactivate({{ $unit->id }})">
-                                                Inactivar
-                                            </flux:button>
+                                            <button type="button" class="btn-icon" wire:confirm="Esta accion inactivara la unidad si no tiene hijos, asignaciones o alcances vigentes." wire:click="inactivate({{ $unit->id }})" aria-label="Inactivar unidad" title="Inactivar">
+                                                <svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
                                         @endif
-                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar esta unidad solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $unit->id }})">
-                                            Eliminar
-                                        </flux:button>
+                                        <button type="button" class="btn-icon" wire:confirm="Eliminar esta unidad solo si no tiene uso? Esta accion no se puede deshacer." wire:click="delete({{ $unit->id }})" aria-label="Eliminar unidad" title="Eliminar">
+                                            <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                 @else
-                                    <span class="text-xs text-zinc-500">Solo consulta</span>
+                                    <span class="text-xs text-surface-muted">Solo consulta</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="6" class="table-cell py-8 text-center text-surface-muted">
                                 No hay unidades que coincidan con los filtros.
                             </td>
                         </tr>
@@ -438,17 +454,17 @@ new class extends Component {
                     @endif
 
                     @error('form.parent_id')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="form-error">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                    <flux:button type="button" variant="ghost" wire:click="closeFormPanel">
+                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                    <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                         Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
+                    </button>
+                    <button type="submit" class="btn-primary">
                         Guardar unidad
-                    </flux:button>
+                    </button>
                 </div>
             </form>
         </x-side-panel>

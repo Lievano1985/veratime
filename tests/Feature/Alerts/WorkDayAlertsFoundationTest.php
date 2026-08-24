@@ -5,8 +5,10 @@ namespace Tests\Feature\Alerts;
 use App\Domains\Alerts\Actions\EvaluateWorkDayAlertsAction;
 use App\Domains\Alerts\Actions\EvaluateWorkDayAlertsForDateRangeAction;
 use App\Domains\Alerts\Actions\ResolveAlertAction;
+use App\Domains\Alerts\Actions\ResolveScheduledAbsenceAlertAsAttendanceIncidentAction;
 use App\Models\Alert;
 use App\Models\AlertType;
+use App\Models\AttendanceIncident;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -220,12 +222,59 @@ class WorkDayAlertsFoundationTest extends TestCase
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->call('openAlertsPanel', $workDay->id)
-            ->assertSee('Justificar falta')
+            ->assertSee('Enviar a incidencia/ausencia')
+            ->assertSee('Tipo de ausencia')
+            ->assertSee('Tratamiento operativo')
             ->assertSee('Confirmar falta')
             ->assertSee('No procede')
             ->assertDontSee('No aprobar');
     }
 
+
+    public function test_scheduled_absence_resolution_creates_attendance_incident_and_recalculates_work_day(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay();
+        $workDay->activeCalculation()->dissociate();
+        $workDay->forceFill([
+            'active_calculation_id' => null,
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 0,
+            'valid_time_event_ids' => [],
+        ])->save();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay->refresh());
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+
+        $incident = app(ResolveScheduledAbsenceAlertAsAttendanceIncidentAction::class)->handle($company, $alert, $user, [
+            'incident_type' => AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE,
+            'payment_status' => AttendanceIncident::PAYMENT_UNPAID,
+            'resolution' => 'Permiso sin goce capturado desde dictamen.',
+        ]);
+
+        $this->assertSame(AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE, $incident->incident_type);
+        $this->assertSame(AttendanceIncident::PAYMENT_UNPAID, $incident->payment_status);
+        $this->assertSame(AttendanceIncident::STATUS_APPROVED, $incident->status);
+        $this->assertSame($workDay->worker_id, $incident->worker_id);
+        $this->assertSame($workDay->employment_relationship_id, $incident->employment_relationship_id);
+        $this->assertSame('2026-08-03', $incident->start_date->toDateString());
+        $this->assertSame('2026-08-03', $incident->end_date->toDateString());
+        $this->assertSame($alert->id, $incident->metadata['source_alert_id']);
+
+        $alert->refresh();
+        $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->status);
+        $this->assertSame('Permiso sin goce capturado desde dictamen.', $alert->resolution);
+        $this->assertSame($user->id, $alert->resolved_by);
+
+        $workDay->refresh()->load('activeCalculation');
+        $this->assertSame(WorkDay::STATUS_CALCULATED, $workDay->status);
+        $this->assertSame(0, $workDay->activeCalculation->total_work_minutes);
+        $this->assertSame(0, $workDay->activeCalculation->ordinary_minutes);
+        $this->assertSame(AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE, data_get($workDay->metadata, 'attendance_incident.incident_type'));
+        $this->assertSame(0, Alert::query()->where('company_id', $company->id)->whereIn('status', Alert::OPEN_STATUSES)->count());
+    }
     public function test_overtime_resolution_panel_uses_contextual_labels(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);

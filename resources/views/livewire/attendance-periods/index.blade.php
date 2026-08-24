@@ -329,9 +329,10 @@ new class extends Component {
             <flux:subheading>Genera paquetes de asistencia por centro, unidades y rango. Vera Time no calcula nomina.</flux:subheading>
         </div>
 
-        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
             Nuevo periodo
-        </flux:button>
+        </button>
     </div>
 
     @if (session('status'))
@@ -405,9 +406,9 @@ new class extends Component {
                                     </flux:button>
                                 @endcan
                                 @can('close', $period)
-                                    <flux:button type="button" size="sm" variant="primary" wire:click="closePeriod({{ $period->id }})">
+                                    <button type="button" class="btn-primary btn-sm" wire:click="closePeriod({{ $period->id }})">
                                         Cerrar
-                                    </flux:button>
+                                    </button>
                                 @endcan
                                 @can('cancel', $period)
                                     <flux:button type="button" size="sm" variant="danger" wire:click="openCancelPanel({{ $period->id }})">
@@ -597,8 +598,8 @@ new class extends Component {
             </div>
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-6">
-                <flux:button type="button" variant="ghost" wire:click="closeCreatePanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Generar periodo</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Generar periodo</button>
             </div>
         </form>
     </x-side-panel>
