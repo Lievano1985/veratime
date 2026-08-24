@@ -123,6 +123,84 @@ select:focus[data-flux-control] {
         @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-status-pending-line bg-white px-3.5 py-2.5 text-[13px] font-semibold text-status-pending-text transition hover:border-status-pending-line hover:bg-status-pending-bg;
     }
 
+    .btn-sm {
+        @apply rounded-lg px-3 py-2 text-xs;
+    }
+
+    .btn-lg {
+        @apply rounded-xl px-5 py-3.5 text-[15px];
+    }
+
+    .btn-outline {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-brand-blue bg-white px-3.5 py-2.5 text-[13px] font-semibold text-brand-blue transition hover:bg-surface-bg hover:text-brand-blue;
+    }
+
+    .btn-icon {
+        @apply inline-flex items-center justify-center gap-0 whitespace-nowrap rounded-[10px] border-[1.5px] border-surface-line bg-white p-2.5 text-[13px] font-semibold text-brand-navy transition hover:border-brand-blue hover:bg-surface-bg hover:text-brand-blue;
+    }
+
+    .form-label {
+        @apply mb-1.5 block text-[12.5px] font-semibold text-brand-navy;
+    }
+
+    .form-hint {
+        @apply mt-1.5 text-[12px] text-surface-muted;
+    }
+
+    .form-error {
+        @apply mt-1.5 text-[12px] text-status-pending-text;
+    }
+
+    .form-input {
+        @apply w-full rounded-xl border-[1.5px] border-surface-line bg-surface-card px-4 py-2.5 text-[14px] text-surface-text outline-none transition placeholder:text-surface-muted focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10;
+    }
+
+    .form-input-error {
+        @apply w-full rounded-xl border-[1.5px] border-status-pending-text bg-surface-card px-4 py-2.5 text-[14px] text-surface-text outline-none transition placeholder:text-surface-muted focus:border-status-pending-text focus:bg-white focus:ring-4 focus:ring-status-pending-text/10;
+    }
+
+    .form-select {
+        @apply w-full appearance-none rounded-xl border-[1.5px] border-surface-line bg-surface-card bg-no-repeat px-4 py-2.5 pr-10 text-[14px] text-surface-text outline-none transition placeholder:text-surface-muted focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7A90' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-position: right 14px center;
+    }
+
+    .badge {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] font-semibold;
+    }
+
+    .badge-success {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-status-rest-line bg-status-rest-bg px-2.5 py-1 text-[11.5px] font-semibold text-status-rest-text;
+    }
+
+    .badge-warn {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-status-warn-line bg-status-warn-bg px-2.5 py-1 text-[11.5px] font-semibold text-status-warn-text;
+    }
+
+    .badge-muted {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-surface-line bg-surface-bg px-2.5 py-1 text-[11.5px] font-semibold text-surface-muted;
+    }
+
+    .badge-danger {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-status-pending-line bg-status-pending-bg px-2.5 py-1 text-[11.5px] font-semibold text-status-pending-text;
+    }
+
+    .table-wrap {
+        @apply overflow-hidden rounded-2xl border border-surface-line;
+    }
+
+    .table-head-cell {
+        @apply border-b border-surface-line bg-surface-bg px-4 py-3 text-left text-[11.5px] font-bold uppercase tracking-wide text-surface-muted;
+    }
+
+    .table-row {
+        @apply border-b border-surface-line transition last:border-b-0 hover:bg-surface-bg;
+    }
+
+    .table-cell {
+        @apply px-4 py-3.5 align-middle text-[13.5px] text-surface-text;
+    }
+
     .stat-item {
         @apply flex items-baseline gap-1.5 border-r border-surface-line px-4 text-[13px] text-surface-muted;
     }

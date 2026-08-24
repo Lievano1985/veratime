@@ -466,30 +466,31 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Responsables y supervisores</flux:heading>
-            <flux:subheading>Asigna centros completos a RH operativo o centros/unidades a supervisores.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Responsables y supervisores</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Asigna centros completos a RH operativo o centros/unidades a supervisores.</p>
         </div>
 
-        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
             Nuevo alcance
-        </flux:button>
+        </button>
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
-    <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+    <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
         Administrador de empresa y RH administrador tienen alcance empresarial completo. RH operativo opera por centro completo; supervisor consulta dentro de sus centros o unidades asignadas.
     </div>
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
+        <div class="grid gap-4 rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)] md:grid-cols-3">
             <flux:input label="Buscar usuario" placeholder="Nombre o email" wire:model.live.debounce.350ms="filters.search" />
             <flux:select label="Rol" wire:model.live="filters.role">
                 <flux:select.option value="all">Todos</flux:select.option>
@@ -504,25 +505,25 @@ new class extends Component {
             </flux:select>
         </div>
 
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap">
+            <table class="w-full min-w-[980px] border-collapse">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Usuario</th>
-                        <th class="px-4 py-3">Alcance</th>
-                        <th class="px-4 py-3">Responsabilidad</th>
-                        <th class="px-4 py-3">Vigencia</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
+                        <th class="table-head-cell">Usuario</th>
+                        <th class="table-head-cell">Alcance</th>
+                        <th class="table-head-cell">Responsabilidad</th>
+                        <th class="table-head-cell">Vigencia</th>
+                        <th class="table-head-cell">Estado</th>
+                        <th class="table-head-cell text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                <tbody>
                     @forelse ($scopes as $scope)
-                        <tr>
-                            <td class="px-4 py-3">
-                                <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $scope->user?->name }}</span>
-                                <span class="text-xs text-zinc-500">{{ $scope->user?->email }}</span>
-                                <span class="block text-xs text-zinc-500">
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <span class="block font-semibold text-brand-navy">{{ $scope->user?->name }}</span>
+                                <span class="text-xs text-surface-muted">{{ $scope->user?->email }}</span>
+                                <span class="block text-xs text-surface-muted">
                                     {{ match ($scope->user?->roleKeyForCompany($currentCompany)) {
                                         RoleKey::RH_OPERATIVO => 'RH operativo',
                                         RoleKey::SUPERVISOR => 'Supervisor',
@@ -530,42 +531,42 @@ new class extends Component {
                                     } }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">
                                 @if ($scope->center)
                                     Centro {{ $scope->center->name }} - incluye todas sus unidades y trabajadores aplicables.
                                 @else
-                                    {{ $scope->organizationalUnit?->name }} - incluye areas y equipos descendientes.
-                                    <span class="block text-xs text-zinc-500">{{ $scope->organizationalUnit?->center?->name }}</span>
+                                    {{ $scope->organizationalUnit?->name }} - incluye áreas y equipos descendientes.
+                                    <span class="block text-xs text-surface-muted">{{ $scope->organizationalUnit?->center?->name }}</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3">{{ $scope->responsibility_type === 'responsible' ? 'Responsable' : 'Supervisor' }}</td>
-                            <td class="px-4 py-3">{{ $scope->effective_from?->toDateString() }} - {{ $scope->effective_to?->toDateString() ?? 'Abierta' }}</td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">{{ $scope->responsibility_type === 'responsible' ? 'Responsable' : 'Supervisor' }}</td>
+                            <td class="table-cell">{{ $scope->effective_from?->toDateString() }} - {{ $scope->effective_to?->toDateString() ?? 'Abierta' }}</td>
+                            <td class="table-cell">
                                 <x-ui.badge variant="{{ $scope->status === 'active' ? 'success' : ($scope->status === 'replaced' ? 'warning' : 'neutral') }}">
                                     {{ $scope->status === 'active' ? 'Vigente' : ($scope->status === 'inactive' ? 'Finalizado' : 'Reemplazado') }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="table-cell text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
-                                    <flux:button type="button" size="sm" variant="ghost" wire:click="openEditPanel({{ $scope->id }})">
-                                        Editar
-                                    </flux:button>
+                                    <button type="button" class="btn-icon" wire:click="openEditPanel({{ $scope->id }})" aria-label="Editar alcance" title="Editar">
+                                        <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
 
                                     @if ($scope->status === 'active')
-                                        <flux:button type="button" size="sm" variant="ghost" wire:click="openEndPanel({{ $scope->id }})">
-                                        Finalizar
-                                        </flux:button>
+                                        <button type="button" class="btn-icon" wire:click="openEndPanel({{ $scope->id }})" aria-label="Finalizar alcance" title="Finalizar">
+                                            <svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                                        </button>
                                     @endif
 
-                                    <flux:button type="button" size="sm" variant="danger" wire:click="deleteScope({{ $scope->id }})" wire:confirm="Esta accion borrara la asignacion de alcance. ¿Deseas continuar?">
-                                        Borrar
-                                    </flux:button>
+                                    <button type="button" class="btn-icon" wire:click="deleteScope({{ $scope->id }})" wire:confirm="Esta acción borrará la asignación de alcance. ¿Deseas continuar?" aria-label="Borrar alcance" title="Borrar">
+                                        <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="6" class="table-cell py-8 text-center text-surface-muted">
                                 No hay alcances operativos que coincidan con los filtros.
                             </td>
                         </tr>
@@ -581,7 +582,7 @@ new class extends Component {
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
                 @if ($errors->any())
-                    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                    <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm text-status-pending-text">
                         <p class="font-medium">Revisa los datos del alcance.</p>
                         <ul class="mt-2 list-disc space-y-1 pl-5">
                             @foreach ($errors->all() as $error)
@@ -602,17 +603,17 @@ new class extends Component {
                 </flux:select>
 
                 @if ($this->selectedUserRoleKey() === RoleKey::RH_OPERATIVO)
-                    <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <div class="rounded-xl border border-surface-line bg-surface-bg px-3 py-2 text-sm text-brand-navy">
                         RH operativo solo puede recibir alcance por centro completo.
                     </div>
                 @else
-                    <label class="block text-sm font-medium text-zinc-800 dark:text-zinc-100" for="operational-scope-kind">
+                    <label class="form-label" for="operational-scope-kind">
                         Tipo de alcance
                     </label>
                     <select
                         id="operational-scope-kind"
                         wire:model.live="form.scope_kind"
-                        class="mt-2 block h-10 w-full rounded-lg border border-zinc-200 border-b-zinc-300/80 bg-white px-3 py-2 text-sm text-zinc-700 shadow-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300"
+                        class="form-select mt-2"
                     >
                         <option value="center">Centro completo</option>
                         <option value="unit">Unidad organizacional</option>
@@ -620,7 +621,7 @@ new class extends Component {
                 @endif
 
                 @error('form.scope_kind')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
 
                 @if (($form['scope_kind'] ?? 'center') === 'center')
@@ -632,7 +633,7 @@ new class extends Component {
                         @endforeach
                     </flux:select>
                     @error('form.center_id')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="form-error">{{ $message }}</p>
                     @enderror
                     </div>
                 @else
@@ -643,9 +644,9 @@ new class extends Component {
                             <flux:select.option value="{{ $unit->id }}">{{ $unit->name }} - {{ $unit->center?->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <p class="text-xs text-zinc-500">Una unidad incluye sus descendientes dentro del mismo centro.</p>
+                    <p class="form-hint">Una unidad incluye sus descendientes dentro del mismo centro.</p>
                     @error('form.organizational_unit_id')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="form-error">{{ $message }}</p>
                     @enderror
                     </div>
                 @endif
@@ -658,16 +659,16 @@ new class extends Component {
                 <flux:textarea label="Motivo" wire:model.live="form.reason" required />
 
                 @error('form.user_id')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
                 @error('form.reason')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">{{ $editingScopeId ? 'Actualizar alcance' : 'Guardar alcance' }}</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-primary">{{ $editingScopeId ? 'Actualizar alcance' : 'Guardar alcance' }}</button>
             </div>
         </form>
     </x-side-panel>
@@ -678,13 +679,13 @@ new class extends Component {
                 <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
                 <flux:textarea label="Motivo" wire:model="endForm.reason" required />
                 @error('endForm.effective_to')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Finalizar</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-primary">Finalizar</button>
             </div>
         </form>
     </x-side-panel>

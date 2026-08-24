@@ -253,6 +253,34 @@ new class extends Component {
         return auth()->user()?->roleKeyForCompany($company) === 'super_admin';
     }
 
+    public function typeLabel(string $type): string
+    {
+        return match ($type) {
+            'legal_mandatory' => 'Legal obligatorio',
+            'electoral' => 'Electoral',
+            'company_internal' => 'Interno de empresa',
+            default => $type,
+        };
+    }
+
+    public function scopeLabel(string $scope): string
+    {
+        return match ($scope) {
+            'national' => 'Nacional',
+            'subnational' => 'Entidad federativa',
+            'company' => 'Empresa',
+            default => $scope,
+        };
+    }
+
+    public function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'active' => 'Activo',
+            'inactive' => 'Inactivo',
+            default => $status,
+        };
+    }
     private function emptyForm(): array
     {
         return [
@@ -267,26 +295,27 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Descansos obligatorios</flux:heading>
-            <flux:subheading>Administra fechas de descanso por tipo y alcance sin calcular jornadas.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Descansos obligatorios</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra fechas de descanso por tipo y alcance sin calcular jornadas.</p>
         </div>
 
-        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
             Crear descanso
-        </flux:button>
+        </button>
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @error('restDay')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">
             {{ $message }}
         </div>
     @enderror
@@ -324,7 +353,7 @@ new class extends Component {
 
                 <div class="space-y-1">
                     <flux:textarea label="Fundamento o referencia" wire:model="form.source_reference" rows="3" />
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p class="form-hint">
                         Ejemplo: LFT artículo 74, acuerdo electoral o política interna
                     </p>
                 </div>
@@ -335,21 +364,20 @@ new class extends Component {
                 </flux:select>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="resetForm">
-                    Cancelar
-                </flux:button>
-                <flux:button type="submit" variant="primary">
-                    Guardar descanso
-                </flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="resetForm">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar descanso</button>
             </div>
         </form>
     </x-side-panel>
 
-    <section class="space-y-4">
-        <flux:heading>Filtros</flux:heading>
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
+        <div class="flex flex-col gap-1">
+            <h2 class="font-display text-lg font-bold text-brand-navy">Listado de descansos</h2>
+            <p class="text-[13px] text-surface-muted">Filtra por fecha, tipo, alcance o estado operativo.</p>
+        </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        <div class="mt-5 grid gap-4 md:grid-cols-4 xl:grid-cols-5">
             <flux:input type="date" label="Fecha" wire:model.live="filters.date" />
             <flux:select label="Tipo" wire:model.live="filters.type">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -370,58 +398,61 @@ new class extends Component {
                 <flux:select.option value="inactive">Inactivo</flux:select.option>
             </flux:select>
         </div>
-    </section>
 
-    <section class="space-y-4">
-        <flux:heading>Listado</flux:heading>
-
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap mt-6">
+            <table class="w-full min-w-[980px] border-collapse">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Fecha</th>
-                        <th class="px-4 py-3">Nombre</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Alcance</th>
-                        <th class="px-4 py-3">Estado/Empresa</th>
-                        <th class="px-4 py-3">Fundamento o referencia</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
+                        <th class="table-head-cell">Fecha</th>
+                        <th class="table-head-cell">Nombre</th>
+                        <th class="table-head-cell">Tipo</th>
+                        <th class="table-head-cell">Alcance</th>
+                        <th class="table-head-cell">Estado/Empresa</th>
+                        <th class="table-head-cell">Fundamento o referencia</th>
+                        <th class="table-head-cell">Estado</th>
+                        <th class="table-head-cell text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                <tbody>
                     @forelse ($restDays as $restDay)
-                        <tr>
-                            <td class="px-4 py-3">{{ $restDay->date?->toDateString() }}</td>
-                            <td class="px-4 py-3">{{ $restDay->name }}</td>
-                            <td class="px-4 py-3">{{ str($restDay->type)->replace('_', ' ')->title() }}</td>
-                            <td class="px-4 py-3">{{ str($restDay->scope)->replace('_', ' ')->title() }}</td>
-                            <td class="px-4 py-3">
+                        <tr class="table-row">
+                            <td class="table-cell font-mono text-brand-navy">{{ $restDay->date?->toDateString() }}</td>
+                            <td class="table-cell font-semibold text-brand-navy">{{ $restDay->name }}</td>
+                            <td class="table-cell text-surface-muted">{{ $this->typeLabel($restDay->type) }}</td>
+                            <td class="table-cell text-surface-muted">{{ $this->scopeLabel($restDay->scope) }}</td>
+                            <td class="table-cell text-surface-muted">
                                 {{ $restDay->scope === 'subnational' ? $restDay->jurisdiction_code : ($restDay->company?->name ?? 'Sin empresa') }}
                             </td>
-                            <td class="px-4 py-3">{{ $restDay->source_reference ?: 'Sin referencia' }}</td>
-                            <td class="px-4 py-3">
-                                <x-ui.badge variant="{{ $restDay->status === 'active' ? 'success' : 'neutral' }}">
-                                    {{ ucfirst($restDay->status) }}
-                                </x-ui.badge>
+                            <td class="table-cell text-surface-muted">{{ $restDay->source_reference ?: 'Sin referencia' }}</td>
+                            <td class="table-cell">
+                                <span class="{{ $restDay->status === 'active' ? 'badge-success' : 'badge-muted' }}">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                    {{ $this->statusLabel($restDay->status) }}
+                                </span>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="table-cell">
                                 @if (Gate::allows('update', $restDay))
-                                    <div class="flex justify-end gap-2">
-                                        <flux:button type="button" size="sm" variant="ghost" wire:click="edit({{ $restDay->id }})">Editar</flux:button>
+                                    <div class="flex justify-end gap-1.5">
+                                        <button type="button" class="btn-icon" wire:click="edit({{ $restDay->id }})" aria-label="Editar descanso" title="Editar">
+                                            <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
                                         @if ($restDay->status === 'active')
-                                            <flux:button type="button" size="sm" variant="ghost" wire:click="inactivate({{ $restDay->id }})">Inactivar</flux:button>
+                                            <button type="button" class="btn-icon" wire:click="inactivate({{ $restDay->id }})" aria-label="Inactivar descanso" title="Inactivar">
+                                                <svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
                                         @endif
-                                        <flux:button type="button" size="sm" variant="danger" wire:confirm="Eliminar este descanso solo si fue capturado por error? Esta accion no se puede deshacer." wire:click="deleteRestDay({{ $restDay->id }})">Eliminar</flux:button>
+                                        <button type="button" class="btn-icon" wire:confirm="Eliminar este descanso solo si fue capturado por error? Esta acción no se puede deshacer." wire:click="deleteRestDay({{ $restDay->id }})" aria-label="Eliminar descanso" title="Eliminar">
+                                            <svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
                                     </div>
                                 @else
-                                    <span class="text-xs text-zinc-500">Sin permisos</span>
+                                    <span class="text-xs text-surface-muted">Sin permisos</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="8" class="table-cell py-8 text-center text-surface-muted">
                                 No hay descansos registrados.
                             </td>
                         </tr>

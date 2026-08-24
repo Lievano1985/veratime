@@ -309,35 +309,36 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full space-y-6 p-6">
+<section class="w-full space-y-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Usuarios</flux:heading>
-            <flux:subheading>Administra usuarios, roles y membresias de la empresa activa.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Usuarios</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra usuarios, roles y membresías de la empresa activa.</p>
         </div>
 
-        <flux:button type="button" icon="plus" variant="primary" wire:click="openCreatePanel">
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
             Nuevo usuario
-        </flux:button>
+        </button>
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     @if ($temporaryPassword)
-        <div class="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 rounded-xl border border-status-warn-line bg-status-warn-bg px-4 py-3 text-sm text-status-warn-text sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <div class="font-semibold">Contraseña temporal</div>
                 <div class="font-mono text-base">{{ $temporaryPassword }}</div>
             </div>
-            <flux:button type="button" size="sm" variant="ghost" wire:click="clearTemporaryPassword">Ocultar</flux:button>
+            <button type="button" class="btn-ghost btn-sm" wire:click="clearTemporaryPassword">Ocultar</button>
         </div>
     @endif
 
-    <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
         <div class="grid gap-4 md:grid-cols-4">
             <flux:input label="Buscar" placeholder="Nombre o correo" wire:model.live.debounce.400ms="filters.search" />
             <flux:select label="Rol" wire:model.live="filters.role_key">
@@ -359,47 +360,51 @@ new class extends Component {
         </div>
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-200 text-sm">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500">
+    <section class="table-wrap">
+        <div>
+            <table class="w-full min-w-[900px] border-collapse">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Usuario</th>
-                        <th class="px-4 py-3">Rol</th>
-                        <th class="px-4 py-3">Estado usuario</th>
-                        <th class="px-4 py-3">Acceso empresa</th>
-                        <th class="px-4 py-3 text-right">Acciones</th>
+                        <th class="table-head-cell">Usuario</th>
+                        <th class="table-head-cell">Rol</th>
+                        <th class="table-head-cell">Estado usuario</th>
+                        <th class="table-head-cell">Acceso empresa</th>
+                        <th class="table-head-cell text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200">
+                <tbody>
                     @forelse ($users as $user)
                         @php($roleKey = $this->roleKey($user))
-                        <tr>
-                            <td class="px-4 py-3">
-                                <div class="font-medium text-zinc-900">{{ $user->name }}</div>
-                                <div class="text-xs text-zinc-500">{{ $user->email }}</div>
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <div class="font-semibold text-brand-navy">{{ $user->name }}</div>
+                                <div class="text-xs text-surface-muted">{{ $user->email }}</div>
                             </td>
-                            <td class="px-4 py-3">{{ $this->roleLabel($roleKey) }}</td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">{{ $this->roleLabel($roleKey) }}</td>
+                            <td class="table-cell">
                                 <x-ui.badge variant="{{ $user->status === 'active' ? 'success' : 'neutral' }}">
                                     {{ $this->statusLabel($user->status) }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">
                                 <x-ui.badge variant="{{ $user->pivot->status === 'active' ? 'success' : 'neutral' }}">
                                     {{ $this->statusLabel($user->pivot->status) }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="table-cell text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
-                                    <flux:button type="button" size="sm" variant="ghost" wire:click="openEditPanel({{ $user->id }})">Editar</flux:button>
-                                    <flux:button type="button" size="sm" variant="outline" wire:click="openResetPanel({{ $user->id }})">Resetear contraseña</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="openEditPanel({{ $user->id }})" aria-label="Editar usuario" title="Editar">
+                                        <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
+                                    <button type="button" class="btn-icon" wire:click="openResetPanel({{ $user->id }})" aria-label="Resetear contraseña" title="Resetear contraseña">
+                                        <svg class="h-4 w-4 text-brand-blue" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 0 0-13.5-3.5L4 8m16 8-2.5 2.5A8 8 0 0 1 4 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="5" class="table-cell py-8 text-center text-surface-muted">
                                 No hay usuarios con estos filtros.
                             </td>
                         </tr>
@@ -408,7 +413,7 @@ new class extends Component {
             </table>
         </div>
 
-        <div class="border-t border-zinc-200 px-4 py-3">
+        <div class="border-t border-surface-line px-4 py-3">
             {{ $users->links() }}
         </div>
     </section>
@@ -429,9 +434,9 @@ new class extends Component {
                     <flux:select.option value="inactive">Inactivo</flux:select.option>
                 </flux:select>
             </div>
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6">
-                <flux:button type="button" variant="ghost" wire:click="closeCreatePanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Crear usuario</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Crear usuario</button>
             </div>
         </form>
     </x-side-panel>
@@ -452,11 +457,11 @@ new class extends Component {
                     </flux:select>
                 @else
                     <div>
-                        <div class="mb-1 block text-sm font-medium text-zinc-700">Estado global del usuario</div>
+                        <div class="form-label">Estado global del usuario</div>
                         <x-ui.badge variant="{{ ($editForm['user_status'] ?? 'active') === 'active' ? 'success' : 'neutral' }}">
                             {{ $this->statusLabel($editForm['user_status'] ?? 'active') }}
                         </x-ui.badge>
-                        <p class="mt-1 text-xs text-zinc-500">Solo el super administrador puede cambiar el estado global.</p>
+                        <p class="form-hint">Solo el super administrador puede cambiar el estado global.</p>
                     </div>
                 @endif
                 <flux:select label="Acceso a esta empresa" wire:model="editForm.membership_status">
@@ -464,9 +469,9 @@ new class extends Component {
                     <flux:select.option value="inactive">Inactivo</flux:select.option>
                 </flux:select>
             </div>
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6">
-                <flux:button type="button" variant="ghost" wire:click="closeEditPanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closeEditPanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
     </x-side-panel>
@@ -475,13 +480,13 @@ new class extends Component {
         <form wire:submit="resetPassword" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
                 <flux:input label="Nueva contraseña temporal" wire:model="resetForm.password" />
-                <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                    Comparte esta contraseña por un medio seguro. Vera Time solo la mostrara en esta sesion.
+                <div class="rounded-xl border border-status-warn-line bg-status-warn-bg px-3 py-2 text-sm text-status-warn-text">
+                    Comparte esta contraseña por un medio seguro. Vera Time solo la mostrará en esta sesión.
                 </div>
             </div>
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6">
-                <flux:button type="button" variant="ghost" wire:click="closeResetPanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Actualizar contraseña</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closeResetPanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Actualizar contraseña</button>
             </div>
         </form>
     </x-side-panel>

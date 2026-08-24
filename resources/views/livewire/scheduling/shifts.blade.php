@@ -337,7 +337,7 @@ new class extends Component {
             return "{$segment['duration_minutes']} min - {$label}";
         }
 
-        $endSuffix = (int) $segment['end_day_offset'] === 1 ? ' (+1 dia)' : '';
+        $endSuffix = (int) $segment['end_day_offset'] === 1 ? ' (+1 día)' : '';
 
         return substr((string) $segment['start_local_time'], 0, 5).'–'.substr((string) $segment['end_local_time'], 0, 5).$endSuffix.' '.$label;
     }
@@ -380,27 +380,31 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Catálogo de turnos</flux:heading>
-            <flux:subheading>Plantillas reutilizables de un día. No asignan personas ni generan calendarios todavía.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Catálogo de turnos</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Plantillas reutilizables de un día. No asignan personas ni generan calendarios todavía.</p>
         </div>
 
         @if ($canManageShiftTemplates)
-            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nueva plantilla</flux:button>
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
+                Nueva plantilla
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{{ session('status') }}</div>
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">{{ session('status') }}</div>
     @endif
 
     @error('shiftTemplate')
-        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-100">{{ $message }}</div>
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">{{ $message }}</div>
     @enderror
 
-    <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-2">
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
+        <div class="grid gap-4 md:grid-cols-2">
         <flux:input label="Buscar" placeholder="Código o nombre" wire:model.live.debounce.350ms="filters.search" />
         <flux:select label="Estado" wire:model.live="filters.status">
             <flux:select.option value="active">Activas</flux:select.option>
@@ -409,81 +413,80 @@ new class extends Component {
                 <flux:select.option value="all">Todas</flux:select.option>
             @endif
         </flux:select>
-    </div>
+        </div>
 
-    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                <tr>
-                    <th class="px-4 py-3">Plantilla</th>
-                    <th class="px-4 py-3">Segmentos</th>
-                    <th class="px-4 py-3">Trabajo efectivo</th>
-                    <th class="px-4 py-3">Duración total</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+        <div class="table-wrap mt-6">
+        <table class="w-full min-w-[940px] border-collapse">
+            <thead>
+                <tr class="table-row">
+                    <th class="table-head-cell">Plantilla</th>
+                    <th class="table-head-cell">Segmentos</th>
+                    <th class="table-head-cell">Trabajo efectivo</th>
+                    <th class="table-head-cell">Duración total</th>
+                    <th class="table-head-cell">Estado</th>
+                    <th class="table-head-cell text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+            <tbody>
                 @forelse ($shiftTemplates as $template)
                     @php($metrics = $template->metrics())
-                    <tr>
-                        <td class="px-4 py-3">
-                            <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $template->code }} - {{ $template->name }}</span>
-                            <span class="text-xs text-zinc-500">{{ $template->description ?: 'Sin descripción' }}</span>
+                    <tr class="table-row">
+                        <td class="table-cell">
+                            <span class="block font-semibold text-brand-navy">{{ $template->code }} - {{ $template->name }}</span>
+                            <span class="text-xs text-surface-muted">{{ $template->description ?: 'Sin descripción' }}</span>
                         </td>
-                        <td class="px-4 py-3">{{ $template->segments->count() }}</td>
-                        <td class="px-4 py-3">
+                        <td class="table-cell">{{ $template->segments->count() }}</td>
+                        <td class="table-cell">
                             <span class="block">{{ $this->formatMinutes($metrics['effective_work_minutes']) }}</span>
-                            <span class="text-xs text-zinc-500">Bruto: {{ $this->formatMinutes($metrics['gross_work_minutes']) }}</span>
+                            <span class="text-xs text-surface-muted">Bruto: {{ $this->formatMinutes($metrics['gross_work_minutes']) }}</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="table-cell">
                             {{ $this->formatMinutes($metrics['total_span_minutes']) }}
                             @if ($metrics['crosses_midnight'])
-                                <x-ui.badge variant="info" class="ml-1">+1 día</x-ui.badge>
+                                <span class="badge ml-1 bg-brand-blue/10 text-status-shift-text">+1 día</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $template->status === 'active' ? 'success' : 'neutral' }}">
-                                {{ $template->status === 'active' ? 'Activa' : 'Inactiva' }}
-                            </x-ui.badge>
+                        <td class="table-cell">
+                            <span class="{{ $template->status === 'active' ? 'badge-success' : 'badge-muted' }}"><span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ $template->status === 'active' ? 'Activa' : 'Inactiva' }}</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="table-cell">
                             <div class="flex justify-end gap-2">
-                                <flux:button size="xs" variant="ghost" wire:click="showDetail({{ $template->id }})">Ver</flux:button>
+                                <button type="button" class="btn-icon" wire:click="showDetail({{ $template->id }})" aria-label="Ver plantilla" title="Ver"><svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="1.8"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.8"/></svg></button>
                                 @if ($canManageShiftTemplates)
-                                    <flux:button size="xs" variant="ghost" wire:click="loadEditForm({{ $template->id }})">Editar</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="loadEditForm({{ $template->id }})" aria-label="Editar plantilla" title="Editar"><svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @if ($template->status === 'active')
-                                        <flux:button size="xs" variant="danger" wire:click="inactivate({{ $template->id }})" wire:confirm="¿Inactivar esta plantilla?">Inactivar</flux:button>
+                                        <button type="button" class="btn-icon" wire:click="inactivate({{ $template->id }})" wire:confirm="¿Inactivar esta plantilla?" aria-label="Inactivar plantilla" title="Inactivar"><svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @else
-                                        <flux:button size="xs" variant="primary" wire:click="reactivate({{ $template->id }})">Reactivar</flux:button>
+                                        <button type="button" class="btn-icon" wire:click="reactivate({{ $template->id }})" aria-label="Reactivar plantilla" title="Reactivar"><svg class="h-4 w-4 text-status-rest-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @endif
-                                    <flux:button size="xs" variant="danger" wire:click="delete({{ $template->id }})" wire:confirm="Eliminar esta plantilla solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="delete({{ $template->id }})" wire:confirm="Eliminar esta plantilla solo si no tiene uso? Esta acción no se puede deshacer." aria-label="Eliminar plantilla" title="Eliminar"><svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                 @else
-                                    <span class="text-xs text-zinc-500">Solo consulta</span>
+                                    <span class="text-xs text-surface-muted">Solo consulta</span>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-zinc-500">No hay plantillas con los filtros actuales.</td>
+                    <tr class="table-row">
+                        <td colspan="6" class="table-cell py-8 text-center text-surface-muted">No hay plantillas con los filtros actuales.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
-    </div>
+        </div>
+    </section>
 
     {{ $shiftTemplates->links() }}
 
     @if ($viewingTemplate)
         @php($detailMetrics = $viewingTemplate->metrics())
-        <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+        <section class="rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
             <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
                     <flux:heading>{{ $viewingTemplate->code }} - {{ $viewingTemplate->name }}</flux:heading>
                     <flux:subheading>Detalle de segmentos de la plantilla.</flux:subheading>
                 </div>
-                <flux:button size="sm" variant="ghost" wire:click="closeDetail">Cerrar</flux:button>
+                <button type="button" class="btn-ghost btn-sm" wire:click="closeDetail">Cerrar</button>
             </div>
 
             <div class="space-y-2 text-sm">
@@ -519,17 +522,17 @@ new class extends Component {
             <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
 
             @error('segments')
-                <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
 
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <flux:heading>Segmentos diarios</flux:heading>
-                    <flux:button type="button" size="sm" icon="plus" variant="primary" wire:click="addSegment">Agregar segmento</flux:button>
+                    <button type="button" class="btn-primary btn-sm" wire:click="addSegment"><span class="text-base leading-none">+</span>Agregar segmento</button>
                 </div>
 
                 @foreach ($segments as $index => $segment)
-                    <div class="rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div class="rounded-2xl border border-surface-line bg-white p-4">
                         <div class="mb-3 flex items-center justify-between">
                             <p class="text-sm font-medium">Segmento {{ $index + 1 }}</p>
                             <div class="flex gap-2">
@@ -577,7 +580,7 @@ new class extends Component {
                 @endforeach
             </div>
 
-            <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+            <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
                 <flux:heading>Vista previa</flux:heading>
                 @if ($preview['valid'])
                     <div class="mt-3 space-y-1 text-sm">
@@ -596,13 +599,13 @@ new class extends Component {
                         <p>Cruza medianoche: {{ $preview['metrics']['crosses_midnight'] ? 'Sí' : 'No' }}</p>
                     </div>
                 @else
-                    <p class="mt-3 text-sm text-zinc-500">Completa segmentos válidos para ver el resumen.</p>
+                    <p class="mt-3 text-sm text-surface-muted">Completa segmentos válidos para ver el resumen.</p>
                 @endif
             </div>
 
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="closeFormPanel">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
             </div>
             </form>
         </x-side-panel>

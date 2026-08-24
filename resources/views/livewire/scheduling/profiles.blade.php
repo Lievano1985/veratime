@@ -36,10 +36,10 @@ new class extends Component {
     private const DAY_NAMES = [
         1 => 'Lunes',
         2 => 'Martes',
-        3 => 'Miercoles',
+        3 => 'Miércoles',
         4 => 'Jueves',
         5 => 'Viernes',
-        6 => 'Sabado',
+        6 => 'Sábado',
         7 => 'Domingo',
     ];
 
@@ -211,7 +211,7 @@ new class extends Component {
 
         if ($methodChanged && ! $this->confirmMethodChange) {
             throw ValidationException::withMessages([
-                'confirmMethodChange' => 'Confirma que deseas reemplazar la configuracion del metodo anterior.',
+                'confirmMethodChange' => 'Confirma que deseas reemplazar la configuración del método anterior.',
             ]);
         }
 
@@ -569,7 +569,7 @@ new class extends Component {
             $template = filled($rule['shift_template_id'] ?? null) ? $templates->get((int) $rule['shift_template_id']) : null;
 
             return [
-                'day' => self::DAY_NAMES[$day] ?? 'Dia',
+                'day' => self::DAY_NAMES[$day] ?? 'Día',
                 'value' => ($rule['day_type'] ?? 'shift') === 'rest'
                     ? 'Descanso'
                     : ($template ? "{$template->code} - {$template->name}" : 'Selecciona plantilla'),
@@ -585,7 +585,7 @@ new class extends Component {
             $template = filled($rule['shift_template_id'] ?? null) ? $templates->get((int) $rule['shift_template_id']) : null;
 
             return [
-                'day' => 'Dia '.(int) ($rule['cycle_day'] ?? 0),
+                'day' => 'Día '.(int) ($rule['cycle_day'] ?? 0),
                 'value' => ($rule['day_type'] ?? 'shift') === 'rest'
                     ? 'Descanso'
                     : ($template ? "{$template->code} - {$template->name}" : 'Selecciona plantilla'),
@@ -598,7 +598,7 @@ new class extends Component {
         return collect($this->flexibleRules)->sortBy('day_of_week')->map(function (array $rule): array {
             $day = (int) ($rule['day_of_week'] ?? 0);
             if (($rule['day_type'] ?? 'work') === 'rest') {
-                return ['day' => self::DAY_NAMES[$day] ?? 'Dia', 'value' => 'Descanso'];
+                return ['day' => self::DAY_NAMES[$day] ?? 'Día', 'value' => 'Descanso'];
             }
 
             $minutes = (int) ($rule['required_minutes'] ?? 0);
@@ -607,7 +607,7 @@ new class extends Component {
                 $value .= ' | Ventana '.$rule['window_start_local_time'].'-'.$rule['window_end_local_time'].$this->offsetSuffix((int) ($rule['window_end_day_offset'] ?? 0));
             }
 
-            return ['day' => self::DAY_NAMES[$day] ?? 'Dia', 'value' => $value];
+            return ['day' => self::DAY_NAMES[$day] ?? 'Día', 'value' => $value];
         })->values()->all();
     }
 
@@ -616,13 +616,13 @@ new class extends Component {
         return collect($this->onCallRules)->sortBy('day_of_week')->map(function (array $rule): array {
             $day = (int) ($rule['day_of_week'] ?? 0);
             if (($rule['day_type'] ?? 'on_call') === 'rest') {
-                return ['day' => self::DAY_NAMES[$day] ?? 'Dia', 'value' => 'Descanso'];
+                return ['day' => self::DAY_NAMES[$day] ?? 'Día', 'value' => 'Descanso'];
             }
 
             $value = 'Disponible '.$rule['availability_start_local_time'].'-'.$rule['availability_end_local_time'].$this->offsetSuffix((int) ($rule['availability_end_day_offset'] ?? 0));
-            $value .= ' | Maximo al activarse: '.$this->formatMinutes((int) ($rule['max_work_minutes'] ?? 0));
+            $value .= ' | Máximo al activarse: '.$this->formatMinutes((int) ($rule['max_work_minutes'] ?? 0));
 
-            return ['day' => self::DAY_NAMES[$day] ?? 'Dia', 'value' => $value];
+            return ['day' => self::DAY_NAMES[$day] ?? 'Día', 'value' => $value];
         })->values()->all();
     }
 
@@ -643,8 +643,8 @@ new class extends Component {
         return match ($profile->profile_type) {
             'pattern' => $profile->pattern_mode === 'weekly'
                 ? 'Horario fijo semanal'
-                : 'Rol rotativo - ciclo de '.$profile->cycleRules->count().' dias',
-            'calendar' => 'Programacion semanal manual',
+                : 'Rol rotativo - ciclo de '.$profile->cycleRules->count().' días',
+            'calendar' => 'Programación semanal manual',
             'flexible' => 'Flexible avanzado',
             'on_call' => 'Guardia avanzada',
             default => 'Tipo no reconocido',
@@ -654,17 +654,17 @@ new class extends Component {
     private function formOperatingModelSummary(): string
     {
         if ($this->formIsWeeklyPattern()) {
-            return 'Horario fijo semanal: se captura la semana base y se repite automaticamente en cada semana nueva.';
+            return 'Horario fijo semanal: se captura la semana base y se repite automáticamente en cada semana nueva.';
         }
 
         if ($this->formIsCyclePattern()) {
-            return 'Rol rotativo / ciclo: captura la secuencia completa; al aplicarlo, la fecha inicial sera el Dia 1.';
+            return 'Rol rotativo / ciclo: captura la secuencia completa; al aplicarlo, la fecha inicial será el Día 1.';
         }
 
         return match ($this->form['profile_type'] ?? 'pattern') {
-            'calendar' => 'Programacion semanal manual: deja dias pendientes para armar la semana por demanda o CSV.',
+            'calendar' => 'Programación semanal manual: deja días pendientes para armar la semana por demanda o CSV.',
             'flexible' => 'Flexible avanzado: define minutos esperados y ventana opcional, sin turno fijo.',
-            'on_call' => 'Guardia avanzada: define disponibilidad; el tiempo real dependera de activaciones futuras.',
+            'on_call' => 'Guardia avanzada: define disponibilidad; el tiempo real dependerá de activaciones futuras.',
             default => 'Selecciona la forma de operar.',
         };
     }
@@ -673,11 +673,11 @@ new class extends Component {
     {
         return match ($profile->profile_type) {
             'pattern' => $profile->pattern_mode === 'weekly'
-                ? $profile->weeklyRules->count().' dias semanales'
-                : 'Ciclo de '.$profile->cycleRules->count().' dias',
-            'calendar' => 'Dias pendientes por calendario',
-            'flexible' => $profile->flexibleRules->where('day_type', 'work')->count().' dias laborales',
-            'on_call' => $profile->onCallRules->where('day_type', 'on_call')->count().' dias disponibles',
+                ? $profile->weeklyRules->count().' días semanales'
+                : 'Ciclo de '.$profile->cycleRules->count().' días',
+            'calendar' => 'Días pendientes por calendario',
+            'flexible' => $profile->flexibleRules->where('day_type', 'work')->count().' días laborales',
+            'on_call' => $profile->onCallRules->where('day_type', 'on_call')->count().' días disponibles',
             default => 'Sin reglas',
         };
     }
@@ -685,10 +685,10 @@ new class extends Component {
     private function profileDetailSubtitle(ScheduleProfile $profile): string
     {
         return match ($profile->profile_type) {
-            'pattern' => $profile->pattern_mode === 'weekly' ? 'Se repite cada semana. Las excepciones se corrigen en el lote semanal, sin tocar la base.' : 'Ciclo rotativo que se repite desde una fecha de inicio. La asignacion marca el Dia 1.',
-            'calendar' => 'No se repite automaticamente. Deja los dias pendientes para capturarlos en la programacion semanal.',
-            'flexible' => 'Minutos requeridos y ventanas por dia. No representa un turno fijo.',
-            'on_call' => 'Disponibilidad o guardia avanzada; no cuenta automaticamente como tiempo trabajado.',
+            'pattern' => $profile->pattern_mode === 'weekly' ? 'Se repite cada semana. Las excepciones se corrigen en el lote semanal, sin tocar la base.' : 'Ciclo rotativo que se repite desde una fecha de inicio. La asignación marca el Día 1.',
+            'calendar' => 'No se repite automáticamente. Deja los días pendientes para capturarlos en la programación semanal.',
+            'flexible' => 'Minutos requeridos y ventanas por día. No representa un turno fijo.',
+            'on_call' => 'Disponibilidad o guardia avanzada; no cuenta automáticamente como tiempo trabajado.',
             default => 'Modelo de horario.',
         };
     }
@@ -746,7 +746,7 @@ new class extends Component {
 
     private function offsetSuffix(int $offset): string
     {
-        return $offset === 1 ? ' (+1 dia)' : '';
+        return $offset === 1 ? ' (+1 día)' : '';
     }
 
     private function formatTimeForInput(?string $time): string
@@ -804,33 +804,37 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <flux:heading size="xl">Modelos de horario</flux:heading>
-            <flux:subheading>Elige como opera la empresa: horario fijo semanal, rol rotativo o captura semanal por demanda.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Modelos de horario</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Elige como opera la empresa: horario fijo semanal, rol rotativo o captura semanal por demanda.</p>
         </div>
 
         @if ($canManageProfiles)
-            <flux:button wire:click="openCreatePanel" icon="plus" variant="primary">Nuevo modelo</flux:button>
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
+                Nuevo modelo
+            </button>
         @endif
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{{ session('status') }}</div>
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">{{ session('status') }}</div>
     @endif
 
     @error('profile')
-        <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
+        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm font-medium text-status-pending-text">{{ $message }}</div>
     @enderror
 
-    <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 md:grid-cols-3">
-        <flux:input label="Buscar" placeholder="Codigo o nombre" wire:model.live.debounce.350ms="filters.search" />
+    <section class="rounded-2xl border border-surface-line bg-surface-card p-6 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
+        <div class="grid gap-4 md:grid-cols-3">
+        <flux:input label="Buscar" placeholder="Código o nombre" wire:model.live.debounce.350ms="filters.search" />
         <flux:select label="Camino" wire:model.live="filters.operating_model">
             <flux:select.option value="all">Todos</flux:select.option>
             <flux:select.option value="weekly">Horario fijo semanal</flux:select.option>
             <flux:select.option value="cycle">Rol rotativo / ciclo</flux:select.option>
-            <flux:select.option value="calendar">Programacion semanal manual</flux:select.option>
+            <flux:select.option value="calendar">Programación semanal manual</flux:select.option>
             <flux:select.option value="flexible">Flexible avanzado</flux:select.option>
             <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
         </flux:select>
@@ -841,69 +845,68 @@ new class extends Component {
                 <flux:select.option value="all">Todos</flux:select.option>
             @endif
         </flux:select>
-    </div>
+        </div>
 
-    <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-            <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                <tr>
-                    <th class="px-4 py-3">Modelo</th>
-                    <th class="px-4 py-3">Forma</th>
-                    <th class="px-4 py-3">Reglas</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+        <div class="table-wrap mt-6">
+        <table class="w-full min-w-[900px] border-collapse">
+            <thead>
+                <tr class="table-row">
+                    <th class="table-head-cell">Modelo</th>
+                    <th class="table-head-cell">Forma</th>
+                    <th class="table-head-cell">Reglas</th>
+                    <th class="table-head-cell">Estado</th>
+                    <th class="table-head-cell text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+            <tbody>
                 @forelse ($profiles as $profile)
-                    <tr>
-                        <td class="px-4 py-3">
-                            <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $profile->code }} - {{ $profile->name }}</span>
-                            <span class="text-xs text-zinc-500">{{ $profile->description ?: 'Sin descripcion' }}</span>
+                    <tr class="table-row">
+                        <td class="table-cell">
+                            <span class="block font-semibold text-brand-navy">{{ $profile->code }} - {{ $profile->name }}</span>
+                            <span class="text-xs text-surface-muted">{{ $profile->description ?: 'Sin descripción' }}</span>
                         </td>
-                        <td class="px-4 py-3">{{ $this->profileTypeLabel($profile) }}</td>
-                        <td class="px-4 py-3">{{ $this->rulesSummary($profile) }}</td>
-                        <td class="px-4 py-3">
-                            <x-ui.badge variant="{{ $profile->status === 'active' ? 'success' : 'neutral' }}">
-                                {{ $profile->status === 'active' ? 'Activo' : 'Inactivo' }}
-                            </x-ui.badge>
+                        <td class="table-cell">{{ $this->profileTypeLabel($profile) }}</td>
+                        <td class="table-cell">{{ $this->rulesSummary($profile) }}</td>
+                        <td class="table-cell">
+                            <span class="{{ $profile->status === 'active' ? 'badge-success' : 'badge-muted' }}"><span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ $profile->status === 'active' ? 'Activo' : 'Inactivo' }}</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="table-cell">
                             <div class="flex justify-end gap-2">
-                                <flux:button size="xs" variant="ghost" wire:click="showDetail({{ $profile->id }})">Ver</flux:button>
+                                <button type="button" class="btn-icon" wire:click="showDetail({{ $profile->id }})" aria-label="Ver modelo" title="Ver"><svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="1.8"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.8"/></svg></button>
                                 @if ($canManageProfiles)
-                                    <flux:button size="xs" variant="ghost" wire:click="loadEditForm({{ $profile->id }})">Editar</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="loadEditForm({{ $profile->id }})" aria-label="Editar modelo" title="Editar"><svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @if ($profile->status === 'active')
-                                        <flux:button size="xs" variant="danger" wire:click="inactivate({{ $profile->id }})" wire:confirm="Inactivar este modelo?">Inactivar</flux:button>
+                                        <button type="button" class="btn-icon" wire:click="inactivate({{ $profile->id }})" wire:confirm="¿Inactivar este modelo?" aria-label="Inactivar modelo" title="Inactivar"><svg class="h-4 w-4 text-status-warn-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18.36 5.64 5.64 18.36M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @else
-                                        <flux:button size="xs" variant="primary" wire:click="reactivate({{ $profile->id }})">Reactivar</flux:button>
+                                        <button type="button" class="btn-icon" wire:click="reactivate({{ $profile->id }})" aria-label="Reactivar modelo" title="Reactivar"><svg class="h-4 w-4 text-status-rest-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                     @endif
-                                    <flux:button size="xs" variant="danger" wire:click="deleteProfile({{ $profile->id }})" wire:confirm="Eliminar este modelo solo si no tiene uso? Esta accion no se puede deshacer.">Eliminar</flux:button>
+                                    <button type="button" class="btn-icon" wire:click="deleteProfile({{ $profile->id }})" wire:confirm="Eliminar este modelo solo si no tiene uso? Esta acción no se puede deshacer." aria-label="Eliminar modelo" title="Eliminar"><svg class="h-4 w-4 text-status-pending-text" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                                 @else
-                                    <span class="text-xs text-zinc-500">Solo consulta</span>
+                                    <span class="text-xs text-surface-muted">Solo consulta</span>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-zinc-500">No hay modelos con los filtros actuales.</td>
+                    <tr class="table-row">
+                        <td colspan="5" class="table-cell py-8 text-center text-surface-muted">No hay modelos con los filtros actuales.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
-    </div>
+        </div>
+    </section>
 
     {{ $profiles->links() }}
 
     @if ($viewingProfile)
-        <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+        <section class="rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
             <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
                     <flux:heading>{{ $viewingProfile->code }} - {{ $viewingProfile->name }}</flux:heading>
                     <flux:subheading>{{ $this->profileDetailSubtitle($viewingProfile) }}</flux:subheading>
                 </div>
-                <flux:button size="sm" variant="ghost" wire:click="closeDetail">Cerrar</flux:button>
+                <button type="button" class="btn-ghost btn-sm" wire:click="closeDetail">Cerrar</button>
             </div>
 
             @if ($this->isWeeklyPattern($viewingProfile))
@@ -915,7 +918,7 @@ new class extends Component {
             @elseif ($this->isCyclePattern($viewingProfile))
                 <div class="grid gap-2 text-sm md:grid-cols-2">
                     @foreach ($viewingProfile->cycleRules as $rule)
-                        <p><span class="font-medium">Dia {{ $rule->cycle_day }}</span>: {{ $rule->day_type === 'rest' ? 'Descanso' : $rule->shiftTemplate?->name }}</p>
+                        <p><span class="font-medium">Día {{ $rule->cycle_day }}</span>: {{ $rule->day_type === 'rest' ? 'Descanso' : $rule->shiftTemplate?->name }}</p>
                     @endforeach
                 </div>
             @elseif ($viewingProfile->profile_type === 'flexible')
@@ -927,24 +930,24 @@ new class extends Component {
             @elseif ($viewingProfile->profile_type === 'on_call')
                 <div class="grid gap-2 text-sm md:grid-cols-2">
                     @foreach ($viewingProfile->onCallRules as $rule)
-                        <p><span class="font-medium">{{ $dayNames[$rule->day_of_week] }}</span>: {{ $rule->day_type === 'rest' ? 'Descanso' : 'Disponible '.$this->formatTimeForInput($rule->availability_start_local_time).'-'.$this->formatTimeForInput($rule->availability_end_local_time).' | maximo '.$this->formatMinutes((int) $rule->max_work_minutes) }}</p>
+                        <p><span class="font-medium">{{ $dayNames[$rule->day_of_week] }}</span>: {{ $rule->day_type === 'rest' ? 'Descanso' : 'Disponible '.$this->formatTimeForInput($rule->availability_start_local_time).'-'.$this->formatTimeForInput($rule->availability_end_local_time).' | máximo '.$this->formatMinutes((int) $rule->max_work_minutes) }}</p>
                     @endforeach
                 </div>
             @else
-                <p class="text-sm text-zinc-600 dark:text-zinc-300">Este modelo se usa cuando la programacion cambia por fecha. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos manualmente o mediante importacion CSV.</p>
+                <p class="text-sm text-surface-muted">Este modelo se usa cuando la programación cambia por fecha. No se repite automáticamente; al generar el calendario, los días quedan pendientes hasta definirlos manualmente o mediante importación CSV.</p>
             @endif
         </section>
     @endif
 
     @if ($canManageProfiles)
-        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar modelo de horario' : 'Nuevo modelo de horario' }}" subheading="Define si este horario se repite cada semana, rota por ciclo o se capturara desde la programacion semanal.">
+        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar modelo de horario' : 'Nuevo modelo de horario' }}" subheading="Define si este horario se repite cada semana, rota por ciclo o se capturará desde la programación semanal.">
             <form wire:submit="save" class="space-y-6 p-6">
                 <div class="grid gap-4 md:grid-cols-4">
-                    <flux:input label="Codigo" wire:model="form.code" required />
+                    <flux:input label="Código" wire:model="form.code" required />
                     <flux:input label="Nombre" wire:model="form.name" required />
                     <flux:select label="Forma de operar" wire:model.live="form.profile_type">
                         <flux:select.option value="pattern">Horario fijo o rol rotativo</flux:select.option>
-                        <flux:select.option value="calendar">Programacion semanal manual</flux:select.option>
+                        <flux:select.option value="calendar">Programación semanal manual</flux:select.option>
                         <flux:select.option value="flexible">Horario flexible avanzado</flux:select.option>
                         <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
                     </flux:select>
@@ -954,15 +957,15 @@ new class extends Component {
                     </flux:select>
                 </div>
 
-                <flux:textarea label="Descripcion" wire:model="form.description" rows="2" />
+                <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
 
-                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
                     {{ $this->formOperatingModelSummary() }}
                 </div>
 
                 @if (($form['profile_type'] ?? 'pattern') === 'pattern')
-                <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                    Este modelo se reutiliza al generar nuevas semanas. Los horarios publicados conservan su version y las excepciones se corrigen en el lote semanal.
+                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                    Este modelo se reutiliza al generar nuevas semanas. Los horarios publicados conservan su versión y las excepciones se corrigen en el lote semanal.
                 </div>
                     <flux:select label="Tipo de modelo" wire:model.live="form.pattern_mode">
                         <flux:select.option value="weekly">Horario fijo semanal</flux:select.option>
@@ -971,25 +974,25 @@ new class extends Component {
                 @endif
 
                 @if ($this->methodChanged())
-                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                        Cambiar la forma de operar reemplazara la configuracion anterior de reglas de este modelo. Las asignaciones e historicos no se modifican.
+                    <div class="rounded-2xl border border-status-warn-line bg-status-warn-bg p-4 text-sm text-status-warn-text">
+                        Cambiar la forma de operar reemplazará la configuración anterior de reglas de este modelo. Las asignaciones e históricos no se modifican.
                         <label class="mt-3 flex items-center gap-2">
                             <input type="checkbox" wire:model="confirmMethodChange" class="rounded border-zinc-300">
-                            <span>Confirmo que deseo reemplazar la configuracion del metodo anterior.</span>
+                            <span>Confirmo que deseo reemplazar la configuración del método anterior.</span>
                         </label>
                         @error('confirmMethodChange')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            <p class="form-error mt-2">{{ $message }}</p>
                         @enderror
                     </div>
                 @endif
 
                 @error('profileRules')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
 
                 @if ($this->formIsWeeklyPattern())
                     @error('weeklyRules')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="form-error">{{ $message }}</p>
                     @enderror
 
                     <section class="space-y-4">
@@ -997,13 +1000,13 @@ new class extends Component {
 
                         <div class="grid gap-3">
                             @foreach ($weeklyRules as $index => $rule)
-                                <div class="grid items-end gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-700 md:grid-cols-3">
+                                <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-3">
                                     <div>
                                         <p class="text-sm font-medium">{{ $dayNames[$rule['day_of_week']] }}</p>
-                                        <p class="text-xs text-zinc-500">Dia ISO {{ $rule['day_of_week'] }}</p>
+                                        <p class="text-xs text-surface-muted">Día ISO {{ $rule['day_of_week'] }}</p>
                                     </div>
 
-                                    <flux:select label="Tipo de dia" wire:model.live="weeklyRules.{{ $index }}.day_type">
+                                    <flux:select label="Tipo de día" wire:model.live="weeklyRules.{{ $index }}.day_type">
                                         <flux:select.option value="shift">Turno</flux:select.option>
                                         <flux:select.option value="rest">Descanso</flux:select.option>
                                     </flux:select>
@@ -1018,7 +1021,7 @@ new class extends Component {
                             @endforeach
                         </div>
 
-                        <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                        <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
                             <flux:heading>Vista previa de semana base</flux:heading>
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($weeklyPreview as $line)
@@ -1029,25 +1032,25 @@ new class extends Component {
                     </section>
                 @elseif ($this->formIsCyclePattern())
                     @error('cycleRules')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="form-error">{{ $message }}</p>
                     @enderror
 
                     <section class="space-y-4">
                         <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                            La fecha inicial de la asignacion representa el Dia 1 del ciclo. Longitud actual: <span class="font-medium">{{ count($cycleRules) }} dias</span>.
+                            La fecha inicial de la asignación representa el Día 1 del ciclo. Longitud actual: <span class="font-medium">{{ count($cycleRules) }} días</span>.
                         </div>
 
                         <div class="flex items-center justify-between">
                             <flux:heading>Rol rotativo / ciclo</flux:heading>
-                            <flux:button type="button" size="sm" variant="ghost" wire:click="addCycleDay">Agregar dia</flux:button>
+                            <button type="button" class="btn-ghost btn-sm" wire:click="addCycleDay">Agregar día</button>
                         </div>
 
                         <div class="grid gap-3">
                             @foreach ($cycleRules as $index => $rule)
-                                <div class="grid items-end gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-700 md:grid-cols-[1fr_1fr_2fr_auto]">
+                                <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-[1fr_1fr_2fr_auto]">
                                     <div>
-                                        <p class="text-sm font-medium">Dia {{ $rule['cycle_day'] }}</p>
-                                        <p class="text-xs text-zinc-500">Numeracion automatica</p>
+                                        <p class="text-sm font-medium">Día {{ $rule['cycle_day'] }}</p>
+                                        <p class="text-xs text-surface-muted">Numeración automática</p>
                                     </div>
 
                                     <flux:select label="Tipo" wire:model.live="cycleRules.{{ $index }}.day_type">
@@ -1063,15 +1066,15 @@ new class extends Component {
                                     </flux:select>
 
                                     <div class="flex gap-1">
-                                        <flux:button type="button" size="xs" variant="ghost" wire:click="moveCycleDay({{ $index }}, 'up')" :disabled="$index === 0">Subir</flux:button>
-                                        <flux:button type="button" size="xs" variant="ghost" wire:click="moveCycleDay({{ $index }}, 'down')" :disabled="$index === count($cycleRules) - 1">Bajar</flux:button>
-                                        <flux:button type="button" size="xs" variant="danger" wire:click="removeCycleDay({{ $index }})" :disabled="count($cycleRules) <= 2">Quitar</flux:button>
+                                        <button type="button" class="btn-ghost btn-sm" wire:click="moveCycleDay({{ $index }}, 'up')" @disabled($index === 0)>Subir</button>
+                                        <button type="button" class="btn-ghost btn-sm" wire:click="moveCycleDay({{ $index }}, 'down')" @disabled($index === count($cycleRules) - 1)>Bajar</button>
+                                        <button type="button" class="btn-danger btn-sm" wire:click="removeCycleDay({{ $index }})" @disabled(count($cycleRules) <= 2)>Quitar</button>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
 
-                        <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                        <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
                             <flux:heading>Vista previa del ciclo</flux:heading>
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($cyclePreview as $line)
@@ -1090,10 +1093,10 @@ new class extends Component {
                         <flux:heading>Reglas flexibles</flux:heading>
                         <div class="grid gap-3">
                             @foreach ($flexibleRules as $index => $rule)
-                                <div class="grid items-end gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-700 md:grid-cols-4">
+                                <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-4">
                                     <div>
                                         <p class="text-sm font-medium">{{ $dayNames[$rule['day_of_week']] }}</p>
-                                        <p class="text-xs text-zinc-500">{{ filled($rule['required_minutes'] ?? null) ? $this->formatMinutes((int) $rule['required_minutes']) : 'Sin minutos' }}</p>
+                                        <p class="text-xs text-surface-muted">{{ filled($rule['required_minutes'] ?? null) ? $this->formatMinutes((int) $rule['required_minutes']) : 'Sin minutos' }}</p>
                                     </div>
 
                                     <flux:select label="Tipo" wire:model.live="flexibleRules.{{ $index }}.day_type">
@@ -1108,27 +1111,27 @@ new class extends Component {
                                             <span>Usar ventana</span>
                                         </label>
                                     @else
-                                        <div class="text-sm text-zinc-500">Descanso sin configuracion.</div>
+                                        <div class="text-sm text-surface-muted">Descanso sin configuración.</div>
                                         <div></div>
                                     @endif
 
                                     @if (($rule['day_type'] ?? 'work') === 'work' && ($rule['uses_window'] ?? false))
                                         <flux:input label="Inicio de ventana" type="time" wire:model="flexibleRules.{{ $index }}.window_start_local_time" />
-                                        <flux:select label="Dia inicial" wire:model="flexibleRules.{{ $index }}.window_start_day_offset">
-                                            <flux:select.option value="0">Mismo dia</flux:select.option>
-                                            <flux:select.option value="1">Dia siguiente</flux:select.option>
+                                        <flux:select label="Día inicial" wire:model="flexibleRules.{{ $index }}.window_start_day_offset">
+                                            <flux:select.option value="0">Mismo día</flux:select.option>
+                                            <flux:select.option value="1">Día siguiente</flux:select.option>
                                         </flux:select>
                                         <flux:input label="Fin de ventana" type="time" wire:model="flexibleRules.{{ $index }}.window_end_local_time" />
-                                        <flux:select label="Dia final" wire:model="flexibleRules.{{ $index }}.window_end_day_offset">
-                                            <flux:select.option value="0">Mismo dia</flux:select.option>
-                                            <flux:select.option value="1">Dia siguiente</flux:select.option>
+                                        <flux:select label="Día final" wire:model="flexibleRules.{{ $index }}.window_end_day_offset">
+                                            <flux:select.option value="0">Mismo día</flux:select.option>
+                                            <flux:select.option value="1">Día siguiente</flux:select.option>
                                         </flux:select>
                                     @endif
                                 </div>
                             @endforeach
                         </div>
 
-                        <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                        <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
                             <flux:heading>Vista previa flexible</flux:heading>
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($flexiblePreview as $line)
@@ -1140,16 +1143,16 @@ new class extends Component {
                 @elseif ($this->formIsOnCall())
                     <section class="space-y-4">
                         <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                            La disponibilidad no se contabiliza automaticamente como tiempo trabajado. El trabajo comenzara unicamente cuando exista una activacion.
+                            La disponibilidad no se contabiliza automáticamente como tiempo trabajado. El trabajo comenzará únicamente cuando exista una activación.
                         </div>
 
                         <flux:heading>Reglas bajo demanda</flux:heading>
                         <div class="grid gap-3">
                             @foreach ($onCallRules as $index => $rule)
-                                <div class="grid items-end gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-700 md:grid-cols-4">
+                                <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-4">
                                     <div>
                                         <p class="text-sm font-medium">{{ $dayNames[$rule['day_of_week']] }}</p>
-                                        <p class="text-xs text-zinc-500">{{ ($rule['day_type'] ?? 'on_call') === 'rest' ? 'Descanso' : 'Disponible' }}</p>
+                                        <p class="text-xs text-surface-muted">{{ ($rule['day_type'] ?? 'on_call') === 'rest' ? 'Descanso' : 'Disponible' }}</p>
                                     </div>
 
                                     <flux:select label="Tipo" wire:model.live="onCallRules.{{ $index }}.day_type">
@@ -1159,24 +1162,24 @@ new class extends Component {
 
                                     @if (($rule['day_type'] ?? 'on_call') === 'on_call')
                                         <flux:input label="Inicio de disponibilidad" type="time" wire:model="onCallRules.{{ $index }}.availability_start_local_time" />
-                                        <flux:select label="Dia inicial" wire:model="onCallRules.{{ $index }}.availability_start_day_offset">
-                                            <flux:select.option value="0">Mismo dia</flux:select.option>
-                                            <flux:select.option value="1">Dia siguiente</flux:select.option>
+                                        <flux:select label="Día inicial" wire:model="onCallRules.{{ $index }}.availability_start_day_offset">
+                                            <flux:select.option value="0">Mismo día</flux:select.option>
+                                            <flux:select.option value="1">Día siguiente</flux:select.option>
                                         </flux:select>
                                         <flux:input label="Fin de disponibilidad" type="time" wire:model="onCallRules.{{ $index }}.availability_end_local_time" />
-                                        <flux:select label="Dia final" wire:model="onCallRules.{{ $index }}.availability_end_day_offset">
-                                            <flux:select.option value="0">Mismo dia</flux:select.option>
-                                            <flux:select.option value="1">Dia siguiente</flux:select.option>
+                                        <flux:select label="Día final" wire:model="onCallRules.{{ $index }}.availability_end_day_offset">
+                                            <flux:select.option value="0">Mismo día</flux:select.option>
+                                            <flux:select.option value="1">Día siguiente</flux:select.option>
                                         </flux:select>
-                                        <flux:input label="Maximo al activarse" type="number" min="1" max="1440" wire:model="onCallRules.{{ $index }}.max_work_minutes" />
+                                        <flux:input label="Máximo al activarse" type="number" min="1" max="1440" wire:model="onCallRules.{{ $index }}.max_work_minutes" />
                                     @else
-                                        <div class="text-sm text-zinc-500">Descanso sin disponibilidad.</div>
+                                        <div class="text-sm text-surface-muted">Descanso sin disponibilidad.</div>
                                     @endif
                                 </div>
                             @endforeach
                         </div>
 
-                        <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                        <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
                             <flux:heading>Vista previa bajo demanda</flux:heading>
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($onCallPreview as $line)
@@ -1187,13 +1190,13 @@ new class extends Component {
                     </section>
                 @else
                     <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                        Este modelo se usa cuando el horario cambia por demanda. No se repite automaticamente; al generar el calendario, los dias quedan pendientes hasta definirlos en la programacion semanal o mediante importacion CSV.
+                        Este modelo se usa cuando el horario cambia por demanda. No se repite automáticamente; al generar el calendario, los días quedan pendientes hasta definirlos en la programación semanal o mediante importación CSV.
                     </div>
                 @endif
 
                 <div class="flex justify-end gap-3">
-                    <flux:button type="button" variant="ghost" wire:click="closeFormPanel">Cancelar</flux:button>
-                    <flux:button type="submit" variant="primary">Guardar</flux:button>
+                    <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
                 </div>
             </form>
         </x-side-panel>

@@ -278,7 +278,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div class="absolute bottom-0 left-1/2 top-0 hidden w-px bg-surface-line md:block"></div>
 
             <section class="flex flex-col items-center border-b border-surface-line pb-6 text-center md:border-b-0 md:pr-6">
-                <x-app-logo class="mb-4 h-16 w-52" />
+                <img src="{{ asset('images/logo vera time.png') }}" alt="Vera Time" class="mb-4 h-16 w-auto">
 
                 <div class="font-display text-[26px] font-extrabold text-brand-navy">Kiosco</div>
                 <p class="mt-2 max-w-[280px] text-[13.5px] leading-relaxed text-surface-muted">
@@ -290,8 +290,16 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     <div data-kiosk-clock class="mt-1.5 font-display text-[36px] font-bold tracking-wide tabular-nums">--:--:--</div>
                 </div>
 
-                <div class="mt-6 inline-flex items-center gap-2 rounded-full border border-status-rest-line bg-status-rest-bg px-3.5 py-2 text-[12.5px] font-semibold text-status-rest-text">
-                    <span class="h-1.5 w-1.5 rounded-full bg-status-good shadow-[0_0_0_3px_rgba(22,178,106,0.18)]"></span>
+                <div @class([
+                    'mt-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[12.5px] font-semibold',
+                    'border-status-rest-line bg-status-rest-bg text-status-rest-text' => $kioskCompanyId,
+                    'border-status-warn-line bg-status-warn-bg text-status-warn-text' => ! $kioskCompanyId,
+                ])>
+                    <span @class([
+                        'h-1.5 w-1.5 rounded-full',
+                        'bg-status-good shadow-[0_0_0_3px_rgba(22,178,106,0.18)]' => $kioskCompanyId,
+                        'bg-status-warn-text shadow-[0_0_0_3px_rgba(147,101,11,0.18)]' => ! $kioskCompanyId,
+                    ])></span>
                     {{ $kioskCompanyId ? 'Kiosco activo' : 'Pendiente de activación' }}
                 </div>
 

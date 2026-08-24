@@ -257,13 +257,13 @@ new class extends Component {
             ->values();
 
         if ($workerIds->isEmpty()) {
-            return 'Primero selecciona trabajadores; se mostraran las unidades compatibles con su centro.';
+            return 'Primero selecciona trabajadores; se mostrarán las unidades compatibles con su centro.';
         }
 
         $centerIds = $this->selectedPrimaryCenterIds($company);
 
         if ($centerIds === []) {
-            return 'Selecciona trabajadores activos con relacion laboral activa en el mismo centro para asignar una unidad principal.';
+            return 'Selecciona trabajadores activos con relación laboral activa en el mismo centro para asignar una unidad principal.';
         }
 
         return 'Solo se muestran unidades activas del centro actual de los trabajadores seleccionados.';
@@ -319,7 +319,7 @@ new class extends Component {
         $relationship = $query->first();
 
         if (! $relationship && $fail) {
-            throw new \InvalidArgumentException('No hay una relacion laboral activa para el trabajador seleccionado.');
+            throw new \InvalidArgumentException('No hay una relación laboral activa para el trabajador seleccionado.');
         }
 
         return $relationship;
@@ -345,28 +345,29 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 p-6">
+<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-            <flux:heading size="xl">Asignaciones organizacionales</flux:heading>
-            <flux:subheading>Administra la segmentacion operativa actual de los trabajadores.</flux:subheading>
+            <h1 class="font-display text-2xl font-bold text-brand-navy">Asignaciones organizacionales</h1>
+            <p class="mt-1.5 text-[13.5px] text-surface-muted">Administra la segmentación operativa actual de los trabajadores.</p>
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <flux:button type="button" variant="primary" wire:click="openPrimaryPanel">
+            <button type="button" class="btn-primary" wire:click="openPrimaryPanel">
+                <span class="text-base leading-none">+</span>
                 Cambiar unidad
-            </flux:button>
+            </button>
         </div>
     </div>
 
     @if (session('status'))
-        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
     @endif
 
     <section class="space-y-4">
-        <div class="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid gap-4 rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)] sm:grid-cols-2 xl:grid-cols-4">
             <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="filters.search" />
             <flux:select label="Centro" wire:model.live="filters.center_id">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -388,22 +389,22 @@ new class extends Component {
             </flux:select>
         </div>
 
-        <div class="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
-            <table class="w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <div class="table-wrap">
+            <table class="w-full min-w-[900px] border-collapse">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">Trabajador</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Unidad</th>
-                        <th class="px-4 py-3">Segmentacion</th>
-                        <th class="px-4 py-3">Estado</th>
+                        <th class="table-head-cell">Trabajador</th>
+                        <th class="table-head-cell">Tipo</th>
+                        <th class="table-head-cell">Unidad</th>
+                        <th class="table-head-cell">Segmentación</th>
+                        <th class="table-head-cell">Estado</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
+                <tbody>
                     @forelse ($assignments as $assignment)
-                        <tr>
-                            <td class="px-4 py-3">
-                                <span class="flex flex-wrap items-center gap-2 font-medium text-zinc-900 dark:text-zinc-100">
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <span class="flex flex-wrap items-center gap-2 font-semibold text-brand-navy">
                                     {{ $assignment->employmentRelationship?->worker?->full_name }}
                                     @if ($this->workerStatusLabel($assignment->employmentRelationship?->worker?->status))
                                         <x-ui.badge variant="{{ $this->workerStatusBadgeVariant($assignment->employmentRelationship?->worker?->status) }}">
@@ -411,15 +412,15 @@ new class extends Component {
                                         </x-ui.badge>
                                     @endif
                                 </span>
-                                <span class="text-xs text-zinc-500">{{ $assignment->employmentRelationship?->worker?->employee_code }} - {{ $assignment->employmentRelationship?->center?->name }}</span>
+                                <span class="text-xs text-surface-muted">{{ $assignment->employmentRelationship?->worker?->employee_code }} - {{ $assignment->employmentRelationship?->center?->name }}</span>
                             </td>
-                            <td class="px-4 py-3">{{ $assignment->assignment_type === 'primary' ? 'Principal' : 'Apoyo historico' }}</td>
-                            <td class="px-4 py-3">{{ $assignment->organizationalUnit?->name }} <span class="text-xs text-zinc-500">({{ $assignment->organizationalUnit?->center?->name }})</span></td>
-                            <td class="px-4 py-3">
-                                <span class="text-zinc-700 dark:text-zinc-200">Actual</span>
-                                <span class="block text-xs text-zinc-500">La vigencia depende del alta o baja del trabajador.</span>
+                            <td class="table-cell">{{ $assignment->assignment_type === 'primary' ? 'Principal' : 'Apoyo histórico' }}</td>
+                            <td class="table-cell">{{ $assignment->organizationalUnit?->name }} <span class="text-xs text-surface-muted">({{ $assignment->organizationalUnit?->center?->name }})</span></td>
+                            <td class="table-cell">
+                                <span class="text-brand-navy">Actual</span>
+                                <span class="block text-xs text-surface-muted">La vigencia depende del alta o baja del trabajador.</span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="table-cell">
                                 <x-ui.badge variant="{{ $this->assignmentStatusBadgeVariant($assignment->status) }}">
                                     {{ $this->assignmentStatusLabel($assignment->status) }}
                                 </x-ui.badge>
@@ -427,7 +428,7 @@ new class extends Component {
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="5" class="table-cell py-8 text-center text-surface-muted">
                                 No hay asignaciones organizacionales que coincidan con los filtros.
                             </td>
                         </tr>
@@ -439,12 +440,12 @@ new class extends Component {
         {{ $assignments->links() }}
     </section>
 
-    <x-side-panel wire:model="showPrimaryPanel" title="Unidad principal" subheading="Cambia la segmentacion actual del trabajador." labelledby="primary-unit-form-title">
+    <x-side-panel wire:model="showPrimaryPanel" title="Unidad principal" subheading="Cambia la segmentación actual del trabajador." labelledby="primary-unit-form-title">
         <form wire:submit="savePrimary" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-4 p-6">
                 <livewire:workers.multi-select wire:model.live="primaryForm.worker_ids" heading="Trabajadores" subheading="Selecciona uno o varios trabajadores activos." :result-limit="150" :show-primary-assignment-status="true" />
 
-                <flux:select label="Operacion" wire:model="primaryForm.operation">
+                <flux:select label="Operación" wire:model="primaryForm.operation">
                     <flux:select.option value="replace">Asignar o cambiar unidad actual</flux:select.option>
                     <flux:select.option value="assign">Asignar solo si no tiene unidad</flux:select.option>
                 </flux:select>
@@ -456,19 +457,19 @@ new class extends Component {
                     @endforeach
                 </flux:select>
                 @if ($primaryUnitHelp)
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ $primaryUnitHelp }}</p>
+                    <p class="form-hint">{{ $primaryUnitHelp }}</p>
                 @endif
 
                 <flux:textarea label="Motivo" wire:model="primaryForm.reason" placeholder="Requerido al reemplazar." />
 
                 @error('primaryForm.organizational_unit_id')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closePanels">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar</flux:button>
+            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
     </x-side-panel>

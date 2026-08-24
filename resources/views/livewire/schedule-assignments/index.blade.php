@@ -269,9 +269,10 @@ new class extends Component {
             <flux:subheading>Administra la vigencia del horario por trabajador sin calcular jornadas.</flux:subheading>
         </div>
 
-        <flux:button type="button" variant="primary" wire:click="openCreatePanel">
+        <button type="button" class="btn-primary" wire:click="openCreatePanel">
+            <span class="text-base leading-none">+</span>
             Nueva asignación
-        </flux:button>
+        </button>
     </div>
 
     @if (session('status'))
@@ -312,12 +313,12 @@ new class extends Component {
             </div>
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
-                <flux:button type="button" variant="ghost" wire:click="closeFormPanel">
+                <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                     Cancelar
-                </flux:button>
-                <flux:button type="submit" variant="primary">
+                </button>
+                <button type="submit" class="btn-primary">
                     Guardar asignación
-                </flux:button>
+                </button>
             </div>
         </form>
     </x-side-panel>

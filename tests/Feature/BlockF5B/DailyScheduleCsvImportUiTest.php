@@ -40,7 +40,7 @@ class DailyScheduleCsvImportUiTest extends TestCase
 
         Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
             ->call('openPanel')
-            ->assertSee('Importacion CSV')
+            ->assertSee('Importación CSV')
             ->assertSee('Descargar plantilla')
             ->assertDontSee('Historial de importaciones');
     }
@@ -154,7 +154,7 @@ class DailyScheduleCsvImportUiTest extends TestCase
             ->call('uploadAndValidate')
             ->assertHasNoErrors()
             ->assertSee('Archivo validado')
-            ->assertSee('Codigo')
+            ->assertSee('Código')
             ->assertSee('Trabajador')
             ->assertSee('STR-001')
             ->assertSee('Tienda Demo Ana')

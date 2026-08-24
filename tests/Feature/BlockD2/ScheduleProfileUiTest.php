@@ -86,7 +86,7 @@ class ScheduleProfileUiTest extends TestCase
             ->set('form.code', 'OCAL')
             ->set('form.name', 'Operacion por calendario')
             ->set('form.profile_type', 'calendar')
-            ->assertSee('No se repite automaticamente')
+            ->assertSee('No se repite automáticamente')
             ->call('save')
             ->assertHasNoErrors();
 
@@ -169,7 +169,7 @@ class ScheduleProfileUiTest extends TestCase
             ->call('selectResolveWorker', $worker->id)
             ->assertSee('Modelo efectivo')
             ->assertSee('Calendario')
-            ->assertSee('Relacion laboral');
+            ->assertSee('Relación laboral');
 
         $direct = ScheduleProfileAssignment::query()
             ->where('assignment_scope', 'employment_relationship')
@@ -196,7 +196,7 @@ class ScheduleProfileUiTest extends TestCase
             ->set('endForm.reason', 'Retirar excepcion')
             ->call('endAssignment')
             ->assertHasNoErrors()
-            ->assertSee('configuracion heredada');
+            ->assertSee('configuración heredada');
 
         $this->assertDatabaseHas('schedule_profile_assignments', ['status' => 'replaced', 'id' => $direct->id]);
         $this->assertDatabaseHas('schedule_profile_assignments', ['status' => 'inactive', 'id' => $replacement->id]);

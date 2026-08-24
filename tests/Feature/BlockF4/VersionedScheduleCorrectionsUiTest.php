@@ -39,7 +39,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
             ->assertSee('Correccion de programacion')
             ->assertSee('Agregar faltantes')
             ->assertDontSee('Actualizar')
-            ->assertSee('Comparar con version anterior');
+            ->assertSee('Comparar');
 
         $this->assertTrue(ScheduleBatch::query()
             ->where('company_id', $company->id)
@@ -111,7 +111,7 @@ class VersionedScheduleCorrectionsUiTest extends TestCase
         Volt::test('scheduling.daily')
             ->set('filters.status', 'all')
             ->call('selectBatch', $draft->id)
-            ->assertSee('Baja historica')
+            ->assertSee($assignment->employmentRelationship->worker->full_name)
             ->call('openDayEditor', $assignment->employment_relationship_id, $assignment->work_date->toDateString())
             ->set('dayForm.day_type', 'rest')
             ->set('dayForm.reason', 'Descanso autorizado en correccion historica.')

@@ -40,6 +40,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -1623,6 +1624,44 @@ new class extends Component {
         };
     }
 
+    private function calendarCellThemeClass(?DailyScheduleAssignment $assignment): string
+    {
+        return match ($assignment?->day_type) {
+            'shift', 'flexible', 'on_call' => 'shift-turno',
+            'rest' => 'shift-descanso',
+            default => 'shift-pendiente',
+        };
+    }
+
+    private function batchStatusBadgeClass(string $status): string
+    {
+        return match ($status) {
+            'published' => 'border-status-good/25 bg-status-good/10 text-status-good',
+            'superseded', 'cancelled' => 'border-surface-line bg-surface-bg text-surface-muted',
+            default => 'border-status-warn-line bg-status-warn-bg text-status-warn-text',
+        };
+    }
+
+    private function workerInitials(?string $name): string
+    {
+        return Str::of($name ?: 'VT')
+            ->explode(' ')
+            ->filter()
+            ->map(fn (string $part): string => Str::substr($part, 0, 1))
+            ->take(2)
+            ->implode('');
+    }
+
+    private function weekDayShortLabel(string $label): string
+    {
+        return Str::before($label, '.');
+    }
+
+    private function weekDateShortLabel(string $label): string
+    {
+        return Str::after($label, ' ');
+    }
+
     private function calendarCellTextClasses(?DailyScheduleAssignment $assignment, bool $historicalOnly = false): string
     {
         if ($historicalOnly) {
@@ -1741,7 +1780,10 @@ new class extends Component {
         </div>
 
         @if ($canCreateBatch)
-            <flux:button type="button" icon="plus" wire:click="openCreatePanel" variant="primary">Nueva semana</flux:button>
+            <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                <span class="text-base leading-none">+</span>
+                Nueva semana
+            </button>
         @endif
     </div>
 
@@ -1893,55 +1935,57 @@ new class extends Component {
             x-transition:leave="transition-opacity ease-in duration-250"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="space-y-3 rounded-lg border border-zinc-200 bg-surface-muted p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
+            class="overflow-hidden rounded-[20px] border border-surface-line bg-surface-card shadow-[0_24px_60px_-34px_rgba(2,25,57,0.28)]"
         >
-            <div class="min-w-0">
-                <div class="flex items-start justify-between gap-4">
+            <div class="border-b border-surface-line px-5 py-4">
+                <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
-                        <flux:heading>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</flux:heading>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <flux:heading>{{ $selectedBatch->center?->name }}</flux:heading>
+                            <span class="rounded-full border px-2.5 py-1 text-[11px] font-semibold {{ $this->batchStatusBadgeClass($selectedBatch->status) }}">
+                                {{ $this->statusLabel($selectedBatch->status) }}{{ $selectedBatch->published_at ? '' : ' · sin publicar' }}
+                            </span>
+                        </div>
+                        <p class="mt-1 text-sm text-surface-muted">
+                            {{ $selectedBatch->period_start->format('d/m/Y') }} - {{ $selectedBatch->period_end->format('d/m/Y') }}
+                            @if ($selectedBatch->previous_batch_id)
+                                · Correccion de programacion
+                            @endif
+                        </p>
                     </div>
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 bg-zinc-100 px-4 py-2 text-sm font-medium leading-5 text-zinc-700 shadow-sm transition hover:bg-zinc-200 hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 dark:hover:text-white dark:focus:ring-zinc-700/60"
+                        class="btn-ghost px-3 py-2"
                         x-on:click="visible = false; setTimeout(() => $wire.closeCalendar(), 260)"
                     >
                         Cerrar
                     </button>
                 </div>
-                <flux:subheading>
-                    @if ($selectedBatch->previous_batch_id)
-                        Correccion de programacion - {{ $selectedBatch->version ? 'Version '.$selectedBatch->version : 'Borrador correctivo' }} - {{ $this->statusLabel($selectedBatch->status) }}
-                    @else
-                        {{ $selectedBatch->version ? 'Version '.$selectedBatch->version : 'Borrador sin version publicada' }} - {{ $this->statusLabel($selectedBatch->status) }}
-                    @endif
-                </flux:subheading>
-            </div>
 
-            <div class="flex justify-end">
-                <div class="flex flex-wrap items-center justify-end gap-2">
+                <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                     @if ($canEditSelectedBatch)
-                        <flux:button size="xs" variant="ghost" wire:click="generateMissing">
+                        <button type="button" class="btn" wire:click="generateMissing">
                             {{ $selectedBatch->previous_batch_id ? 'Agregar faltantes' : 'Generar' }}
-                        </flux:button>
+                        </button>
                     @endif
                     @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
-                        <flux:button size="xs" variant="ghost" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</flux:button>
+                        <button type="button" class="btn" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</button>
                     @endif
                     @if ($canPrepareNextWeek)
-                        <flux:button size="xs" variant="ghost" wire:click="openPrepareWeeksPanel">Preparar semanas</flux:button>
+                        <button type="button" class="btn" wire:click="openPrepareWeeksPanel">Preparar semanas</button>
                     @endif
                     @if ($canClonePublishedWeek)
-                        <flux:button size="xs" variant="ghost" wire:click="openCloneWeekPanel">Clonar semana</flux:button>
+                        <button type="button" class="btn" wire:click="openCloneWeekPanel">Clonar semana</button>
                     @endif
                     @if ($canEditSelectedBatch)
-                        <flux:button size="xs" variant="ghost" wire:click="openBulkPanel">Masivo</flux:button>
+                        <button type="button" class="btn" wire:click="openBulkPanel">Masivo</button>
                     @endif
-                    <flux:button size="xs" variant="ghost" wire:click="reviewBatch">Revisar</flux:button>
+                    <button type="button" class="btn-primary" wire:click="reviewBatch">Revisar y publicar</button>
                     @if ($selectedBatch->previous_batch_id)
-                        <flux:button size="xs" variant="ghost" wire:click="compareWithPrevious">Comparar con version anterior</flux:button>
+                        <button type="button" class="btn" wire:click="compareWithPrevious">Comparar</button>
                     @endif
                     @if (in_array($selectedBatch->status, ['published', 'superseded'], true))
-                        <flux:button size="xs" variant="ghost" wire:click="loadVersionHistory">Historial</flux:button>
+                        <button type="button" class="btn" wire:click="loadVersionHistory">Historial</button>
                     @endif
                     @if ($canEditSelectedBatch)
                         <livewire:scheduling.daily-schedule-csv-import
@@ -1952,16 +1996,16 @@ new class extends Component {
                         />
                     @endif
                     @if ($selectedBatch->status === 'published')
-                        <flux:button size="xs" variant="ghost" wire:click="verifyIntegrity">Integridad</flux:button>
+                        <button type="button" class="btn" wire:click="verifyIntegrity">Integridad</button>
                     @endif
                     @if ($canCreateCorrection)
-                        <flux:button size="xs" variant="primary" wire:click="openCorrectionPanel">Correccion</flux:button>
+                        <button type="button" class="btn-primary" wire:click="openCorrectionPanel">Correccion</button>
                     @endif
                     @if ($canDeleteDraftSelectedBatch)
-                        <flux:button size="xs" variant="danger" wire:confirm="Borrar definitivamente este borrador? Esta accion no se puede deshacer." wire:click="deleteDraftBatch">Borrar</flux:button>
+                        <button type="button" class="btn-danger" wire:confirm="Borrar definitivamente este borrador? Esta accion no se puede deshacer." wire:click="deleteDraftBatch">Borrar</button>
                     @endif
                     @if ($canDeleteCancelledSelectedBatch)
-                        <flux:button size="xs" variant="danger" wire:confirm="Eliminar definitivamente este lote cancelado? Esta accion no se puede deshacer." wire:click="deleteCancelledBatch">Eliminar definitivo</flux:button>
+                        <button type="button" class="btn-danger" wire:confirm="Eliminar definitivamente este lote cancelado? Esta accion no se puede deshacer." wire:click="deleteCancelledBatch">Eliminar definitivo</button>
                     @endif
                 </div>
             </div>
@@ -1985,18 +2029,21 @@ new class extends Component {
                 </div>
             @endif
 
-            <div class="flex flex-wrap gap-x-4 gap-y-1 rounded-md bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800">
-                <span><strong>{{ $selectedSummary['workers'] }}</strong> trabajadores</span>
-                <span><strong>{{ $selectedSummary['days'] }}</strong> dias</span>
-                <span><strong>{{ $selectedSummary['shift'] }}</strong> turnos</span>
-                <span><strong>{{ $selectedSummary['rest'] }}</strong> descansos</span>
-                <span><strong>{{ $selectedSummary['flexible'] }}</strong> flexibles</span>
-                <span><strong>{{ $selectedSummary['on_call'] }}</strong> guardias</span>
-                <span class="{{ $selectedSummary['unassigned'] > 0 ? 'font-medium text-amber-700 dark:text-amber-300' : '' }}"><strong>{{ $selectedSummary['unassigned'] }}</strong> pendientes</span>
+            <div class="flex flex-wrap items-center gap-x-0 gap-y-2 border-b border-surface-line bg-surface-card px-5 py-3 text-sm">
+                <span class="stat-item pl-0"><b>{{ $selectedSummary['workers'] }}</b> trabajadores</span>
+                <span class="stat-item"><b>{{ $selectedSummary['days'] }}</b> dias</span>
+                <span class="stat-item"><b>{{ $selectedSummary['shift'] }}</b> turnos</span>
+                <span class="stat-item"><b>{{ $selectedSummary['rest'] }}</b> descansos</span>
+                <span class="stat-item"><b>{{ $selectedSummary['flexible'] }}</b> flexibles</span>
+                <span class="stat-item"><b>{{ $selectedSummary['on_call'] }}</b> guardias</span>
+                <span class="stat-item border-r-0 {{ $selectedSummary['unassigned'] > 0 ? 'text-status-warn-text' : '' }}"><b>{{ $selectedSummary['unassigned'] }}</b> pendientes</span>
             </div>
 
             @if ($selectedSummary['unassigned'] > 0)
-                <p class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">Existen {{ $selectedSummary['unassigned'] }} dias pendientes de definicion.</p>
+                <div class="mx-5 mt-4 flex items-center justify-between gap-3 rounded-xl border border-status-warn-line bg-status-warn-bg px-4 py-3 text-sm text-status-warn-text">
+                    <p>Existen <strong>{{ $selectedSummary['unassigned'] }} dias pendientes</strong> de definicion en esta semana.</p>
+                    <button type="button" wire:click="$set('filters.only_pending', true)" class="text-xs font-bold underline underline-offset-4">Revisar pendientes</button>
+                </div>
             @endif
 
             @if ($validationPanel !== [])
@@ -2048,7 +2095,7 @@ new class extends Component {
                             </label>
                             @error('confirmPublish')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                             @error('publication')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-                            <flux:button class="mt-3" size="sm" variant="primary" wire:click="publishBatch">Publicar</flux:button>
+                            <button type="button" class="btn-primary btn-sm mt-3" wire:click="publishBatch">Publicar</button>
                         </div>
                     @endif
                 </div>
@@ -2116,96 +2163,111 @@ new class extends Component {
                 </div>
             @endif
 
-            <div class="rounded-lg bg-surface-muted p-3 dark:bg-zinc-950/40">
-            <div class="mb-3 flex items-center justify-between gap-3">
-                <flux:button size="xs" variant="ghost" icon="chevron-left" wire:click="previousWeek">Semana anterior</flux:button>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
-                <flux:button size="xs" variant="ghost" icon-trailing="chevron-right" wire:click="nextWeek">Semana siguiente</flux:button>
-            </div>
-            <div class="hidden lg:block">
-                <table class="w-full table-fixed divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                    <colgroup>
-                        <col class="w-[18rem]">
-                        @foreach ($weekDates as $date)
-                            <col class="w-[calc((100%-18rem)/7)]">
-                        @endforeach
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th class="sticky left-0 bg-white px-2 py-2 text-left dark:bg-zinc-900">Trabajador</th>
-                            @foreach ($weekDates as $date)
-                                <th @class([
-                                    'px-2 py-2 text-left text-xs font-medium',
-                                    'text-zinc-400' => $date['outside_period'] ?? false,
-                                    'text-zinc-600 dark:text-zinc-300' => ! ($date['outside_period'] ?? false),
-                                ])>{{ $date['label'] }}</th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-800 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
-                        @forelse ($calendarRows as $row)
-                            <tr>
-                                <td class="sticky left-0 bg-inherit px-2 py-3 align-top">
-                                    <span class="block truncate font-medium">{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
-                                    <span class="block truncate text-xs text-zinc-500">{{ $row['relationship']->position_name }} | {{ $row['relationship']->center?->name }}</span>
-                                    <span class="block truncate text-xs text-zinc-500">{{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
-                                </td>
-                                @foreach ($row['cells'] as $cell)
-                                    <td class="px-1.5 py-2 align-top">
-                                        @if ($cell['outside_vigence'])
-                                            <div class="min-h-20 rounded-md border border-dashed border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900/60">
-                                                Fuera de vigencia
-                                            </div>
-                                        @else
-                                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="min-h-20 w-full rounded-md border p-2 text-left transition disabled:cursor-default disabled:opacity-90 {{ $this->calendarCellClasses($cell['assignment'], $cell['historical_only']) }}">
-                                                <span class="flex flex-wrap items-center gap-1">
-                                                    <span class="truncate font-semibold">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
-                                                    @if ($cell['historical_only'])
-                                                        <x-ui.badge>Baja historica</x-ui.badge>
-                                                    @endif
-                                                </span>
-                                                <span class="mt-1 block line-clamp-2 text-xs {{ $this->calendarCellTextClasses($cell['assignment'], $cell['historical_only']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
-                                                <span class="mt-1 block truncate text-[11px] opacity-70">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
-                                            </button>
-                                        @endif
-                                    </td>
-                                @endforeach
-                            </tr>
-                        @empty
-                            <tr><td colspan="{{ count($weekDates) + 1 }}" class="px-4 py-8 text-center text-zinc-500">No hay trabajadores o dias para mostrar.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="grid gap-3 lg:hidden">
-                @foreach ($calendarRows as $row)
-                    @foreach ($row['cells'] as $cell)
-                        @if (! $cell['outside_vigence'])
-                            <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" @disabled(! $canEditSelectedBatch) class="rounded-md border p-4 text-left transition {{ $this->calendarCellClasses($cell['assignment'], $cell['historical_only']) }}">
-                                <span class="block text-xs opacity-70">{{ $cell['date'] }}</span>
-                                <span class="flex flex-wrap items-center gap-2 font-medium">
-                                    <span>{{ $row['relationship']->worker?->employee_code }} - {{ $row['relationship']->worker?->full_name }}</span>
-                                    @if ($cell['historical_only'])
-                                        <x-ui.badge>Baja historica</x-ui.badge>
-                                    @endif
-                                </span>
-                                <span class="block text-xs opacity-70">{{ $row['relationship']->center?->name }} | {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</span>
-                                <span class="block text-sm {{ $this->calendarCellTextClasses($cell['assignment'], $cell['historical_only']) }}">{{ $this->assignmentSummary($cell['assignment']) }}</span>
-                            </button>
-                        @endif
-                    @endforeach
-                @endforeach
-            </div>
-
-            @if ($calendarRows->hasPages() || $calendarRows->total() > 0)
-                <div class="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                    <div class="mb-2 text-xs text-zinc-500">
-                        Mostrando {{ $calendarRows->firstItem() }} a {{ $calendarRows->lastItem() }} de {{ $calendarRows->total() }} trabajadores
+            <div class="mx-5 mb-5 overflow-hidden rounded-[18px] border border-surface-line bg-surface-card">
+                <div class="flex items-center justify-center gap-5 border-b border-surface-line bg-surface-bg px-5 py-3">
+                    <button type="button" wire:click="previousWeek" class="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-surface-muted transition hover:bg-brand-blue/10 hover:text-brand-blue">
+                        ‹ Semana anterior
+                    </button>
+                    <div class="text-center font-display text-[15px] font-bold text-brand-navy">
+                        {{ $weekDates[0]['label'] ?? $selectedBatch->period_start->toDateString() }} - {{ $weekDates[count($weekDates) - 1]['label'] ?? $selectedBatch->period_end->toDateString() }}
                     </div>
-                    {{ $calendarRows->links(data: ['scrollTo' => false]) }}
+                    <button type="button" wire:click="nextWeek" class="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-surface-muted transition hover:bg-brand-blue/10 hover:text-brand-blue">
+                        Semana siguiente ›
+                    </button>
                 </div>
-            @endif
+
+                <div class="hidden overflow-x-auto px-5 pt-5 pb-2 lg:block">
+                    <div class="grid overflow-hidden rounded-[14px] border border-surface-line" style="grid-template-columns: 232px repeat({{ count($weekDates) }}, minmax(150px, 1fr)); min-width: 1280px;">
+                        <div class="cell-head sticky left-0 z-[3] flex items-center">Trabajador</div>
+                        @foreach ($weekDates as $i => $date)
+                            <div class="cell-head {{ $i === count($weekDates) - 1 ? 'border-r-0' : '' }} {{ ($date['outside_period'] ?? false) ? 'opacity-55' : '' }}">
+                                <span class="block">{{ $this->weekDayShortLabel($date['label']) }}</span>
+                                <span class="block text-[11px] font-medium text-surface-muted">{{ $this->weekDateShortLabel($date['label']) }}</span>
+                            </div>
+                        @endforeach
+
+                        @forelse ($calendarRows as $row)
+                            <div class="row-emp">
+                                <div class="emp-avatar bg-gradient-to-br from-brand-blue-bright to-brand-deep">
+                                    {{ $this->workerInitials($row['relationship']->worker?->full_name) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="emp-name truncate">{{ $row['relationship']->worker?->full_name }}</div>
+                                    <div class="emp-code truncate">{{ $row['relationship']->worker?->employee_code }}</div>
+                                    <div class="emp-role truncate">{{ $row['relationship']->center?->name }} · {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</div>
+                                </div>
+                            </div>
+
+                            @foreach ($row['cells'] as $cell)
+                                <div class="day-cell">
+                                    @if ($cell['outside_vigence'])
+                                        <div class="h-full rounded-xl border border-dashed border-surface-line bg-surface-bg p-2.5 text-[11px] text-surface-muted">
+                                            Fuera de vigencia
+                                        </div>
+                                    @else
+                                        <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" {{ ! $canEditSelectedBatch ? 'disabled' : '' }} class="{{ $this->calendarCellThemeClass($cell['assignment']) }} min-h-[82px] w-full text-left transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-18px_rgba(2,25,57,0.35)] disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none">
+                                            <div class="shift-label">
+                                                @if ($cell['assignment']?->shiftTemplate?->code)
+                                                    <span class="code-tag">{{ $cell['assignment']->shiftTemplate->code }}</span>
+                                                @endif
+                                                {{ $this->dayTypeLabel($cell['assignment']?->day_type) }}
+                                                @if ($cell['historical_only'])
+                                                    <span class="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-surface-muted">Baja</span>
+                                                @endif
+                                            </div>
+                                            @if ($cell['assignment']?->day_type === 'shift')
+                                                <div class="shift-time">{{ $this->mainShiftRange($cell['assignment']) }}</div>
+                                            @endif
+                                            <div class="shift-detail">{{ $this->assignmentSummary($cell['assignment']) }}</div>
+                                            <span class="shift-link">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
+                                        </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @empty
+                            <div class="col-span-full px-4 py-8 text-center text-sm text-surface-muted">No hay trabajadores o días para mostrar.</div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="grid gap-3 p-5 lg:hidden">
+                    @forelse ($calendarRows as $row)
+                        <div class="rounded-2xl border border-surface-line bg-white p-4">
+                            <div class="mb-3 flex items-center gap-3">
+                                <div class="emp-avatar bg-gradient-to-br from-brand-blue-bright to-brand-deep">
+                                    {{ $this->workerInitials($row['relationship']->worker?->full_name) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="emp-name truncate">{{ $row['relationship']->worker?->full_name }}</div>
+                                    <div class="emp-code truncate">{{ $row['relationship']->worker?->employee_code }}</div>
+                                    <div class="emp-role truncate">{{ $row['relationship']->center?->name }} · {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</div>
+                                </div>
+                            </div>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                @foreach ($row['cells'] as $cell)
+                                    @if (! $cell['outside_vigence'])
+                                        <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" {{ ! $canEditSelectedBatch ? 'disabled' : '' }} class="{{ $this->calendarCellThemeClass($cell['assignment']) }} text-left transition disabled:cursor-default">
+                                            <span class="block font-mono text-[10.5px] text-surface-muted">{{ $cell['date'] }}</span>
+                                            <span class="shift-label mt-1">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
+                                            <span class="shift-detail block">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                        </button>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-surface-line bg-white p-6 text-center text-sm text-surface-muted">No hay trabajadores o días para mostrar.</div>
+                    @endforelse
+                </div>
+
+                @if ($calendarRows->hasPages() || $calendarRows->total() > 0)
+                    <div class="border-t border-surface-line px-5 py-4 text-[12.5px] text-surface-muted">
+                        <div class="mb-2">
+                            Mostrando {{ $calendarRows->firstItem() }} a {{ $calendarRows->lastItem() }} de {{ $calendarRows->total() }} trabajadores
+                        </div>
+                        {{ $calendarRows->links(data: ['scrollTo' => false]) }}
+                    </div>
+                @endif
             </div>
         </section>
     @endif
@@ -2233,9 +2295,9 @@ new class extends Component {
             </div>
             <flux:textarea label="Notas opcionales" wire:model="batchForm.notes" rows="3" />
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showCreatePanel', false)">Cancelar</flux:button>
-                <flux:button type="button" variant="ghost" wire:click="createEmptyBatch">Crear semana vacia</flux:button>
-                <flux:button type="button" variant="primary" wire:click="createAndGenerate">Crear y generar desde perfiles</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showCreatePanel', false)">Cancelar</button>
+                <button type="button" class="btn-ghost" wire:click="createEmptyBatch">Crear semana vacía</button>
+                <button type="button" class="btn-primary" wire:click="createAndGenerate">Crear y generar desde perfiles</button>
             </div>
         </form>
     </x-side-panel>
@@ -2264,8 +2326,8 @@ new class extends Component {
             @error('generation')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
 
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showPrepareWeeksPanel', false)">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Preparar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showPrepareWeeksPanel', false)">Cancelar</button>
+                <button type="submit" class="btn-primary">Preparar</button>
             </div>
         </form>
     </x-side-panel>
@@ -2290,9 +2352,9 @@ new class extends Component {
             @error('cloneWeekForm.target_date')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
 
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showCloneWeekPanel', false)">Cancelar</flux:button>
-                <flux:button type="submit" variant="ghost">Clonar a borrador</flux:button>
-                <flux:button type="button" variant="primary" wire:click="clonePublishedWeekAndPublish">Clonar y publicar</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showCloneWeekPanel', false)">Cancelar</button>
+                <button type="submit" class="btn-ghost">Clonar a borrador</button>
+                <button type="button" class="btn-primary" wire:click="clonePublishedWeekAndPublish">Clonar y publicar</button>
             </div>
         </form>
     </x-side-panel>
@@ -2309,8 +2371,8 @@ new class extends Component {
             <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara un borrador correctivo. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
             <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Crear correccion</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</button>
+                <button type="submit" class="btn-primary">Crear corrección</button>
             </div>
         </form>
     </x-side-panel>
@@ -2329,8 +2391,8 @@ new class extends Component {
 
             <flux:textarea label="Motivo" wire:model="dayForm.reason" required />
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showDayPanel', false)">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Guardar dia</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showDayPanel', false)">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar día</button>
             </div>
         </form>
     </x-side-panel>
@@ -2374,8 +2436,8 @@ new class extends Component {
             </label>
             @error('confirmBulk')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
             <div class="flex justify-end gap-3">
-                <flux:button type="button" variant="ghost" wire:click="$set('showBulkPanel', false)">Cancelar</flux:button>
-                <flux:button type="submit" variant="primary">Aplicar cambio masivo</flux:button>
+                <button type="button" class="btn-ghost" wire:click="$set('showBulkPanel', false)">Cancelar</button>
+                <button type="submit" class="btn-primary">Aplicar cambio masivo</button>
             </div>
         </form>
     </x-side-panel>
