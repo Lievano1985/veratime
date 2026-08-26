@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
-use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -21,30 +19,16 @@ class DatabaseSeeder extends Seeder
         $this->call(RoleSeeder::class);
         $this->call(LegalRuleSeeder::class);
         $this->call(AlertTypeSeeder::class);
-/*         $this->call(VeraTimeDemoSeeder::class);
- */        $this->call(VeraTimeOperationalVerificationSeeder::class);
 
-        $user = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $this->ensureSuperAdmin();
 
-        $company = Company::factory()->create([
-            'name' => 'Vera Time Demo',
-            'legal_name' => 'Vera Time Demo SA de CV',
-            'tax_id' => 'VTIME260705XX1',
-        ]);
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(VeraTimeOperationalVerificationSeeder::class);
+        }
+    }
 
-        $company->setting()->create(Company::defaultSettings());
-
-        $role = Role::query()->where('key', RoleKey::ADMIN_EMPRESA)->first();
-
-        $user->companies()->attach($company, [
-            'role_id' => $role?->id,
-            'status' => 'active',
-            'is_default' => true,
-        ]);
-
+    private function ensureSuperAdmin(): void
+    {
         $superAdminPassword = env('VERA_TIME_SUPER_ADMIN_PASSWORD') ?: Str::password(24);
         $superAdmin = User::query()->firstOrCreate(
             ['email' => 'superadmin@veratime.local'],

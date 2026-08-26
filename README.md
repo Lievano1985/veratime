@@ -61,7 +61,7 @@ Rutas web relevantes:
 
 ## Seeder demo local
 
-Para cargar datos demo locales hasta Sprint 2:
+Para cargar datos demo locales completos:
 
 ```bash
 php artisan db:seed --class=VeraTimeDemoSeeder
@@ -70,11 +70,59 @@ php artisan db:seed --class=VeraTimeDemoSeeder
 Datos demo principales:
 
 - Empresa: `Vera Time Demo Completo`.
-- Usuarios: `owner.demo@veratime.local`, `admin.demo@veratime.local`, `rh.demo@veratime.local`.
+- Usuarios principales: `admin.demo@veratime.local`, `rh.demo@veratime.local`, `rh.operativo.demo@veratime.local`, `supervisor.demo@veratime.local`.
 - Password demo local: `VeraDemo123!`.
 - NIP demo local para kiosco: `1234`.
 
-El seeder es idempotente y solo crea datos ficticios/locales. No crea motor legal, calculos, `work_days`, alertas, incidencias, reportes, API ni CSV.
+El seeder es idempotente y solo crea datos ficticios/locales.
+
+`DatabaseSeeder` no crea usuarios demo ni empresas demo en produccion. Los datos demo solo se cargan automaticamente en ambientes `local` o `testing`.
+
+## Produccion en cPanel
+
+En produccion, antes de sembrar catalogos iniciales, define la contrasena inicial del super admin en `.env`:
+
+```env
+VERA_TIME_SUPER_ADMIN_PASSWORD=********
+APP_DEBUG=false
+QUEUE_CONNECTION=database
+```
+
+Despues ejecuta:
+
+```bash
+php artisan migrate --force
+php artisan db:seed --force
+php artisan optimize:clear
+php artisan view:clear
+php artisan config:clear
+```
+
+El usuario inicial de plataforma se crea como:
+
+```text
+superadmin@veratime.local
+```
+
+Despues de iniciar sesion, cambia correo, nombre y contrasena desde la aplicacion y retira `VERA_TIME_SUPER_ADMIN_PASSWORD` del `.env` si ya no se requiere.
+
+Si el servidor no tiene Node/npm, compila assets en local y sube la carpeta:
+
+```text
+public/build
+```
+
+Cron unico recomendado en cPanel:
+
+```bash
+* * * * * cd /home/hencydt9h2nh/gotvera.com/repositories/veratime && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
+```
+
+Si PHP esta en otra ruta, confirma con:
+
+```bash
+which php
+```
 
 ## Comandos utiles
 
