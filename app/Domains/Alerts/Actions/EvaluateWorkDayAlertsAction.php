@@ -132,6 +132,22 @@ class EvaluateWorkDayAlertsAction
             ];
         }
 
+        if ($calculation->late_arrival_minutes > 0) {
+            $alerts['late_arrival_detected'] = [
+                'title' => 'Retardo',
+                'description' => "Se calcularon {$calculation->late_arrival_minutes} minutos de retardo.",
+                'metadata' => ['late_arrival_minutes' => $calculation->late_arrival_minutes],
+            ];
+        }
+
+        if ($calculation->early_departure_minutes > 0) {
+            $alerts['early_departure_detected'] = [
+                'title' => 'Salida anticipada',
+                'description' => "Se calcularon {$calculation->early_departure_minutes} minutos de salida anticipada.",
+                'metadata' => ['early_departure_minutes' => $calculation->early_departure_minutes],
+            ];
+        }
+
         if ($calculation->total_work_minutes > 720) {
             $alerts['twelve_hours_exceeded'] = [
                 'title' => 'Jornada mayor a 12 horas',

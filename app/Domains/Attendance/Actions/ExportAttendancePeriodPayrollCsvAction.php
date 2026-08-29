@@ -87,6 +87,9 @@ class ExportAttendancePeriodPayrollCsvAction
             'domingo_trabajado',
             'horas_domingo_trabajado',
             'prima_dominical_aplica',
+            'descanso_programado',
+            'descanso_trabajado',
+            'descanso_domingo_trabajado',
             'descanso_semanal_trabajado',
             'descanso_obligatorio_trabajado',
             'horas_festivo_trabajado',
@@ -96,7 +99,9 @@ class ExportAttendancePeriodPayrollCsvAction
             'horas_descanso_pagado',
             'horas_descanso_no_pagado',
             'minutos_retardo',
+            'dictamen_retardo',
             'minutos_salida_anticipada',
+            'dictamen_salida_anticipada',
             'minutos_ausencia',
             'tiene_incidencia',
             'tipo_incidencia',
@@ -119,6 +124,9 @@ class ExportAttendancePeriodPayrollCsvAction
         $breakMinutes = (int) ($calculation?->break_minutes ?? 0);
         $sundayMinutes = (int) ($calculation?->sunday_minutes ?? 0);
         $mandatoryRestMinutes = (int) ($calculation?->mandatory_rest_minutes ?? 0);
+        $scheduledRest = $workDay->day_type === 'rest';
+        $scheduledRestWorked = $scheduledRest && (int) ($calculation?->total_work_minutes ?? 0) > 0;
+        $sundayRestWorked = $scheduledRestWorked && ($workDay->work_date?->isSunday() ?? false);
 
         return $this->sanitizeRow([
             $period->company?->name ?? '',
@@ -143,7 +151,10 @@ class ExportAttendancePeriodPayrollCsvAction
             $this->yesNo($sundayMinutes > 0),
             $this->hours($sundayMinutes),
             $this->yesNo($sundayMinutes > 0),
-            $this->yesNo(data_get($calculation?->result_snapshot, 'special_legal_cases.weekly_rest.worked', false)),
+            $this->yesNo((bool) data_get($calculation?->result_snapshot, 'special_legal_cases.scheduled_rest.programmed', $scheduledRest)),
+            $this->yesNo((bool) data_get($calculation?->result_snapshot, 'special_legal_cases.scheduled_rest.worked', $scheduledRestWorked)),
+            $this->yesNo((bool) data_get($calculation?->result_snapshot, 'special_legal_cases.scheduled_rest.sunday_worked', $sundayRestWorked)),
+            $this->yesNo((bool) data_get($calculation?->result_snapshot, 'special_legal_cases.scheduled_rest.worked', $scheduledRestWorked)),
             $this->yesNo($mandatoryRestMinutes > 0),
             $this->hours($mandatoryRestMinutes),
             $this->hours($mandatoryRestMinutes),
@@ -151,8 +162,10 @@ class ExportAttendancePeriodPayrollCsvAction
             $this->mandatoryRestReference($calculation),
             $this->hours($paidBreakMinutes),
             $this->hours(max(0, $breakMinutes - $paidBreakMinutes)),
-            0,
-            0,
+            (int) ($calculation?->late_arrival_minutes ?? 0),
+            $this->alertResolutionLabel($this->alertForRule($workDay, 'late_arrival_detected')),
+            (int) ($calculation?->early_departure_minutes ?? 0),
+            $this->alertResolutionLabel($this->alertForRule($workDay, 'early_departure_detected')),
             $this->absenceMinutes($workDay, $incident),
             $this->yesNo($incident !== [] || $primaryAlert instanceof Alert),
             $incident['incident_type'] ?? $primaryAlert?->rule_code ?? '',
@@ -198,6 +211,29 @@ class ExportAttendancePeriodPayrollCsvAction
         return $workDay->alerts
             ->sortByDesc(fn (Alert $alert): int => in_array($alert->status, Alert::OPEN_STATUSES, true) ? 1 : 0)
             ->first();
+    }
+
+    private function alertForRule(WorkDay $workDay, string $ruleCode): ?Alert
+    {
+        return $workDay->alerts
+            ->where('rule_code', $ruleCode)
+            ->sortByDesc(fn (Alert $alert): int => in_array($alert->status, Alert::OPEN_STATUSES, true) ? 1 : 0)
+            ->first();
+    }
+
+    private function alertResolutionLabel(?Alert $alert): string
+    {
+        if (! $alert instanceof Alert) {
+            return '';
+        }
+
+        return match ($alert->status) {
+            Alert::STATUS_JUSTIFIED => 'justificada',
+            Alert::STATUS_CORRECTED => 'confirmada',
+            Alert::STATUS_CLOSED => 'no_procede',
+            'new', 'in_review', 'pending_information' => 'pendiente',
+            default => $alert->status,
+        };
     }
 
     /**

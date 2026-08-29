@@ -86,7 +86,10 @@ class ApplySpecialLegalCasesForDateRangeAction
                     }
 
                     $mandatoryRestDays = $this->mandatoryRestDays->handle($company, $workDay->center, $workDay->work_date);
+                    $scheduledRest = $workDay->day_type === 'rest';
+                    $scheduledRestWorked = $scheduledRest && $calculation->total_work_minutes > 0;
                     $sundayMinutes = $workDay->work_date->isSunday() ? $calculation->total_work_minutes : 0;
+                    $sundayRestWorked = $workDay->work_date->isSunday() && $scheduledRestWorked;
                     $mandatoryRestMinutes = $mandatoryRestDays->isNotEmpty() ? $calculation->total_work_minutes : 0;
 
                     $this->applyResult(
@@ -95,6 +98,9 @@ class ApplySpecialLegalCasesForDateRangeAction
                         mandatoryRestMinutes: $mandatoryRestMinutes,
                         mandatoryRestDays: $mandatoryRestDays,
                         weeklyRestSnapshot: $weeklyRestSnapshot,
+                        scheduledRest: $scheduledRest,
+                        scheduledRestWorked: $scheduledRestWorked,
+                        sundayRestWorked: $sundayRestWorked,
                     );
 
                     if ($isRequestedDate) {
@@ -140,8 +146,16 @@ class ApplySpecialLegalCasesForDateRangeAction
      * @param Collection<int, MandatoryRestDay> $mandatoryRestDays
      * @param array<string, mixed> $weeklyRestSnapshot
      */
-    private function applyResult(WorkDayCalculation $calculation, int $sundayMinutes, int $mandatoryRestMinutes, Collection $mandatoryRestDays, array $weeklyRestSnapshot): void
-    {
+    private function applyResult(
+        WorkDayCalculation $calculation,
+        int $sundayMinutes,
+        int $mandatoryRestMinutes,
+        Collection $mandatoryRestDays,
+        array $weeklyRestSnapshot,
+        bool $scheduledRest,
+        bool $scheduledRestWorked,
+        bool $sundayRestWorked,
+    ): void {
         $mandatoryRestSnapshot = $mandatoryRestDays
             ->map(fn (MandatoryRestDay $restDay): array => [
                 'mandatory_rest_day_id' => $restDay->id,
@@ -172,6 +186,10 @@ class ApplySpecialLegalCasesForDateRangeAction
                     'weekly_rest' => [
                         'source' => 'natural_week_monday_sunday',
                     ],
+                    'scheduled_rest' => [
+                        'source' => 'published_daily_schedule',
+                        'rule' => 'worked_minutes_on_scheduled_rest_day',
+                    ],
                 ],
             ]),
             'result_snapshot' => array_replace_recursive($calculation->result_snapshot ?? [], [
@@ -179,11 +197,17 @@ class ApplySpecialLegalCasesForDateRangeAction
                     'schema_version' => 1,
                     'sunday_minutes' => $sundayMinutes,
                     'mandatory_rest_minutes' => $mandatoryRestMinutes,
+                    'scheduled_rest' => [
+                        'programmed' => $scheduledRest,
+                        'worked' => $scheduledRestWorked,
+                        'worked_minutes' => $scheduledRestWorked ? $calculation->total_work_minutes : 0,
+                        'sunday_worked' => $sundayRestWorked,
+                    ],
                     'weekly_rest' => $weeklyRestSnapshot,
                 ],
             ]),
             'explanation' => array_replace_recursive($calculation->explanation ?? [], [
-                'special_legal_cases' => $this->explanation($sundayMinutes, $mandatoryRestMinutes, $weeklyRestSnapshot),
+                'special_legal_cases' => $this->explanation($sundayMinutes, $mandatoryRestMinutes, $weeklyRestSnapshot, $scheduledRestWorked, $sundayRestWorked),
             ]),
         ])->save();
     }
@@ -191,12 +215,20 @@ class ApplySpecialLegalCasesForDateRangeAction
     /**
      * @param array<string, mixed> $weeklyRestSnapshot
      */
-    private function explanation(int $sundayMinutes, int $mandatoryRestMinutes, array $weeklyRestSnapshot): string
+    private function explanation(int $sundayMinutes, int $mandatoryRestMinutes, array $weeklyRestSnapshot, bool $scheduledRestWorked, bool $sundayRestWorked): string
     {
         $parts = [
             "Domingo {$sundayMinutes} minutos",
             "descanso obligatorio {$mandatoryRestMinutes} minutos",
         ];
+
+        if ($scheduledRestWorked) {
+            $parts[] = 'descanso programado trabajado';
+        }
+
+        if ($sundayRestWorked) {
+            $parts[] = 'descanso dominical trabajado';
+        }
 
         if ($weeklyRestSnapshot['requires_review']) {
             $parts[] = 'semana sin dia de descanso detectado para revision futura';

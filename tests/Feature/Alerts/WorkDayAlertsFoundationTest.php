@@ -55,6 +55,27 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame($calculation->id, Alert::query()->where('company_id', $company->id)->firstOrFail()->work_day_calculation_id);
     }
 
+    public function test_evaluator_creates_punctuality_alerts_from_calculated_minutes(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay([
+            'late_arrival_minutes' => 12,
+            'early_departure_minutes' => 8,
+        ]);
+
+        $summary = app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
+
+        $this->assertSame(['created_or_updated' => 2, 'closed' => 0, 'open' => 2], $summary);
+        $this->assertSame(WorkDay::STATUS_WITH_ALERTS, $workDay->refresh()->status);
+        $this->assertEqualsCanonicalizing(
+            ['late_arrival_detected', 'early_departure_detected'],
+            Alert::query()
+                ->where('company_id', $company->id)
+                ->pluck('rule_code')
+                ->all(),
+        );
+        $this->assertSame(12, Alert::query()->where('rule_code', 'late_arrival_detected')->firstOrFail()->metadata['late_arrival_minutes']);
+        $this->assertSame(8, Alert::query()->where('rule_code', 'early_departure_detected')->firstOrFail()->metadata['early_departure_minutes']);
+    }
     public function test_evaluator_does_not_duplicate_and_closes_stale_alerts(): void
     {
         [$company, $workDay, $calculation] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
@@ -222,10 +243,11 @@ class WorkDayAlertsFoundationTest extends TestCase
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->call('openAlertsPanel', $workDay->id)
+            ->assertSee('Confirmar falta')
             ->assertSee('Enviar a incidencia/ausencia')
+            ->set('alertResolutionForm.status', Alert::STATUS_JUSTIFIED)
             ->assertSee('Tipo de ausencia')
             ->assertSee('Tratamiento operativo')
-            ->assertSee('Confirmar falta')
             ->assertSee('No procede')
             ->assertDontSee('No aprobar');
     }
@@ -275,6 +297,71 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame(AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE, data_get($workDay->metadata, 'attendance_incident.incident_type'));
         $this->assertSame(0, Alert::query()->where('company_id', $company->id)->whereIn('status', Alert::OPEN_STATUSES)->count());
     }
+
+    public function test_changing_scheduled_absence_resolution_cancels_linked_attendance_incident(): void
+    {
+        [$company, $workDay] = $this->scheduledAbsenceWorkDay();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay->refresh());
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+
+        $incident = app(ResolveScheduledAbsenceAlertAsAttendanceIncidentAction::class)->handle($company, $alert, $user, [
+            'incident_type' => AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE,
+            'payment_status' => AttendanceIncident::PAYMENT_PAID,
+            'resolution' => 'Falta justificada inicialmente.',
+        ]);
+
+        app(ResolveScheduledAbsenceAlertAsAttendanceIncidentAction::class)->handle($company, $alert->refresh(), $user, [
+            'status' => Alert::STATUS_CLOSED,
+            'resolution' => 'Se descarta la ausencia vinculada por correccion.',
+        ]);
+
+        $this->assertSame(AttendanceIncident::STATUS_CANCELLED, $incident->refresh()->status);
+        $this->assertSame($user->id, $incident->cancelled_by);
+        $this->assertSame('scheduled_absence_alert_resolution_changed', $incident->metadata['cancel_scope']);
+        $this->assertSame(0, AttendanceIncident::query()
+            ->where('company_id', $company->id)
+            ->where('worker_id', $workDay->worker_id)
+            ->where('status', AttendanceIncident::STATUS_APPROVED)
+            ->count());
+
+        $alert->refresh();
+        $this->assertSame(Alert::STATUS_CLOSED, $alert->status);
+        $this->assertSame('Se descarta la ausencia vinculada por correccion.', $alert->resolution);
+    }
+
+    public function test_changing_scheduled_absence_justification_updates_linked_incident_without_duplicate(): void
+    {
+        [$company, $workDay] = $this->scheduledAbsenceWorkDay();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay->refresh());
+        $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+
+        $incident = app(ResolveScheduledAbsenceAlertAsAttendanceIncidentAction::class)->handle($company, $alert, $user, [
+            'incident_type' => AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE,
+            'payment_status' => AttendanceIncident::PAYMENT_PAID,
+            'resolution' => 'Falta justificada inicialmente.',
+        ]);
+
+        $updated = app(ResolveScheduledAbsenceAlertAsAttendanceIncidentAction::class)->handle($company, $alert->refresh(), $user, [
+            'status' => Alert::STATUS_JUSTIFIED,
+            'incident_type' => AttendanceIncident::TYPE_INCAPACITY,
+            'payment_status' => AttendanceIncident::PAYMENT_PAID,
+            'resolution' => 'Se corrige el dictamen a incapacidad.',
+        ]);
+
+        $this->assertSame($incident->id, $updated?->id);
+        $this->assertSame(1, AttendanceIncident::query()->where('company_id', $company->id)->count());
+        $this->assertSame(AttendanceIncident::TYPE_INCAPACITY, $incident->refresh()->incident_type);
+        $this->assertSame(AttendanceIncident::STATUS_APPROVED, $incident->status);
+        $this->assertSame('Se corrige el dictamen a incapacidad.', $incident->notes);
+        $this->assertSame(AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE, $incident->metadata['change_history'][0]['previous_incident_type']);
+
+        $alert->refresh();
+        $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->status);
+        $this->assertSame('Se corrige el dictamen a incapacidad.', $alert->resolution);
+    }
+
     public function test_overtime_resolution_panel_uses_contextual_labels(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
@@ -287,10 +374,91 @@ class WorkDayAlertsFoundationTest extends TestCase
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->call('openAlertsPanel', $workDay->id)
-            ->assertSee('Autorizar tiempo extra')
+            ->assertSee('Confirmar tiempo extra')
             ->assertSee('No autorizar')
             ->assertSee('No procede')
             ->assertDontSee('No aprobar');
+    }
+
+    public function test_punctuality_resolution_panel_uses_specific_contextual_labels(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay([
+            'late_arrival_minutes' => 12,
+            'early_departure_minutes' => 8,
+        ]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+        $earlyDepartureAlert = Alert::query()
+            ->where('company_id', $company->id)
+            ->where('rule_code', 'early_departure_detected')
+            ->firstOrFail();
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('work-days.index')
+            ->set('dateFrom', '2026-08-03')
+            ->set('dateTo', '2026-08-03')
+            ->call('openAlertsPanel', $workDay->id)
+            ->assertSee('Confirmar retardo')
+            ->assertSee('Justificar retardo')
+            ->set('selectedAlertId', $earlyDepartureAlert->id)
+            ->assertSee('Confirmar salida anticipada')
+            ->assertSee('Justificar salida anticipada');
+    }
+
+    public function test_special_legal_alerts_use_specific_contextual_resolution_labels(): void
+    {
+        [$company, $workDay] = $this->calculatedWorkDay();
+        $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+        $alerts = collect([
+            'twelve_hours_exceeded' => ['Confirmar jornada mayor a 12 horas', 'Justificar jornada mayor a 12 horas'],
+            'sunday_work' => ['Aprobar domingo trabajado', 'No aprobar domingo trabajado'],
+            'mandatory_rest_work' => ['Aprobar descanso trabajado', 'No aprobar descanso trabajado'],
+            'weekly_rest_missing' => ['Confirmar incidencia', 'Justificar descanso'],
+        ])->mapWithKeys(function (array $labels, string $ruleCode) use ($company, $workDay): array {
+            $type = AlertType::query()->create([
+                'code' => $ruleCode,
+                'name' => $ruleCode,
+                'description' => $ruleCode,
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'test',
+                'status' => 'active',
+            ]);
+
+            $alert = Alert::query()->create([
+                'company_id' => $company->id,
+                'alert_type_id' => $type->id,
+                'worker_id' => $workDay->worker_id,
+                'work_day_id' => $workDay->id,
+                'work_day_calculation_id' => $workDay->active_calculation_id,
+                'severity' => AlertType::SEVERITY_WARNING,
+                'status' => Alert::STATUS_NEW,
+                'title' => $type->name,
+                'description' => $type->description,
+                'rule_code' => $ruleCode,
+                'detected_at' => now(),
+                'fingerprint' => $ruleCode.'-'.$workDay->id,
+            ]);
+
+            return [$alert->id => $labels];
+        });
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        $component = Volt::test('work-days.index')
+            ->set('dateFrom', '2026-08-03')
+            ->set('dateTo', '2026-08-03')
+            ->call('openAlertsPanel', $workDay->id);
+
+        foreach ($alerts as $alertId => $labels) {
+            $component->set('selectedAlertId', $alertId);
+
+            foreach ($labels as $label) {
+                $component->assertSee($label);
+            }
+
+            $component->assertSee('No procede');
+        }
     }
     public function test_work_days_alert_badge_opens_resolution_panel_and_updates_status(): void
     {
@@ -322,7 +490,7 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame(WorkDay::STATUS_CALCULATED, $workDay->refresh()->status);
     }
 
-    public function test_resolved_alert_cannot_be_resolved_again(): void
+    public function test_resolved_alert_can_be_updated_with_resolution_history(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
         app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
@@ -334,12 +502,17 @@ class WorkDayAlertsFoundationTest extends TestCase
             'resolution' => 'Tiempo extra autorizado por operacion.',
         ]);
 
-        $this->expectException(\InvalidArgumentException::class);
-
         app(ResolveAlertAction::class)->handle($company, $alert->refresh(), $user, [
             'status' => Alert::STATUS_CLOSED,
-            'resolution' => 'Segundo dictamen no permitido.',
+            'resolution' => 'Segundo dictamen por correccion operativa.',
         ]);
+
+        $alert->refresh();
+
+        $this->assertSame(Alert::STATUS_CLOSED, $alert->status);
+        $this->assertSame('Segundo dictamen por correccion operativa.', $alert->resolution);
+        $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->metadata['resolution_history'][0]['previous_status']);
+        $this->assertSame('Tiempo extra autorizado por operacion.', $alert->metadata['resolution_history'][0]['previous_resolution']);
     }
 
     public function test_supervisor_cannot_view_alerts_list(): void
@@ -396,6 +569,23 @@ class WorkDayAlertsFoundationTest extends TestCase
         $workDay->forceFill(['active_calculation_id' => $calculation->id])->save();
 
         return [$company, $workDay->refresh(), $calculation];
+    }
+
+    private function scheduledAbsenceWorkDay(): array
+    {
+        [$company, $workDay] = $this->calculatedWorkDay();
+        $workDay->activeCalculation()->dissociate();
+        $workDay->forceFill([
+            'active_calculation_id' => null,
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 0,
+            'valid_time_event_ids' => [],
+        ])->save();
+
+        return [$company, $workDay->refresh()];
     }
 
     private function userForCompany(Company $company, string $roleKey): User

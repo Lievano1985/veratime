@@ -80,6 +80,8 @@ class BuildAttendancePeriodReportAction
                     'overtime_minutes' => 0,
                     'overtime_double_minutes' => 0,
                     'overtime_triple_minutes' => 0,
+                    'late_arrival_minutes' => 0,
+                    'early_departure_minutes' => 0,
                     'sunday_minutes' => 0,
                     'mandatory_rest_minutes' => 0,
                     'open_incidents' => 0,
@@ -101,6 +103,8 @@ class BuildAttendancePeriodReportAction
                 $rows[$workerId]['overtime_minutes'] += (int) $calculation->overtime_minutes;
                 $rows[$workerId]['overtime_double_minutes'] += (int) $calculation->overtime_double_minutes;
                 $rows[$workerId]['overtime_triple_minutes'] += (int) $calculation->overtime_triple_minutes;
+                $rows[$workerId]['late_arrival_minutes'] += (int) $calculation->late_arrival_minutes;
+                $rows[$workerId]['early_departure_minutes'] += (int) $calculation->early_departure_minutes;
                 $rows[$workerId]['sunday_minutes'] += (int) $calculation->sunday_minutes;
                 $rows[$workerId]['mandatory_rest_minutes'] += (int) $calculation->mandatory_rest_minutes;
             }
@@ -128,6 +132,8 @@ class BuildAttendancePeriodReportAction
             'overtime_minutes' => array_sum(array_column($workerRows, 'overtime_minutes')),
             'overtime_double_minutes' => array_sum(array_column($workerRows, 'overtime_double_minutes')),
             'overtime_triple_minutes' => array_sum(array_column($workerRows, 'overtime_triple_minutes')),
+            'late_arrival_minutes' => array_sum(array_column($workerRows, 'late_arrival_minutes')),
+            'early_departure_minutes' => array_sum(array_column($workerRows, 'early_departure_minutes')),
             'sunday_minutes' => array_sum(array_column($workerRows, 'sunday_minutes')),
             'mandatory_rest_minutes' => array_sum(array_column($workerRows, 'mandatory_rest_minutes')),
             'open_incidents' => array_sum(array_column($workerRows, 'open_incidents')),

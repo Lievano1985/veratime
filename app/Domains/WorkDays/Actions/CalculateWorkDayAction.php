@@ -73,6 +73,7 @@ class CalculateWorkDayAction
                 ->max('version')) + 1;
 
             $result = $this->calculateFromEvents($events);
+            $punctuality = $this->calculatePunctuality($company, $workDay, $result);
             $workDayStatus = $result['has_blocking_issues']
                 ? WorkDay::STATUS_UNDER_REVIEW
                 : WorkDay::STATUS_CALCULATED;
@@ -93,6 +94,8 @@ class CalculateWorkDayAction
                 'overtime_minutes' => 0,
                 'break_minutes' => $result['break_minutes'],
                 'paid_break_minutes' => 0,
+                'late_arrival_minutes' => $punctuality['late_arrival_minutes'],
+                'early_departure_minutes' => $punctuality['early_departure_minutes'],
                 'sunday_minutes' => 0,
                 'mandatory_rest_minutes' => 0,
                 'classification' => WorkDayCalculation::CLASSIFICATION_PENDING,
@@ -106,6 +109,7 @@ class CalculateWorkDayAction
                     'schema_version' => 1,
                     'work_intervals' => $result['work_intervals'],
                     'break_intervals' => $result['break_intervals'],
+                    'punctuality' => $punctuality,
                     'issues' => $result['issues'],
                 ],
                 'explanation' => [
@@ -170,6 +174,8 @@ class CalculateWorkDayAction
                 'overtime_minutes' => 0,
                 'break_minutes' => 0,
                 'paid_break_minutes' => 0,
+                'late_arrival_minutes' => 0,
+                'early_departure_minutes' => 0,
                 'sunday_minutes' => 0,
                 'mandatory_rest_minutes' => 0,
                 'classification' => WorkDayCalculation::CLASSIFICATION_PENDING,
@@ -313,6 +319,60 @@ class CalculateWorkDayAction
             'break_intervals' => $breakIntervals,
             'issues' => array_values(array_unique($issues)),
             'has_blocking_issues' => $workIntervals === [] || $issues !== [],
+        ];
+    }
+
+    /**
+     * @param array{work_intervals: list<array<string, mixed>>, has_blocking_issues: bool} $result
+     * @return array{late_arrival_minutes: int, early_departure_minutes: int, late_arrival_tolerance_minutes: int, early_departure_tolerance_minutes: int}
+     */
+    private function calculatePunctuality(Company $company, WorkDay $workDay, array $result): array
+    {
+        $settings = array_merge(Company::defaultSettings(), $company->setting?->toArray() ?? []);
+        $lateTolerance = max(0, (int) ($settings['late_arrival_tolerance_minutes'] ?? 0));
+        $earlyTolerance = max(0, (int) ($settings['early_departure_tolerance_minutes'] ?? 0));
+
+        $empty = [
+            'late_arrival_minutes' => 0,
+            'early_departure_minutes' => 0,
+            'late_arrival_tolerance_minutes' => $lateTolerance,
+            'early_departure_tolerance_minutes' => $earlyTolerance,
+        ];
+
+        if ($result['has_blocking_issues']
+            || $workDay->schedule_status !== WorkDay::SCHEDULE_STATUS_SCHEDULED
+            || $workDay->day_type !== 'shift'
+            || ! $workDay->daily_schedule_assignment_id
+        ) {
+            return $empty;
+        }
+
+        $workIntervals = $result['work_intervals'];
+        if ($workIntervals === []) {
+            return $empty;
+        }
+
+        $workDay->loadMissing('dailyScheduleAssignment.segments');
+        $scheduledWorkSegments = $workDay->dailyScheduleAssignment?->segments
+            ->where('segment_type', 'work')
+            ->filter(fn ($segment): bool => $segment->starts_at_utc !== null && $segment->ends_at_utc !== null)
+            ->sortBy('starts_at_utc')
+            ->values();
+
+        if (! $scheduledWorkSegments || $scheduledWorkSegments->isEmpty()) {
+            return $empty;
+        }
+
+        $scheduledStart = CarbonImmutable::parse($scheduledWorkSegments->first()->starts_at_utc)->utc();
+        $scheduledEnd = CarbonImmutable::parse($scheduledWorkSegments->last()->ends_at_utc)->utc();
+        $actualStart = CarbonImmutable::parse($workIntervals[0]['start_utc'])->utc();
+        $actualEnd = CarbonImmutable::parse($workIntervals[array_key_last($workIntervals)]['end_utc'])->utc();
+
+        return [
+            'late_arrival_minutes' => max(0, (int) $scheduledStart->diffInMinutes($actualStart, false) - $lateTolerance),
+            'early_departure_minutes' => max(0, (int) $actualEnd->diffInMinutes($scheduledEnd, false) - $earlyTolerance),
+            'late_arrival_tolerance_minutes' => $lateTolerance,
+            'early_departure_tolerance_minutes' => $earlyTolerance,
         ];
     }
 

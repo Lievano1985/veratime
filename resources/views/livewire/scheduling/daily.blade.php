@@ -1964,12 +1964,18 @@ new class extends Component {
 
                 <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                     @if ($canEditSelectedBatch)
-                        <button type="button" class="btn" wire:click="generateMissing">
-                            {{ $selectedBatch->previous_batch_id ? 'Agregar faltantes' : 'Generar' }}
+                        <button type="button" class="btn" wire:click="generateMissing" wire:loading.attr="disabled" wire:target="generateMissing">
+                            <span wire:loading wire:target="generateMissing" class="btn-spinner"></span>
+                            <span wire:loading.remove wire:target="generateMissing">{{ $selectedBatch->previous_batch_id ? 'Agregar faltantes' : 'Generar' }}</span>
+                            <span wire:loading wire:target="generateMissing">Generando</span>
                         </button>
                     @endif
                     @if ($canEditSelectedBatch && ! $selectedBatch->previous_batch_id)
-                        <button type="button" class="btn" wire:click="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">Actualizar</button>
+                        <button type="button" class="btn" wire:click="refreshGenerated" wire:loading.attr="disabled" wire:target="refreshGenerated" wire:confirm="Actualiza los dias generados desde perfiles. Los cambios manuales y cargas externas se conservaran.">
+                            <span wire:loading wire:target="refreshGenerated" class="btn-spinner"></span>
+                            <span wire:loading.remove wire:target="refreshGenerated">Actualizar</span>
+                            <span wire:loading wire:target="refreshGenerated">Actualizando</span>
+                        </button>
                     @endif
                     @if ($canPrepareNextWeek)
                         <button type="button" class="btn" wire:click="openPrepareWeeksPanel">Preparar semanas</button>
@@ -1980,7 +1986,11 @@ new class extends Component {
                     @if ($canEditSelectedBatch)
                         <button type="button" class="btn" wire:click="openBulkPanel">Masivo</button>
                     @endif
-                    <button type="button" class="btn-primary" wire:click="reviewBatch">Revisar y publicar</button>
+                    <button type="button" class="btn-primary" wire:click="reviewBatch" wire:loading.attr="disabled" wire:target="reviewBatch">
+                        <span wire:loading wire:target="reviewBatch" class="btn-spinner"></span>
+                        <span wire:loading.remove wire:target="reviewBatch">Revisar y publicar</span>
+                        <span wire:loading wire:target="reviewBatch">Revisando</span>
+                    </button>
                     @if ($selectedBatch->previous_batch_id)
                         <button type="button" class="btn" wire:click="compareWithPrevious">Comparar</button>
                     @endif
@@ -2095,7 +2105,11 @@ new class extends Component {
                             </label>
                             @error('confirmPublish')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                             @error('publication')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-                            <button type="button" class="btn-primary btn-sm mt-3" wire:click="publishBatch">Publicar</button>
+                            <button type="button" class="btn-primary btn-sm mt-3" wire:click="publishBatch" wire:loading.attr="disabled" wire:target="publishBatch">
+                                <span wire:loading wire:target="publishBatch" class="btn-spinner"></span>
+                                <span wire:loading.remove wire:target="publishBatch">Publicar</span>
+                                <span wire:loading wire:target="publishBatch">Publicando</span>
+                            </button>
                         </div>
                     @endif
                 </div>
@@ -2296,8 +2310,16 @@ new class extends Component {
             <flux:textarea label="Notas opcionales" wire:model="batchForm.notes" rows="3" />
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCreatePanel', false)">Cancelar</button>
-                <button type="button" class="btn-ghost" wire:click="createEmptyBatch">Crear semana vacía</button>
-                <button type="button" class="btn-primary" wire:click="createAndGenerate">Crear y generar desde perfiles</button>
+                <button type="button" class="btn-ghost" wire:click="createEmptyBatch" wire:loading.attr="disabled" wire:target="createEmptyBatch">
+                    <span wire:loading wire:target="createEmptyBatch" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="createEmptyBatch">Crear semana vacía</span>
+                    <span wire:loading wire:target="createEmptyBatch">Creando</span>
+                </button>
+                <button type="button" class="btn-primary" wire:click="createAndGenerate" wire:loading.attr="disabled" wire:target="createAndGenerate">
+                    <span wire:loading wire:target="createAndGenerate" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="createAndGenerate">Crear y generar desde perfiles</span>
+                    <span wire:loading wire:target="createAndGenerate">Generando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>
@@ -2327,7 +2349,11 @@ new class extends Component {
 
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showPrepareWeeksPanel', false)">Cancelar</button>
-                <button type="submit" class="btn-primary">Preparar</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="prepareFutureWeeks">
+                    <span wire:loading wire:target="prepareFutureWeeks" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="prepareFutureWeeks">Preparar</span>
+                    <span wire:loading wire:target="prepareFutureWeeks">Preparando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>
@@ -2353,8 +2379,16 @@ new class extends Component {
 
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCloneWeekPanel', false)">Cancelar</button>
-                <button type="submit" class="btn-ghost">Clonar a borrador</button>
-                <button type="button" class="btn-primary" wire:click="clonePublishedWeekAndPublish">Clonar y publicar</button>
+                <button type="submit" class="btn-ghost" wire:loading.attr="disabled" wire:target="clonePublishedWeek">
+                    <span wire:loading wire:target="clonePublishedWeek" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="clonePublishedWeek">Clonar a borrador</span>
+                    <span wire:loading wire:target="clonePublishedWeek">Clonando</span>
+                </button>
+                <button type="button" class="btn-primary" wire:click="clonePublishedWeekAndPublish" wire:loading.attr="disabled" wire:target="clonePublishedWeekAndPublish">
+                    <span wire:loading wire:target="clonePublishedWeekAndPublish" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="clonePublishedWeekAndPublish">Clonar y publicar</span>
+                    <span wire:loading wire:target="clonePublishedWeekAndPublish">Publicando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>
@@ -2372,7 +2406,11 @@ new class extends Component {
             <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</button>
-                <button type="submit" class="btn-primary">Crear corrección</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="createCorrection">
+                    <span wire:loading wire:target="createCorrection" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="createCorrection">Crear corrección</span>
+                    <span wire:loading wire:target="createCorrection">Creando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>
@@ -2392,7 +2430,11 @@ new class extends Component {
             <flux:textarea label="Motivo" wire:model="dayForm.reason" required />
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showDayPanel', false)">Cancelar</button>
-                <button type="submit" class="btn-primary">Guardar día</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="saveDay">
+                    <span wire:loading wire:target="saveDay" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="saveDay">Guardar día</span>
+                    <span wire:loading wire:target="saveDay">Guardando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>
@@ -2437,7 +2479,11 @@ new class extends Component {
             @error('confirmBulk')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
             <div class="flex justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showBulkPanel', false)">Cancelar</button>
-                <button type="submit" class="btn-primary">Aplicar cambio masivo</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="applyBulk">
+                    <span wire:loading wire:target="applyBulk" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="applyBulk">Aplicar cambio masivo</span>
+                    <span wire:loading wire:target="applyBulk">Aplicando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>

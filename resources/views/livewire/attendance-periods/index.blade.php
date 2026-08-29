@@ -401,13 +401,17 @@ new class extends Component {
                                     {{ $period->status === 'closed' ? 'Reporte' : 'Ver' }}
                                 </flux:button>
                                 @can('validateForClosing', $period)
-                                    <flux:button type="button" size="sm" variant="outline" wire:click="validatePeriod({{ $period->id }})">
-                                        Validar
-                                    </flux:button>
+                                    <button type="button" class="btn btn-sm" wire:click="validatePeriod({{ $period->id }})" wire:loading.attr="disabled" wire:target="validatePeriod({{ $period->id }})">
+                                        <span wire:loading wire:target="validatePeriod({{ $period->id }})" class="btn-spinner"></span>
+                                        <span wire:loading.remove wire:target="validatePeriod({{ $period->id }})">Validar</span>
+                                        <span wire:loading wire:target="validatePeriod({{ $period->id }})">Validando</span>
+                                    </button>
                                 @endcan
                                 @can('close', $period)
-                                    <button type="button" class="btn-primary btn-sm" wire:click="closePeriod({{ $period->id }})">
-                                        Cerrar
+                                    <button type="button" class="btn-primary btn-sm" wire:click="closePeriod({{ $period->id }})" wire:loading.attr="disabled" wire:target="closePeriod({{ $period->id }})">
+                                        <span wire:loading wire:target="closePeriod({{ $period->id }})" class="btn-spinner"></span>
+                                        <span wire:loading.remove wire:target="closePeriod({{ $period->id }})">Cerrar</span>
+                                        <span wire:loading wire:target="closePeriod({{ $period->id }})">Cerrando</span>
                                     </button>
                                 @endcan
                                 @can('cancel', $period)
@@ -599,7 +603,11 @@ new class extends Component {
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-6">
                 <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
-                <button type="submit" class="btn-primary">Generar periodo</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="create">
+                    <span wire:loading wire:target="create" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="create">Generar periodo</span>
+                    <span wire:loading wire:target="create">Generando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>

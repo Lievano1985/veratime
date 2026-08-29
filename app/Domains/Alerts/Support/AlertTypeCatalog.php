@@ -30,6 +30,18 @@ class AlertTypeCatalog
                 'default_severity' => AlertType::SEVERITY_WARNING,
                 'category' => 'daily',
             ],
+            'late_arrival_detected' => [
+                'name' => 'Retardo',
+                'description' => 'La jornada tiene minutos de retardo calculados.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'daily',
+            ],
+            'early_departure_detected' => [
+                'name' => 'Salida anticipada',
+                'description' => 'La jornada tiene minutos de salida anticipada calculados.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'daily',
+            ],
             'twelve_hours_exceeded' => [
                 'name' => 'Jornada mayor a 12 horas',
                 'description' => 'El total trabajado supera 12 horas en una jornada.',
