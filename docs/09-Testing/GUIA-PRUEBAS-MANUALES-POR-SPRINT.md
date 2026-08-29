@@ -1,34 +1,34 @@
-# GuÃ­a funcional de pruebas manuales por sprint - Vera Time
+# GuÃƒÂ­a funcional de pruebas manuales por sprint - Vera Time
 
 ## Objetivo
 
-Esta guÃ­a sirve para que una persona no tÃ©cnica pueda revisar manualmente el avance de Vera Time por fases.
+Esta guÃƒÂ­a sirve para que una persona no tÃƒÂ©cnica pueda revisar manualmente el avance de Vera Time por fases.
 
-La idea no es revisar cÃ³digo. La idea es entrar a la plataforma, navegar por las pantallas disponibles y confirmar que cada sprint funciona segÃºn lo construido y aprobado.
+La idea no es revisar cÃƒÂ³digo. La idea es entrar a la plataforma, navegar por las pantallas disponibles y confirmar que cada sprint funciona segÃƒÂºn lo construido y aprobado.
 
-Cada secciÃ³n indica:
+Cada secciÃƒÂ³n indica:
 
-- quÃ© funcionalidad debe existir;
-- con quÃ© usuario probar;
-- en quÃ© pantalla probar;
-- quÃ© pasos seguir;
-- quÃ© resultado se espera;
-- quÃ© cosas todavÃ­a no deberÃ­an existir;
+- quÃƒÂ© funcionalidad debe existir;
+- con quÃƒÂ© usuario probar;
+- en quÃƒÂ© pantalla probar;
+- quÃƒÂ© pasos seguir;
+- quÃƒÂ© resultado se espera;
+- quÃƒÂ© cosas todavÃƒÂ­a no deberÃƒÂ­an existir;
 - observaciones o pendientes.
 
 ---
 
-## PreparaciÃ³n general antes de probar
+## PreparaciÃƒÂ³n general antes de probar
 
 ### Usuarios recomendados
 
-| Usuario | Para quÃ© sirve |
+| Usuario | Para quÃƒÂ© sirve |
 |---|---|
-| Administrador de empresa | Probar administraciÃ³n de empresas, centros, trabajadores y horarios. |
-| Usuario con acceso a dos empresas | Probar selector de empresa y separaciÃ³n de datos. |
+| Administrador de empresa | Probar administraciÃƒÂ³n de empresas, centros, trabajadores y horarios. |
+| Usuario con acceso a dos empresas | Probar selector de empresa y separaciÃƒÂ³n de datos. |
 | Usuario sin empresa activa | Validar bloqueo de acceso operativo. |
-| Usuario de otra empresa | Confirmar que no vea informaciÃ³n ajena. |
-| Rol no autorizado | Validar permisos para crear, editar o inactivar informaciÃ³n. |
+| Usuario de otra empresa | Confirmar que no vea informaciÃƒÂ³n ajena. |
+| Rol no autorizado | Validar permisos para crear, editar o inactivar informaciÃƒÂ³n. |
 
 ### Datos recomendados
 
@@ -41,7 +41,7 @@ Tener disponibles, conforme avance cada sprint:
 - Al menos dos personas trabajadoras.
 - Al menos un horario normal.
 - Al menos un horario nocturno que cruce medianoche.
-- Al menos una asignaciÃ³n de horario a trabajador, solo cuando Sprint 2B estÃ© disponible.
+- Al menos una asignaciÃƒÂ³n de horario a trabajador, solo cuando Sprint 2B estÃƒÂ© disponible.
 
 ### Regla general de prueba
 
@@ -50,26 +50,26 @@ En todos los sprints se debe revisar que:
 - un usuario de Empresa A no vea datos de Empresa B;
 - un usuario sin empresa activa no pueda operar;
 - una empresa inactiva no permita operaciones normales;
-- los datos dados de baja, reemplazados o inactivados no se borren fÃ­sicamente;
-- no aparezcan mÃ³dulos futuros como terminados antes de tiempo.
+- los datos dados de baja, reemplazados o inactivados no se borren fÃƒÂ­sicamente;
+- no aparezcan mÃƒÂ³dulos futuros como terminados antes de tiempo.
 
 ---
 
 ## Criterios para reportar problemas
 
-### Problemas crÃ­ticos
+### Problemas crÃƒÂ­ticos
 
-Reportar como crÃ­tico si ocurre cualquiera de estos casos:
+Reportar como crÃƒÂ­tico si ocurre cualquiera de estos casos:
 
 - un usuario de una empresa ve datos de otra empresa;
 - un usuario sin empresa activa puede operar;
 - una empresa inactiva permite crear o modificar datos;
 - una baja elimina historial;
-- un cambio de relaciÃ³n laboral borra historial;
-- un cambio de condiciÃ³n laboral sobrescribe historial;
-- el NIP queda visible en texto claro despuÃ©s de guardar;
-- una asignaciÃ³n futura modifica historial pasado;
-- aparecen mÃ³dulos futuros como si ya estuvieran terminados;
+- un cambio de relaciÃƒÂ³n laboral borra historial;
+- un cambio de condiciÃƒÂ³n laboral sobrescribe historial;
+- el NIP queda visible en texto claro despuÃƒÂ©s de guardar;
+- una asignaciÃƒÂ³n futura modifica historial pasado;
+- aparecen mÃƒÂ³dulos futuros como si ya estuvieran terminados;
 - aparecen contadores falsos de jornadas, alertas o incidencias.
 
 ### Mejoras de UX
@@ -79,13 +79,13 @@ Reportar como mejora si ocurre cualquiera de estos casos:
 - pantalla confusa;
 - mensajes poco claros;
 - botones poco entendibles;
-- falta de confirmaciÃ³n visual;
+- falta de confirmaciÃƒÂ³n visual;
 - tabla sin filtros;
 - pantalla saturada.
 
 ---
 
-## Sprint 0 - Base tÃ©cnica, acceso y multiempresa
+## Sprint 0 - Base tÃƒÂ©cnica, acceso y multiempresa
 
 **Estado:** Cerrado.
 
@@ -95,11 +95,11 @@ Reportar como mejora si ocurre cualquiera de estos casos:
 - Usuarios activos pueden entrar.
 - Usuarios inactivos no deben entrar.
 - Empresa activa o contexto de empresa.
-- RelaciÃ³n usuario-empresa.
+- RelaciÃƒÂ³n usuario-empresa.
 - Roles iniciales.
-- ProtecciÃ³n multi-tenant.
-- ConfiguraciÃ³n base con Laravel, Livewire, Tailwind, MySQL/MariaDB y database queue.
-- Registro pÃºblico deshabilitado.
+- ProtecciÃƒÂ³n multi-tenant.
+- ConfiguraciÃƒÂ³n base con Laravel, Livewire, Tailwind, MySQL/MariaDB y database queue.
+- Registro pÃƒÂºblico deshabilitado.
 
 ### Usuario o rol para probar
 
@@ -111,19 +111,19 @@ Reportar como mejora si ocurre cualquiera de estos casos:
 ### Ruta o pantalla
 
 - `/login`
-- Pantalla principal despuÃ©s de iniciar sesiÃ³n.
+- Pantalla principal despuÃƒÂ©s de iniciar sesiÃƒÂ³n.
 - Cualquier pantalla protegida del sistema.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Login correcto | Entrar a `/login`, capturar credenciales de usuario activo y presionar iniciar sesiÃ³n. | El usuario entra correctamente y trabaja bajo una empresa activa. |
+| Login correcto | Entrar a `/login`, capturar credenciales de usuario activo y presionar iniciar sesiÃƒÂ³n. | El usuario entra correctamente y trabaja bajo una empresa activa. |
 | Usuario inactivo | Entrar a `/login` con credenciales de usuario inactivo. | El sistema no permite acceso. |
-| Usuario sin empresa activa | Iniciar sesiÃ³n con usuario sin empresa activa e intentar entrar a pantalla protegida. | El sistema bloquea el acceso operativo. |
-| ProtecciÃ³n entre empresas | Entrar como Empresa A e intentar abrir un registro de Empresa B. | El sistema bloquea el acceso. |
+| Usuario sin empresa activa | Iniciar sesiÃƒÂ³n con usuario sin empresa activa e intentar entrar a pantalla protegida. | El sistema bloquea el acceso operativo. |
+| ProtecciÃƒÂ³n entre empresas | Entrar como Empresa A e intentar abrir un registro de Empresa B. | El sistema bloquea el acceso. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
 - Registro de jornada.
 - Motor legal.
@@ -131,27 +131,27 @@ Reportar como mejora si ocurre cualquiera de estos casos:
 - Reportes.
 - Conformidad digital.
 - ClickBalance.
-- BiometrÃ­a.
+- BiometrÃƒÂ­a.
 - App nativa.
-- MÃ³dulos de nÃ³mina.
+- MÃƒÂ³dulos de nÃƒÂ³mina.
 - API de negocio completa.
 
 ### Observaciones
 
-Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, seguridad y separaciÃ³n por empresa.
+Este sprint es base tÃƒÂ©cnica. La mayorÃƒÂ­a de pruebas son de acceso, seguridad y separaciÃƒÂ³n por empresa.
 
 ---
 
-## Sprint 1A - Empresa, selector y configuraciÃ³n bÃ¡sica
+## Sprint 1A - Empresa, selector y configuraciÃƒÂ³n bÃƒÂ¡sica
 
 **Estado:** Cerrado.
 
 ### Funcionalidad esperada
 
 - Selector de empresa.
-- AdministraciÃ³n bÃ¡sica de empresa.
-- ConfiguraciÃ³n bÃ¡sica de empresa.
-- Datos bÃ¡sicos de la empresa.
+- AdministraciÃƒÂ³n bÃƒÂ¡sica de empresa.
+- ConfiguraciÃƒÂ³n bÃƒÂ¡sica de empresa.
+- Datos bÃƒÂ¡sicos de la empresa.
 - Estado de la empresa.
 - Cambio de empresa activa cuando el usuario tenga permiso.
 
@@ -163,22 +163,22 @@ Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, segurida
 
 ### Ruta o pantalla
 
-- Pantalla de empresa o configuraciÃ³n de empresa.
-- Selector de empresa en encabezado o menÃº.
-- Pantalla principal despuÃ©s del login.
+- Pantalla de empresa o configuraciÃƒÂ³n de empresa.
+- Selector de empresa en encabezado o menÃƒÂº.
+- Pantalla principal despuÃƒÂ©s del login.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Ver empresa activa | Iniciar sesiÃ³n y revisar quÃ© empresa aparece como activa. | La informaciÃ³n corresponde a esa empresa. |
+| Ver empresa activa | Iniciar sesiÃƒÂ³n y revisar quÃƒÂ© empresa aparece como activa. | La informaciÃƒÂ³n corresponde a esa empresa. |
 | Cambiar empresa activa | Usar un usuario con Empresa A y Empresa B, abrir selector y cambiar empresa. | Solo muestra empresas autorizadas y no mezcla datos. |
-| Editar datos bÃ¡sicos | Modificar un dato permitido, guardar y recargar. | El cambio se conserva y solo afecta la empresa activa. |
+| Editar datos bÃƒÂ¡sicos | Modificar un dato permitido, guardar y recargar. | El cambio se conserva y solo afecta la empresa activa. |
 | Empresa inactiva | Intentar operar con empresa inactiva. | El sistema bloquea o impide operaciones. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
-- Centros completos si no se estÃ¡ probando Sprint 1B.
+- Centros completos si no se estÃƒÂ¡ probando Sprint 1B.
 - Trabajadores.
 - Relaciones laborales.
 - Condiciones laborales.
@@ -191,7 +191,7 @@ Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, segurida
 
 ### Observaciones
 
-`BL-0205` Dashboard inicial no debe considerarse cerrado aquÃ­. Se reubicÃ³ para una fase posterior porque depende de jornadas, alertas e incidencias.
+`BL-0205` Dashboard inicial no debe considerarse cerrado aquÃƒÂ­. Se reubicÃƒÂ³ para una fase posterior porque depende de jornadas, alertas e incidencias.
 
 ---
 
@@ -205,9 +205,9 @@ Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, segurida
 - Crear centro.
 - Editar centro.
 - Inactivar centro.
-- CÃ³digo Ãºnico por empresa.
+- CÃƒÂ³digo ÃƒÂºnico por empresa.
 - Zona horaria por centro.
-- SeparaciÃ³n de centros por empresa.
+- SeparaciÃƒÂ³n de centros por empresa.
 
 ### Usuario o rol para probar
 
@@ -219,20 +219,20 @@ Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, segurida
 ### Ruta o pantalla
 
 - `/centers`
-- MenÃº Centros o Centros de trabajo.
+- MenÃƒÂº Centros o Centros de trabajo.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Crear centro | En Empresa A, crear centro con cÃ³digo, nombre y zona horaria. | El centro se crea y aparece solo en Empresa A. |
-| CÃ³digo duplicado | Crear dos centros con el mismo cÃ³digo en la misma empresa. | El sistema rechaza el duplicado. |
-| Mismo cÃ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃ³digo. | El sistema lo permite porque la regla es por empresa. |
+| Crear centro | En Empresa A, crear centro con cÃƒÂ³digo, nombre y zona horaria. | El centro se crea y aparece solo en Empresa A. |
+| CÃƒÂ³digo duplicado | Crear dos centros con el mismo cÃƒÂ³digo en la misma empresa. | El sistema rechaza el duplicado. |
+| Mismo cÃƒÂ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃƒÂ³digo. | El sistema lo permite porque la regla es por empresa. |
 | Editar centro | Cambiar nombre, zona horaria o estado permitido. | Los cambios se guardan sin afectar otra empresa. |
 | Inactivar centro | Inactivar un centro activo. | Queda inactivo, no eliminado. |
-| Acceso cruzado | Intentar abrir o modificar un centro de otra empresa. | El sistema bloquea la acciÃ³n. |
+| Acceso cruzado | Intentar abrir o modificar un centro de otra empresa. | El sistema bloquea la acciÃƒÂ³n. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
 - Trabajadores ligados a centros si no se prueba Sprint 1C.
 - Horarios asignados a centros.
@@ -242,7 +242,7 @@ Este sprint es base tÃ©cnica. La mayorÃ­a de pruebas son de acceso, segurida
 
 ### Observaciones
 
-La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculos de jornada.
+La zona horaria del centro se guarda, pero todavÃƒÂ­a no debe generar cÃƒÂ¡lculos de jornada.
 
 ---
 
@@ -254,16 +254,16 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 
 - Pantalla de personas trabajadoras.
 - Crear trabajador.
-- Editar datos bÃ¡sicos.
+- Editar datos bÃƒÂ¡sicos.
 - Baja no destructiva.
-- RelaciÃ³n laboral con centro, puesto y fecha.
+- RelaciÃƒÂ³n laboral con centro, puesto y fecha.
 - Historial de relaciones laborales.
 - Cambio de centro o puesto sin borrar historial.
 
 ### Usuario o rol para probar
 
 - Administrador de empresa.
-- Recursos humanos, si el rol existe en la instalaciÃ³n.
+- Recursos humanos, si el rol existe en la instalaciÃƒÂ³n.
 - Usuario de otra empresa.
 - Usuario sin empresa activa.
 - Rol no autorizado.
@@ -271,26 +271,26 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 ### Ruta o pantalla
 
 - `/workers`
-- MenÃº Personas trabajadoras o Trabajadores.
+- MenÃƒÂº Personas trabajadoras o Trabajadores.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Crear trabajador | Crear persona trabajadora con cÃ³digo, nombre, centro y puesto inicial. | Se crea en la empresa activa y tiene relaciÃ³n laboral activa. |
-| CÃ³digo duplicado | Usar el mismo cÃ³digo en la misma empresa. | El sistema rechaza el duplicado. |
-| Mismo cÃ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃ³digo. | El sistema lo permite. |
-| Editar datos bÃ¡sicos | Cambiar telÃ©fono o correo sin cambiar centro/puesto. | No se crea nueva relaciÃ³n laboral. |
-| Cambiar centro o puesto | Cambiar centro, puesto o fecha de nueva relaciÃ³n. | Se cierra la relaciÃ³n anterior y se conserva historial. |
+| Crear trabajador | Crear persona trabajadora con cÃƒÂ³digo, nombre, centro y puesto inicial. | Se crea en la empresa activa y tiene relaciÃƒÂ³n laboral activa. |
+| CÃƒÂ³digo duplicado | Usar el mismo cÃƒÂ³digo en la misma empresa. | El sistema rechaza el duplicado. |
+| Mismo cÃƒÂ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃƒÂ³digo. | El sistema lo permite. |
+| Editar datos bÃƒÂ¡sicos | Cambiar telÃƒÂ©fono o correo sin cambiar centro/puesto. | No se crea nueva relaciÃƒÂ³n laboral. |
+| Cambiar centro o puesto | Cambiar centro, puesto o fecha de nueva relaciÃƒÂ³n. | Se cierra la relaciÃƒÂ³n anterior y se conserva historial. |
 | Baja no destructiva | Dar de baja o terminar un trabajador. | Cambia estado, no se elimina, y se conserva historial. |
-| Centro de otra empresa | Intentar asignar centro de Empresa B a trabajador de Empresa A. | El sistema bloquea la operaciÃ³n. |
+| Centro de otra empresa | Intentar asignar centro de Empresa B a trabajador de Empresa A. | El sistema bloquea la operaciÃƒÂ³n. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
 - Condiciones laborales con vigencia si no se prueba Sprint 1D.
 - Credenciales de kiosco si no se prueba Sprint 1D.
 - Horarios.
-- AsignaciÃ³n de horarios.
+- AsignaciÃƒÂ³n de horarios.
 - Registro de jornada.
 - Jornadas calculadas.
 - Alertas.
@@ -300,7 +300,7 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 
 ### Observaciones
 
-`BL-0307` Detalle completo del trabajador y `BL-0306` ImportaciÃ³n CSV siguen pendientes.
+`BL-0307` Detalle completo del trabajador y `BL-0306` ImportaciÃƒÂ³n CSV siguen pendientes.
 
 ---
 
@@ -312,9 +312,9 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 
 - Condiciones laborales con vigencia.
 - Reemplazo de condiciones sin destruir historial.
-- ValidaciÃ³n para evitar solapamientos activos.
+- ValidaciÃƒÂ³n para evitar solapamientos activos.
 - Credenciales de kiosco por trabajador.
-- CÃ³digo de acceso.
+- CÃƒÂ³digo de acceso.
 - NIP guardado de forma segura, no visible.
 - Reset de NIP.
 - Bloqueo de credencial.
@@ -329,27 +329,27 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 ### Ruta o pantalla
 
 - `/workers`
-- SecciÃ³n de condiciones laborales dentro del trabajador.
-- SecciÃ³n de credenciales de kiosco dentro del trabajador.
+- SecciÃƒÂ³n de condiciones laborales dentro del trabajador.
+- SecciÃƒÂ³n de credenciales de kiosco dentro del trabajador.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Crear condiciÃ³n laboral | Crear condiciÃ³n con modalidad, horas semanales, descanso y fecha de inicio. | La condiciÃ³n se guarda y queda vigente. |
-| Reemplazar condiciÃ³n | Crear nueva condiciÃ³n con fecha posterior. | La anterior se cierra y el historial se conserva. |
-| Solapamiento | Crear condiciÃ³n que se empalme con una vigente. | El sistema rechaza el solapamiento. |
-| Crear credencial | Crear credencial con cÃ³digo y NIP temporal. | La credencial se crea y el NIP no queda visible. |
+| Crear condiciÃƒÂ³n laboral | Crear condiciÃƒÂ³n con modalidad, horas semanales, descanso y fecha de inicio. | La condiciÃƒÂ³n se guarda y queda vigente. |
+| Reemplazar condiciÃƒÂ³n | Crear nueva condiciÃƒÂ³n con fecha posterior. | La anterior se cierra y el historial se conserva. |
+| Solapamiento | Crear condiciÃƒÂ³n que se empalme con una vigente. | El sistema rechaza el solapamiento. |
+| Crear credencial | Crear credencial con cÃƒÂ³digo y NIP temporal. | La credencial se crea y el NIP no queda visible. |
 | Resetear NIP | Ingresar nuevo NIP temporal. | El NIP se actualiza sin mostrarse en texto claro. |
 | Bloquear credencial | Bloquear credencial activa. | Queda bloqueada, no eliminada. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
 - Kiosco operativo real.
 - Registro de entrada/salida.
 - Eventos de jornada.
 - Uso real del NIP para checar entrada.
-- CÃ¡lculo de jornada.
+- CÃƒÂ¡lculo de jornada.
 - Alertas.
 - Incidencias.
 - Reportes.
@@ -357,7 +357,7 @@ La zona horaria del centro se guarda, pero todavÃ­a no debe generar cÃ¡lculo
 
 ### Observaciones
 
-Las credenciales existen como preparaciÃ³n para kiosco, pero el kiosco todavÃ­a no debe operar.
+Las credenciales existen como preparaciÃƒÂ³n para kiosco, pero el kiosco todavÃƒÂ­a no debe operar.
 
 ---
 
@@ -371,12 +371,12 @@ Las credenciales existen como preparaciÃ³n para kiosco, pero el kiosco todavÃ
 - Crear horario.
 - Editar horario.
 - Inactivar horario.
-- DÃ­as del horario.
-- Hora de entrada y salida por dÃ­a.
+- DÃƒÂ­as del horario.
+- Hora de entrada y salida por dÃƒÂ­a.
 - Tipo legal del horario.
 - Pausas programadas.
-- CÃ³digo Ãºnico por empresa.
-- SeparaciÃ³n multiempresa.
+- CÃƒÂ³digo ÃƒÂºnico por empresa.
+- SeparaciÃƒÂ³n multiempresa.
 
 ### Usuario o rol para probar
 
@@ -389,55 +389,55 @@ Las credenciales existen como preparaciÃ³n para kiosco, pero el kiosco todavÃ
 ### Ruta o pantalla
 
 - `/schedules`
-- MenÃº Horarios.
+- MenÃƒÂº Horarios.
 
 ### Pruebas manuales
 
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
-| Crear horario bÃ¡sico | Crear horario con cÃ³digo, nombre, tipo legal y estado activo. | El horario se crea en la empresa activa. |
-| CÃ³digo duplicado | Crear dos horarios con el mismo cÃ³digo en la misma empresa. | El sistema rechaza el duplicado. |
-| Mismo cÃ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃ³digo. | El sistema lo permite. |
-| Configurar dÃ­as laborales | Marcar dÃ­a laboral y capturar entrada/salida. | El dÃ­a se guarda y exige horarios. |
-| DÃ­a no laboral | Marcar dÃ­a no laboral y dejar horas vacÃ­as. | El sistema permite guardar sin calcular jornada. |
-| Pausa programada | Agregar pausa con nombre, duraciÃ³n o rango horario. | La pausa queda asociada al dÃ­a correcto. |
-| Pausa invÃ¡lida | Capturar duraciÃ³n negativa. | El sistema rechaza la pausa. |
+| Crear horario bÃƒÂ¡sico | Crear horario con cÃƒÂ³digo, nombre, tipo legal y estado activo. | El horario se crea en la empresa activa. |
+| CÃƒÂ³digo duplicado | Crear dos horarios con el mismo cÃƒÂ³digo en la misma empresa. | El sistema rechaza el duplicado. |
+| Mismo cÃƒÂ³digo en otra empresa | Cambiar a Empresa B y usar el mismo cÃƒÂ³digo. | El sistema lo permite. |
+| Configurar dÃƒÂ­as laborales | Marcar dÃƒÂ­a laboral y capturar entrada/salida. | El dÃƒÂ­a se guarda y exige horarios. |
+| DÃƒÂ­a no laboral | Marcar dÃƒÂ­a no laboral y dejar horas vacÃƒÂ­as. | El sistema permite guardar sin calcular jornada. |
+| Pausa programada | Agregar pausa con nombre, duraciÃƒÂ³n o rango horario. | La pausa queda asociada al dÃƒÂ­a correcto. |
+| Pausa invÃƒÂ¡lida | Capturar duraciÃƒÂ³n negativa. | El sistema rechaza la pausa. |
 | Inactivar horario | Inactivar horario activo. | Queda inactivo, no eliminado. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
-- AsignaciÃ³n de horario a trabajador, si Sprint 2B no estÃ¡ cerrado.
-- ValidaciÃ³n completa de cruce de medianoche, si Sprint 2B no estÃ¡ cerrado.
+- AsignaciÃƒÂ³n de horario a trabajador, si Sprint 2B no estÃƒÂ¡ cerrado.
+- ValidaciÃƒÂ³n completa de cruce de medianoche, si Sprint 2B no estÃƒÂ¡ cerrado.
 - Descansos obligatorios.
 - Registro de entrada/salida.
 - Eventos de jornada.
 - Kiosco operativo.
 - Motor legal.
-- CÃ¡lculo de horas.
+- CÃƒÂ¡lculo de horas.
 - Alertas.
 - Incidencias.
 - Reportes.
 
 ### Observaciones
 
-En Sprint 2A `crosses_midnight` puede existir visualmente, pero todavÃ­a no debe ejecutar lÃ³gica avanzada.
+En Sprint 2A `crosses_midnight` puede existir visualmente, pero todavÃƒÂ­a no debe ejecutar lÃƒÂ³gica avanzada.
 
 ---
 
 ## Sprint 2B - Horarios con cruce de medianoche, asignaciones y vigencias
 
-**Estado:** En revisiÃ³n o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
+**Estado:** En revisiÃƒÂ³n o pendiente de cierre. Candidato a cierre con validaciones automatizadas OK.
 
-Esta secciÃ³n solo debe usarse como guÃ­a formal cuando Sprint 2B estÃ© en la rama de prueba correspondiente o ya cerrado en `main`.
+Esta secciÃƒÂ³n solo debe usarse como guÃƒÂ­a formal cuando Sprint 2B estÃƒÂ© en la rama de prueba correspondiente o ya cerrado en `main`.
 
 ### Funcionalidad esperada al cerrar el sprint
 
-- ValidaciÃ³n de horarios que cruzan medianoche.
-- AsignaciÃ³n de horario a trabajador.
-- Vigencia de asignaciÃ³n por fecha efectiva.
-- Reemplazo de asignaciÃ³n sin borrar historial.
-- InactivaciÃ³n de asignaciÃ³n sin eliminarla.
-- ResoluciÃ³n del horario vigente por trabajador y fecha.
+- ValidaciÃƒÂ³n de horarios que cruzan medianoche.
+- AsignaciÃƒÂ³n de horario a trabajador.
+- Vigencia de asignaciÃƒÂ³n por fecha efectiva.
+- Reemplazo de asignaciÃƒÂ³n sin borrar historial.
+- InactivaciÃƒÂ³n de asignaciÃƒÂ³n sin eliminarla.
+- ResoluciÃƒÂ³n del horario vigente por trabajador y fecha.
 - Pantalla simple de asignaciones.
 
 ### Usuario o rol para probar
@@ -457,17 +457,17 @@ Esta secciÃ³n solo debe usarse como guÃ­a formal cuando Sprint 2B estÃ© en
 | Prueba | Pasos | Resultado esperado |
 |---|---|---|
 | Horario normal | Crear o editar horario con entrada `08:00`, salida `17:00` y sin cruce de medianoche. | El horario se guarda sin calcular jornada ni generar alertas. |
-| Cruce vÃ¡lido | Crear dÃ­a laboral con entrada `22:00`, salida `06:00` y cruce de medianoche activo. | El sistema permite guardar y registra el cruce. |
-| Cruce invÃ¡lido | Capturar `22:00` a `06:00` sin marcar cruce de medianoche. | El sistema rechaza la configuraciÃ³n. |
-| Crear asignaciÃ³n | Seleccionar trabajador, horario y fecha efectiva. | La asignaciÃ³n se crea sin generar jornadas ni eventos. |
-| Reemplazar asignaciÃ³n | Crear nueva asignaciÃ³n con otro horario y fecha posterior. | La anterior se cierra y la nueva queda vigente desde la fecha indicada. |
-| Evitar solapamientos | Crear asignaciÃ³n que se empalme con otra activa del mismo trabajador. | El sistema rechaza el solapamiento. |
-| Resolver horario por fecha | Revisar horario vigente en una fecha anterior y otra posterior. | El sistema identifica el horario correcto segÃºn la fecha. |
-| Inactivar asignaciÃ³n | Inactivar una asignaciÃ³n activa. | La asignaciÃ³n se inactiva y no se elimina. |
-| Horario de otra empresa | Intentar asignar horario de Empresa B a trabajador de Empresa A. | El sistema bloquea la operaciÃ³n. |
-| Trabajador de otra empresa | Intentar asignar horario a trabajador de Empresa B desde Empresa A. | El sistema bloquea la operaciÃ³n. |
+| Cruce vÃƒÂ¡lido | Crear dÃƒÂ­a laboral con entrada `22:00`, salida `06:00` y cruce de medianoche activo. | El sistema permite guardar y registra el cruce. |
+| Cruce invÃƒÂ¡lido | Capturar `22:00` a `06:00` sin marcar cruce de medianoche. | El sistema rechaza la configuraciÃƒÂ³n. |
+| Crear asignaciÃƒÂ³n | Seleccionar trabajador, horario y fecha efectiva. | La asignaciÃƒÂ³n se crea sin generar jornadas ni eventos. |
+| Reemplazar asignaciÃƒÂ³n | Crear nueva asignaciÃƒÂ³n con otro horario y fecha posterior. | La anterior se cierra y la nueva queda vigente desde la fecha indicada. |
+| Evitar solapamientos | Crear asignaciÃƒÂ³n que se empalme con otra activa del mismo trabajador. | El sistema rechaza el solapamiento. |
+| Resolver horario por fecha | Revisar horario vigente en una fecha anterior y otra posterior. | El sistema identifica el horario correcto segÃƒÂºn la fecha. |
+| Inactivar asignaciÃƒÂ³n | Inactivar una asignaciÃƒÂ³n activa. | La asignaciÃƒÂ³n se inactiva y no se elimina. |
+| Horario de otra empresa | Intentar asignar horario de Empresa B a trabajador de Empresa A. | El sistema bloquea la operaciÃƒÂ³n. |
+| Trabajador de otra empresa | Intentar asignar horario a trabajador de Empresa B desde Empresa A. | El sistema bloquea la operaciÃƒÂ³n. |
 
-### No deberÃ­a existir todavÃ­a
+### No deberÃƒÂ­a existir todavÃƒÂ­a
 
 - Descansos obligatorios `BL-0405`.
 - Registro de jornada.
@@ -477,13 +477,13 @@ Esta secciÃ³n solo debe usarse como guÃ­a formal cuando Sprint 2B estÃ© en
 - Kiosco operativo.
 - Captura manual justificada.
 - Motor legal.
-- CÃ¡lculos de jornada.
+- CÃƒÂ¡lculos de jornada.
 - Alertas.
 - Incidencias.
 - Reportes.
 - Conformidad digital.
 - API de negocio.
-- ImportaciÃ³n CSV.
+- ImportaciÃƒÂ³n CSV.
 
 ### Observaciones
 
@@ -498,9 +498,9 @@ Validaciones finales reportadas para cierre:
 
 Arquitectura y QA quedaron aprobados con observaciones menores S3. No hay S1 ni S2 reportados.
 
-TodavÃ­a no debe existir cÃ¡lculo de horas ni clasificaciÃ³n legal de jornada como diurna, nocturna o mixta.
+TodavÃƒÂ­a no debe existir cÃƒÂ¡lculo de horas ni clasificaciÃƒÂ³n legal de jornada como diurna, nocturna o mixta.
 
-Si una asignaciÃ³n futura cambia datos histÃ³ricos, debe reportarse como error crÃ­tico.
+Si una asignaciÃƒÂ³n futura cambia datos histÃƒÂ³ricos, debe reportarse como error crÃƒÂ­tico.
 
 ---
 
@@ -844,55 +844,55 @@ El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, m
 | Pendiente | Nota |
 |---|---|
 | `BL-0205` Dashboard inicial | Depende de jornadas, alertas e incidencias reales. |
-| `BL-0306` ImportaciÃ³n CSV de trabajadores | No debe aparecer como lista todavÃ­a. |
+| `BL-0306` ImportaciÃƒÂ³n CSV de trabajadores | No debe aparecer como lista todavÃƒÂ­a. |
 | `BL-0307` Detalle completo de trabajador | Faltan jornadas, alertas, incidencias y reportes. |
 | `BL-0405` Descansos obligatorios | Implementado en Sprint 2C con type/scope separados; candidato a cierre si las pruebas manuales y automatizadas pasan. |
 | `BL-0501` Modelo `time_events` | Implementado en Sprint 2D como modelo interno; sin UI operativa. |
 | `BL-0502` y `BL-0503` Registro web basico | Implementados en Sprint 2E como flujo administrativo `/time-clock`, sin calculos. |
 | `BL-0504` y `BL-0505` Kiosco y captura manual | Implementados en Sprint 2F como kiosco basico y captura manual justificada, sin calculos. |
 | `BL-0506` y `BL-0507` Flujos posteriores de eventos | Pendientes; no debe haber anulacion logica operativa ni eventos fuera de orden/tardios como flujo. |
-| API y motor legal | Pendientes; no debe existir API de negocio completa ni cÃ¡lculo legal. |
+| API y motor legal | Pendientes; no debe existir API de negocio completa ni cÃƒÂ¡lculo legal. |
 | Alertas, incidencias, cierres y reportes | Pendientes; no deben considerarse listos. |
 
 ---
 
-## Checklist rÃ¡pido por fase
+## Checklist rÃƒÂ¡pido por fase
 
-Usar esta tabla para marcar validaciÃ³n manual. En observaciÃ³n anotar pantalla, usuario y caso probado.
+Usar esta tabla para marcar validaciÃƒÂ³n manual. En observaciÃƒÂ³n anotar pantalla, usuario y caso probado.
 
-| Fase | Punto a validar | Probado | Correcto | Falla | ObservaciÃ³n |
+| Fase | Punto a validar | Probado | Correcto | Falla | ObservaciÃƒÂ³n |
 |---|---|---|---|---|---|
 | Sprint 0 | Login funciona |  |  |  |  |
 | Sprint 0 | Logout funciona |  |  |  |  |
 | Sprint 0 | Usuario inactivo no entra |  |  |  |  |
 | Sprint 0 | Usuario sin empresa activa queda bloqueado |  |  |  |  |
 | Sprint 0 | Usuario de Empresa A no ve Empresa B |  |  |  |  |
-| Sprint 0 | Registro pÃºblico no estÃ¡ disponible |  |  |  |  |
+| Sprint 0 | Registro pÃƒÂºblico no estÃƒÂ¡ disponible |  |  |  |  |
 | Sprint 1A | Se ve empresa activa |  |  |  |  |
 | Sprint 1A | Selector solo muestra empresas permitidas |  |  |  |  |
 | Sprint 1A | Se puede cambiar empresa activa |  |  |  |  |
-| Sprint 1A | Datos bÃ¡sicos de empresa se guardan |  |  |  |  |
+| Sprint 1A | Datos bÃƒÂ¡sicos de empresa se guardan |  |  |  |  |
 | Sprint 1A | Empresa inactiva no permite operar |  |  |  |  |
 | Sprint 1B | Se pueden crear centros |  |  |  |  |
-| Sprint 1B | CÃ³digo de centro es Ãºnico por empresa |  |  |  |  |
+| Sprint 1B | CÃƒÂ³digo de centro es ÃƒÂºnico por empresa |  |  |  |  |
 | Sprint 1B | Se puede inactivar centro sin borrarlo |  |  |  |  |
 | Sprint 1C | Se puede crear trabajador |  |  |  |  |
-| Sprint 1C | CÃ³digo de trabajador es Ãºnico por empresa |  |  |  |  |
-| Sprint 1C | Cambio de relaciÃ³n laboral conserva historial |  |  |  |  |
+| Sprint 1C | CÃƒÂ³digo de trabajador es ÃƒÂºnico por empresa |  |  |  |  |
+| Sprint 1C | Cambio de relaciÃƒÂ³n laboral conserva historial |  |  |  |  |
 | Sprint 1C | Baja no borra trabajador |  |  |  |  |
-| Sprint 1D | Se puede crear condiciÃ³n laboral |  |  |  |  |
-| Sprint 1D | Reemplazo de condiciÃ³n conserva historial |  |  |  |  |
+| Sprint 1D | Se puede crear condiciÃƒÂ³n laboral |  |  |  |  |
+| Sprint 1D | Reemplazo de condiciÃƒÂ³n conserva historial |  |  |  |  |
 | Sprint 1D | NIP no se muestra en texto claro |  |  |  |  |
 | Sprint 1D | Se puede bloquear credencial |  |  |  |  |
 | Sprint 2A | Se puede crear horario |  |  |  |  |
-| Sprint 2A | CÃ³digo de horario es Ãºnico por empresa |  |  |  |  |
-| Sprint 2A | DÃ­a laboral requiere entrada y salida |  |  |  |  |
+| Sprint 2A | CÃƒÂ³digo de horario es ÃƒÂºnico por empresa |  |  |  |  |
+| Sprint 2A | DÃƒÂ­a laboral requiere entrada y salida |  |  |  |  |
 | Sprint 2A | Se pueden agregar pausas programadas |  |  |  |  |
 | Sprint 2A | Se puede inactivar horario sin borrarlo |  |  |  |  |
 | Sprint 2B | Horario `22:00` a `06:00` requiere cruce de medianoche |  |  |  |  |
 | Sprint 2B | Horario normal `08:00` a `17:00` funciona |  |  |  |  |
 | Sprint 2B | Se puede asignar horario a trabajador |  |  |  |  |
-| Sprint 2B | Se puede reemplazar asignaciÃ³n |  |  |  |  |
+| Sprint 2B | Se puede reemplazar asignaciÃƒÂ³n |  |  |  |  |
 | Sprint 2B | Se conserva historial |  |  |  |  |
 | Sprint 2B | No se permiten solapamientos |  |  |  |  |
 | Sprint 2B | Se puede inactivar asignacion sin borrar |  |  |  |  |
@@ -1116,8 +1116,8 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 |---|---|---|
 | Pantalla publica | Abrir `/`. | Se muestra Vera Time en espanol, sin textos del starter kit Laravel en ingles. |
 | Login | Abrir `/login`. | Titulos, campos, botones y enlaces se muestran en espanol. |
-| Recuperacion de contraseña | Abrir flujo de recuperacion. | Textos y mensajes se muestran en espanol. |
-| Perfil | Abrir configuracion de perfil, contraseña y apariencia. | Navegacion, formularios y botones se muestran en espanol. |
+| Recuperacion de contraseÃ±a | Abrir flujo de recuperacion. | Textos y mensajes se muestran en espanol. |
+| Perfil | Abrir configuracion de perfil, contraseÃ±a y apariencia. | Navegacion, formularios y botones se muestran en espanol. |
 | Navegacion | Revisar sidebar/header. | Menus visibles estan en espanol. |
 | Kiosco | Abrir `/kiosk`. | Instrucciones, errores y acciones visibles estan en espanol. |
 | Validaciones | Provocar campos requeridos en formularios principales. | Los mensajes de validacion se muestran en espanol. |
@@ -1200,7 +1200,7 @@ php artisan test tests/Feature/BlockF2/DraftScheduleGenerationDomainTest.php --s
 
 | Caso | Accion | Resultado esperado |
 |---|---|---|
-| Abrir catalogo | Entrar a `/scheduling/shifts` con owner/admin/rh. | Carga el listado y muestra "Catálogo de turnos". |
+| Abrir catalogo | Entrar a `/scheduling/shifts` con owner/admin/rh. | Carga el listado y muestra "CatÃ¡logo de turnos". |
 | Crear turno simple | Crear plantilla con trabajo `08:00` a `16:00`. | Se guarda y la vista previa muestra 8 h de trabajo. |
 | Turno nocturno | Crear trabajo `22:00` a `06:00` con dia final siguiente. | Se guarda y muestra `+1 dia` / cruza medianoche. |
 | Jornada partida | Crear trabajo, descanso fijo y segundo trabajo. | Se guardan varios segmentos sin solaparse. |
@@ -1505,6 +1505,8 @@ Validaciones manuales:
 | Validar sin bloqueantes | Seleccionar un periodo con jornadas calculadas y sin alertas abiertas. | Cambia a `Listo` y permite cerrar. |
 | Cerrar periodo | Pulsar `Cerrar` en un periodo sin bloqueantes. | Cambia a `Cerrado`, guarda usuario/fecha y muestra reporte base. |
 | Reporte base | Revisar un periodo cerrado. | Muestra resumen general, desglose por trabajador y SHA-256. |
+| Exportar CSV base | Desde un periodo cerrado, descargar el CSV de asistencia. | Descarga archivo con trabajador, fecha, jornada, horas ordinarias, extras, domingo trabajado, descanso programado, descanso trabajado, descanso dominical trabajado, descanso obligatorio, retardo, salida anticipada e incidencias/ausencias cuando apliquen. |
+| Tolerancias de puntualidad | En Configuracion de empresa, ajustar tolerancia de retardo y salida anticipada, recalcular jornadas y exportar el periodo. | Jornadas muestra alertas de retardo/salida anticipada cuando superan tolerancia y el CSV refleja `minutos_retardo` y `minutos_salida_anticipada`. |
 | Registrar ausencia | Entrar a `/attendance-incidents`, seleccionar trabajador, rango y tipo `Vacaciones` o `Incapacidad`. | Se crea una incidencia aprobada con referencia/comentario opcional. |
 | Recalcular jornada con ausencia | En `/work-days`, recalcular el rango de la ausencia. | La jornada programada sin eventos aparece como la ausencia registrada, no como falta pendiente. |
 | Cierre con ausencia | Validar un periodo que incluya la ausencia ya recalculada. | No bloquea el cierre por falta pendiente y el reporte suma la ausencia como hecho operativo. |
