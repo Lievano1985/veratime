@@ -8,8 +8,11 @@ use App\Domains\WorkDays\Actions\CalculateWorkDaysForDateRangeAction;
 use App\Domains\WorkDays\Actions\RefreshWorkDaysForDateRangeAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
+use App\Models\DailyScheduleSegment;
 use App\Models\EmploymentRelationship;
 use App\Models\Role;
+use App\Models\ScheduleBatch;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\WorkDay;
@@ -57,6 +60,42 @@ class WorkDayCalculationFoundationTest extends TestCase
         $this->assertSame(510, $calculation->total_work_minutes);
         $this->assertSame(30, $calculation->break_minutes);
         $this->assertSame(WorkDay::STATUS_CALCULATED, $workDay->refresh()->status);
+    }
+
+    public function test_punctuality_minutes_are_calculated_against_published_shift_with_tolerance(): void
+    {
+        [$company, $relationship, $workDay] = $this->workDayFixture();
+        $company->setting()->create(array_replace(Company::defaultSettings(), [
+            'late_arrival_tolerance_minutes' => 10,
+            'early_departure_tolerance_minutes' => 10,
+        ]));
+        $this->attachPublishedShift($company, $relationship, $workDay, '2026-08-03 14:00:00', '2026-08-03 23:00:00');
+        $this->timeEvent($company, $relationship, 'clock_in', '08:12:00', '2026-08-03 14:12:00');
+        $this->timeEvent($company, $relationship, 'clock_out', '16:45:00', '2026-08-03 22:45:00');
+
+        $calculation = app(CalculateWorkDayAction::class)->handle($company->refresh(), $workDay);
+
+        $this->assertSame(2, $calculation->late_arrival_minutes);
+        $this->assertSame(5, $calculation->early_departure_minutes);
+        $this->assertSame(10, data_get($calculation->result_snapshot, 'punctuality.late_arrival_tolerance_minutes'));
+        $this->assertSame(10, data_get($calculation->result_snapshot, 'punctuality.early_departure_tolerance_minutes'));
+    }
+
+    public function test_punctuality_minutes_stay_zero_when_events_are_inside_tolerance(): void
+    {
+        [$company, $relationship, $workDay] = $this->workDayFixture();
+        $company->setting()->create(array_replace(Company::defaultSettings(), [
+            'late_arrival_tolerance_minutes' => 10,
+            'early_departure_tolerance_minutes' => 10,
+        ]));
+        $this->attachPublishedShift($company, $relationship, $workDay, '2026-08-03 14:00:00', '2026-08-03 23:00:00');
+        $this->timeEvent($company, $relationship, 'clock_in', '08:05:00', '2026-08-03 14:05:00');
+        $this->timeEvent($company, $relationship, 'clock_out', '16:55:00', '2026-08-03 22:55:00');
+
+        $calculation = app(CalculateWorkDayAction::class)->handle($company->refresh(), $workDay);
+
+        $this->assertSame(0, $calculation->late_arrival_minutes);
+        $this->assertSame(0, $calculation->early_departure_minutes);
     }
 
     public function test_incomplete_event_sequence_is_kept_under_review_without_losing_events(): void
@@ -298,6 +337,52 @@ class WorkDayCalculationFoundationTest extends TestCase
         ]);
 
         return [$company, $relationship];
+    }
+
+    private function attachPublishedShift(Company $company, EmploymentRelationship $relationship, WorkDay $workDay, string $startsAtUtc, string $endsAtUtc): DailyScheduleAssignment
+    {
+        $batch = ScheduleBatch::factory()->create([
+            'company_id' => $company->id,
+            'center_id' => $relationship->center_id,
+            'period_start' => '2026-08-03',
+            'period_end' => '2026-08-09',
+            'version' => 1,
+            'status' => 'published',
+            'snapshot_sha256' => str_repeat('a', 64),
+        ]);
+        $assignment = DailyScheduleAssignment::factory()->create([
+            'company_id' => $company->id,
+            'schedule_batch_id' => $batch->id,
+            'employment_relationship_id' => $relationship->id,
+            'work_date' => $workDay->work_date,
+            'day_type' => 'shift',
+            'timezone' => 'America/Mexico_City',
+        ]);
+        DailyScheduleSegment::factory()->create([
+            'company_id' => $company->id,
+            'daily_schedule_assignment_id' => $assignment->id,
+            'segment_order' => 1,
+            'segment_type' => 'work',
+            'timing_mode' => 'fixed',
+            'start_local_time' => '08:00:00',
+            'end_local_time' => '17:00:00',
+            'start_day_offset' => 0,
+            'end_day_offset' => 0,
+            'starts_at_utc' => $startsAtUtc,
+            'ends_at_utc' => $endsAtUtc,
+            'duration_minutes' => null,
+            'is_paid' => true,
+        ]);
+
+        $workDay->forceFill([
+            'schedule_batch_id' => $batch->id,
+            'daily_schedule_assignment_id' => $assignment->id,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 540,
+        ])->save();
+
+        return $assignment->refresh();
     }
 
     private function timeEvent(Company $company, EmploymentRelationship $relationship, string $eventType, string $localTime, string $occurredAtUtc): TimeEvent

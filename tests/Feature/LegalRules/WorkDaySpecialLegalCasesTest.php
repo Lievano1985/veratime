@@ -32,6 +32,29 @@ class WorkDaySpecialLegalCasesTest extends TestCase
         $this->assertSame(480, $calculation->result_snapshot['special_legal_cases']['sunday_minutes']);
     }
 
+    public function test_sunday_scheduled_rest_worked_is_marked_separately(): void
+    {
+        [$company, $relationship] = $this->relationshipFixture();
+        $calculation = $this->calculatedWorkDay(
+            company: $company,
+            relationship: $relationship,
+            date: '2026-08-09',
+            minutes: 360,
+            dayType: 'rest',
+        );
+
+        app(ApplySpecialLegalCasesForDateRangeAction::class)->handle($company, '2026-08-09', '2026-08-09');
+
+        $calculation->refresh();
+        $scheduledRest = $calculation->result_snapshot['special_legal_cases']['scheduled_rest'];
+
+        $this->assertSame(360, $calculation->sunday_minutes);
+        $this->assertTrue($scheduledRest['programmed']);
+        $this->assertTrue($scheduledRest['worked']);
+        $this->assertTrue($scheduledRest['sunday_worked']);
+        $this->assertSame(360, $scheduledRest['worked_minutes']);
+    }
+
     public function test_company_mandatory_rest_day_worked_minutes_are_marked(): void
     {
         [$company, $relationship] = $this->relationshipFixture();
@@ -146,7 +169,14 @@ class WorkDaySpecialLegalCasesTest extends TestCase
         return [$company, $relationship];
     }
 
-    private function calculatedWorkDay(Company $company, EmploymentRelationship $relationship, string $date, int $minutes, string $classification = WorkDayCalculation::CLASSIFICATION_DIURNAL): WorkDayCalculation
+    private function calculatedWorkDay(
+        Company $company,
+        EmploymentRelationship $relationship,
+        string $date,
+        int $minutes,
+        string $classification = WorkDayCalculation::CLASSIFICATION_DIURNAL,
+        string $dayType = 'shift',
+    ): WorkDayCalculation
     {
         $workDay = WorkDay::factory()->create([
             'company_id' => $company->id,
@@ -156,6 +186,8 @@ class WorkDaySpecialLegalCasesTest extends TestCase
             'work_date' => $date,
             'timezone' => 'America/Mexico_City',
             'status' => WorkDay::STATUS_CALCULATED,
+            'day_type' => $dayType,
+            'expected_work_minutes' => $dayType === 'shift' ? 480 : null,
         ]);
         $calculation = WorkDayCalculation::factory()->create([
             'company_id' => $company->id,

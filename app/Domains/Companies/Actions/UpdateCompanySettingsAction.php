@@ -31,6 +31,8 @@ class UpdateCompanySettingsAction
             'work_days_auto_refresh_time' => blank($data['work_days_auto_refresh_time'] ?? null)
                 ? null
                 : (string) $data['work_days_auto_refresh_time'],
+            'late_arrival_tolerance_minutes' => max(0, (int) ($data['late_arrival_tolerance_minutes'] ?? 0)),
+            'early_departure_tolerance_minutes' => max(0, (int) ($data['early_departure_tolerance_minutes'] ?? 0)),
             'allow_worker_corrections' => (bool) ($data['allow_worker_corrections'] ?? false),
             'require_pin_for_kiosk' => (bool) ($data['require_pin_for_kiosk'] ?? false),
             'kiosk_key_hash' => $kioskKeyHash,

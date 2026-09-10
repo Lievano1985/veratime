@@ -131,6 +131,7 @@ class AttendancePeriodClosingTest extends TestCase
     {
         [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
         [$period, $worker] = $this->periodWithWorker($company, $user);
+        $period->forceFill(['period_end' => '2026-08-09'])->save();
         $worker->forceFill([
             'rfc' => 'VTDEMO260101',
             'curp' => 'VTDEMO260101HTCRMN01',
@@ -140,15 +141,15 @@ class AttendancePeriodClosingTest extends TestCase
             'company_id' => $company->id,
             'worker_id' => $worker->id,
             'center_id' => $period->center_id,
-            'work_date' => '2026-08-05',
+            'work_date' => '2026-08-09',
             'timezone' => 'America/Mexico_City',
             'status' => WorkDay::STATUS_CALCULATED,
             'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
-            'day_type' => 'shift',
-            'expected_work_minutes' => 480,
+            'day_type' => 'rest',
+            'expected_work_minutes' => null,
             'valid_time_event_count' => 2,
-            'first_event_at_utc' => '2026-08-05 14:00:00',
-            'last_event_at_utc' => '2026-08-06 00:01:00',
+            'first_event_at_utc' => '2026-08-09 14:00:00',
+            'last_event_at_utc' => '2026-08-10 00:01:00',
         ]);
         $calculation = WorkDayCalculation::factory()->create([
             'company_id' => $company->id,
@@ -158,10 +159,18 @@ class AttendancePeriodClosingTest extends TestCase
             'overtime_double_minutes' => 61,
             'overtime_triple_minutes' => 0,
             'night_minutes' => 30,
+            'late_arrival_minutes' => 12,
+            'early_departure_minutes' => 15,
             'sunday_minutes' => 61,
             'mandatory_rest_minutes' => 61,
             'rules_snapshot' => [
                 'special_legal_cases' => [
+                    'scheduled_rest' => [
+                        'programmed' => true,
+                        'worked' => true,
+                        'sunday_worked' => true,
+                        'worked_minutes' => 541,
+                    ],
                     'mandatory_rest' => [
                         'matches' => [
                             [
@@ -175,6 +184,8 @@ class AttendancePeriodClosingTest extends TestCase
         ]);
         $workDay->forceFill(['active_calculation_id' => $calculation->id])->save();
         $this->closedAlert($company, $workDay, $worker, Alert::STATUS_JUSTIFIED);
+        $this->punctualityAlert($company, $workDay, $worker, 'late_arrival_detected', Alert::STATUS_JUSTIFIED);
+        $this->punctualityAlert($company, $workDay, $worker, 'early_departure_detected', Alert::STATUS_CORRECTED);
         $period->forceFill(['status' => AttendancePeriod::STATUS_CLOSED])->save();
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
@@ -184,13 +195,15 @@ class AttendancePeriodClosingTest extends TestCase
 
         $response->assertOk();
         $this->assertStringContainsString('horas_extra_dobles,horas_extra_triples,horas_nocturnas,domingo_trabajado,horas_domingo_trabajado,prima_dominical_aplica', $content);
+        $this->assertStringContainsString('descanso_programado,descanso_trabajado,descanso_domingo_trabajado,descanso_semanal_trabajado', $content);
         $this->assertStringContainsString('horas_festivo_trabajado,horas_festivo_pago_normal,horas_festivo_pago_doble_adicional,festivo_referencia', $content);
+        $this->assertStringContainsString('minutos_retardo,dictamen_retardo,minutos_salida_anticipada,dictamen_salida_anticipada', $content);
         $this->assertStringContainsString('VT-900', $content);
         $this->assertStringContainsString('VTDEMO260101', $content);
         $this->assertStringContainsString('01234567890', $content);
         $this->assertStringContainsString('8.00,1.02,1.02,0.00,0.50,si,1.02,si', $content);
-        $this->assertStringContainsString('si,1.02,1.02,1.02,"Descanso demo - Referencia demo"', $content);
-        $this->assertStringContainsString('si,scheduled_absence', $content);
+        $this->assertStringContainsString('si,si,si,si,si,1.02,1.02,1.02,"Descanso demo - Referencia demo"', $content);
+        $this->assertStringContainsString('0.00,0.00,12,justificada,15,confirmada,0,si,scheduled_absence', $content);
     }
 
     public function test_ui_can_validate_and_close_ready_period(): void
@@ -298,6 +311,34 @@ class AttendancePeriodClosingTest extends TestCase
             'resolution' => 'Dictamen aplicado.',
             'resolved_at' => now(),
             'fingerprint' => 'period-closed-alert-'.$workDay->id,
+        ]);
+    }
+
+    private function punctualityAlert(Company $company, WorkDay $workDay, Worker $worker, string $ruleCode, string $status): Alert
+    {
+        $type = AlertType::query()->create([
+            'code' => $ruleCode,
+            'name' => $ruleCode === 'late_arrival_detected' ? 'Retardo' : 'Salida anticipada',
+            'description' => 'Incidencia de puntualidad.',
+            'default_severity' => 'medium',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        return Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $type->id,
+            'worker_id' => $worker->id,
+            'work_day_id' => $workDay->id,
+            'severity' => 'medium',
+            'status' => $status,
+            'title' => $type->name,
+            'description' => 'Dictamen de puntualidad.',
+            'rule_code' => $ruleCode,
+            'detected_at' => now(),
+            'resolution' => 'Dictamen aplicado.',
+            'resolved_at' => now(),
+            'fingerprint' => 'period-punctuality-alert-'.$ruleCode.'-'.$workDay->id,
         ]);
     }
 

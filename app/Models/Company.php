@@ -199,6 +199,8 @@ class Company extends Model
             'work_days_last_refreshed_at' => null,
             'work_days_last_refresh_status' => null,
             'work_days_last_refresh_summary' => null,
+            'late_arrival_tolerance_minutes' => 0,
+            'early_departure_tolerance_minutes' => 0,
             'allow_worker_corrections' => false,
             'require_pin_for_kiosk' => true,
             'kiosk_key_hash' => null,

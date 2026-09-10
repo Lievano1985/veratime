@@ -1107,7 +1107,7 @@ Reglas implementadas en el bloque base de calculo:
 
 ## 12.4 `attendance_periods`
 
-Bloque H agrega periodos de asistencia manuales por alcance. Estos periodos agrupan el rango que Vera Time usara para cierre operativo, reporte base y futura exportacion CSV o API, pero no calculan nomina.
+Bloque H agrega periodos de asistencia manuales por alcance. Estos periodos agrupan el rango que Vera Time usa para cierre operativo, reporte base y exportacion CSV base; la API equivalente queda pendiente. No calculan nomina.
 
 Campos principales:
 
@@ -1150,7 +1150,12 @@ Reglas H:
 - `validation_summary` conserva conteos de jornadas, alertas abiertas y jornadas pendientes/en revision.
 - `report_summary` conserva el reporte base congelado por trabajador.
 - `snapshot_canonical_json` y `snapshot_sha256` conservan evidencia de integridad del cierre.
-- No crea exportaciones ni conceptos de nomina.
+- El CSV del periodo se genera desde `work_days`, `work_day_calculations`, alertas e incidencias/ausencias operativas asociadas al periodo cerrado.
+- El CSV incluye horas ordinarias, extra dobles/triples, nocturnas, domingos, descansos obligatorios, retardos, salidas anticipadas, ausencias e incidencias cuando existen datos calculados.
+- `company_settings.late_arrival_tolerance_minutes` y `company_settings.early_departure_tolerance_minutes` guardan tolerancias operativas por empresa.
+- `work_day_calculations.late_arrival_minutes` y `work_day_calculations.early_departure_minutes` conservan el resultado calculado usado por reportes y CSV.
+- Permite exportacion CSV base solo para periodos cerrados.
+- No crea conceptos de nomina, pagos, dispersion, ISR, IMSS ni recibos.
 
 Índices:
 

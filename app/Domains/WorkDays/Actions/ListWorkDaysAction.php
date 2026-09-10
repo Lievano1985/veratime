@@ -11,7 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListWorkDaysAction
 {
     /**
-     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, search?: ?string} $filters
+     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, situation?: ?string, attention?: ?string, search?: ?string} $filters
      * @return LengthAwarePaginator<int, WorkDay>
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
@@ -76,11 +76,13 @@ class ListWorkDaysAction
             ->when($filters['center_id'] ?? null, fn ($query, $centerId) => $query->where('center_id', $centerId))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['schedule_status'] ?? null, fn ($query, $status) => $query->where('schedule_status', $status))
+            ->when($filters['situation'] ?? null, fn ($query, $situation) => $this->applySituationFilter($query, $situation))
+            ->when($filters['attention'] ?? null, fn ($query, $attention) => $this->applyAttentionFilter($query, $attention))
             ->when($filters['incident_type'] ?? null, function ($query, $type): void {
                 if ($type === 'with_incidents') {
                     $query->where(function ($incidentQuery): void {
                         $incidentQuery
-                            ->whereHas('alerts')
+                            ->whereHas('alerts', fn ($alertQuery) => $alertQuery->where('status', '!=', Alert::STATUS_CLOSED))
                             ->orWhereNotNull('metadata->attendance_incident')
                             ->orWhereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'))
                             ->orWhere('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
@@ -100,7 +102,7 @@ class ListWorkDaysAction
 
                 if ($type === 'none') {
                     $query
-                        ->whereDoesntHave('alerts')
+                        ->whereDoesntHave('alerts', fn ($alertQuery) => $alertQuery->where('status', '!=', Alert::STATUS_CLOSED))
                         ->whereNull('metadata->attendance_incident')
                         ->whereDoesntHave('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'));
 
@@ -130,7 +132,7 @@ class ListWorkDaysAction
 
                 if ($status === 'none') {
                     $query
-                        ->whereDoesntHave('alerts')
+                        ->whereDoesntHave('alerts', fn ($alertQuery) => $alertQuery->where('status', '!=', Alert::STATUS_CLOSED))
                         ->whereNull('metadata->attendance_incident')
                         ->whereDoesntHave('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'));
                 }
@@ -151,5 +153,135 @@ class ListWorkDaysAction
             ->orderByDesc('work_date')
             ->orderBy('worker_id')
             ->paginate($perPage);
+    }
+
+    private function applySituationFilter($query, string $situation): void
+    {
+        match ($situation) {
+            'normal' => $this->whereWithoutVisibleIncident($query)
+                ->where('status', WorkDay::STATUS_CALCULATED)
+                ->where('schedule_status', WorkDay::SCHEDULE_STATUS_SCHEDULED)
+                ->where('day_type', 'shift')
+                ->whereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->where('total_work_minutes', '>', 0)),
+            'scheduled_absence' => $this->whereScheduledAbsenceCandidate($query),
+            'justified_absence' => $this->whereAttendanceIncidentType($query, [
+                'justified_paid_absence',
+                'justified_unpaid_absence',
+            ]),
+            'vacation' => $this->whereAttendanceIncidentType($query, ['vacation']),
+            'incapacity' => $this->whereAttendanceIncidentType($query, ['incapacity']),
+            'permission' => $this->whereAttendanceIncidentType($query, [
+                'paid_permission',
+                'unpaid_permission',
+                'maternity_paternity',
+                'other',
+            ]),
+            'overtime_detected',
+            'late_arrival_detected',
+            'early_departure_detected',
+            'incomplete_work_day',
+            'sunday_work',
+            'mandatory_rest_work',
+            'weekly_rest_missing' => $this->whereAlertRule($query, $situation),
+            'rest' => $query->where('day_type', 'rest'),
+            'unscheduled_work_day' => $query->where('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED),
+            'without_calculation' => $query->whereNull('active_calculation_id'),
+            'with_incidents' => $this->whereWithVisibleIncident($query),
+            default => null,
+        };
+    }
+
+    private function applyAttentionFilter($query, string $attention): void
+    {
+        match ($attention) {
+            'requires_attention' => $query->where(function ($attentionQuery): void {
+                $attentionQuery
+                    ->whereHas('alerts', fn ($alertQuery) => $alertQuery->whereIn('status', Alert::OPEN_STATUSES))
+                    ->orWhere('status', WorkDay::STATUS_UNDER_REVIEW)
+                    ->orWhere(function ($absenceQuery): void {
+                        $this->whereScheduledAbsenceCandidate($absenceQuery);
+                    });
+            }),
+            'resolved' => $query->where(function ($attentionQuery): void {
+                $attentionQuery
+                    ->whereNotNull('metadata->attendance_incident')
+                    ->orWhereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'))
+                    ->orWhereHas('alerts', fn ($alertQuery) => $alertQuery->whereIn('status', [
+                        Alert::STATUS_JUSTIFIED,
+                        Alert::STATUS_CORRECTED,
+                    ]));
+            }),
+            'closed_not_applicable' => $query->whereHas('alerts', fn ($alertQuery) => $alertQuery
+                ->where('status', Alert::STATUS_CLOSED)
+                ->whereNotNull('resolved_by')
+                ->where('metadata->resolution->status', Alert::STATUS_CLOSED)),
+            'none' => $this->whereWithoutVisibleIncident($query),
+            default => null,
+        };
+    }
+
+    private function whereWithVisibleIncident($query)
+    {
+        return $query->where(function ($incidentQuery): void {
+            $incidentQuery
+                ->whereHas('alerts', fn ($alertQuery) => $alertQuery->where('status', '!=', Alert::STATUS_CLOSED))
+                ->orWhereNotNull('metadata->attendance_incident')
+                ->orWhereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'))
+                ->orWhere('schedule_status', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
+                ->orWhere('status', WorkDay::STATUS_UNDER_REVIEW)
+                ->orWhere(function ($absenceQuery): void {
+                    $this->whereScheduledAbsenceCandidate($absenceQuery);
+                });
+        });
+    }
+
+    private function whereWithoutVisibleIncident($query)
+    {
+        return $query
+            ->whereDoesntHave('alerts', fn ($alertQuery) => $alertQuery->where('status', '!=', Alert::STATUS_CLOSED))
+            ->whereNull('metadata->attendance_incident')
+            ->whereDoesntHave('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereNotNull('result_snapshot->attendance_incident'))
+            ->where('schedule_status', '!=', WorkDay::SCHEDULE_STATUS_UNSCHEDULED)
+            ->where('status', '!=', WorkDay::STATUS_UNDER_REVIEW)
+            ->where(function ($absenceQuery): void {
+                $absenceQuery
+                    ->whereNotNull('active_calculation_id')
+                    ->orWhere('valid_time_event_count', '>', 0)
+                    ->orWhere('schedule_status', '!=', WorkDay::SCHEDULE_STATUS_SCHEDULED)
+                    ->orWhere('day_type', '!=', 'shift')
+                    ->orWhereNull('expected_work_minutes')
+                    ->orWhere('expected_work_minutes', '<=', 0);
+            });
+    }
+
+    private function whereScheduledAbsenceCandidate($query)
+    {
+        return $query
+            ->whereNull('active_calculation_id')
+            ->whereDoesntHave('alerts')
+            ->whereNull('metadata->attendance_incident')
+            ->where('valid_time_event_count', 0)
+            ->where('schedule_status', WorkDay::SCHEDULE_STATUS_SCHEDULED)
+            ->where('day_type', 'shift')
+            ->where('expected_work_minutes', '>', 0);
+    }
+
+    /**
+     * @param list<string> $types
+     */
+    private function whereAttendanceIncidentType($query, array $types): void
+    {
+        $query->where(function ($incidentQuery) use ($types): void {
+            $incidentQuery
+                ->whereIn('metadata->attendance_incident->incident_type', $types)
+                ->orWhereHas('activeCalculation', fn ($calculationQuery) => $calculationQuery->whereIn('result_snapshot->attendance_incident->incident_type', $types));
+        });
+    }
+
+    private function whereAlertRule($query, string $ruleCode): void
+    {
+        $query->whereHas('alerts', fn ($alertQuery) => $alertQuery
+            ->where('rule_code', $ruleCode)
+            ->where('status', '!=', Alert::STATUS_CLOSED));
     }
 }

@@ -33,6 +33,8 @@ class WorkDayCalculationFactory extends Factory
             'overtime_triple_minutes' => 0,
             'break_minutes' => 0,
             'paid_break_minutes' => 0,
+            'late_arrival_minutes' => 0,
+            'early_departure_minutes' => 0,
             'sunday_minutes' => 0,
             'mandatory_rest_minutes' => 0,
             'classification' => WorkDayCalculation::CLASSIFICATION_PENDING,

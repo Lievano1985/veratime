@@ -33,6 +33,8 @@ class CompanySettingsTest extends TestCase
             ->set('settingsForm.payroll_period_type', 'weekly')
             ->set('settingsForm.default_timezone', 'America/Mazatlan')
             ->set('settingsForm.default_closure_day', 5)
+            ->set('settingsForm.late_arrival_tolerance_minutes', 7)
+            ->set('settingsForm.early_departure_tolerance_minutes', 9)
             ->set('settingsForm.allow_worker_corrections', true)
             ->set('settingsForm.require_pin_for_kiosk', false)
             ->set('settingsForm.kiosk_key', 'KIOSK-DEMO1!')
@@ -44,6 +46,8 @@ class CompanySettingsTest extends TestCase
             'payroll_period_type' => 'weekly',
             'default_timezone' => 'America/Mazatlan',
             'default_closure_day' => 5,
+            'late_arrival_tolerance_minutes' => 7,
+            'early_departure_tolerance_minutes' => 9,
             'allow_worker_corrections' => true,
             'require_pin_for_kiosk' => false,
             'kiosk_key_hash' => KioskKey::hash('KIOSK-DEMO1!'),

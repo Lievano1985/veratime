@@ -357,7 +357,7 @@ Estado: en progreso en rama `feature/work-day-incidence-board`.
 - Modelos base:
   - `AlertType`.
   - `Alert`.
-- `AlertTypeSeeder` carga los tipos mínimos del MVP inicial:
+- `AlertTypeSeeder` carga los tipos mÃ­nimos del MVP inicial:
   - `scheduled_absence`.
   - `incomplete_work_day`.
   - `overtime_detected`.
@@ -800,7 +800,7 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - Ruta: `/attendance-periods`.
 - Permite generar periodos de asistencia abiertos por centro completo o por una o varias unidades organizacionales del mismo centro.
 - El usuario define el rango de fechas manualmente; la configuracion de empresa solo sirve como referencia/sugerencia inicial.
-- `attendance_periods` agrupa el paquete de asistencia que despues alimentara CSV o API.
+- `attendance_periods` agrupa el paquete de asistencia para cierre operativo, consulta y exportacion CSV base.
 - `attendance_period_scopes` guarda las unidades incluidas cuando el periodo no aplica a todo el centro.
 - H2 valida bloqueantes contra Jornadas y enlaza a `/work-days` filtrado por centro/rango para atender pendientes.
 - H2 permite cerrar un periodo solo cuando no existen bloqueantes abiertos.
@@ -808,7 +808,10 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - El cierre guarda `validation_summary`, `report_summary`, snapshot canonico y hash SHA-256.
 - Vera Time no calcula nomina, pagos, dispersion, ISR, IMSS ni recibos.
 - El modulo de periodos no dictamina jornadas ni corrige incidencias; esas acciones siguen en Jornadas.
-- Pendiente: exportacion CSV/API del periodo, conformidad digital y entrega a sistemas externos.
+- Exportacion CSV base de periodo cerrado: implementada para descargar el paquete operativo de asistencia hacia nomina externa.
+- H5 agrega retardo y salida anticipada como minutos calculados contra la programacion diaria publicada, usando tolerancias configurables por empresa, y los expone como alertas operativas visibles cuando superan la tolerancia.
+- El CSV de periodo cerrado exporta `minutos_retardo` y `minutos_salida_anticipada` desde `work_day_calculations`.
+- Pendiente: API de periodo/exportacion, conformidad digital y entrega directa a sistemas externos.
 
 ## Bloque H4 - incidencias y ausencias operativas
 
@@ -821,7 +824,8 @@ Estado: implementado/candidato a cierre, condicionado a validacion verde final.
 - La ausencia aprobada evita la alerta automatica de falta y permite que el cierre de periodo no la trate como bloqueante.
 - El reporte base de periodo distingue faltas sin justificar de ausencias justificadas y ausencias no pagadas como hechos operativos.
 - No calcula nomina, descuentos, subsidios, prima vacacional, CFDI, claves SAT obligatorias ni percepciones/deducciones.
-- Pendiente: exportar estas incidencias en CSV/API del periodo y definir si se agregaran referencias/folios mas formales por tipo documental.
+- CSV de periodo ya incluye incidencias/ausencias operativas cuando existen en el snapshot de jornada.
+- Pendiente: exponer incidencias por API del periodo y definir si se agregaran referencias/folios mas formales por tipo documental.
 
 ## Bloque Admin A1 - alta guiada de empresa
 

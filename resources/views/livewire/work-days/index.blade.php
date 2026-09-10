@@ -44,6 +44,12 @@ new class extends Component {
     #[Url(as: 'dictamen')]
     public string $incidentStatusFilter = '';
 
+    #[Url(as: 'situacion')]
+    public string $situationFilter = '';
+
+    #[Url(as: 'atencion')]
+    public string $attentionFilter = '';
+
     #[Url]
     public string $search = '';
 
@@ -74,6 +80,33 @@ new class extends Component {
             'resolution' => '',
         ];
     }
+
+    private function syncAlertResolutionForm(?Alert $alert): void
+    {
+        $this->alertResolutionForm = $this->defaultAlertResolutionForm();
+
+        if (! $alert) {
+            return;
+        }
+
+        $options = $this->alertResolutionOptions($alert);
+        $currentStatus = array_key_exists($alert->status, $options)
+            ? $alert->status
+            : array_key_first($options);
+
+        $this->alertResolutionForm['status'] = $currentStatus;
+        $this->alertResolutionForm['resolution'] = (string) ($alert->resolution ?? '');
+
+        if ($alert->rule_code === 'scheduled_absence') {
+            $linkedIncident = $this->linkedAttendanceIncidentForAlert($alert);
+
+            if ($linkedIncident) {
+                $this->alertResolutionForm['incident_type'] = $linkedIncident->incident_type;
+                $this->alertResolutionForm['payment_status'] = $linkedIncident->payment_status;
+            }
+        }
+    }
+
     public function mount(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -123,7 +156,7 @@ new class extends Component {
 
         $this->selectedWorkDayId = $workDay->id;
         $this->selectedAlertId = $firstAlert?->id;
-        $this->alertResolutionForm = $this->defaultAlertResolutionForm();
+        $this->syncAlertResolutionForm($firstAlert);
         $this->showAlertsPanel = true;
     }
 
@@ -167,8 +200,9 @@ new class extends Component {
         Gate::authorize('resolve', $alert);
 
         try {
-            if ($alert->rule_code === 'scheduled_absence' && $validated['alertResolutionForm']['status'] === Alert::STATUS_JUSTIFIED) {
+            if ($alert->rule_code === 'scheduled_absence') {
                 $absenceAction->handle($company, $alert, auth()->user(), [
+                    'status' => $validated['alertResolutionForm']['status'],
                     'incident_type' => $validated['alertResolutionForm']['incident_type'] ?: AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE,
                     'payment_status' => $validated['alertResolutionForm']['payment_status'] ?: AttendanceIncident::PAYMENT_PAID,
                     'resolution' => $validated['alertResolutionForm']['resolution'],
@@ -200,6 +234,24 @@ new class extends Component {
         $this->alertResolutionForm['resolution'] = '';
         Session::flash('status', 'Incidencia dictaminada. Aun quedan incidencias pendientes para la jornada.');
         $this->resetPage();
+    }
+
+    public function updatedSelectedAlertId(): void
+    {
+        $this->syncAlertResolutionForm(Alert::query()->find((int) $this->selectedAlertId));
+    }
+
+    public function linkedAttendanceIncidentForAlert(?Alert $alert): ?AttendanceIncident
+    {
+        if (! $alert || $alert->rule_code !== 'scheduled_absence') {
+            return null;
+        }
+
+        return AttendanceIncident::query()
+            ->where('company_id', $alert->company_id)
+            ->where('metadata->source_alert_id', $alert->id)
+            ->latest('id')
+            ->first();
     }
 
     public function processWorkDays(ProcessCompanyWorkDaysAction $action, CurrentCompany $currentCompany): void
@@ -275,6 +327,16 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function updatedSituationFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedAttentionFilter(): void
+    {
+        $this->resetPage();
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -293,6 +355,8 @@ new class extends Component {
         $this->scheduleStatusFilter = '';
         $this->incidentTypeFilter = '';
         $this->incidentStatusFilter = '';
+        $this->situationFilter = '';
+        $this->attentionFilter = '';
         $this->search = '';
         $this->resetPage();
     }
@@ -313,10 +377,12 @@ new class extends Component {
             'center_ids' => $visibleWorkDayAccess['center_ids'],
             'relationship_ids' => $visibleWorkDayAccess['relationship_ids'],
             'center_id' => $this->centerId === '' ? null : (int) $this->centerId,
-            'status' => $this->statusFilter === '' ? null : $this->statusFilter,
-            'schedule_status' => $this->scheduleStatusFilter === '' ? null : $this->scheduleStatusFilter,
-            'incident_type' => $this->incidentTypeFilter === '' ? null : $this->incidentTypeFilter,
-            'incident_status' => $this->incidentStatusFilter === '' ? null : $this->incidentStatusFilter,
+            'status' => $this->situationFilter === '' && $this->statusFilter !== '' ? $this->statusFilter : null,
+            'schedule_status' => $this->situationFilter === '' && $this->scheduleStatusFilter !== '' ? $this->scheduleStatusFilter : null,
+            'incident_type' => $this->situationFilter === '' && $this->incidentTypeFilter !== '' ? $this->incidentTypeFilter : null,
+            'incident_status' => $this->attentionFilter === '' && $this->incidentStatusFilter !== '' ? $this->incidentStatusFilter : null,
+            'situation' => $this->situationFilter === '' ? null : $this->situationFilter,
+            'attention' => $this->attentionFilter === '' ? null : $this->attentionFilter,
             'search' => $this->search,
         ]);
 
@@ -528,23 +594,48 @@ new class extends Component {
     {
         return match ($alert?->rule_code) {
             'scheduled_absence' => [
-                Alert::STATUS_JUSTIFIED => 'Enviar a incidencia/ausencia',
                 Alert::STATUS_CORRECTED => 'Confirmar falta',
+                Alert::STATUS_JUSTIFIED => 'Enviar a incidencia/ausencia',
                 Alert::STATUS_CLOSED => 'No procede',
             ],
             'overtime_detected' => [
-                Alert::STATUS_JUSTIFIED => 'Autorizar tiempo extra',
+                Alert::STATUS_JUSTIFIED => 'Confirmar tiempo extra',
                 Alert::STATUS_CORRECTED => 'No autorizar',
                 Alert::STATUS_CLOSED => 'No procede',
             ],
             'incomplete_work_day' => [
+                Alert::STATUS_CORRECTED => 'Confirmar jornada incompleta',
                 Alert::STATUS_JUSTIFIED => 'Justificar jornada incompleta',
-                Alert::STATUS_CORRECTED => 'Confirmar incidencia',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'late_arrival_detected' => [
+                Alert::STATUS_CORRECTED => 'Confirmar retardo',
+                Alert::STATUS_JUSTIFIED => 'Justificar retardo',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'early_departure_detected' => [
+                Alert::STATUS_CORRECTED => 'Confirmar salida anticipada',
+                Alert::STATUS_JUSTIFIED => 'Justificar salida anticipada',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'twelve_hours_exceeded' => [
+                Alert::STATUS_CORRECTED => 'Confirmar jornada mayor a 12 horas',
+                Alert::STATUS_JUSTIFIED => 'Justificar jornada mayor a 12 horas',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'sunday_work' => [
+                Alert::STATUS_JUSTIFIED => 'Aprobar domingo trabajado',
+                Alert::STATUS_CORRECTED => 'No aprobar domingo trabajado',
+                Alert::STATUS_CLOSED => 'No procede',
+            ],
+            'mandatory_rest_work' => [
+                Alert::STATUS_JUSTIFIED => 'Aprobar descanso trabajado',
+                Alert::STATUS_CORRECTED => 'No aprobar descanso trabajado',
                 Alert::STATUS_CLOSED => 'No procede',
             ],
             'weekly_rest_missing' => [
-                Alert::STATUS_JUSTIFIED => 'Justificar descanso',
                 Alert::STATUS_CORRECTED => 'Confirmar incidencia',
+                Alert::STATUS_JUSTIFIED => 'Justificar descanso',
                 Alert::STATUS_CLOSED => 'No procede',
             ],
             default => [
@@ -581,6 +672,36 @@ new class extends Component {
             'incomplete_work_day' => match ($alert->status) {
                 Alert::STATUS_JUSTIFIED => 'Jornada incompleta justificada',
                 Alert::STATUS_CORRECTED => 'Incidencia confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'late_arrival_detected' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Retardo justificado',
+                Alert::STATUS_CORRECTED => 'Retardo confirmado',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'early_departure_detected' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Salida anticipada justificada',
+                Alert::STATUS_CORRECTED => 'Salida anticipada confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'twelve_hours_exceeded' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Jornada mayor a 12 horas justificada',
+                Alert::STATUS_CORRECTED => 'Jornada mayor a 12 horas confirmada',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'sunday_work' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Domingo trabajado aprobado',
+                Alert::STATUS_CORRECTED => 'Domingo trabajado no aprobado',
+                Alert::STATUS_CLOSED => 'No procede',
+                default => $this->alertStatusLabel($alert->status),
+            },
+            'mandatory_rest_work' => match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Descanso trabajado aprobado',
+                Alert::STATUS_CORRECTED => 'Descanso trabajado no aprobado',
                 Alert::STATUS_CLOSED => 'No procede',
                 default => $this->alertStatusLabel($alert->status),
             },
@@ -1043,7 +1164,7 @@ new class extends Component {
     @endif
 
     <section class="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[0.85fr_0.85fr_1fr_1fr_1fr_1fr_1fr_auto] xl:items-end">
+        <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-[0.75fr_0.75fr_1fr_1.1fr_1fr_1fr_auto] xl:items-end">
             <flux:input label="Desde" type="date" max="{{ $todayDate }}" wire:model.live="dateFrom" />
             <flux:input label="Hasta" type="date" max="{{ $todayDate }}" wire:model.live="dateTo" />
 
@@ -1054,42 +1175,39 @@ new class extends Component {
                 @endforeach
             </flux:select>
 
-            <flux:select label="Horario" wire:model.live="scheduleStatusFilter">
-                <flux:select.option value="">Todos</flux:select.option>
-                <flux:select.option value="scheduled">Programadas</flux:select.option>
-                <flux:select.option value="unscheduled">No programadas</flux:select.option>
-            </flux:select>
+            <flux:input label="Trabajador" placeholder="Clave o nombre" wire:model.live.debounce.400ms="search" />
 
-            <flux:select label="Resultado" wire:model.live="statusFilter">
+            <flux:select label="Situación" wire:model.live="situationFilter">
                 <flux:select.option value="">Todas</flux:select.option>
-                <flux:select.option value="with_alerts">Con alertas</flux:select.option>
-                <flux:select.option value="calculated">Calculadas</flux:select.option>
-                <flux:select.option value="under_review">En revision</flux:select.option>
-                <flux:select.option value="pending">Pendientes</flux:select.option>
-            </flux:select>
-
-            <flux:select label="Incidencia" wire:model.live="incidentTypeFilter">
-                <flux:select.option value="">Todas</flux:select.option>
-                <flux:select.option value="with_incidents">Solo con incidencia</flux:select.option>
+                <flux:select.option value="normal">Normal</flux:select.option>
                 <flux:select.option value="scheduled_absence">Falta</flux:select.option>
+                <flux:select.option value="justified_absence">Falta justificada</flux:select.option>
+                <flux:select.option value="vacation">Vacaciones</flux:select.option>
+                <flux:select.option value="incapacity">Incapacidad</flux:select.option>
+                <flux:select.option value="permission">Permiso</flux:select.option>
+                <flux:select.option value="overtime_detected">Tiempo extra</flux:select.option>
+                <flux:select.option value="late_arrival_detected">Retardo</flux:select.option>
+                <flux:select.option value="early_departure_detected">Salida anticipada</flux:select.option>
                 <flux:select.option value="incomplete_work_day">Evento incompleto</flux:select.option>
                 <flux:select.option value="unscheduled_work_day">No programada</flux:select.option>
-                <flux:select.option value="overtime_detected">Hora extra</flux:select.option>
                 <flux:select.option value="sunday_work">Domingo trabajado</flux:select.option>
                 <flux:select.option value="mandatory_rest_work">Descanso obligatorio</flux:select.option>
                 <flux:select.option value="weekly_rest_missing">Semana sin descanso</flux:select.option>
+                <flux:select.option value="rest">Descanso</flux:select.option>
+                <flux:select.option value="without_calculation">Sin cálculo</flux:select.option>
             </flux:select>
 
-            <flux:select label="Dictamen" wire:model.live="incidentStatusFilter">
+            <flux:select label="Atención" wire:model.live="attentionFilter">
                 <flux:select.option value="">Todos</flux:select.option>
-                <flux:select.option value="pending">Pendiente</flux:select.option>
-                <flux:select.option value="dictated">Dictaminada</flux:select.option>
+                <flux:select.option value="requires_attention">Requiere dictamen</flux:select.option>
+                <flux:select.option value="resolved">Ya dictaminada</flux:select.option>
+                <flux:select.option value="closed_not_applicable">Cerrada / no procede</flux:select.option>
                 <flux:select.option value="none">Sin incidencia</flux:select.option>
             </flux:select>
 
-            <flux:input label="Trabajador" placeholder="Clave o nombre" wire:model.live.debounce.400ms="search" />
-
-            <flux:button type="button" variant="ghost" wire:click="clearFilters">Limpiar</flux:button>
+            <div class="md:col-start-4 xl:col-start-auto xl:self-end">
+                <flux:button type="button" variant="ghost" wire:click="clearFilters" class="w-full xl:w-auto">Limpiar</flux:button>
+            </div>
         </div>
     </section>
 
@@ -1268,7 +1386,7 @@ new class extends Component {
                         @forelse ($selectedWorkDay->alerts as $alert)
                             <label class="block rounded-md border border-zinc-200 p-4 dark:border-zinc-700 {{ $selectedAlertId === $alert->id ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-zinc-900' }}">
                                 <div class="flex items-start gap-3">
-                                    @if ($canResolveAlerts && in_array($alert->status, Alert::OPEN_STATUSES, true))
+                                    @if ($canResolveAlerts)
                                         <input type="radio" class="mt-1" wire:model.live="selectedAlertId" value="{{ $alert->id }}">
                                     @else
                                         <span class="mt-1 h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700"></span>
@@ -1310,13 +1428,14 @@ new class extends Component {
                         @endforelse
                     </section>
 
-                    @if ($canResolveAlerts && $selectedWorkDay->alerts->contains(fn ($alert) => in_array($alert->status, Alert::OPEN_STATUSES, true)))
+                    @if ($canResolveAlerts && $selectedWorkDay->alerts->isNotEmpty())
                         @php($selectedAlertForResolution = $selectedWorkDay->alerts->firstWhere('id', $selectedAlertId))
+                        @php($linkedAbsenceIncident = $this->linkedAttendanceIncidentForAlert($selectedAlertForResolution))
                         <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
                             <flux:select label="Dictamen" wire:model.live="alertResolutionForm.status">
-                                <flux:select.option value="{{ Alert::STATUS_JUSTIFIED }}">{{ $this->alertResolutionOptionLabel($selectedAlertForResolution, Alert::STATUS_JUSTIFIED) }}</flux:select.option>
-                                <flux:select.option value="{{ Alert::STATUS_CORRECTED }}">{{ $this->alertResolutionOptionLabel($selectedAlertForResolution, Alert::STATUS_CORRECTED) }}</flux:select.option>
-                                <flux:select.option value="{{ Alert::STATUS_CLOSED }}">{{ $this->alertResolutionOptionLabel($selectedAlertForResolution, Alert::STATUS_CLOSED) }}</flux:select.option>
+                                @foreach ($this->alertResolutionOptions($selectedAlertForResolution) as $status => $label)
+                                    <flux:select.option value="{{ $status }}">{{ $label }}</flux:select.option>
+                                @endforeach
                             </flux:select>
 
                             @if ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $alertResolutionForm['status'] === Alert::STATUS_JUSTIFIED)
@@ -1340,7 +1459,15 @@ new class extends Component {
                                 </div>
 
                                 <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                                    Se creara una incidencia/ausencia aprobada para esta fecha y la jornada se recalculara. No se registran horas trabajadas.
+                                    @if ($linkedAbsenceIncident)
+                                        Se actualizara la incidencia/ausencia vinculada y la jornada se recalculara. No se creara un duplicado.
+                                    @else
+                                        Se creara una incidencia/ausencia aprobada para esta fecha y la jornada se recalculara. No se registran horas trabajadas.
+                                    @endif
+                                </div>
+                            @elseif ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $linkedAbsenceIncident && $linkedAbsenceIncident->status === AttendanceIncident::STATUS_APPROVED)
+                                <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                                    Esta falta tiene una incidencia/ausencia vinculada. Al guardar este dictamen, esa incidencia quedara cancelada y la jornada se recalculara.
                                 </div>
                             @endif
 
@@ -1348,7 +1475,11 @@ new class extends Component {
 
                             <div class="flex justify-end gap-2">
                                 <button type="button" class="btn-ghost" wire:click="closeAlertsPanel">Cancelar</button>
-                                <button type="submit" class="btn-primary">Guardar dictamen</button>
+                                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="resolveSelectedAlert">
+                                    <span wire:loading wire:target="resolveSelectedAlert" class="btn-spinner"></span>
+                                    <span wire:loading.remove wire:target="resolveSelectedAlert">Guardar dictamen</span>
+                                    <span wire:loading wire:target="resolveSelectedAlert">Guardando</span>
+                                </button>
                             </div>
                         </form>
                     @else
@@ -1423,7 +1554,11 @@ new class extends Component {
 
             <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
                 <button type="button" class="btn-ghost" wire:click="closeProcessPanel">Cancelar</button>
-                <button type="submit" class="btn-primary">Recalcular</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="processWorkDays">
+                    <span wire:loading wire:target="processWorkDays" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="processWorkDays">Recalcular</span>
+                    <span wire:loading wire:target="processWorkDays">Recalculando</span>
+                </button>
             </div>
         </form>
     </x-side-panel>

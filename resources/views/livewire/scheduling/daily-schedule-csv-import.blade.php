@@ -51,8 +51,10 @@
                     </label>
                 </div>
 
-                <button type="button" class="btn-primary btn-sm" wire:click="uploadAndValidate" wire:loading.attr="disabled">
-                    Cargar y validar
+                <button type="button" class="btn-primary btn-sm" wire:click="uploadAndValidate" wire:loading.attr="disabled" wire:target="uploadAndValidate,file">
+                    <span wire:loading wire:target="uploadAndValidate,file" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="uploadAndValidate,file">Cargar y validar</span>
+                    <span wire:loading wire:target="uploadAndValidate,file">Validando</span>
                 </button>
             </div>
 
@@ -73,7 +75,11 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @if (in_array($activeImport->status, ['uploaded', 'invalid', 'validated'], true))
-                                <button type="button" class="btn-ghost btn-sm" wire:click="validateImport">Revalidar</button>
+                                <button type="button" class="btn-ghost btn-sm" wire:click="validateImport" wire:loading.attr="disabled" wire:target="validateImport">
+                                    <span wire:loading wire:target="validateImport" class="btn-spinner"></span>
+                                    <span wire:loading.remove wire:target="validateImport">Revalidar</span>
+                                    <span wire:loading wire:target="validateImport">Revalidando</span>
+                                </button>
                             @endif
                             @if ($activeImport->invalid_rows > 0 || $activeImport->warning_rows > 0)
                                 <a href="{{ route('scheduling.daily.imports.errors', $activeImport) }}" class="btn-outline btn-sm">
@@ -96,8 +102,10 @@
                                         <input type="checkbox" wire:model="confirmApply" class="rounded border-surface-line text-brand-blue focus:ring-brand-blue">
                                         <span>Vista previa revisada</span>
                                     </label>
-                                    <button type="button" class="btn-primary btn-sm" wire:click="applyImport" wire:loading.attr="disabled">
-                                        Enviar horarios al borrador
+                                    <button type="button" class="btn-primary btn-sm" wire:click="applyImport" wire:loading.attr="disabled" wire:target="applyImport">
+                                        <span wire:loading wire:target="applyImport" class="btn-spinner"></span>
+                                        <span wire:loading.remove wire:target="applyImport">Enviar horarios al borrador</span>
+                                        <span wire:loading wire:target="applyImport">Enviando</span>
                                     </button>
                                 </div>
                             </div>

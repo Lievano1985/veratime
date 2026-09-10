@@ -110,10 +110,265 @@ class WorkDayOperationalListTest extends TestCase
             ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-04', 'incident' => 'with_incidents']))
             ->assertOk()
             ->assertSee('Todas')
-            ->assertSee('Solo con incidencia')
+            ->assertSee('Situación')
+            ->assertSee('Atención')
             ->assertSee('Falta')
             ->assertSee('2026-08-03')
             ->assertDontSee('Bruno Normal');
+    }
+
+    public function test_work_days_incident_filter_ignores_closed_not_applicable_alerts(): void
+    {
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
+
+        $calculation = WorkDayCalculation::factory()->create([
+            'company_id' => $company->id,
+            'work_day_id' => $workDay->id,
+            'status' => WorkDayCalculation::STATUS_ACTIVE,
+            'total_work_minutes' => 480,
+        ]);
+
+        $workDay->forceFill([
+            'active_calculation_id' => $calculation->id,
+            'status' => WorkDay::STATUS_CALCULATED,
+            'valid_time_event_count' => 2,
+        ])->save();
+
+        $alertType = AlertType::query()->create([
+            'code' => 'scheduled_absence',
+            'name' => 'Falta',
+            'description' => 'Jornada programada sin eventos validos.',
+            'default_severity' => 'high',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $alertType->id,
+            'worker_id' => $workDay->worker_id,
+            'work_day_id' => $workDay->id,
+            'work_day_calculation_id' => $calculation->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_CLOSED,
+            'title' => 'Falta',
+            'description' => 'La jornada estaba programada y no tenia eventos validos de asistencia.',
+            'rule_code' => 'scheduled_absence',
+            'detected_at' => '2026-08-04 09:00:00',
+            'resolution' => 'Cerrada / no procede por recalculo.',
+            'resolved_at' => '2026-08-04 10:00:00',
+            'fingerprint' => 'closed-not-applicable-filter-demo',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-03', 'incident' => 'with_incidents']))
+            ->assertOk()
+            ->assertDontSee('Ana Demo Lopez')
+            ->assertSee('Sin jornadas en el rango seleccionado.');
+    }
+
+    public function test_closed_not_applicable_attention_filter_only_shows_manually_closed_alerts(): void
+    {
+        [$company, $user, $manualWorkDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Manual');
+
+        $automaticWorker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'AUTO',
+            'full_name' => 'Bruno Automatico',
+        ]);
+        $automaticWorkDay = WorkDay::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $automaticWorker->id,
+            'center_id' => $manualWorkDay->center_id,
+            'work_date' => '2026-08-04',
+            'timezone' => 'America/Mexico_City',
+            'status' => WorkDay::STATUS_CALCULATED,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 2,
+        ]);
+        $automaticCalculation = WorkDayCalculation::factory()->create([
+            'company_id' => $company->id,
+            'work_day_id' => $automaticWorkDay->id,
+            'status' => WorkDayCalculation::STATUS_ACTIVE,
+            'total_work_minutes' => 480,
+        ]);
+        $automaticWorkDay->forceFill(['active_calculation_id' => $automaticCalculation->id])->save();
+
+        $alertType = AlertType::query()->create([
+            'code' => 'scheduled_absence',
+            'name' => 'Falta',
+            'description' => 'Jornada programada sin eventos validos.',
+            'default_severity' => 'high',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $alertType->id,
+            'worker_id' => $manualWorkDay->worker_id,
+            'work_day_id' => $manualWorkDay->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_CLOSED,
+            'title' => 'Falta',
+            'description' => 'La falta no procede por aclaracion operativa.',
+            'rule_code' => 'scheduled_absence',
+            'detected_at' => '2026-08-03 21:35:00',
+            'resolution' => 'No procede por aclaracion operativa.',
+            'resolved_by' => $user->id,
+            'resolved_at' => '2026-08-04 10:00:00',
+            'metadata' => [
+                'resolution' => [
+                    'status' => Alert::STATUS_CLOSED,
+                    'actor_id' => $user->id,
+                    'resolved_at' => '2026-08-04 10:00:00',
+                ],
+            ],
+            'fingerprint' => 'manual-closed-not-applicable-demo',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $alertType->id,
+            'worker_id' => $automaticWorkDay->worker_id,
+            'work_day_id' => $automaticWorkDay->id,
+            'work_day_calculation_id' => $automaticCalculation->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_CLOSED,
+            'title' => 'Falta',
+            'description' => 'La jornada estaba programada y no tenia eventos validos de asistencia.',
+            'rule_code' => 'scheduled_absence',
+            'detected_at' => '2026-08-04 09:00:00',
+            'resolution' => 'Cerrada automaticamente por recalculo.',
+            'resolved_at' => '2026-08-04 10:00:00',
+            'fingerprint' => 'automatic-closed-recalculation-demo',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', [
+                'from' => '2026-08-03',
+                'to' => '2026-08-04',
+                'atencion' => 'closed_not_applicable',
+            ]))
+            ->assertOk()
+            ->assertSee('Ana Manual')
+            ->assertDontSee('Bruno Automatico');
+    }
+
+    public function test_work_days_situation_and_attention_filters_use_clear_business_labels(): void
+    {
+        [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
+        $normalWorker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'NOR',
+            'full_name' => 'Bruno Normal',
+        ]);
+        $normalWorkDay = WorkDay::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $normalWorker->id,
+            'center_id' => $workDay->center_id,
+            'work_date' => '2026-08-04',
+            'timezone' => 'America/Mexico_City',
+            'status' => WorkDay::STATUS_CALCULATED,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 2,
+        ]);
+        $calculation = WorkDayCalculation::factory()->create([
+            'company_id' => $company->id,
+            'work_day_id' => $normalWorkDay->id,
+            'status' => WorkDayCalculation::STATUS_ACTIVE,
+            'total_work_minutes' => 480,
+        ]);
+        $normalWorkDay->forceFill(['active_calculation_id' => $calculation->id])->save();
+
+        $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', [
+                'from' => '2026-08-03',
+                'to' => '2026-08-04',
+                'situacion' => 'scheduled_absence',
+                'atencion' => 'requires_attention',
+            ]))
+            ->assertOk()
+            ->assertSee('Situación')
+            ->assertSee('Atención')
+            ->assertSee('Requiere dictamen')
+            ->assertSee('Falta')
+            ->assertSee('Ana Demo Lopez')
+            ->assertDontSee('Bruno Normal');
+    }
+
+    public function test_requires_attention_filter_excludes_already_resolved_absence_candidates(): void
+    {
+        [$company, $user, $resolvedWorkDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
+
+        $rawWorker = Worker::factory()->create([
+            'company_id' => $company->id,
+            'employee_code' => 'RAW',
+            'full_name' => 'Bruno Sin Dictamen',
+        ]);
+        WorkDay::factory()->create([
+            'company_id' => $company->id,
+            'worker_id' => $rawWorker->id,
+            'center_id' => $resolvedWorkDay->center_id,
+            'work_date' => '2026-08-03',
+            'timezone' => 'America/Mexico_City',
+            'status' => WorkDay::STATUS_PENDING,
+            'schedule_status' => WorkDay::SCHEDULE_STATUS_SCHEDULED,
+            'day_type' => 'shift',
+            'expected_work_minutes' => 480,
+            'valid_time_event_count' => 0,
+        ]);
+
+        $alertType = AlertType::query()->create([
+            'code' => 'scheduled_absence',
+            'name' => 'Falta',
+            'description' => 'Jornada programada sin eventos validos.',
+            'default_severity' => 'high',
+            'category' => 'attendance',
+            'status' => 'active',
+        ]);
+
+        Alert::query()->create([
+            'company_id' => $company->id,
+            'alert_type_id' => $alertType->id,
+            'worker_id' => $resolvedWorkDay->worker_id,
+            'work_day_id' => $resolvedWorkDay->id,
+            'severity' => 'high',
+            'status' => Alert::STATUS_CORRECTED,
+            'title' => 'Falta',
+            'description' => 'La falta ya fue dictaminada.',
+            'rule_code' => 'scheduled_absence',
+            'detected_at' => '2026-08-04 09:00:00',
+            'resolution' => 'Dictaminada por RH.',
+            'resolved_by' => $user->id,
+            'resolved_at' => '2026-08-04 10:00:00',
+            'metadata' => [
+                'resolution' => [
+                    'status' => Alert::STATUS_CORRECTED,
+                    'actor_id' => $user->id,
+                    'resolved_at' => '2026-08-04 10:00:00',
+                ],
+            ],
+            'fingerprint' => 'resolved-absence-candidate-demo',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', [
+                'from' => '2026-08-03',
+                'to' => '2026-08-03',
+                'atencion' => 'requires_attention',
+            ]))
+            ->assertOk()
+            ->assertDontSee('Ana Demo Lopez')
+            ->assertSee('Bruno Sin Dictamen');
     }
 
     public function test_work_days_list_caps_future_dates_to_company_today(): void
@@ -333,7 +588,7 @@ class WorkDayOperationalListTest extends TestCase
             ->assertSee('Tiempo extra detectado')
             ->assertSee('Jornada incompleta')
             ->assertDontSee('La jornada estaba programada y no tenia eventos validos de asistencia.')
-            ->assertSee('Dictaminada');
+            ->assertSee('Pendiente');
     }
 
     public function test_work_days_list_does_not_duplicate_absence_badge_when_alert_and_candidate_match(): void

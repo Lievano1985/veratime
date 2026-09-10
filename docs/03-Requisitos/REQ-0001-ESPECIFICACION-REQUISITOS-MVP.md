@@ -1,6 +1,6 @@
-﻿---
+---
 id: REQ-0001
-title: Especificación de requisitos del MVP
+title: EspecificaciÃ³n de requisitos del MVP
 project: Vera Time
 version: 1.0.0
 status: Draft
@@ -15,31 +15,31 @@ tags:
   - veratime
 ---
 
-# REQ-0001 — Especificación de requisitos del MVP
+# REQ-0001 â€” EspecificaciÃ³n de requisitos del MVP
 
 ## 1. Objetivo
 
-Definir los requisitos funcionales y no funcionales del MVP de Vera Time que deberá estar listo para producción antes del 1 de enero de 2027.
+Definir los requisitos funcionales y no funcionales del MVP de Vera Time que deberÃ¡ estar listo para producciÃ³n antes del 1 de enero de 2027.
 
 Este documento convierte en especificaciones de producto:
 
-- La investigación jurídica aprobada.
+- La investigaciÃ³n jurÃ­dica aprobada.
 - El modelo de negocio.
 - El alcance del MVP.
 - El presupuesto.
 - El roadmap acelerado.
 - Las decisiones sobre alertas preventivas.
-- La revisión y conformidad digital de la jornada.
+- La revisiÃ³n y conformidad digital de la jornada.
 
-No define todavía tablas físicas, endpoints, componentes de interfaz ni arquitectura detallada.
+No define todavÃ­a tablas fÃ­sicas, endpoints, componentes de interfaz ni arquitectura detallada.
 
 ---
 
 ## 2. Alcance del MVP
 
-El MVP de Vera Time deberá concentrarse en entregar una plataforma operativa, vendible y legalmente útil antes del 1 de enero de 2027.
+El MVP de Vera Time deberÃ¡ concentrarse en entregar una plataforma operativa, vendible y legalmente Ãºtil antes del 1 de enero de 2027.
 
-El alcance se divide en capacidades indispensables. Cada capacidad debe aportar valor directo al cumplimiento, a la operación diaria o a la evidencia documental.
+El alcance se divide en capacidades indispensables. Cada capacidad debe aportar valor directo al cumplimiento, a la operaciÃ³n diaria o a la evidencia documental.
 
 ### 2.0 Regla de evidencia operativa
 
@@ -81,13 +81,13 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 
 **Incluye:**
 
-- Administración de múltiples empresas dentro de una sola plataforma.
-- Separación estricta de datos por empresa.
+- AdministraciÃ³n de mÃºltiples empresas dentro de una sola plataforma.
+- SeparaciÃ³n estricta de datos por empresa.
 - Usuarios con acceso a una o varias empresas.
 - Cambio de empresa activa cuando el usuario tenga permiso.
 - Roles y permisos por empresa.
-- Restricción de acceso por centro, área o grupo cuando aplique.
-- Plan o suscripción asignado por empresa.
+- RestricciÃ³n de acceso por centro, Ã¡rea o grupo cuando aplique.
+- Plan o suscripciÃ³n asignado por empresa.
 - Estado de empresa: activa, suspendida, cancelada o en piloto.
 
 **No incluye en el MVP:**
@@ -95,41 +95,41 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Ambientes dedicados por cliente.
 - Marca blanca.
 - Subdominios personalizados.
-- Facturación automatizada avanzada.
+- FacturaciÃ³n automatizada avanzada.
 - Marketplace de integraciones.
 
-**Valor:** permite operar Vera Time como SaaS real, atendiendo varias empresas sin crear una instalación separada para cada cliente.
+**Valor:** permite operar Vera Time como SaaS real, atendiendo varias empresas sin crear una instalaciÃ³n separada para cada cliente.
 
-**Criterio de validación:** una empresa no debe poder ver, modificar ni exportar información de otra empresa bajo ninguna condición.
+**Criterio de validaciÃ³n:** una empresa no debe poder ver, modificar ni exportar informaciÃ³n de otra empresa bajo ninguna condiciÃ³n.
 
-### 2.2 Empresas, centros y estructura básica
+### 2.2 Empresas, centros y estructura bÃ¡sica
 
 **Incluye:**
 
 - Registro de empresa.
-- Razón social.
+- RazÃ³n social.
 - Nombre comercial.
 - RFC.
 - Zona horaria principal.
 - Centros de trabajo.
 - Zona horaria por centro.
 - Estado del centro.
-- Datos básicos de contacto.
-- Configuración inicial del periodo de nómina o cierre.
-- Configuración de días laborales generales.
-- Configuración de descansos obligatorios aplicables.
+- Datos bÃ¡sicos de contacto.
+- ConfiguraciÃ³n inicial del periodo de nÃ³mina o cierre.
+- ConfiguraciÃ³n de dÃ­as laborales generales.
+- ConfiguraciÃ³n de descansos obligatorios aplicables.
 
 **No incluye en el MVP:**
 
 - Estructura organizacional compleja.
 - Organigramas.
-- Presupuestos por área.
-- Administración avanzada de sucursales.
-- Múltiples países.
+- Presupuestos por Ã¡rea.
+- AdministraciÃ³n avanzada de sucursales.
+- MÃºltiples paÃ­ses.
 
 **Valor:** permite ubicar correctamente a cada persona trabajadora, aplicar zona horaria, generar reportes por centro y delimitar evidencia.
 
-**Criterio de validación:** debe poder configurarse una empresa con al menos dos centros y generar reportes separados por cada uno.
+**Criterio de validaciÃ³n:** debe poder configurarse una empresa con al menos dos centros y generar reportes separados por cada uno.
 
 ### 2.3 Personas trabajadoras y relaciones laborales
 
@@ -146,63 +146,63 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Puesto.
 - Fecha de ingreso.
 - Estado: activo, baja, suspendido.
-- Relación laboral vigente.
+- RelaciÃ³n laboral vigente.
 - Historial de cambios relevantes.
-- Fecha de baja sin eliminación de registros.
+- Fecha de baja sin eliminaciÃ³n de registros.
 - Condiciones laborales con vigencia.
-- Modalidad: presencial, híbrida, teletrabajo básico o campo.
-- Día de descanso asignado.
+- Modalidad: presencial, hÃ­brida, teletrabajo bÃ¡sico o campo.
+- DÃ­a de descanso asignado.
 - Horario o turno aplicable.
-- Política de registro aplicable.
+- PolÃ­tica de registro aplicable.
 
 **No incluye en el MVP:**
 
 - Expediente laboral completo.
 - Documentos personales avanzados.
-- Contratos generados automáticamente.
+- Contratos generados automÃ¡ticamente.
 - Incapacidades.
 - Vacaciones.
-- Evaluaciones de desempeño.
+- Evaluaciones de desempeÃ±o.
 - Reclutamiento.
 
 **Valor:** es la base para calcular jornada, generar evidencia individual y cobrar por persona activa.
 
-**Criterio de validación:** una persona debe poder cambiar de horario o centro sin que se modifiquen sus jornadas históricas.
+**Criterio de validaciÃ³n:** una persona debe poder cambiar de horario o centro sin que se modifiquen sus jornadas histÃ³ricas.
 
 ### 2.4 Horarios, turnos y vigencias
 
 **Incluye:**
 
-- Catálogo de horarios.
+- CatÃ¡logo de horarios.
 - Tipo legal programado: diurno, nocturno o mixto.
 - Hora de entrada programada.
 - Hora de salida programada.
 - Pausas o descansos programados.
-- Días aplicables.
+- DÃ­as aplicables.
 - Vigencia del horario.
 - Turnos fijos.
-- Turnos rotativos básicos.
-- Asignación de turno por persona.
-- Asignación de turno por grupo.
+- Turnos rotativos bÃ¡sicos.
+- AsignaciÃ³n de turno por persona.
+- AsignaciÃ³n de turno por grupo.
 - Cambio de horario con fecha efectiva.
-- Día de descanso semanal.
+- DÃ­a de descanso semanal.
 - Calendario de descansos obligatorios.
-- Identificación de jornadas que cruzan medianoche.
+- IdentificaciÃ³n de jornadas que cruzan medianoche.
 
 **No incluye en el MVP:**
 
-- Planeación avanzada de turnos con optimización automática.
+- PlaneaciÃ³n avanzada de turnos con optimizaciÃ³n automÃ¡tica.
 - Bolsa de turnos.
 - Intercambio de turnos entre trabajadores.
 - Forecast de demanda.
-- Inteligencia para asignación automática.
+- Inteligencia para asignaciÃ³n automÃ¡tica.
 - Calendario laboral complejo por convenio colectivo.
 
-**Valor:** permite comparar lo planeado contra lo registrado y calcular si existe una posible desviación.
+**Valor:** permite comparar lo planeado contra lo registrado y calcular si existe una posible desviaciÃ³n.
 
-**Criterio de validación:** debe poder configurarse un trabajador con turno nocturno que inicia un día y termina al siguiente, sin romper el cálculo.
+**Criterio de validaciÃ³n:** debe poder configurarse un trabajador con turno nocturno que inicia un dÃ­a y termina al siguiente, sin romper el cÃ¡lculo.
 
-### 2.5 Registro electrónico de jornada
+### 2.5 Registro electrÃ³nico de jornada
 
 **Incluye:**
 
@@ -213,78 +213,78 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Registro desde web responsiva o PWA.
 - Registro desde kiosco o dispositivo compartido.
 - Captura administrativa justificada.
-- Importación de eventos por CSV.
+- ImportaciÃ³n de eventos por CSV.
 - API oficial para recibir eventos.
 - Fecha y hora del hecho.
-- Fecha y hora de recepción.
+- Fecha y hora de recepciÃ³n.
 - Zona horaria.
 - Fuente del evento.
-- Usuario, dispositivo o integración de origen.
+- Usuario, dispositivo o integraciÃ³n de origen.
 - Estado del evento.
-- Prevención de duplicados.
+- PrevenciÃ³n de duplicados.
 - Manejo de eventos fuera de orden.
-- Registro tardío.
-- Bitácora del evento.
-- No eliminación destructiva.
+- Registro tardÃ­o.
+- BitÃ¡cora del evento.
+- No eliminaciÃ³n destructiva.
 
 **No incluye en el MVP:**
 
-- App móvil nativa.
-- Checador biométrico propio.
+- App mÃ³vil nativa.
+- Checador biomÃ©trico propio.
 - Reconocimiento facial propio.
 - Huella digital propia.
 - GPS obligatorio.
 - Foto obligatoria.
 - Registro offline avanzado con app nativa.
-- Integración con todos los relojes checadores del mercado.
+- IntegraciÃ³n con todos los relojes checadores del mercado.
 
-**Valor:** cumple el núcleo del registro electrónico y genera la materia prima para cálculos, reportes y evidencia.
+**Valor:** cumple el nÃºcleo del registro electrÃ³nico y genera la materia prima para cÃ¡lculos, reportes y evidencia.
 
-**Criterio de validación:** una persona debe poder registrar entrada y salida; el sistema debe reconstruir la jornada y conservar la fuente del registro.
+**Criterio de validaciÃ³n:** una persona debe poder registrar entrada y salida; el sistema debe reconstruir la jornada y conservar la fuente del registro.
 
-### 2.6 Motor legal de cálculo
+### 2.6 Motor legal de cÃ¡lculo
 
 **Incluye:**
 
-- Reconstrucción de jornada a partir de eventos.
-- Clasificación diurna, nocturna o mixta.
-- Cálculo de minutos diurnos y nocturnos.
-- Límite diario por tipo de jornada.
-- Límite semanal vigente por año.
-- Cálculo de tiempo ordinario.
-- Cálculo de horas extraordinarias.
-- Separación de bandas de horas extra.
-- Validación de máximo diario de doce horas.
-- Descanso mínimo en jornada continua.
+- ReconstrucciÃ³n de jornada a partir de eventos.
+- ClasificaciÃ³n diurna, nocturna o mixta.
+- CÃ¡lculo de minutos diurnos y nocturnos.
+- LÃ­mite diario por tipo de jornada.
+- LÃ­mite semanal vigente por aÃ±o.
+- CÃ¡lculo de tiempo ordinario.
+- CÃ¡lculo de horas extraordinarias.
+- SeparaciÃ³n de bandas de horas extra.
+- ValidaciÃ³n de mÃ¡ximo diario de doce horas.
+- Descanso mÃ­nimo en jornada continua.
 - Pausas computables y no computables.
 - Trabajo en domingo.
 - Trabajo en descanso semanal.
 - Trabajo en descanso obligatorio.
-- Más de seis días consecutivos.
+- MÃ¡s de seis dÃ­as consecutivos.
 - Reglas legales versionadas.
-- Condiciones más favorables configurables.
-- Explicación del cálculo.
-- Recalculo después de corrección.
+- Condiciones mÃ¡s favorables configurables.
+- ExplicaciÃ³n del cÃ¡lculo.
+- Recalculo despuÃ©s de correcciÃ³n.
 
 **No incluye en el MVP:**
 
-- Cálculo completo de nómina.
+- CÃ¡lculo completo de nÃ³mina.
 - Impuestos.
 - Seguridad social.
-- Recibos de nómina.
-- Cálculo monetario definitivo.
-- Casos especiales de todos los capítulos laborales.
-- Interpretaciones jurídicas automáticas.
+- Recibos de nÃ³mina.
+- CÃ¡lculo monetario definitivo.
+- Casos especiales de todos los capÃ­tulos laborales.
+- Interpretaciones jurÃ­dicas automÃ¡ticas.
 
-**Valor:** convierte los eventos en información útil, explicable y defendible.
+**Valor:** convierte los eventos en informaciÃ³n Ãºtil, explicable y defendible.
 
-**Criterio de validación:** dado un conjunto de eventos, el sistema debe explicar qué regla aplicó, cuántas horas ordinarias calculó, si existieron horas extra y qué alertas generó.
+**Criterio de validaciÃ³n:** dado un conjunto de eventos, el sistema debe explicar quÃ© regla aplicÃ³, cuÃ¡ntas horas ordinarias calculÃ³, si existieron horas extra y quÃ© alertas generÃ³.
 
 ### 2.7 Alertas preventivas de posibles incumplimientos
 
 **Incluye:**
 
-- Generación automática de alertas.
+- GeneraciÃ³n automÃ¡tica de alertas.
 - Alertas por entrada faltante.
 - Alertas por salida faltante.
 - Eventos duplicados.
@@ -292,55 +292,57 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Jornada diaria excedida.
 - Jornada semanal excedida.
 - Horas extraordinarias.
-- Más de doce horas totales en un día.
+- Retardo.
+- Salida anticipada.
+- MÃ¡s de doce horas totales en un dÃ­a.
 - Descanso insuficiente.
-- Más de seis días consecutivos trabajados.
+- MÃ¡s de seis dÃ­as consecutivos trabajados.
 - Trabajo en domingo.
 - Trabajo en descanso obligatorio.
 - Horario no vigente.
-- Relación laboral no vigente.
-- Corrección pendiente.
+- RelaciÃ³n laboral no vigente.
+- CorrecciÃ³n pendiente.
 - Diferencia entre tiempo calculado y autorizado.
 - Diferencia entre tiempo autorizado y exportado.
 - Reporte de periodo con diferencias.
-- Niveles: informativa, advertencia, alta y crítica.
-- Estados: nueva, en revisión, pendiente de información, justificada, corregida y cerrada.
-- Responsable de atención.
+- Niveles: informativa, advertencia, alta y crÃ­tica.
+- Estados: nueva, en revisiÃ³n, pendiente de informaciÃ³n, justificada, corregida y cerrada.
+- Responsable de atenciÃ³n.
 - Comentarios.
 - Evidencia.
-- Resolución trazable.
-- Bloqueo de cierre cuando exista alerta crítica pendiente.
+- ResoluciÃ³n trazable.
+- Bloqueo de cierre cuando exista alerta crÃ­tica pendiente.
 
 **No incluye en el MVP:**
 
-- Predicción con inteligencia artificial.
-- Recomendaciones automáticas avanzadas.
-- Envío masivo por WhatsApp.
+- PredicciÃ³n con inteligencia artificial.
+- Recomendaciones automÃ¡ticas avanzadas.
+- EnvÃ­o masivo por WhatsApp.
 - Tablero avanzado de riesgos.
-- Priorización automática por impacto económico.
-- Dictamen jurídico automático.
+- PriorizaciÃ³n automÃ¡tica por impacto econÃ³mico.
+- Dictamen jurÃ­dico automÃ¡tico.
 
-**Valor:** permite actuar antes del cierre del periodo y evita que los problemas se descubran hasta la nómina, auditoría o inspección.
+**Valor:** permite actuar antes del cierre del periodo y evita que los problemas se descubran hasta la nÃ³mina, auditorÃ­a o inspecciÃ³n.
 
-**Criterio de validación:** si una jornada supera el límite configurado, el sistema debe generar una alerta neutral de posible desviación sin modificar el registro real.
+**Criterio de validaciÃ³n:** si una jornada supera el lÃ­mite configurado, el sistema debe generar una alerta neutral de posible desviaciÃ³n sin modificar el registro real.
 
 ### 2.8 Incidencias y correcciones no destructivas
 
 **Incluye:**
 
-- Creación automática de incidencia desde alerta.
-- Creación manual de incidencia.
-- Solicitud de corrección por persona trabajadora.
-- Solicitud de corrección por supervisor o RH.
+- CreaciÃ³n automÃ¡tica de incidencia desde alerta.
+- CreaciÃ³n manual de incidencia.
+- Solicitud de correcciÃ³n por persona trabajadora.
+- Solicitud de correcciÃ³n por supervisor o RH.
 - Tipos de incidencia.
 - Comentarios.
 - Evidencia.
 - Valor original.
 - Valor propuesto.
 - Motivo.
-- Aprobación o rechazo.
+- AprobaciÃ³n o rechazo.
 - Recalculo posterior.
-- Conservación de versión previa.
+- ConservaciÃ³n de versiÃ³n previa.
 - Historial completo.
 - Estado de controversia cuando no exista acuerdo.
 - Cierre de incidencia.
@@ -349,13 +351,13 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 
 - Flujos complejos con muchas aprobaciones.
 - Firma avanzada de cada incidencia.
-- Conciliación laboral formal.
-- Comunicación automática con autoridades.
+- ConciliaciÃ³n laboral formal.
+- ComunicaciÃ³n automÃ¡tica con autoridades.
 - Chat interno avanzado.
 
 **Valor:** permite corregir errores sin destruir evidencia ni perder confianza.
 
-**Criterio de validación:** una salida faltante debe poder corregirse mediante una solicitud aprobada, conservando el registro original y generando una nueva versión del cálculo.
+**Criterio de validaciÃ³n:** una salida faltante debe poder corregirse mediante una solicitud aprobada, conservando el registro original y generando una nueva versiÃ³n del cÃ¡lculo.
 
 ### 2.9 Portal de la persona trabajadora
 
@@ -364,13 +366,13 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Acceso individual.
 - Consulta de jornadas diarias.
 - Consulta semanal o por periodo.
-- Visualización de entradas y salidas.
-- Visualización de pausas.
-- Visualización de horas ordinarias.
-- Visualización de posibles horas extra.
-- Visualización de incidencias.
-- Visualización de alertas visibles para el trabajador.
-- Solicitud de aclaración.
+- VisualizaciÃ³n de entradas y salidas.
+- VisualizaciÃ³n de pausas.
+- VisualizaciÃ³n de horas ordinarias.
+- VisualizaciÃ³n de posibles horas extra.
+- VisualizaciÃ³n de incidencias.
+- VisualizaciÃ³n de alertas visibles para el trabajador.
+- Solicitud de aclaraciÃ³n.
 - Adjuntar evidencia.
 - Seguimiento de estado.
 - Consulta del reporte de cierre.
@@ -382,54 +384,54 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Chat completo.
 - Documentos laborales completos.
 - Vacaciones.
-- Recibos de nómina.
+- Recibos de nÃ³mina.
 - Beneficios.
 - Encuestas.
 
-**Valor:** da transparencia, reduce reclamos tardíos y permite que el trabajador participe en la validación de su información.
+**Valor:** da transparencia, reduce reclamos tardÃ­os y permite que el trabajador participe en la validaciÃ³n de su informaciÃ³n.
 
-**Criterio de validación:** una persona trabajadora debe poder entrar, ver su semana y solicitar una aclaración sobre un registro específico.
+**Criterio de validaciÃ³n:** una persona trabajadora debe poder entrar, ver su semana y solicitar una aclaraciÃ³n sobre un registro especÃ­fico.
 
 ### 2.10 Cierre de periodo y conformidad digital
 
 **Incluye:**
 
-- Configuración de periodo: semanal, quincenal, mensual o periodo de nómina.
+- ConfiguraciÃ³n de periodo: semanal, quincenal, mensual o periodo de nÃ³mina.
 - Cierre administrativo.
-- Revisión previa de alertas.
-- Generación de reporte individual.
+- RevisiÃ³n previa de alertas.
+- GeneraciÃ³n de reporte individual.
 - Versionamiento del reporte.
 - Estados del periodo.
-- Envío a revisión del trabajador.
-- Opción conforme.
-- Opción no conforme / solicitar aclaración.
-- Opción pendiente de revisión.
-- Confirmación expresa.
-- Texto de aceptación sin renuncia de derechos.
+- EnvÃ­o a revisiÃ³n del trabajador.
+- OpciÃ³n conforme.
+- OpciÃ³n no conforme / solicitar aclaraciÃ³n.
+- OpciÃ³n pendiente de revisiÃ³n.
+- ConfirmaciÃ³n expresa.
+- Texto de aceptaciÃ³n sin renuncia de derechos.
 - Identidad de la persona.
 - Fecha y hora.
 - Zona horaria.
-- Versión exacta del reporte.
+- VersiÃ³n exacta del reporte.
 - Hash del reporte.
-- Método de autenticación.
+- MÃ©todo de autenticaciÃ³n.
 - IP y dispositivo como datos auxiliares.
-- Nueva versión si hay corrección.
-- Nueva revisión cuando cambia el reporte.
-- Sin aceptación automática por silencio.
+- Nueva versiÃ³n si hay correcciÃ³n.
+- Nueva revisiÃ³n cuando cambia el reporte.
+- Sin aceptaciÃ³n automÃ¡tica por silencio.
 
 **No incluye en el MVP:**
 
-- Firma electrónica avanzada de proveedor externo.
+- Firma electrÃ³nica avanzada de proveedor externo.
 - e.firma SAT.
 - Sellado de tiempo certificado externo.
-- Firma biométrica.
+- Firma biomÃ©trica.
 - Reconocimiento facial para firmar.
-- Notarización.
+- NotarizaciÃ³n.
 - Blockchain.
 
 **Valor:** fortalece la evidencia laboral, permite detectar inconformidades a tiempo y mejora la defensa documental de empresa y trabajador.
 
-**Criterio de validación:** un reporte firmado no puede modificarse. Si cambia, se conserva la versión anterior y se genera una nueva versión pendiente de revisión.
+**Criterio de validaciÃ³n:** un reporte firmado no puede modificarse. Si cambia, se conserva la versiÃ³n anterior y se genera una nueva versiÃ³n pendiente de revisiÃ³n.
 
 ### 2.11 Reportes operativos y regulatorios
 
@@ -449,23 +451,23 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Reporte de conformidad digital.
 - Reporte de personas sin cierre.
 - Reporte de jornadas incompletas.
-- Exportación PDF.
-- Exportación CSV o XLSX.
-- Filtros básicos.
+- ExportaciÃ³n PDF.
+- ExportaciÃ³n CSV o XLSX.
+- Filtros bÃ¡sicos.
 - Totales y detalles.
 
 **No incluye en el MVP:**
 
 - BI avanzado.
 - Dashboards ejecutivos complejos.
-- Gráficas predictivas.
+- GrÃ¡ficas predictivas.
 - Reportes personalizados ilimitados.
 - Conector directo con Power BI.
 - Constructor visual de reportes.
 
-**Valor:** permite operar día a día, revisar riesgos y preparar información para nómina o autoridad.
+**Valor:** permite operar dÃ­a a dÃ­a, revisar riesgos y preparar informaciÃ³n para nÃ³mina o autoridad.
 
-**Criterio de validación:** RH debe poder generar un reporte semanal por centro con jornadas completas, incompletas, horas extra e incidencias.
+**Criterio de validaciÃ³n:** RH debe poder generar un reporte semanal por centro con jornadas completas, incompletas, horas extra e incidencias.
 
 ### 2.12 Expedientes y exportaciones de evidencia
 
@@ -476,7 +478,7 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Expediente por periodo.
 - Expediente por solicitud.
 - Eventos fuente.
-- Cálculos.
+- CÃ¡lculos.
 - Incidencias.
 - Correcciones.
 - Alertas.
@@ -484,25 +486,25 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Versiones.
 - Manifiesto de integridad.
 - Hash.
-- Fecha de generación.
-- Usuario que generó.
+- Fecha de generaciÃ³n.
+- Usuario que generÃ³.
 - Alcance del expediente.
-- Exportación en PDF.
-- Exportación estructurada.
+- ExportaciÃ³n en PDF.
+- ExportaciÃ³n estructurada.
 - Paquete ZIP cuando aplique.
 - Registro de entrega o descarga.
 
 **No incluye en el MVP:**
 
 - Portal especial para autoridad.
-- Envío automático a STPS.
-- Integración con plataformas oficiales no publicadas.
-- Certificación externa de expediente.
+- EnvÃ­o automÃ¡tico a STPS.
+- IntegraciÃ³n con plataformas oficiales no publicadas.
+- CertificaciÃ³n externa de expediente.
 - Firma avanzada institucional.
 
-**Valor:** permite responder de forma ordenada y delimitada ante auditorías, revisiones internas o inspecciones.
+**Valor:** permite responder de forma ordenada y delimitada ante auditorÃ­as, revisiones internas o inspecciones.
 
-**Criterio de validación:** el sistema debe generar un expediente de una persona y un periodo específico sin incluir datos de otras personas no solicitadas.
+**Criterio de validaciÃ³n:** el sistema debe generar un expediente de una persona y un periodo especÃ­fico sin incluir datos de otras personas no solicitadas.
 
 ### 2.13 Importaciones CSV e interoperabilidad API
 
@@ -511,8 +513,8 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Plantilla CSV para personas.
 - Plantilla CSV para horarios.
 - Plantilla CSV para eventos.
-- Validación por fila.
-- Resultado de importación.
+- ValidaciÃ³n por fila.
+- Resultado de importaciÃ³n.
 - Errores descargables.
 - API oficial para crear o actualizar trabajadores.
 - API oficial para crear eventos de jornada.
@@ -521,121 +523,121 @@ No se debe modificar el horario publicado desde la pantalla de trabajadores.
 - Interoperabilidad bidireccional entre interfaz, API, CSV, jobs e integraciones.
 - Credenciales por empresa.
 - Idempotencia.
-- Bitácora técnica.
+- BitÃ¡cora tÃ©cnica.
 - Identificador externo.
 
 **No incluye en el MVP:**
 
 - Marketplace de integraciones.
 - Conectores listos para todos los relojes.
-- Integración directa con todas las nóminas.
+- IntegraciÃ³n directa con todas las nÃ³minas.
 - Webhooks avanzados.
-- SDK público.
-- Sincronización bidireccional compleja.
+- SDK pÃºblico.
+- SincronizaciÃ³n bidireccional compleja.
 
 **Valor:** permite adoptar el sistema sin capturar todo manualmente y abre la puerta a integraciones futuras.
 
-**Criterio de validación:** una empresa debe poder importar trabajadores y eventos desde CSV, con errores claros cuando una fila no sea válida.
+**Criterio de validaciÃ³n:** una empresa debe poder importar trabajadores y eventos desde CSV, con errores claros cuando una fila no sea vÃ¡lida.
 
-### 2.14 Seguridad, auditoría, respaldos y monitoreo
+### 2.14 Seguridad, auditorÃ­a, respaldos y monitoreo
 
 **Incluye:**
 
-- Autenticación.
+- AutenticaciÃ³n.
 - Roles y permisos.
-- Protección contra acceso cruzado.
-- Auditoría de operaciones sensibles.
+- ProtecciÃ³n contra acceso cruzado.
+- AuditorÃ­a de operaciones sensibles.
 - Registro de cambios.
 - Registro de accesos relevantes.
-- Respaldos automáticos.
-- Restauración probada.
+- Respaldos automÃ¡ticos.
+- RestauraciÃ³n probada.
 - Logs de errores.
-- Monitoreo básico.
-- Alertas técnicas.
-- Protección de secretos.
-- Cifrado en tránsito.
+- Monitoreo bÃ¡sico.
+- Alertas tÃ©cnicas.
+- ProtecciÃ³n de secretos.
+- Cifrado en trÃ¡nsito.
 - Control de sesiones.
-- Principio de mínimo privilegio.
+- Principio de mÃ­nimo privilegio.
 
 **No incluye en el MVP:**
 
-- Certificación ISO.
+- CertificaciÃ³n ISO.
 - SOC 2.
 - Pentest formal completo.
 - SSO empresarial avanzado.
 - MFA obligatorio para todos.
 - SIEM dedicado.
-- Alta disponibilidad multi-región.
+- Alta disponibilidad multi-regiÃ³n.
 
 **Valor:** sin seguridad y trazabilidad, el producto no puede venderse como plataforma de evidencia laboral.
 
-**Criterio de validación:** debe existir bitácora de quién modificó una jornada, cuándo lo hizo, qué cambió y por qué.
+**Criterio de validaciÃ³n:** debe existir bitÃ¡cora de quiÃ©n modificÃ³ una jornada, cuÃ¡ndo lo hizo, quÃ© cambiÃ³ y por quÃ©.
 
-### 2.15 Piloto e implementación inicial
+### 2.15 Piloto e implementaciÃ³n inicial
 
 **Incluye:**
 
-- Selección de empresas piloto.
-- Diagnóstico inicial.
+- SelecciÃ³n de empresas piloto.
+- DiagnÃ³stico inicial.
 - Carga de datos.
-- Configuración de horarios.
-- Capacitación a administradores.
-- Capacitación básica a trabajadores.
+- ConfiguraciÃ³n de horarios.
+- CapacitaciÃ³n a administradores.
+- CapacitaciÃ³n bÃ¡sica a trabajadores.
 - Soporte durante arranque.
-- Revisión diaria durante el piloto.
+- RevisiÃ³n diaria durante el piloto.
 - Registro de problemas.
-- Ajustes de configuración.
-- Medición de uso.
-- Retroalimentación.
-- Validación de disposición de pago.
+- Ajustes de configuraciÃ³n.
+- MediciÃ³n de uso.
+- RetroalimentaciÃ³n.
+- ValidaciÃ³n de disposiciÃ³n de pago.
 
 **No incluye en el MVP:**
 
-- Implementación masiva nacional.
+- ImplementaciÃ³n masiva nacional.
 - Mesa de ayuda 24/7.
-- Consultoría laboral profunda para cada cliente.
-- Migración histórica extensa.
-- Capacitación presencial ilimitada.
-- Personalización profunda por cliente.
+- ConsultorÃ­a laboral profunda para cada cliente.
+- MigraciÃ³n histÃ³rica extensa.
+- CapacitaciÃ³n presencial ilimitada.
+- PersonalizaciÃ³n profunda por cliente.
 
-**Valor:** el piloto valida producto, precio, operación y riesgo antes de escalar comercialmente.
+**Valor:** el piloto valida producto, precio, operaciÃ³n y riesgo antes de escalar comercialmente.
 
-**Criterio de validación:** una empresa piloto debe operar al menos dos semanas con jornadas reales, correcciones, reportes y cierre de periodo.
+**Criterio de validaciÃ³n:** una empresa piloto debe operar al menos dos semanas con jornadas reales, correcciones, reportes y cierre de periodo.
 
 ### 2.16 Capacidades P1 que aportan valor pero no deben retrasar el MVP
 
-Estas capacidades pueden incluirse solo si no comprometen la fecha de producción.
+Estas capacidades pueden incluirse solo si no comprometen la fecha de producciÃ³n.
 
 | Capacidad | Incluye | No incluye |
 |---|---|---|
-| Teletrabajo básico | Modalidad de teletrabajo, lugar acordado, política de desconexión y documento asociado. | NOM-037 completa, listas avanzadas, gestión completa de equipos y evaluaciones de seguridad y salud. |
-| Exportación a prenómina | Horas ordinarias, horas extra, domingos, descanso obligatorio e incidencias. | Salario, ISR, IMSS, timbrado y recibos de nómina. |
-| Notificaciones | Recordatorios de cierre, revisión y alertas a responsables. | WhatsApp masivo, SMS masivo y automatizaciones complejas. |
+| Teletrabajo bÃ¡sico | Modalidad de teletrabajo, lugar acordado, polÃ­tica de desconexiÃ³n y documento asociado. | NOM-037 completa, listas avanzadas, gestiÃ³n completa de equipos y evaluaciones de seguridad y salud. |
+| ExportaciÃ³n a prenÃ³mina | Horas ordinarias, horas extra, domingos, descanso obligatorio e incidencias. | Salario, ISR, IMSS, timbrado y recibos de nÃ³mina. |
+| Notificaciones | Recordatorios de cierre, revisiÃ³n y alertas a responsables. | WhatsApp masivo, SMS masivo y automatizaciones complejas. |
 
-### 2.17 Preguntas de validación del alcance
+### 2.17 Preguntas de validaciÃ³n del alcance
 
-Antes de cerrar el alcance, se deberán responder afirmativamente estas preguntas:
+Antes de cerrar el alcance, se deberÃ¡n responder afirmativamente estas preguntas:
 
-1. ¿El MVP permite registrar inicio y fin de jornada por persona?
-2. ¿Puede calcular correctamente jornadas diurnas, nocturnas y mixtas?
-3. ¿Puede detectar horas extraordinarias y límites excedidos?
-4. ¿Puede detectar descansos insuficientes?
-5. ¿Puede detectar jornadas incompletas?
-6. ¿Puede generar alertas antes del cierre?
-7. ¿Puede corregir sin borrar historial?
-8. ¿Puede generar una nueva versión después de una corrección?
-9. ¿Puede el trabajador revisar su reporte?
-10. ¿Puede marcar conforme o no conforme?
-11. ¿Puede generarse evidencia del reporte firmado?
-12. ¿Puede exportarse un expediente por periodo?
-13. ¿Puede RH operar sin depender del desarrollador?
-14. ¿Puede una empresa piloto configurarse en menos de una semana?
-15. ¿Puede el sistema cobrar por persona activa?
-16. ¿Puede crecer a varias empresas sin mezclar datos?
-17. ¿Puede actualizar reglas legales sin tocar pantallas?
-18. ¿Puede funcionar sin biometría ni app nativa?
-19. ¿Puede venderse como cumplimiento y evidencia, no como simple checador?
-20. ¿Hay algo que, si falta, impide vender o pilotear antes de enero de 2027?
+1. Â¿El MVP permite registrar inicio y fin de jornada por persona?
+2. Â¿Puede calcular correctamente jornadas diurnas, nocturnas y mixtas?
+3. Â¿Puede detectar horas extraordinarias y lÃ­mites excedidos?
+4. Â¿Puede detectar descansos insuficientes?
+5. Â¿Puede detectar jornadas incompletas?
+6. Â¿Puede generar alertas antes del cierre?
+7. Â¿Puede corregir sin borrar historial?
+8. Â¿Puede generar una nueva versiÃ³n despuÃ©s de una correcciÃ³n?
+9. Â¿Puede el trabajador revisar su reporte?
+10. Â¿Puede marcar conforme o no conforme?
+11. Â¿Puede generarse evidencia del reporte firmado?
+12. Â¿Puede exportarse un expediente por periodo?
+13. Â¿Puede RH operar sin depender del desarrollador?
+14. Â¿Puede una empresa piloto configurarse en menos de una semana?
+15. Â¿Puede el sistema cobrar por persona activa?
+16. Â¿Puede crecer a varias empresas sin mezclar datos?
+17. Â¿Puede actualizar reglas legales sin tocar pantallas?
+18. Â¿Puede funcionar sin biometrÃ­a ni app nativa?
+19. Â¿Puede venderse como cumplimiento y evidencia, no como simple checador?
+20. Â¿Hay algo que, si falta, impide vender o pilotear antes de enero de 2027?
 
 ---
 
@@ -643,47 +645,47 @@ Antes de cerrar el alcance, se deberán responder afirmativamente estas pregunta
 
 Quedan fuera:
 
-- Aplicaciones móviles nativas.
-- Biometría propia.
+- Aplicaciones mÃ³viles nativas.
+- BiometrÃ­a propia.
 - Reconocimiento facial.
 - Hardware propio.
-- Nómina integral.
+- NÃ³mina integral.
 - Inteligencia artificial.
-- Analítica avanzada.
-- Integraciones múltiples con relojes checadores.
-- Operación internacional.
-- Módulo completo de seguridad y salud en teletrabajo.
-- Firma electrónica avanzada de terceros.
-- Sellado de tiempo certificado externo, salvo decisión posterior.
+- AnalÃ­tica avanzada.
+- Integraciones mÃºltiples con relojes checadores.
+- OperaciÃ³n internacional.
+- MÃ³dulo completo de seguridad y salud en teletrabajo.
+- Firma electrÃ³nica avanzada de terceros.
+- Sellado de tiempo certificado externo, salvo decisiÃ³n posterior.
 
 ---
 
 ## 4. Actores
 
-| Código | Actor | Descripción |
+| CÃ³digo | Actor | DescripciÃ³n |
 |---|---|---|
 | ACT-001 | Superadministrador | Administra la plataforma SaaS, planes, empresas y configuraciones globales. |
-| ACT-002 | Administrador de empresa | Configura la empresa, centros, usuarios, trabajadores, horarios y políticas. |
+| ACT-002 | Administrador de empresa | Configura la empresa, centros, usuarios, trabajadores, horarios y polÃ­ticas. |
 | ACT-003 | Recursos humanos | Administra relaciones laborales, turnos, incidencias y reportes. |
 | ACT-004 | Supervisor | Revisa jornadas, incidencias y alertas de personas bajo su responsabilidad. |
-| ACT-005 | Nómina/Prenómina | Consulta y exporta tiempos y conceptos autorizados. |
-| ACT-006 | Jurídico/Cumplimiento | Consulta evidencia, expedientes y trazabilidad. |
+| ACT-005 | NÃ³mina/PrenÃ³mina | Consulta y exporta tiempos y conceptos autorizados. |
+| ACT-006 | JurÃ­dico/Cumplimiento | Consulta evidencia, expedientes y trazabilidad. |
 | ACT-007 | Persona trabajadora | Registra eventos, consulta jornadas y manifiesta conformidad o inconformidad. |
 | ACT-008 | Auditor/Inspector autorizado | Recibe un expediente delimitado y previamente autorizado. |
-| ACT-009 | Integración externa | Envía o consulta información mediante API o importación. |
-| ACT-010 | Soporte Vera Time | Atiende incidencias técnicas con acceso restringido y auditado. |
+| ACT-009 | IntegraciÃ³n externa | EnvÃ­a o consulta informaciÃ³n mediante API o importaciÃ³n. |
+| ACT-010 | Soporte Vera Time | Atiende incidencias tÃ©cnicas con acceso restringido y auditado. |
 
 ---
 
-## 5. Módulos del MVP
+## 5. MÃ³dulos del MVP
 
-| Código | Módulo |
+| CÃ³digo | MÃ³dulo |
 |---|---|
 | MOD-001 | Plataforma multi-tenant |
 | MOD-002 | Empresas y centros |
 | MOD-003 | Personas y relaciones laborales |
 | MOD-004 | Horarios y turnos |
-| MOD-005 | Registro electrónico |
+| MOD-005 | Registro electrÃ³nico |
 | MOD-006 | Motor legal |
 | MOD-007 | Alertas preventivas |
 | MOD-008 | Incidencias y correcciones |
@@ -691,9 +693,9 @@ Quedan fuera:
 | MOD-010 | Cierre y conformidad digital |
 | MOD-011 | Reportes y expedientes |
 | MOD-012 | Importaciones e integraciones |
-| MOD-013 | Seguridad y auditoría |
-| MOD-014 | Suscripción y límites del plan |
-| MOD-015 | Administración global |
+| MOD-013 | Seguridad y auditorÃ­a |
+| MOD-014 | SuscripciÃ³n y lÃ­mites del plan |
+| MOD-015 | AdministraciÃ³n global |
 
 ---
 
@@ -701,45 +703,45 @@ Quedan fuera:
 
 ## 6.1 Plataforma multi-tenant
 
-### RF-MT-001 — Aislamiento por empresa
+### RF-MT-001 â€” Aislamiento por empresa
 
-El sistema deberá impedir que una empresa consulte, modifique o exporte datos de otra empresa.
+El sistema deberÃ¡ impedir que una empresa consulte, modifique o exporte datos de otra empresa.
 
 **Prioridad:** P0
 
-**Criterios de aceptación:**
+**Criterios de aceptaciÃ³n:**
 
 - Toda consulta operativa aplica el contexto de empresa.
-- Un usuario sin acceso a una empresa recibe denegación.
+- Un usuario sin acceso a una empresa recibe denegaciÃ³n.
 - Una URL o identificador manipulado no permite acceso cruzado.
-- Las exportaciones solo contienen información del tenant activo.
+- Las exportaciones solo contienen informaciÃ³n del tenant activo.
 
-### RF-MT-002 — Usuario con acceso a varias empresas
+### RF-MT-002 â€” Usuario con acceso a varias empresas
 
-Un usuario autorizado podrá pertenecer a una o varias empresas y cambiar entre ellas.
-
-**Prioridad:** P0
-
-### RF-MT-003 — Roles y permisos
-
-El sistema deberá manejar permisos por rol y alcance.
+Un usuario autorizado podrÃ¡ pertenecer a una o varias empresas y cambiar entre ellas.
 
 **Prioridad:** P0
 
-Como mínimo:
+### RF-MT-003 â€” Roles y permisos
+
+El sistema deberÃ¡ manejar permisos por rol y alcance.
+
+**Prioridad:** P0
+
+Como mÃ­nimo:
 
 - Superadministrador.
 - Administrador de empresa.
 - Recursos humanos.
 - Supervisor.
-- Nómina.
-- Jurídico.
+- NÃ³mina.
+- JurÃ­dico.
 - Persona trabajadora.
 - Solo lectura.
 
-### RF-MT-004 — Alcance por centro o equipo
+### RF-MT-004 â€” Alcance por centro o equipo
 
-Los permisos podrán limitarse por centro, área o grupo de personas.
+Los permisos podrÃ¡n limitarse por centro, Ã¡rea o grupo de personas.
 
 **Prioridad:** P0
 
@@ -747,37 +749,37 @@ Los permisos podrán limitarse por centro, área o grupo de personas.
 
 ## 6.2 Empresas y centros
 
-### RF-EMP-001 — Alta de empresa
+### RF-EMP-001 â€” Alta de empresa
 
-El superadministrador podrá registrar una empresa cliente.
+El superadministrador podrÃ¡ registrar una empresa cliente.
 
-**Datos mínimos:**
+**Datos mÃ­nimos:**
 
-- Razón social.
+- RazÃ³n social.
 - Nombre comercial.
 - RFC.
 - Zona horaria principal.
 - Estado.
 - Plan.
-- Fecha de activación.
+- Fecha de activaciÃ³n.
 
 **Prioridad:** P0
 
-### RF-EMP-002 — Centros de trabajo
+### RF-EMP-002 â€” Centros de trabajo
 
-La empresa podrá registrar uno o varios centros de trabajo.
-
-**Prioridad:** P0
-
-### RF-EMP-003 — Zona horaria por centro
-
-Cada centro podrá tener una zona horaria específica.
+La empresa podrÃ¡ registrar uno o varios centros de trabajo.
 
 **Prioridad:** P0
 
-### RF-EMP-004 — Configuración histórica
+### RF-EMP-003 â€” Zona horaria por centro
 
-Los cambios relevantes de empresa o centro tendrán vigencia y no alterarán registros cerrados.
+Cada centro podrÃ¡ tener una zona horaria especÃ­fica.
+
+**Prioridad:** P0
+
+### RF-EMP-004 â€” ConfiguraciÃ³n histÃ³rica
+
+Los cambios relevantes de empresa o centro tendrÃ¡n vigencia y no alterarÃ¡n registros cerrados.
 
 **Prioridad:** P0
 
@@ -785,19 +787,19 @@ Los cambios relevantes de empresa o centro tendrán vigencia y no alterarán reg
 
 ## 6.3 Personas trabajadoras y relaciones laborales
 
-### RF-PER-001 — Alta de persona trabajadora
+### RF-PER-001 â€” Alta de persona trabajadora
 
-La empresa podrá registrar personas trabajadoras manualmente, por CSV o API.
+La empresa podrÃ¡ registrar personas trabajadoras manualmente, por CSV o API.
 
 **Prioridad:** P0
 
-### RF-PER-002 — Relación laboral
+### RF-PER-002 â€” RelaciÃ³n laboral
 
-Cada persona deberá tener al menos una relación laboral con:
+Cada persona deberÃ¡ tener al menos una relaciÃ³n laboral con:
 
 - Empresa.
 - Centro.
-- Número o clave interna.
+- NÃºmero o clave interna.
 - Fecha de ingreso.
 - Puesto.
 - Estado.
@@ -805,35 +807,35 @@ Cada persona deberá tener al menos una relación laboral con:
 
 **Prioridad:** P0
 
-### RF-PER-003 — Condiciones laborales con vigencia
+### RF-PER-003 â€” Condiciones laborales con vigencia
 
-El sistema deberá conservar históricamente:
+El sistema deberÃ¡ conservar histÃ³ricamente:
 
 - Tipo de jornada.
 - Jornada semanal pactada.
 - Horario o turno.
-- Día de descanso.
+- DÃ­a de descanso.
 - Modalidad.
-- Política aplicable.
+- PolÃ­tica aplicable.
 - Fecha de vigencia.
 
 **Prioridad:** P0
 
-### RF-PER-004 — Baja sin eliminación
+### RF-PER-004 â€” Baja sin eliminaciÃ³n
 
-Una baja laboral no eliminará jornadas, eventos, reportes ni evidencias.
+Una baja laboral no eliminarÃ¡ jornadas, eventos, reportes ni evidencias.
 
 **Prioridad:** P0
 
-### RF-PER-004.1 — Limpieza de catalogos sin uso
+### RF-PER-004.1 â€” Limpieza de catalogos sin uso
 
 El sistema permitira eliminar catalogos capturados por error cuando no tengan asignaciones, horarios generados, asistencias, reportes, evidencias ni dependencias operativas. Si el registro ya participa en horario o cumplimiento, se bloqueara la eliminacion ordinaria y se ofrecera inactivacion, baja, finalizacion o versionamiento segun corresponda.
 
 **Prioridad:** P0
 
-### RF-PER-005 — Acceso individual
+### RF-PER-005 â€” Acceso individual
 
-Cada persona trabajadora tendrá acceso únicamente a sus registros y solicitudes.
+Cada persona trabajadora tendrÃ¡ acceso Ãºnicamente a sus registros y solicitudes.
 
 **Prioridad:** P0
 
@@ -841,42 +843,42 @@ Cada persona trabajadora tendrá acceso únicamente a sus registros y solicitude
 
 ## 6.4 Horarios y turnos
 
-### RF-HOR-001 — Catálogo de horarios
+### RF-HOR-001 â€” CatÃ¡logo de horarios
 
-La empresa podrá crear horarios con:
+La empresa podrÃ¡ crear horarios con:
 
 - Nombre.
 - Tipo legal programado.
 - Hora de inicio.
 - Hora de fin.
 - Descansos.
-- Días aplicables.
+- DÃ­as aplicables.
 - Zona horaria.
 - Vigencia.
 
 **Prioridad:** P0
 
-### RF-HOR-002 — Turnos rotativos
+### RF-HOR-002 â€” Turnos rotativos
 
-El sistema permitirá programar turnos rotativos.
-
-**Prioridad:** P0
-
-### RF-HOR-003 — Asignación por persona o grupo
-
-Los horarios podrán asignarse individualmente o por grupo.
+El sistema permitirÃ¡ programar turnos rotativos.
 
 **Prioridad:** P0
 
-### RF-HOR-004 — Cambio con fecha efectiva
+### RF-HOR-003 â€” AsignaciÃ³n por persona o grupo
 
-Un cambio de horario no modificará jornadas anteriores.
+Los horarios podrÃ¡n asignarse individualmente o por grupo.
 
 **Prioridad:** P0
 
-### RF-HOR-005 — Calendario de descanso
+### RF-HOR-004 â€” Cambio con fecha efectiva
 
-Se podrá configurar el día de descanso semanal y descansos obligatorios aplicables.
+Un cambio de horario no modificarÃ¡ jornadas anteriores.
+
+**Prioridad:** P0
+
+### RF-HOR-005 â€” Calendario de descanso
+
+Se podrÃ¡ configurar el dÃ­a de descanso semanal y descansos obligatorios aplicables.
 
 Los descansos obligatorios se separan en dos conceptos:
 
@@ -887,23 +889,23 @@ Combinaciones permitidas:
 
 - `legal_mandatory`: `national` o `subnational`.
 - `electoral`: `national` o `subnational`.
-- `company_internal`: únicamente `company`.
+- `company_internal`: Ãºnicamente `company`.
 
-Normalización requerida:
+NormalizaciÃ³n requerida:
 
 - `national`: requiere `country_code`, sin `company_id` y sin `jurisdiction_code`.
 - `subnational`: requiere `country_code` y `jurisdiction_code` normalizado, sin `company_id`.
 - `company`: con `company_id` y sin `jurisdiction_code`.
 
-Durante el MVP el país operativo queda fijo en México (`country_code = MX`). No se implementan calendarios de otros países, reglas laborales extranjeras ni selector internacional de país.
+Durante el MVP el paÃ­s operativo queda fijo en MÃ©xico (`country_code = MX`). No se implementan calendarios de otros paÃ­ses, reglas laborales extranjeras ni selector internacional de paÃ­s.
 
-Los registros nacionales, subnacionales o electorales globales solo podrán administrarse por `super_admin`. Los usuarios de empresa solo podrán administrar descansos `company_internal` de su empresa.
+Los registros nacionales, subnacionales o electorales globales solo podrÃ¡n administrarse por `super_admin`. Los usuarios de empresa solo podrÃ¡n administrar descansos `company_internal` de su empresa.
 
 **Prioridad:** P0
 
 ---
 
-### RF-HOR-006 — Programacion diaria publicada
+### RF-HOR-006 â€” Programacion diaria publicada
 
 La programacion diaria publicada sera la unica fuente de verdad operativa para registro, calculo, alertas, cierres y reportes.
 
@@ -923,7 +925,7 @@ La publicacion F3A/F3B debe bloquear batches incompletos, dias `unassigned`, con
 
 **Prioridad:** P0
 
-### RF-HOR-007 — Perfiles WFM
+### RF-HOR-007 â€” Perfiles WFM
 
 Vera Time debera soportar perfiles de horario:
 
@@ -940,7 +942,7 @@ En D1/D2 esta operativo `pattern` con `pattern_mode = weekly` y `calendar`. En E
 
 **Prioridad:** P0
 
-### RF-HOR-008 — Estructura organizacional
+### RF-HOR-008 â€” Estructura organizacional
 
 La empresa podra operar solo con centros o agregar unidades organizacionales opcionales por centro con jerarquia visible inicial `department` -> `area` -> `team`.
 
@@ -950,29 +952,29 @@ Los responsables y supervisores solo podran operar trabajadores dentro de sus ce
 
 **Prioridad:** P0
 
-## 6.5 Registro electrónico
+## 6.5 Registro electrÃ³nico
 
-### RF-REG-001 — Registro de entrada
+### RF-REG-001 â€” Registro de entrada
 
-La persona trabajadora podrá registrar el inicio de su jornada.
-
-**Prioridad:** P0
-
-### RF-REG-002 — Registro de salida
-
-La persona trabajadora podrá registrar el final de su jornada.
+La persona trabajadora podrÃ¡ registrar el inicio de su jornada.
 
 **Prioridad:** P0
 
-### RF-REG-003 — Registro de pausas
+### RF-REG-002 â€” Registro de salida
 
-El sistema permitirá registrar inicio y fin de pausas cuando la política lo requiera.
+La persona trabajadora podrÃ¡ registrar el final de su jornada.
 
 **Prioridad:** P0
 
-### RF-REG-004 — Múltiples fuentes de captura
+### RF-REG-003 â€” Registro de pausas
 
-El sistema podrá recibir eventos mediante:
+El sistema permitirÃ¡ registrar inicio y fin de pausas cuando la polÃ­tica lo requiera.
+
+**Prioridad:** P0
+
+### RF-REG-004 â€” MÃºltiples fuentes de captura
+
+El sistema podrÃ¡ recibir eventos mediante:
 
 - Web responsiva/PWA.
 - Kiosco.
@@ -982,56 +984,56 @@ El sistema podrá recibir eventos mediante:
 
 **Prioridad:** P0
 
-### RF-REG-005 — Datos mínimos del evento
+### RF-REG-005 â€” Datos mÃ­nimos del evento
 
-Cada evento deberá conservar:
+Cada evento deberÃ¡ conservar:
 
-- Identificador único.
+- Identificador Ãºnico.
 - Empresa.
 - Persona.
 - Tipo.
 - Fecha y hora del hecho.
 - Zona horaria.
-- Fecha y hora de recepción.
+- Fecha y hora de recepciÃ³n.
 - Fuente.
-- Usuario, dispositivo o integración.
+- Usuario, dispositivo o integraciÃ³n.
 - Estado.
 
 **Prioridad:** P0
 
-### RF-REG-006 — Idempotencia
+### RF-REG-006 â€” Idempotencia
 
-La API y las importaciones deberán evitar duplicar eventos cuando se reintente una operación.
-
-**Prioridad:** P0
-
-### RF-REG-007 — Registro tardío
-
-El sistema distinguirá entre la hora del hecho y la hora de recepción.
+La API y las importaciones deberÃ¡n evitar duplicar eventos cuando se reintente una operaciÃ³n.
 
 **Prioridad:** P0
 
-### RF-REG-008 — Eventos fuera de orden
+### RF-REG-007 â€” Registro tardÃ­o
 
-El sistema permitirá recibir eventos fuera de orden y marcará la jornada para recalculo o revisión.
+El sistema distinguirÃ¡ entre la hora del hecho y la hora de recepciÃ³n.
 
 **Prioridad:** P0
 
-### RF-REG-009 — Captura manual justificada
+### RF-REG-008 â€” Eventos fuera de orden
 
-Una captura manual deberá registrar:
+El sistema permitirÃ¡ recibir eventos fuera de orden y marcarÃ¡ la jornada para recalculo o revisiÃ³n.
+
+**Prioridad:** P0
+
+### RF-REG-009 â€” Captura manual justificada
+
+Una captura manual deberÃ¡ registrar:
 
 - Motivo.
 - Autor.
 - Fecha.
 - Evidencia opcional.
-- Aprobación cuando aplique.
+- AprobaciÃ³n cuando aplique.
 
 **Prioridad:** P0
 
-### RF-REG-010 — No eliminación destructiva
+### RF-REG-010 â€” No eliminaciÃ³n destructiva
 
-Un evento utilizado no podrá eliminarse mediante una operación ordinaria.
+Un evento utilizado no podrÃ¡ eliminarse mediante una operaciÃ³n ordinaria.
 
 **Prioridad:** P0
 
@@ -1039,15 +1041,15 @@ Un evento utilizado no podrá eliminarse mediante una operación ordinaria.
 
 ## 6.6 Motor legal
 
-### RF-CAL-001 — Reconstrucción de jornada
+### RF-CAL-001 â€” ReconstrucciÃ³n de jornada
 
-El sistema deberá reconstruir la jornada a partir de eventos válidos.
+El sistema deberÃ¡ reconstruir la jornada a partir de eventos vÃ¡lidos.
 
 **Prioridad:** P0
 
-### RF-CAL-002 — Clasificación por tipo
+### RF-CAL-002 â€” ClasificaciÃ³n por tipo
 
-El sistema calculará minutos diurnos y nocturnos y clasificará la jornada como:
+El sistema calcularÃ¡ minutos diurnos y nocturnos y clasificarÃ¡ la jornada como:
 
 - Diurna.
 - Nocturna.
@@ -1056,39 +1058,39 @@ El sistema calculará minutos diurnos y nocturnos y clasificará la jornada como
 
 **Prioridad:** P0
 
-### RF-CAL-003 — Límites diarios
+### RF-CAL-003 â€” LÃ­mites diarios
 
-El sistema validará el máximo diario aplicable.
-
-**Prioridad:** P0
-
-### RF-CAL-004 — Límite semanal por vigencia
-
-El sistema aplicará el máximo semanal vigente en la fecha trabajada.
+El sistema validarÃ¡ el mÃ¡ximo diario aplicable.
 
 **Prioridad:** P0
 
-### RF-CAL-005 — Horas extraordinarias
+### RF-CAL-004 â€” LÃ­mite semanal por vigencia
 
-El sistema separará:
+El sistema aplicarÃ¡ el mÃ¡ximo semanal vigente en la fecha trabajada.
+
+**Prioridad:** P0
+
+### RF-CAL-005 â€” Horas extraordinarias
+
+El sistema separarÃ¡:
 
 - Tiempo ordinario.
 - Emergencia.
-- Extraordinario dentro del artículo 66.
-- Excedente del artículo 68.
-- Tiempo superior al máximo diario.
+- Extraordinario dentro del artÃ­culo 66.
+- Excedente del artÃ­culo 68.
+- Tiempo superior al mÃ¡ximo diario.
 
 **Prioridad:** P0
 
-### RF-CAL-006 — Descansos
+### RF-CAL-006 â€” Descansos
 
-El motor determinará si una pausa es computable y detectará descansos insuficientes.
+El motor determinarÃ¡ si una pausa es computable y detectarÃ¡ descansos insuficientes.
 
 **Prioridad:** P0
 
-### RF-CAL-007 — Domingo y descansos obligatorios
+### RF-CAL-007 â€” Domingo y descansos obligatorios
 
-El sistema identificará tiempo trabajado:
+El sistema identificarÃ¡ tiempo trabajado:
 
 - En domingo.
 - En descanso semanal.
@@ -1096,33 +1098,33 @@ El sistema identificará tiempo trabajado:
 
 **Prioridad:** P0
 
-### RF-CAL-008 — Regla más favorable
+### RF-CAL-008 â€” Regla mÃ¡s favorable
 
-El motor podrá aplicar condiciones contractuales más favorables que el máximo legal.
+El motor podrÃ¡ aplicar condiciones contractuales mÃ¡s favorables que el mÃ¡ximo legal.
 
 **Prioridad:** P0
 
-### RF-CAL-009 — Reglas versionadas
+### RF-CAL-009 â€” Reglas versionadas
 
-Los parámetros normativos tendrán:
+Los parÃ¡metros normativos tendrÃ¡n:
 
 - Fuente.
-- Versión.
+- VersiÃ³n.
 - Inicio de vigencia.
 - Fin de vigencia.
 - Estado.
 
 **Prioridad:** P0
 
-### RF-CAL-010 — Explicación del cálculo
+### RF-CAL-010 â€” ExplicaciÃ³n del cÃ¡lculo
 
-Cada resultado deberá mostrar:
+Cada resultado deberÃ¡ mostrar:
 
 - Eventos considerados.
 - Regla aplicada.
-- Minutos por categoría.
+- Minutos por categorÃ­a.
 - Alertas generadas.
-- Versión del cálculo.
+- VersiÃ³n del cÃ¡lculo.
 
 **Prioridad:** P0
 
@@ -1130,15 +1132,15 @@ Cada resultado deberá mostrar:
 
 ## 6.7 Alertas preventivas
 
-### RF-ALT-001 — Generación automática
+### RF-ALT-001 â€” GeneraciÃ³n automÃ¡tica
 
-El sistema deberá generar alertas cuando detecte posibles desviaciones.
+El sistema deberÃ¡ generar alertas cuando detecte posibles desviaciones.
 
 **Prioridad:** P0
 
-### RF-ALT-002 — Catálogo mínimo de alertas
+### RF-ALT-002 â€” CatÃ¡logo mÃ­nimo de alertas
 
-Como mínimo:
+Como mÃ­nimo:
 
 - Entrada faltante.
 - Salida faltante.
@@ -1147,83 +1149,85 @@ Como mínimo:
 - Jornada diaria excedida.
 - Jornada semanal excedida.
 - Horas extraordinarias.
-- Más de doce horas en un día.
+- Retardo.
+- Salida anticipada.
+- MÃ¡s de doce horas en un dÃ­a.
 - Descanso insuficiente.
-- Más de seis días consecutivos.
+- MÃ¡s de seis dÃ­as consecutivos.
 - Trabajo en domingo.
 - Trabajo en descanso obligatorio.
-- Horario o relación no vigente.
-- Corrección pendiente.
+- Horario o relaciÃ³n no vigente.
+- CorrecciÃ³n pendiente.
 - Diferencia entre tiempo calculado, autorizado y exportado.
 - Reporte de periodo con diferencias.
 
 **Prioridad:** P0
 
-### RF-ALT-003 — Niveles de prioridad
+### RF-ALT-003 â€” Niveles de prioridad
 
-Las alertas tendrán niveles:
+Las alertas tendrÃ¡n niveles:
 
 - Informativa.
 - Advertencia.
 - Alta.
-- Crítica.
+- CrÃ­tica.
 
 **Prioridad:** P0
 
-### RF-ALT-004 — Estados
+### RF-ALT-004 â€” Estados
 
-Las alertas tendrán los siguientes estados:
+Las alertas tendrÃ¡n los siguientes estados:
 
 - Nueva.
-- En revisión.
-- Pendiente de información.
+- En revisiÃ³n.
+- Pendiente de informaciÃ³n.
 - Justificada.
 - Corregida.
 - Cerrada.
 
 **Prioridad:** P0
 
-### RF-ALT-005 — Lenguaje neutral
+### RF-ALT-005 â€” Lenguaje neutral
 
-La interfaz deberá utilizar expresiones como:
+La interfaz deberÃ¡ utilizar expresiones como:
 
 - Posible incumplimiento.
-- Situación pendiente de revisión.
-- Requiere validación.
+- SituaciÃ³n pendiente de revisiÃ³n.
+- Requiere validaciÃ³n.
 - Tiempo superior al programado.
 
-No deberá presentar automáticamente una infracción confirmada.
+No deberÃ¡ presentar automÃ¡ticamente una infracciÃ³n confirmada.
 
 **Prioridad:** P0
 
-### RF-ALT-006 — Responsable y vencimiento
+### RF-ALT-006 â€” Responsable y vencimiento
 
-Una alerta podrá asignarse a un responsable y tener una fecha objetivo.
+Una alerta podrÃ¡ asignarse a un responsable y tener una fecha objetivo.
 
 **Prioridad:** P0
 
-### RF-ALT-007 — Resolución trazable
+### RF-ALT-007 â€” ResoluciÃ³n trazable
 
-La resolución deberá conservar:
+La resoluciÃ³n deberÃ¡ conservar:
 
 - Responsable.
 - Fecha.
 - Comentario.
 - Evidencia.
-- Acción aplicada.
+- AcciÃ³n aplicada.
 - Estado final.
 
 **Prioridad:** P0
 
-### RF-ALT-008 — Bloqueo de cierre
+### RF-ALT-008 â€” Bloqueo de cierre
 
-Una alerta crítica pendiente podrá bloquear el cierre definitivo del periodo.
+Una alerta crÃ­tica pendiente podrÃ¡ bloquear el cierre definitivo del periodo.
 
 **Prioridad:** P0
 
-### RF-ALT-009 — No alteración de eventos
+### RF-ALT-009 â€” No alteraciÃ³n de eventos
 
-Resolver una alerta no deberá modificar eventos sin utilizar el flujo de corrección.
+Resolver una alerta no deberÃ¡ modificar eventos sin utilizar el flujo de correcciÃ³n.
 
 **Prioridad:** P0
 
@@ -1231,13 +1235,13 @@ Resolver una alerta no deberá modificar eventos sin utilizar el flujo de correc
 
 ## 6.8 Incidencias y correcciones
 
-### RF-INC-001 — Creación de incidencia
+### RF-INC-001 â€” CreaciÃ³n de incidencia
 
-El sistema permitirá crear incidencias manuales o automáticas.
+El sistema permitirÃ¡ crear incidencias manuales o automÃ¡ticas.
 
 **Prioridad:** P0
 
-### RF-INC-002 — Tipos mínimos
+### RF-INC-002 â€” Tipos mÃ­nimos
 
 - Registro faltante.
 - Registro incorrecto.
@@ -1245,17 +1249,19 @@ El sistema permitirá crear incidencias manuales o automáticas.
 - Horario.
 - Turno.
 - Horas extraordinarias.
+- Retardo.
+- Salida anticipada.
 - Trabajo en domingo.
 - Descanso obligatorio.
-- Diferencia de cálculo.
-- Problema técnico.
+- Diferencia de cÃ¡lculo.
+- Problema tÃ©cnico.
 - Solicitud de la persona trabajadora.
 
 **Prioridad:** P0
 
-### RF-INC-003 — Corrección propuesta
+### RF-INC-003 â€” CorrecciÃ³n propuesta
 
-Toda corrección deberá mostrar:
+Toda correcciÃ³n deberÃ¡ mostrar:
 
 - Valor original.
 - Valor propuesto.
@@ -1266,27 +1272,27 @@ Toda corrección deberá mostrar:
 
 **Prioridad:** P0
 
-### RF-INC-004 — Flujo de aprobación
+### RF-INC-004 â€” Flujo de aprobaciÃ³n
 
-La corrección podrá requerir aprobación del supervisor o recursos humanos.
-
-**Prioridad:** P0
-
-### RF-INC-005 — Historial
-
-La corrección no sobrescribirá el valor original.
+La correcciÃ³n podrÃ¡ requerir aprobaciÃ³n del supervisor o recursos humanos.
 
 **Prioridad:** P0
 
-### RF-INC-006 — Recalculo
+### RF-INC-005 â€” Historial
 
-Una corrección aprobada generará una nueva versión del cálculo.
+La correcciÃ³n no sobrescribirÃ¡ el valor original.
 
 **Prioridad:** P0
 
-### RF-INC-007 — Controversia
+### RF-INC-006 â€” Recalculo
 
-Si no existe acuerdo, el sistema conservará:
+Una correcciÃ³n aprobada generarÃ¡ una nueva versiÃ³n del cÃ¡lculo.
+
+**Prioridad:** P0
+
+### RF-INC-007 â€” Controversia
+
+Si no existe acuerdo, el sistema conservarÃ¡:
 
 - Registro original.
 - Solicitud.
@@ -1300,47 +1306,49 @@ Si no existe acuerdo, el sistema conservará:
 
 ## 6.9 Portal de la persona trabajadora
 
-### RF-PORT-001 — Consulta de jornadas
+### RF-PORT-001 â€” Consulta de jornadas
 
-La persona podrá consultar sus jornadas por día, semana y periodo.
+La persona podrÃ¡ consultar sus jornadas por dÃ­a, semana y periodo.
 
 **Prioridad:** P0
 
-### RF-PORT-002 — Detalle explicable
+### RF-PORT-002 â€” Detalle explicable
 
-La persona podrá consultar:
+La persona podrÃ¡ consultar:
 
 - Eventos.
 - Horario.
 - Pausas.
 - Horas ordinarias.
 - Horas extraordinarias.
+- Retardo.
+- Salida anticipada.
 - Alertas visibles.
 - Correcciones.
 
 **Prioridad:** P0
 
-### RF-PORT-003 — Solicitud de aclaración
+### RF-PORT-003 â€” Solicitud de aclaraciÃ³n
 
-La persona podrá solicitar una aclaración desde una jornada o reporte.
-
-**Prioridad:** P0
-
-### RF-PORT-004 — Evidencia adjunta
-
-La persona podrá adjuntar evidencia a su solicitud.
+La persona podrÃ¡ solicitar una aclaraciÃ³n desde una jornada o reporte.
 
 **Prioridad:** P0
 
-### RF-PORT-005 — Seguimiento
+### RF-PORT-004 â€” Evidencia adjunta
 
-La persona podrá consultar el estado y resolución de sus solicitudes.
+La persona podrÃ¡ adjuntar evidencia a su solicitud.
 
 **Prioridad:** P0
 
-### RF-PORT-006 — Acceso a políticas
+### RF-PORT-005 â€” Seguimiento
 
-La persona podrá consultar políticas y mecanismos de registro vigentes que le apliquen.
+La persona podrÃ¡ consultar el estado y resoluciÃ³n de sus solicitudes.
+
+**Prioridad:** P0
+
+### RF-PORT-006 â€” Acceso a polÃ­ticas
+
+La persona podrÃ¡ consultar polÃ­ticas y mecanismos de registro vigentes que le apliquen.
 
 **Prioridad:** P1
 
@@ -1348,7 +1356,7 @@ La persona podrá consultar políticas y mecanismos de registro vigentes que le 
 
 ## 6.10 Cierre y conformidad digital
 
-### RF-CIE-H1 — Periodos de asistencia por alcance
+### RF-CIE-H1 â€” Periodos de asistencia por alcance
 
 El sistema permitira crear periodos de asistencia por centro completo o por una o varias unidades organizacionales del mismo centro, usando un rango de fechas definido por el usuario.
 
@@ -1362,13 +1370,13 @@ Reglas:
 - H2 valida si existen bloqueantes en Jornadas y permite cerrar solo periodos sin bloqueantes.
 - H3 genera un reporte base congelado al cierre con resumen general y desglose por trabajador.
 - El modulo de periodos no revisa jornadas en detalle ni resuelve incidencias; enlaza a Jornadas para atenderlas.
-- No exporta y no calcula nomina.
+- La exportacion CSV base queda disponible solo para periodos cerrados; no calcula nomina.
 
 Valor:
 
-Permite que RH prepare paquetes de asistencia por rango real de operacion, sin imponer reglas rigidas de nomina ni dispersión.
+Permite que RH prepare paquetes de asistencia por rango real de operacion, sin imponer reglas rigidas de nomina ni dispersiÃ³n.
 
-### RF-CIE-H2 — Validacion y cierre operativo
+### RF-CIE-H2 â€” Validacion y cierre operativo
 
 El sistema permitira validar un periodo contra las jornadas existentes del mismo centro, unidades y rango.
 
@@ -1379,7 +1387,7 @@ Reglas:
 - Si no existen bloqueantes, el periodo podra cerrarse.
 - El cierre conservara usuario, fecha, resumen de validacion, snapshot canonico y hash SHA-256.
 
-### RF-CIE-H3 — Reporte base del periodo
+### RF-CIE-H3 â€” Reporte base del periodo
 
 Al cerrar un periodo, Vera Time generara un reporte base congelado.
 
@@ -1397,9 +1405,35 @@ Debe incluir:
 - Descansos obligatorios trabajados.
 - Incidencias abiertas y cerradas.
 
-El reporte es operativo para revision y entrega posterior. No calcula pagos, nomina, impuestos ni dispersion.
+El reporte es operativo para revision y para exportacion CSV base del periodo cerrado. No calcula pagos, nomina, impuestos ni dispersion.
 
-### RF-CIE-000 — Perfiles multiples de cierre
+### RF-CIE-H4 - Exportacion CSV base del periodo cerrado
+
+El sistema permitira descargar un CSV operativo desde un periodo cerrado.
+
+Debe incluir, cuando exista informacion disponible:
+
+- Identificacion de empresa, centro, unidad y trabajador.
+- RFC, CURP y NSS del trabajador.
+- Fecha, tipo de dia y estatus de jornada.
+- Hora de entrada y salida.
+- Horas ordinarias, extra totales, dobles y triples.
+- Horas nocturnas.
+- Domingo trabajado y descanso obligatorio trabajado.
+- Referencia de descanso obligatorio cuando aplique.
+- Descansos pagados y no pagados.
+- Minutos de retardo y salida anticipada calculados contra la programacion publicada con tolerancias configurables por empresa.
+- Minutos de ausencia.
+- Tipo, estatus y pago operativo de incidencia.
+- Observaciones sanitizadas para evitar formulas en CSV.
+
+Cierre funcional antes de API:
+
+- Retardo y salida anticipada quedan calculados en el MVP cuando la jornada tiene programacion publicada y eventos completos, y generan alertas operativas cuando superan la tolerancia configurada.
+- Vacaciones, incapacidad, permisos y faltas justificadas pagadas/no pagadas salen al CSV cuando existen como incidencias/ausencias operativas en el snapshot de jornada.
+- Queda pendiente definir el contrato API equivalente al CSV para consulta externa del periodo.
+
+### RF-CIE-000 â€” Perfiles multiples de cierre
 
 Toda empresa debera tener un perfil de cierre predeterminado. Podran existir excepciones por centro, unidad organizacional o relacion laboral.
 
@@ -1424,20 +1458,20 @@ Los cierres publicados deberan congelar trabajadores, configuracion, versiones y
 
 **Prioridad:** P0
 
-### RF-CON-001 — Periodos de cierre
+### RF-CON-001 â€” Periodos de cierre
 
-La empresa podrá configurar cierres:
+La empresa podrÃ¡ configurar cierres:
 
 - Semanales.
 - Quincenales.
 - Mensuales.
-- Por periodo de nómina.
+- Por periodo de nÃ³mina.
 
 **Prioridad:** P0
 
-### RF-CON-002 — Generación de reporte individual
+### RF-CON-002 â€” GeneraciÃ³n de reporte individual
 
-Al cierre se generará un reporte individual con:
+Al cierre se generarÃ¡ un reporte individual con:
 
 - Eventos.
 - Horarios.
@@ -1452,104 +1486,104 @@ Al cierre se generará un reporte individual con:
 
 **Prioridad:** P0
 
-### RF-CON-003 — Estados del periodo
+### RF-CON-003 â€” Estados del periodo
 
-El periodo podrá estar en:
+El periodo podrÃ¡ estar en:
 
-- En cálculo.
+- En cÃ¡lculo.
 - Con alertas.
-- En revisión administrativa.
-- Disponible para revisión.
+- En revisiÃ³n administrativa.
+- Disponible para revisiÃ³n.
 - Conforme.
 - No conforme.
-- En aclaración.
+- En aclaraciÃ³n.
 - Cerrado.
 
 **Prioridad:** P0
 
-### RF-CON-004 — Opciones de la persona trabajadora
+### RF-CON-004 â€” Opciones de la persona trabajadora
 
-La persona podrá seleccionar:
+La persona podrÃ¡ seleccionar:
 
 - Conforme.
-- No conforme / solicitar aclaración.
-- Pendiente de revisión.
+- No conforme / solicitar aclaraciÃ³n.
+- Pendiente de revisiÃ³n.
 
 **Prioridad:** P0
 
-### RF-CON-005 — Confirmación expresa
+### RF-CON-005 â€” ConfirmaciÃ³n expresa
 
-La conformidad requerirá una acción expresa de la persona autenticada.
+La conformidad requerirÃ¡ una acciÃ³n expresa de la persona autenticada.
 
 **Prioridad:** P0
 
-### RF-CON-006 — Evidencia de confirmación
+### RF-CON-006 â€” Evidencia de confirmaciÃ³n
 
-Se conservará:
+Se conservarÃ¡:
 
 - Identidad.
 - Periodo.
-- Versión.
+- VersiÃ³n.
 - Fecha y hora.
 - Zona horaria.
 - Resultado.
 - Texto aceptado.
-- Método de autenticación.
+- MÃ©todo de autenticaciÃ³n.
 - Hash del reporte.
 - IP y dispositivo como datos auxiliares.
 
 **Prioridad:** P0
 
-### RF-CON-007 — Texto sin renuncia de derechos
+### RF-CON-007 â€” Texto sin renuncia de derechos
 
-El texto de conformidad deberá aclarar que no implica renuncia a salarios, prestaciones ni derechos laborales.
-
-**Prioridad:** P0
-
-### RF-CON-008 — No conformidad
-
-Una no conformidad deberá generar una incidencia vinculada al reporte.
+El texto de conformidad deberÃ¡ aclarar que no implica renuncia a salarios, prestaciones ni derechos laborales.
 
 **Prioridad:** P0
 
-### RF-CON-009 — Nueva versión
+### RF-CON-008 â€” No conformidad
 
-Si el reporte cambia después de una corrección:
-
-1. Se conserva la versión anterior.
-2. Se genera una nueva versión.
-3. Se invalidará únicamente el cierre de la nueva versión.
-4. Se solicitará una nueva revisión.
+Una no conformidad deberÃ¡ generar una incidencia vinculada al reporte.
 
 **Prioridad:** P0
 
-### RF-CON-010 — Sin aceptación automática
+### RF-CON-009 â€” Nueva versiÃ³n
 
-La falta de respuesta nunca se considerará conformidad.
+Si el reporte cambia despuÃ©s de una correcciÃ³n:
+
+1. Se conserva la versiÃ³n anterior.
+2. Se genera una nueva versiÃ³n.
+3. Se invalidarÃ¡ Ãºnicamente el cierre de la nueva versiÃ³n.
+4. Se solicitarÃ¡ una nueva revisiÃ³n.
 
 **Prioridad:** P0
 
-### RF-CON-011 — Alerta crítica
+### RF-CON-010 â€” Sin aceptaciÃ³n automÃ¡tica
 
-Un reporte con alertas críticas pendientes no podrá cerrarse definitivamente.
+La falta de respuesta nunca se considerarÃ¡ conformidad.
 
 **Prioridad:** P0
 
-### RF-CON-012 — Recordatorios
+### RF-CON-011 â€” Alerta crÃ­tica
 
-El sistema podrá enviar recordatorios de revisión.
+Un reporte con alertas crÃ­ticas pendientes no podrÃ¡ cerrarse definitivamente.
+
+**Prioridad:** P0
+
+### RF-CON-012 â€” Recordatorios
+
+El sistema podrÃ¡ enviar recordatorios de revisiÃ³n.
 
 **Prioridad:** P1
 
-### RF-CON-013 — Método de autenticación
+### RF-CON-013 â€” MÃ©todo de autenticaciÃ³n
 
-Para el MVP se admitirá:
+Para el MVP se admitirÃ¡:
 
-- Sesión individual.
-- Confirmación expresa.
-- NIP o código por correo.
+- SesiÃ³n individual.
+- ConfirmaciÃ³n expresa.
+- NIP o cÃ³digo por correo.
 - Hash.
-- Bitácora.
+- BitÃ¡cora.
 
 **Prioridad:** P0
 
@@ -1557,33 +1591,33 @@ Para el MVP se admitirá:
 
 ## 6.11 Reportes y expedientes
 
-### RF-REP-001 — Reporte diario
+### RF-REP-001 â€” Reporte diario
 
-El sistema generará reportes diarios por persona, centro y empresa.
-
-**Prioridad:** P0
-
-### RF-REP-002 — Reporte semanal o de periodo
-
-El sistema generará acumulados por periodo.
+El sistema generarÃ¡ reportes diarios por persona, centro y empresa.
 
 **Prioridad:** P0
 
-### RF-REP-003 — Reporte de horas extraordinarias
+### RF-REP-002 â€” Reporte semanal o de periodo
 
-El sistema mostrará bandas, acumulados y alertas.
-
-**Prioridad:** P0
-
-### RF-REP-004 — Reporte de incidencias
-
-El sistema mostrará incidencias por tipo, responsable y estado.
+El sistema generarÃ¡ acumulados por periodo.
 
 **Prioridad:** P0
 
-### RF-REP-005 — Reporte de alertas
+### RF-REP-003 â€” Reporte de horas extraordinarias
 
-El sistema mostrará:
+El sistema mostrarÃ¡ bandas, acumulados y alertas.
+
+**Prioridad:** P0
+
+### RF-REP-004 â€” Reporte de incidencias
+
+El sistema mostrarÃ¡ incidencias por tipo, responsable y estado.
+
+**Prioridad:** P0
+
+### RF-REP-005 â€” Reporte de alertas
+
+El sistema mostrarÃ¡:
 
 - Tipo.
 - Nivel.
@@ -1595,9 +1629,9 @@ El sistema mostrará:
 
 **Prioridad:** P0
 
-### RF-REP-006 — Expediente delimitado
+### RF-REP-006 â€” Expediente delimitado
 
-El sistema generará expedientes por:
+El sistema generarÃ¡ expedientes por:
 
 - Empresa.
 - Centro.
@@ -1607,22 +1641,22 @@ El sistema generará expedientes por:
 
 **Prioridad:** P0
 
-### RF-REP-007 — Manifiesto de integridad
+### RF-REP-007 â€” Manifiesto de integridad
 
-El expediente deberá incluir:
+El expediente deberÃ¡ incluir:
 
-- Fecha de generación.
+- Fecha de generaciÃ³n.
 - Alcance.
 - Usuario.
-- Versión.
+- VersiÃ³n.
 - Hash o manifiesto.
 - Archivos incluidos.
 
 **Prioridad:** P0
 
-### RF-REP-008 — Formatos
+### RF-REP-008 â€” Formatos
 
-El MVP deberá exportar al menos:
+El MVP deberÃ¡ exportar al menos:
 
 - PDF legible.
 - CSV o XLSX estructurado.
@@ -1630,9 +1664,9 @@ El MVP deberá exportar al menos:
 
 **Prioridad:** P0
 
-### RF-REP-009 — Exportación para prenómina
+### RF-REP-009 â€” ExportaciÃ³n para prenÃ³mina
 
-El sistema podrá exportar horas y conceptos, sin calcular nómina integral.
+El sistema podrÃ¡ exportar horas y conceptos, sin calcular nÃ³mina integral.
 
 **Prioridad:** P1
 
@@ -1640,29 +1674,29 @@ El sistema podrá exportar horas y conceptos, sin calcular nómina integral.
 
 ## 6.12 Importaciones e integraciones
 
-### RF-INT-001 — Importación de personas
+### RF-INT-001 â€” ImportaciÃ³n de personas
 
-Se podrán importar personas mediante plantilla CSV.
-
-**Prioridad:** P0
-
-### RF-INT-002 — Importación de horarios
-
-Se podrán importar asignaciones de horario.
+Se podrÃ¡n importar personas mediante plantilla CSV.
 
 **Prioridad:** P0
 
-### RF-INT-003 — Importación de eventos
+### RF-INT-002 â€” ImportaciÃ³n de horarios
 
-Se podrán importar eventos con validación y resultado por fila.
+Se podrÃ¡n importar asignaciones de horario.
 
 **Prioridad:** P0
 
-### RF-INT-004 — API oficial del MVP
+### RF-INT-003 â€” ImportaciÃ³n de eventos
 
-El MVP deberá contar con una API oficial versionada para interoperabilidad.
+Se podrÃ¡n importar eventos con validaciÃ³n y resultado por fila.
 
-Como mínimo deberá permitir:
+**Prioridad:** P0
+
+### RF-INT-004 â€” API oficial del MVP
+
+El MVP deberÃ¡ contar con una API oficial versionada para interoperabilidad.
+
+Como mÃ­nimo deberÃ¡ permitir:
 
 - Crear o actualizar trabajadores.
 - Consultar trabajadores.
@@ -1675,15 +1709,15 @@ Como mínimo deberá permitir:
 
 **Prioridad:** P0
 
-### RF-INT-005 — Credenciales por empresa
+### RF-INT-005 â€” Credenciales por empresa
 
-Cada integración utilizará credenciales limitadas a una empresa.
+Cada integraciÃ³n utilizarÃ¡ credenciales limitadas a una empresa.
 
 **Prioridad:** P0
 
-### RF-INT-006 — Registro técnico
+### RF-INT-006 â€” Registro tÃ©cnico
 
-Toda operación de integración conservará:
+Toda operaciÃ³n de integraciÃ³n conservarÃ¡:
 
 - Origen.
 - Fecha.
@@ -1695,59 +1729,59 @@ Toda operación de integración conservará:
 
 ---
 
-## 6.13 Suscripción y límites
+## 6.13 SuscripciÃ³n y lÃ­mites
 
-### RF-PLAN-001 — Plan por empresa
+### RF-PLAN-001 â€” Plan por empresa
 
-Cada empresa estará asociada a un plan.
-
-**Prioridad:** P0
-
-### RF-PLAN-002 — Persona activa
-
-El sistema deberá identificar personas activas para medición y cobro.
+Cada empresa estarÃ¡ asociada a un plan.
 
 **Prioridad:** P0
 
-### RF-PLAN-003 — Límites
+### RF-PLAN-002 â€” Persona activa
 
-El sistema podrá limitar:
+El sistema deberÃ¡ identificar personas activas para mediciÃ³n y cobro.
+
+**Prioridad:** P0
+
+### RF-PLAN-003 â€” LÃ­mites
+
+El sistema podrÃ¡ limitar:
 
 - Personas activas.
 - Centros.
 - Administradores.
 - Almacenamiento.
 - Integraciones.
-- Retención.
+- RetenciÃ³n.
 - Funciones.
 
 **Prioridad:** P0
 
-### RF-PLAN-004 — Sin pérdida de datos
+### RF-PLAN-004 â€” Sin pÃ©rdida de datos
 
-Al superar un límite, el sistema no eliminará información.
+Al superar un lÃ­mite, el sistema no eliminarÃ¡ informaciÃ³n.
 
 **Prioridad:** P0
 
-### RF-PLAN-005 — Suspensión controlada
+### RF-PLAN-005 â€” SuspensiÃ³n controlada
 
-Una suspensión comercial deberá mantener la información bajo la política aplicable y limitar nuevas operaciones.
+Una suspensiÃ³n comercial deberÃ¡ mantener la informaciÃ³n bajo la polÃ­tica aplicable y limitar nuevas operaciones.
 
 **Prioridad:** P1
 
 ---
 
-## 6.14 Administración global
+## 6.14 AdministraciÃ³n global
 
-### RF-ADM-001 — Parámetros legales globales
+### RF-ADM-001 â€” ParÃ¡metros legales globales
 
-Solo usuarios autorizados podrán administrar reglas legales globales.
+Solo usuarios autorizados podrÃ¡n administrar reglas legales globales.
 
 **Prioridad:** P0
 
-### RF-ADM-002 — Publicación de versión
+### RF-ADM-002 â€” PublicaciÃ³n de versiÃ³n
 
-Una nueva regla deberá pasar por estados:
+Una nueva regla deberÃ¡ pasar por estados:
 
 - Borrador.
 - Revisada.
@@ -1757,19 +1791,19 @@ Una nueva regla deberá pasar por estados:
 
 **Prioridad:** P0
 
-### RF-ADM-003 — Historial normativo
+### RF-ADM-003 â€” Historial normativo
 
-El sistema conservará todas las versiones.
+El sistema conservarÃ¡ todas las versiones.
 
 **Prioridad:** P0
 
-### RF-ADM-004 — Soporte auditado
+### RF-ADM-004 â€” Soporte auditado
 
-Todo acceso de soporte a una empresa deberá:
+Todo acceso de soporte a una empresa deberÃ¡:
 
 - Estar autorizado.
 - Tener motivo.
-- Tener duración.
+- Tener duraciÃ³n.
 - Quedar auditado.
 
 **Prioridad:** P0
@@ -1778,29 +1812,29 @@ Todo acceso de soporte a una empresa deberá:
 
 ## 6.15 API e interoperabilidad bidireccional
 
-### RF-API-001 — Operaciones críticas por API
+### RF-API-001 â€” Operaciones crÃ­ticas por API
 
-Las funcionalidades críticas del MVP deberán poder ejecutarse por API cuando formen parte de la operación P0.
-
-**Prioridad:** P0
-
-### RF-API-002 — Bidireccionalidad interfaz/API
-
-Lo creado por API deberá verse en la interfaz cuando el usuario tenga permiso. Lo creado por la interfaz deberá poder consultarse por API cuando aplique al alcance de integración.
+Las funcionalidades crÃ­ticas del MVP deberÃ¡n poder ejecutarse por API cuando formen parte de la operaciÃ³n P0.
 
 **Prioridad:** P0
 
-### RF-API-003 — Lógica compartida
+### RF-API-002 â€” Bidireccionalidad interfaz/API
 
-API, CSV, jobs e integraciones deberán usar las mismas acciones, servicios de aplicación y servicios de dominio que la interfaz.
-
-La API no deberá duplicar reglas ni saltarse validaciones del sistema.
+Lo creado por API deberÃ¡ verse en la interfaz cuando el usuario tenga permiso. Lo creado por la interfaz deberÃ¡ poder consultarse por API cuando aplique al alcance de integraciÃ³n.
 
 **Prioridad:** P0
 
-### RF-API-004 — Fuente del dato
+### RF-API-003 â€” LÃ³gica compartida
 
-Cada registro creado o modificado deberá conservar su fuente.
+API, CSV, jobs e integraciones deberÃ¡n usar las mismas acciones, servicios de aplicaciÃ³n y servicios de dominio que la interfaz.
+
+La API no deberÃ¡ duplicar reglas ni saltarse validaciones del sistema.
+
+**Prioridad:** P0
+
+### RF-API-004 â€” Fuente del dato
+
+Cada registro creado o modificado deberÃ¡ conservar su fuente.
 
 Ejemplos:
 
@@ -1815,23 +1849,23 @@ Ejemplos:
 
 **Prioridad:** P0
 
-### RF-API-005 — Seguridad de API
+### RF-API-005 â€” Seguridad de API
 
-La API deberá tener:
+La API deberÃ¡ tener:
 
-- Autenticación.
+- AutenticaciÃ³n.
 - Permisos.
 - Alcance por empresa.
 - Versionamiento.
 - Idempotencia cuando cree datos sensibles.
-- Auditoría.
+- AuditorÃ­a.
 - Errores estandarizados.
 
 **Prioridad:** P0
 
-### RF-API-006 — Capacidades API P0
+### RF-API-006 â€” Capacidades API P0
 
-La API del MVP deberá cubrir:
+La API del MVP deberÃ¡ cubrir:
 
 | Capacidad | Prioridad |
 |---|---|
@@ -1846,9 +1880,9 @@ La API del MVP deberá cubrir:
 
 **Prioridad:** P0
 
-### RF-API-007 — Capacidades API P1
+### RF-API-007 â€” Capacidades API P1
 
-Las siguientes capacidades podrán implementarse si no comprometen la fecha del MVP:
+Las siguientes capacidades podrÃ¡n implementarse si no comprometen la fecha del MVP:
 
 | Capacidad | Prioridad |
 |---|---|
@@ -1857,8 +1891,8 @@ Las siguientes capacidades podrán implementarse si no comprometen la fecha del 
 | Resolver alertas | P1 |
 | Aprobar correcciones | P1 |
 | Generar expedientes | P1 |
-| Confirmar conformidad vía API | P1 |
-| Integración directa ClickBalance | P1 |
+| Confirmar conformidad vÃ­a API | P1 |
+| IntegraciÃ³n directa ClickBalance | P1 |
 
 **Prioridad:** P1
 
@@ -1866,39 +1900,39 @@ Las siguientes capacidades podrán implementarse si no comprometen la fecha del 
 
 # 7. Requisitos no funcionales
 
-## RNF-001 — Seguridad
+## RNF-001 â€” Seguridad
 
-La plataforma deberá aplicar:
+La plataforma deberÃ¡ aplicar:
 
 - HTTPS.
-- Contraseñas seguras.
-- Protección CSRF.
-- Prevención de acceso horizontal.
+- ContraseÃ±as seguras.
+- ProtecciÃ³n CSRF.
+- PrevenciÃ³n de acceso horizontal.
 - Rate limiting.
-- Gestión segura de secretos.
-- Principio de mínimo privilegio.
+- GestiÃ³n segura de secretos.
+- Principio de mÃ­nimo privilegio.
 
 **Prioridad:** P0
 
-## RNF-002 — Aislamiento multi-tenant
+## RNF-002 â€” Aislamiento multi-tenant
 
-Toda capa de acceso a datos deberá respetar el tenant.
-
-**Prioridad:** P0
-
-## RNF-003 — Integridad
-
-Los eventos, cálculos cerrados, reportes firmados y expedientes deberán ser verificables.
+Toda capa de acceso a datos deberÃ¡ respetar el tenant.
 
 **Prioridad:** P0
 
-## RNF-004 — Trazabilidad
+## RNF-003 â€” Integridad
 
-Toda operación sensible deberá registrar:
+Los eventos, cÃ¡lculos cerrados, reportes firmados y expedientes deberÃ¡n ser verificables.
+
+**Prioridad:** P0
+
+## RNF-004 â€” Trazabilidad
+
+Toda operaciÃ³n sensible deberÃ¡ registrar:
 
 - Actor.
 - Fecha.
-- Acción.
+- AcciÃ³n.
 - Entidad.
 - Valor anterior.
 - Valor nuevo.
@@ -1906,7 +1940,7 @@ Toda operación sensible deberá registrar:
 
 **Prioridad:** P0
 
-## RNF-005 — Disponibilidad
+## RNF-005 â€” Disponibilidad
 
 Objetivo inicial del MVP:
 
@@ -1918,80 +1952,80 @@ Excluyendo mantenimientos programados.
 
 **Prioridad:** P0
 
-## RNF-006 — Recuperación
+## RNF-006 â€” RecuperaciÃ³n
 
-El sistema deberá contar con:
+El sistema deberÃ¡ contar con:
 
-- Respaldos automáticos.
-- Prueba periódica de restauración.
+- Respaldos automÃ¡ticos.
+- Prueba periÃ³dica de restauraciÃ³n.
 - RPO y RTO definidos antes del piloto.
 
 **Prioridad:** P0
 
-## RNF-007 — Rendimiento
+## RNF-007 â€” Rendimiento
 
 Objetivos iniciales:
 
 - Pantallas comunes: menos de 2 segundos en condiciones normales.
-- Registro de evento: confirmación menor de 3 segundos.
-- Reportes pesados: procesamiento asíncrono cuando sea necesario.
+- Registro de evento: confirmaciÃ³n menor de 3 segundos.
+- Reportes pesados: procesamiento asÃ­ncrono cuando sea necesario.
 
 **Prioridad:** P0
 
-## RNF-008 — Escalabilidad
+## RNF-008 â€” Escalabilidad
 
-El registro de eventos deberá soportar crecimiento sin rediseñar el dominio principal.
+El registro de eventos deberÃ¡ soportar crecimiento sin rediseÃ±ar el dominio principal.
 
 **Prioridad:** P0
 
-## RNF-009 — Accesibilidad
+## RNF-009 â€” Accesibilidad
 
-Las pantallas principales deberán cumplir criterios básicos de accesibilidad:
+Las pantallas principales deberÃ¡n cumplir criterios bÃ¡sicos de accesibilidad:
 
-- Navegación por teclado.
+- NavegaciÃ³n por teclado.
 - Etiquetas.
 - Contraste.
 - Mensajes comprensibles.
-- Diseño responsivo.
+- DiseÃ±o responsivo.
 
 **Prioridad:** P0
 
-## RNF-010 — Privacidad
+## RNF-010 â€” Privacidad
 
-El sistema aplicará:
+El sistema aplicarÃ¡:
 
-- Minimización.
+- MinimizaciÃ³n.
 - Finalidad.
 - Acceso restringido.
 - Aviso de privacidad.
-- Retención.
+- RetenciÃ³n.
 - Procedimientos ARCO.
 
 **Prioridad:** P0
 
-## RNF-011 — Observabilidad
+## RNF-011 â€” Observabilidad
 
-La plataforma deberá contar con:
+La plataforma deberÃ¡ contar con:
 
 - Logs.
 - Monitoreo.
-- Alertas técnicas.
+- Alertas tÃ©cnicas.
 - Seguimiento de errores.
-- Métricas de uso.
+- MÃ©tricas de uso.
 
 **Prioridad:** P0
 
-## RNF-012 — Mantenibilidad
+## RNF-012 â€” Mantenibilidad
 
-Las reglas legales deberán estar separadas de la interfaz y versionadas.
+Las reglas legales deberÃ¡n estar separadas de la interfaz y versionadas.
 
 **Prioridad:** P0
 
-## RNF-013 — Pruebas
+## RNF-013 â€” Pruebas
 
-El proyecto deberá tener pruebas automatizadas para:
+El proyecto deberÃ¡ tener pruebas automatizadas para:
 
-- Cálculos.
+- CÃ¡lculos.
 - Multi-tenant.
 - Permisos.
 - Correcciones.
@@ -2001,15 +2035,15 @@ El proyecto deberá tener pruebas automatizadas para:
 
 **Prioridad:** P0
 
-## RNF-014 — Portabilidad
+## RNF-014 â€” Portabilidad
 
-La empresa podrá obtener una exportación de su información.
+La empresa podrÃ¡ obtener una exportaciÃ³n de su informaciÃ³n.
 
 **Prioridad:** P0
 
-## RNF-015 — Neutralidad jurídica
+## RNF-015 â€” Neutralidad jurÃ­dica
 
-La plataforma deberá evitar presentar alertas como sentencias definitivas.
+La plataforma deberÃ¡ evitar presentar alertas como sentencias definitivas.
 
 **Prioridad:** P0
 
@@ -2017,75 +2051,75 @@ La plataforma deberá evitar presentar alertas como sentencias definitivas.
 
 # 8. Flujos principales
 
-## FLUJO-001 — Alta y configuración inicial
+## FLUJO-001 â€” Alta y configuraciÃ³n inicial
 
 ```text
 Crear empresa
-→ Crear centros
-→ Crear usuarios
-→ Importar personas
-→ Crear horarios y turnos
-→ Asignar condiciones
-→ Activar registro
+â†’ Crear centros
+â†’ Crear usuarios
+â†’ Importar personas
+â†’ Crear horarios y turnos
+â†’ Asignar condiciones
+â†’ Activar registro
 ```
 
-## FLUJO-002 — Registro y cálculo
+## FLUJO-002 â€” Registro y cÃ¡lculo
 
 ```text
 Registrar entrada
-→ Registrar pausas
-→ Registrar salida
-→ Reconstruir jornada
-→ Aplicar reglas
-→ Generar resultados
-→ Generar alertas
+â†’ Registrar pausas
+â†’ Registrar salida
+â†’ Reconstruir jornada
+â†’ Aplicar reglas
+â†’ Generar resultados
+â†’ Generar alertas
 ```
 
-## FLUJO-003 — Incidencia y corrección
+## FLUJO-003 â€” Incidencia y correcciÃ³n
 
 ```text
 Detectar diferencia
-→ Crear incidencia
-→ Revisar datos
-→ Proponer corrección
-→ Aprobar o rechazar
-→ Recalcular
-→ Conservar versión previa
+â†’ Crear incidencia
+â†’ Revisar datos
+â†’ Proponer correcciÃ³n
+â†’ Aprobar o rechazar
+â†’ Recalcular
+â†’ Conservar versiÃ³n previa
 ```
 
-## FLUJO-004 — Cierre y conformidad
+## FLUJO-004 â€” Cierre y conformidad
 
 ```text
 Finalizar periodo
-→ Calcular jornadas
-→ Revisar alertas
-→ Resolver críticas
-→ Generar reporte individual
-→ Enviar a revisión
-→ Conforme / No conforme / Pendiente
-→ Cerrar o abrir aclaración
+â†’ Calcular jornadas
+â†’ Revisar alertas
+â†’ Resolver crÃ­ticas
+â†’ Generar reporte individual
+â†’ Enviar a revisiÃ³n
+â†’ Conforme / No conforme / Pendiente
+â†’ Cerrar o abrir aclaraciÃ³n
 ```
 
-## FLUJO-005 — Expediente
+## FLUJO-005 â€” Expediente
 
 ```text
 Recibir solicitud
-→ Delimitar empresa, personas y periodo
-→ Generar información
-→ Revisar
-→ Cerrar expediente
-→ Generar hash
-→ Entregar
-→ Conservar acuse
+â†’ Delimitar empresa, personas y periodo
+â†’ Generar informaciÃ³n
+â†’ Revisar
+â†’ Cerrar expediente
+â†’ Generar hash
+â†’ Entregar
+â†’ Conservar acuse
 ```
 
 ---
 
-# 9. Criterios globales de aceptación del MVP
+# 9. Criterios globales de aceptaciÃ³n del MVP
 
-El MVP estará listo para piloto cuando:
+El MVP estarÃ¡ listo para piloto cuando:
 
-1. Una empresa pueda configurarse sin intervención directa en base de datos.
+1. Una empresa pueda configurarse sin intervenciÃ³n directa en base de datos.
 2. Puedan importarse personas y horarios.
 3. Una persona pueda registrar entrada y salida.
 4. El motor pueda reconstruir y clasificar jornadas.
@@ -2093,26 +2127,26 @@ El MVP estará listo para piloto cuando:
 6. Las incidencias puedan corregirse sin eliminar el historial.
 7. La persona trabajadora pueda consultar sus registros.
 8. Pueda marcar conforme o no conforme un reporte.
-9. Una corrección genere una nueva versión.
+9. Una correcciÃ³n genere una nueva versiÃ³n.
 10. Un reporte firmado conserve hash y evidencia.
 11. Puedan generarse reportes por persona, centro y periodo.
 12. Pueda generarse un expediente delimitado.
 13. Los datos de una empresa no sean accesibles desde otra.
-14. Existan pruebas automatizadas de reglas críticas.
+14. Existan pruebas automatizadas de reglas crÃ­ticas.
 15. Existan respaldos y monitoreo.
-16. El piloto pueda operar durante al menos dos semanas sin pérdida de información.
+16. El piloto pueda operar durante al menos dos semanas sin pÃ©rdida de informaciÃ³n.
 
 ---
 
-# 10. Priorización resumida
+# 10. PriorizaciÃ³n resumida
 
-## P0 — Obligatorio para producción
+## P0 â€” Obligatorio para producciÃ³n
 
 - Multi-tenant.
 - Empresas y centros.
 - Personas y relaciones laborales.
 - Horarios y turnos.
-- Registro electrónico.
+- Registro electrÃ³nico.
 - Motor legal.
 - Alertas.
 - Incidencias.
@@ -2123,35 +2157,35 @@ El MVP estará listo para piloto cuando:
 - CSV.
 - API e interoperabilidad bidireccional.
 - Seguridad.
-- Auditoría.
+- AuditorÃ­a.
 - Respaldos.
 - Monitoreo.
 
-## P1 — Solo si no afecta la fecha
+## P1 â€” Solo si no afecta la fecha
 
 - Recordatorios avanzados.
-- Exportación de prenómina específica.
-- Teletrabajo básico.
-- Políticas visibles en portal.
-- Suspensión comercial automatizada.
+- ExportaciÃ³n de prenÃ³mina especÃ­fica.
+- Teletrabajo bÃ¡sico.
+- PolÃ­ticas visibles en portal.
+- SuspensiÃ³n comercial automatizada.
 - Notificaciones configurables.
 - Crear horarios por API.
 - Asignar horarios por API.
 - Resolver alertas por API.
 - Aprobar correcciones por API.
 - Generar expedientes por API.
-- Confirmar conformidad vía API.
-- Integración directa ClickBalance.
+- Confirmar conformidad vÃ­a API.
+- IntegraciÃ³n directa ClickBalance.
 
 ## Fuera
 
 - App nativa.
-- Biometría.
+- BiometrÃ­a.
 - Hardware.
-- Nómina.
+- NÃ³mina.
 - IA.
-- Analítica avanzada.
-- Internacionalización.
+- AnalÃ­tica avanzada.
+- InternacionalizaciÃ³n.
 
 ---
 
@@ -2169,22 +2203,22 @@ Este documento depende de:
 
 # 12. Siguiente paso
 
-Después de aprobar este documento, se deberá continuar con:
+DespuÃ©s de aprobar este documento, se deberÃ¡ continuar con:
 
 ```text
 docs/04-Arquitectura/
 ```
 
-El siguiente documento recomendado será:
+El siguiente documento recomendado serÃ¡:
 
 ```text
 ARQ-0001-ARQUITECTURA-DEL-MVP.md
 ```
 
-Ahí se definirán:
+AhÃ­ se definirÃ¡n:
 
-- Módulos técnicos.
-- Límites del dominio.
+- MÃ³dulos tÃ©cnicos.
+- LÃ­mites del dominio.
 - Estrategia multi-tenant.
 - Componentes Laravel/Livewire.
 - Motor de reglas.

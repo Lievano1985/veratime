@@ -35,6 +35,8 @@ new class extends Component {
             'settingsForm.default_timezone' => ['required', 'string', 'max:100'],
             'settingsForm.default_closure_day' => ['nullable', 'integer', 'between:1,31'],
             'settingsForm.work_days_auto_refresh_time' => ['nullable', 'date_format:H:i'],
+            'settingsForm.late_arrival_tolerance_minutes' => ['required', 'integer', 'min:0', 'max:240'],
+            'settingsForm.early_departure_tolerance_minutes' => ['required', 'integer', 'min:0', 'max:240'],
             'settingsForm.allow_worker_corrections' => ['boolean'],
             'settingsForm.require_pin_for_kiosk' => ['boolean'],
             'settingsForm.kiosk_key' => ['nullable', 'string', 'min:8', 'max:80', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
@@ -105,6 +107,8 @@ new class extends Component {
             'work_days_auto_refresh_time' => $settings['work_days_auto_refresh_time']
                 ? substr((string) $settings['work_days_auto_refresh_time'], 0, 5)
                 : null,
+            'late_arrival_tolerance_minutes' => (int) ($settings['late_arrival_tolerance_minutes'] ?? 0),
+            'early_departure_tolerance_minutes' => (int) ($settings['early_departure_tolerance_minutes'] ?? 0),
             'allow_worker_corrections' => (bool) $settings['allow_worker_corrections'],
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'kiosk_key' => '',
@@ -190,6 +194,12 @@ new class extends Component {
                 <flux:input wire:model="settingsForm.default_timezone" label="Zona horaria" required />
                 <flux:input wire:model="settingsForm.default_closure_day" label="Dia de cierre" type="number" min="1" max="31" />
                 <flux:input wire:model="settingsForm.work_days_auto_refresh_time" label="Hora automatica de jornadas" type="time" />
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <flux:input wire:model="settingsForm.late_arrival_tolerance_minutes" label="Tolerancia de retardo (min)" type="number" min="0" max="240" />
+                    <flux:input wire:model="settingsForm.early_departure_tolerance_minutes" label="Tolerancia de salida anticipada (min)" type="number" min="0" max="240" />
+                </div>
+                <p class="text-xs text-surface-muted">Estas tolerancias ajustan los minutos de retardo y salida anticipada que se reportan en jornadas y CSV de periodo.</p>
 
                 <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
                     <flux:input wire:model="settingsForm.kiosk_key" label="Clave de kiosco" type="password" autocomplete="new-password" placeholder="Dejar vacio para conservar la actual" />

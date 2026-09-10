@@ -35,26 +35,32 @@ class ResolveAlertAction
             throw new InvalidArgumentException('El motivo del dictamen es obligatorio.');
         }
 
-        if (! in_array($alert->status, Alert::OPEN_STATUSES, true)) {
-            throw new InvalidArgumentException('Solo se pueden dictaminar alertas abiertas.');
-        }
-
         return DB::transaction(function () use ($company, $alert, $actor, $status, $resolution): Alert {
             $locked = Alert::query()
                 ->where('company_id', $company->id)
                 ->lockForUpdate()
                 ->findOrFail($alert->id);
 
-            if (! in_array($locked->status, Alert::OPEN_STATUSES, true)) {
-                throw new InvalidArgumentException('Solo se pueden dictaminar alertas abiertas.');
+            $metadata = $locked->metadata ?? [];
+            $history = $metadata['resolution_history'] ?? [];
+
+            if ($locked->resolved_at || $locked->resolution) {
+                $history[] = [
+                    'previous_status' => $locked->status,
+                    'previous_resolution' => $locked->resolution,
+                    'previous_resolved_by' => $locked->resolved_by,
+                    'previous_resolved_at' => $locked->resolved_at?->toDateTimeString(),
+                    'changed_by' => $actor->id,
+                    'changed_at' => CarbonImmutable::now('UTC')->toDateTimeString(),
+                ];
             }
 
-            $metadata = $locked->metadata ?? [];
             $metadata['resolution'] = [
                 'status' => $status,
                 'actor_id' => $actor->id,
                 'resolved_at' => CarbonImmutable::now('UTC')->toDateTimeString(),
             ];
+            $metadata['resolution_history'] = $history;
 
             $locked->forceFill([
                 'status' => $status,
