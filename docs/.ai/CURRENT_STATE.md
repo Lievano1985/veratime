@@ -841,7 +841,7 @@ Estado: implementado / candidato a cierre.
 
 ## Bloque Admin A2 - cuenta cliente y suscripciones
 
-Estado: implementado parcial / candidato a cierre.
+Estado: implementado / candidato a cierre.
 
 - Vera Time se vendera por suscripcion.
 - El caso principal del MVP es una cuenta cliente con una empresa operativa.
@@ -850,6 +850,27 @@ Estado: implementado parcial / candidato a cierre.
 - El flujo guiado de `super_admin` crea cuenta cliente, empresa y administrador principal en una transaccion.
 - Multiempresa queda preparado a nivel de cuenta cliente, pero sin cobro, facturacion, limites automaticos ni autoservicio comercial.
 - A1/A2 no sincroniza automaticamente estado de empresa con estado de cuenta cliente.
+- ADR-0007 define la capa minima de productos contratados para la suite VERA:
+  - `products`.
+  - `customer_account_products`.
+  - producto inicial `time` para VERA Time.
+  - `customer_account_products` vive a nivel cuenta cliente, no empresa.
+  - una sola fila por cuenta/producto representa el estado actual.
+  - el historial comercial queda para `customer_account_product_events` futuro.
+  - `ProductAccess`/`hasProduct('time')` debera resolver empresa -> cuenta cliente -> producto contratado.
+  - `trial`, `active` y `past_due` permiten jobs de Time.
+  - `suspended` y `cancelled` detienen nueva operacion automatica de Time.
+- A2.1 implementa la capa minima de productos contratados:
+  - `products`.
+  - `customer_account_products`.
+  - `ProductSeeder`.
+  - `ProductAccess`.
+  - middleware `product:time`.
+  - backfill de VERA Time activo para cuentas existentes.
+  - alta guiada/creacion/edicion de empresa aseguran VERA Time activo en cuentas nuevas.
+  - `/customer-accounts` muestra productos contratados por cuenta y permite cambiar estado, inicio, fin de prueba y fin efectivo.
+  - `work-days:refresh`, `work-days:auto-refresh` y `RecalculateWorkDayFromTimeEventJob` respetan producto Time operativo.
+- Pendiente posterior: billing/facturacion, planes completos, historial comercial detallado y permisos por producto a nivel usuario.
 
 ## Bloque Admin A3 - suspensiones y acceso
 

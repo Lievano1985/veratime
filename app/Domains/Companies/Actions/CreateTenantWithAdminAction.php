@@ -2,6 +2,7 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\Role;
@@ -15,6 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class CreateTenantWithAdminAction
 {
+    public function __construct(
+        private readonly EnsureCustomerAccountHasProductAction $ensureCustomerAccountHasProduct,
+    ) {}
+
     /**
      * @param array{company: array<string, mixed>, admin: array<string, mixed>} $data
      */
@@ -55,6 +60,8 @@ class CreateTenantWithAdminAction
                 'status' => 'active',
                 'metadata' => [],
             ]);
+
+            $this->ensureCustomerAccountHasProduct->handle($customerAccount);
 
             $company = Company::query()->create([
                 'customer_account_id' => $customerAccount->id,

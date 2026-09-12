@@ -62,6 +62,8 @@ class DailyScheduleCalendarUiTest extends TestCase
 
     public function test_initial_batch_filter_hides_past_batches_and_can_show_all_periods(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-08-10 09:00:00'));
+
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
         $draft = $this->firstBatch($company);

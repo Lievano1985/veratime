@@ -1,7 +1,10 @@
 <?php
 
 use App\Domains\CustomerAccounts\Actions\UpdateCustomerAccountStatusAction;
+use App\Domains\Products\Actions\UpdateCustomerAccountProductAction;
 use App\Models\CustomerAccount;
+use App\Models\CustomerAccountProduct;
+use App\Models\Product;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -12,6 +15,10 @@ new class extends Component {
     use WithPagination;
 
     public array $filters = [];
+    public bool $showProductPanel = false;
+    public ?int $editingCustomerAccountId = null;
+    public string $editingCustomerAccountName = '';
+    public array $productForm = [];
 
     public function mount(): void
     {
@@ -22,6 +29,8 @@ new class extends Component {
             'account_type' => '',
             'status' => '',
         ];
+
+        $this->resetProductForm();
     }
 
     public function updated($property): void
@@ -49,6 +58,84 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function openProductPanel(int $customerAccountId): void
+    {
+        $customerAccount = CustomerAccount::query()
+            ->with(['customerAccountProducts.product'])
+            ->findOrFail($customerAccountId);
+
+        Gate::authorize('update', $customerAccount);
+
+        $activeProduct = Product::query()
+            ->where('status', Product::STATUS_ACTIVE)
+            ->orderBy('name')
+            ->first();
+
+        $customerProduct = $activeProduct
+            ? $customerAccount->customerAccountProducts->firstWhere('product_id', $activeProduct->id)
+            : null;
+
+        $this->editingCustomerAccountId = $customerAccount->id;
+        $this->editingCustomerAccountName = $customerAccount->name;
+        $this->productForm = [
+            'product_id' => $activeProduct?->id,
+            'status' => $customerProduct?->status ?? CustomerAccountProduct::STATUS_ACTIVE,
+            'starts_at' => $customerProduct?->starts_at?->format('Y-m-d') ?? '',
+            'trial_ends_at' => $customerProduct?->trial_ends_at?->format('Y-m-d') ?? '',
+            'ends_at' => $customerProduct?->ends_at?->format('Y-m-d') ?? '',
+        ];
+        $this->showProductPanel = true;
+    }
+
+    public function updatedProductFormProductId(): void
+    {
+        if (! $this->editingCustomerAccountId || ! $this->productForm['product_id']) {
+            return;
+        }
+
+        $customerProduct = CustomerAccountProduct::query()
+            ->where('customer_account_id', $this->editingCustomerAccountId)
+            ->where('product_id', $this->productForm['product_id'])
+            ->first();
+
+        $this->productForm['status'] = $customerProduct?->status ?? CustomerAccountProduct::STATUS_ACTIVE;
+        $this->productForm['starts_at'] = $customerProduct?->starts_at?->format('Y-m-d') ?? '';
+        $this->productForm['trial_ends_at'] = $customerProduct?->trial_ends_at?->format('Y-m-d') ?? '';
+        $this->productForm['ends_at'] = $customerProduct?->ends_at?->format('Y-m-d') ?? '';
+    }
+
+    public function saveProduct(UpdateCustomerAccountProductAction $action): void
+    {
+        $validated = validator($this->productForm, [
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('status', Product::STATUS_ACTIVE)],
+            'status' => ['required', Rule::in([
+                CustomerAccountProduct::STATUS_TRIAL,
+                CustomerAccountProduct::STATUS_ACTIVE,
+                CustomerAccountProduct::STATUS_PAST_DUE,
+                CustomerAccountProduct::STATUS_SUSPENDED,
+                CustomerAccountProduct::STATUS_CANCELLED,
+            ])],
+            'starts_at' => ['nullable', 'date'],
+            'trial_ends_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date'],
+        ])->validate();
+
+        $customerAccount = CustomerAccount::query()->findOrFail($this->editingCustomerAccountId);
+
+        $action->handle(auth()->user(), $customerAccount, $validated);
+
+        Session::flash('status', 'Producto contratado actualizado.');
+        $this->showProductPanel = false;
+        $this->resetProductForm();
+        $this->dispatch('companies-updated');
+    }
+
+    public function closeProductPanel(): void
+    {
+        $this->showProductPanel = false;
+        $this->resetProductForm();
+    }
+
     public function with(): array
     {
         Gate::authorize('viewAny', CustomerAccount::class);
@@ -58,9 +145,16 @@ new class extends Component {
         $status = trim((string) ($this->filters['status'] ?? ''));
 
         return [
+            'products' => Product::query()
+                ->where('status', Product::STATUS_ACTIVE)
+                ->orderBy('name')
+                ->get(),
             'customerAccounts' => CustomerAccount::query()
                 ->withCount('companies')
-                ->with(['companies' => fn ($query) => $query->orderBy('name')])
+                ->with([
+                    'companies' => fn ($query) => $query->orderBy('name'),
+                    'customerAccountProducts.product' => fn ($query) => $query->orderBy('name'),
+                ])
                 ->when($search !== '', function ($query) use ($search): void {
                     $query->where(function ($inner) use ($search): void {
                         $inner
@@ -105,6 +199,41 @@ new class extends Component {
             default => 'success',
         };
     }
+
+    private function productStatusLabel(string $status): string
+    {
+        return match ($status) {
+            CustomerAccountProduct::STATUS_TRIAL => 'Prueba',
+            CustomerAccountProduct::STATUS_PAST_DUE => 'Pago vencido',
+            CustomerAccountProduct::STATUS_SUSPENDED => 'Suspendido',
+            CustomerAccountProduct::STATUS_CANCELLED => 'Cancelado',
+            default => 'Activo',
+        };
+    }
+
+    private function productStatusBadge(string $status): string
+    {
+        return match ($status) {
+            CustomerAccountProduct::STATUS_TRIAL => 'info',
+            CustomerAccountProduct::STATUS_PAST_DUE => 'warning',
+            CustomerAccountProduct::STATUS_SUSPENDED => 'warning',
+            CustomerAccountProduct::STATUS_CANCELLED => 'danger',
+            default => 'success',
+        };
+    }
+
+    private function resetProductForm(): void
+    {
+        $this->editingCustomerAccountId = null;
+        $this->editingCustomerAccountName = '';
+        $this->productForm = [
+            'product_id' => null,
+            'status' => CustomerAccountProduct::STATUS_ACTIVE,
+            'starts_at' => '',
+            'trial_ends_at' => '',
+            'ends_at' => '',
+        ];
+    }
 }; ?>
 
 <section class="w-full space-y-6 p-6">
@@ -146,6 +275,7 @@ new class extends Component {
                         <th class="px-4 py-3">Cuenta</th>
                         <th class="px-4 py-3">Tipo</th>
                         <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3">Productos</th>
                         <th class="px-4 py-3">Empresas</th>
                         <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
@@ -162,6 +292,23 @@ new class extends Component {
                                 <x-ui.badge variant="{{ $this->statusBadge($customerAccount->status) }}">
                                     {{ $this->statusLabel($customerAccount->status) }}
                                 </x-ui.badge>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-col gap-2">
+                                    @forelse ($customerAccount->customerAccountProducts as $customerProduct)
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="text-sm font-medium text-zinc-900">{{ $customerProduct->product?->name ?? 'Producto' }}</span>
+                                            <x-ui.badge variant="{{ $this->productStatusBadge($customerProduct->status) }}">
+                                                {{ $this->productStatusLabel($customerProduct->status) }}
+                                            </x-ui.badge>
+                                        </div>
+                                    @empty
+                                        <span class="text-sm text-zinc-500">Sin productos activos</span>
+                                    @endforelse
+                                    <button type="button" class="btn-ghost btn-sm w-fit" wire:click="openProductPanel({{ $customerAccount->id }})">
+                                        Administrar
+                                    </button>
+                                </div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-sm font-medium text-zinc-900">{{ $customerAccount->companies_count }} empresa(s)</div>
@@ -198,7 +345,7 @@ new class extends Component {
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-zinc-500">
+                            <td colspan="6" class="px-4 py-8 text-center text-zinc-500">
                                 No hay cuentas cliente con estos filtros.
                             </td>
                         </tr>
@@ -211,4 +358,43 @@ new class extends Component {
             {{ $customerAccounts->links() }}
         </div>
     </section>
+
+    <x-side-panel wire:model="showProductPanel" title="Productos contratados" subheading="{{ $editingCustomerAccountName }}" labelledby="customer-account-product-title" maxWidth="max-w-xl" closeMethod="closeProductPanel">
+        <form wire:submit="saveProduct" class="space-y-5 p-6">
+            <flux:select label="Producto" wire:model.live="productForm.product_id">
+                @forelse ($products as $product)
+                    <flux:select.option value="{{ $product->id }}">{{ $product->name }}</flux:select.option>
+                @empty
+                    <flux:select.option value="">No hay productos activos</flux:select.option>
+                @endforelse
+            </flux:select>
+
+            <flux:select label="Estado del producto" wire:model="productForm.status">
+                <flux:select.option value="{{ CustomerAccountProduct::STATUS_TRIAL }}">Prueba</flux:select.option>
+                <flux:select.option value="{{ CustomerAccountProduct::STATUS_ACTIVE }}">Activo</flux:select.option>
+                <flux:select.option value="{{ CustomerAccountProduct::STATUS_PAST_DUE }}">Pago vencido</flux:select.option>
+                <flux:select.option value="{{ CustomerAccountProduct::STATUS_SUSPENDED }}">Suspendido</flux:select.option>
+                <flux:select.option value="{{ CustomerAccountProduct::STATUS_CANCELLED }}">Cancelado</flux:select.option>
+            </flux:select>
+
+            <div class="grid gap-4 md:grid-cols-3">
+                <flux:input type="date" label="Inicio" wire:model="productForm.starts_at" />
+                <flux:input type="date" label="Fin de prueba" wire:model="productForm.trial_ends_at" />
+                <flux:input type="date" label="Fin efectivo" wire:model="productForm.ends_at" />
+            </div>
+
+            <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+                Trial, activo y pago vencido permiten operar VERA Time. Suspendido y cancelado bloquean rutas operativas y detienen nuevos procesos automaticos.
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button type="button" class="btn-ghost" wire:click="closeProductPanel">Cancelar</button>
+                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="saveProduct">
+                    <span wire:loading wire:target="saveProduct" class="btn-spinner"></span>
+                    <span wire:loading.remove wire:target="saveProduct">Guardar producto</span>
+                    <span wire:loading wire:target="saveProduct">Guardando</span>
+                </button>
+            </div>
+        </form>
+    </x-side-panel>
 </section>

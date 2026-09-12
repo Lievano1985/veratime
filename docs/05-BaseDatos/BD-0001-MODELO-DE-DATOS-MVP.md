@@ -157,7 +157,7 @@ Cuando se definan índices únicos sobre columnas nullable, se deberá validar e
 
 | Módulo | Tablas principales |
 |---|---|
-| Tenancy y planes | `companies`, `company_settings`, `plans`, `subscriptions`, `usage_snapshots` |
+| Tenancy y productos contratados | `customer_accounts`, `companies`, `company_settings`, `products`, `customer_account_products`, `plans`, `subscriptions`, `usage_snapshots` |
 | Usuarios y permisos | `users`, `company_user`, `roles`, `permissions`, `role_user`, `role_permission` |
 | Centros | `centers` |
 | Trabajadores | `workers`, `employment_relationships`, `labor_conditions`, `worker_credentials` |
@@ -198,6 +198,101 @@ Indices:
 ```text
 index(account_type, status)
 ```
+
+## 5.0.1 `products`
+
+Catalogo de productos comerciales de la plataforma VERA.
+
+Durante el MVP el producto operativo es VERA Time. A futuro podran existir VERA Payroll y VERA RH como productos comprables por separado e integrables entre si.
+
+| Campo | Tipo sugerido | Notas |
+|---|---|---|
+| `id` | bigint pk | Identificador |
+| `key` | string(50) | Clave canonica unica: `time`, `payroll`, `rh` |
+| `name` | string(120) | Nombre comercial: VERA Time, VERA Payroll, VERA RH |
+| `description` | text nullable | Descripcion corta |
+| `is_addon` | boolean | Indica si es complemento de otro producto |
+| `requires_product_id` | bigint fk nullable | Producto requerido, si aplica |
+| `status` | string(30) | `draft`, `active`, `inactive` |
+| `metadata` | JSON nullable | Datos ligeros no criticos |
+| `created_at` | timestamp |  |
+| `updated_at` | timestamp |  |
+
+Indices:
+
+```text
+unique(key)
+index(status, is_addon)
+```
+
+Regla:
+
+`key` no debe ser enum de base de datos. Debe quedar como string validado en codigo mediante constantes para permitir nuevos productos sin migracion estructural.
+
+## 5.0.2 `customer_account_products`
+
+Representa el estado actual de un producto contratado por una cuenta cliente.
+
+| Campo | Tipo sugerido | Notas |
+|---|---|---|
+| `id` | bigint pk | Identificador |
+| `customer_account_id` | bigint fk | Cuenta cliente |
+| `product_id` | bigint fk | Producto |
+| `status` | string(30) | `trial`, `active`, `past_due`, `suspended`, `cancelled` |
+| `starts_at` | timestamp nullable | Inicio de acceso o contratacion |
+| `trial_ends_at` | timestamp nullable | Fin de prueba |
+| `ends_at` | timestamp nullable | Fin efectivo si aplica |
+| `metadata` | JSON nullable | Plan, limites y referencias comerciales ligeras |
+| `created_at` | timestamp |  |
+| `updated_at` | timestamp |  |
+
+Indices:
+
+```text
+unique(customer_account_id, product_id)
+index(customer_account_id, status)
+index(product_id, status)
+index(status, ends_at)
+```
+
+Reglas:
+
+- Una cuenta cliente tendra una sola fila por producto.
+- La fila representa el estado actual del producto contratado.
+- Si el cliente cancela y luego reactiva el mismo producto, se actualiza la misma fila.
+- El historial comercial detallado se pospone para una tabla futura `customer_account_product_events`.
+- `trial` es un estado; `trial_ends_at` conserva la fecha de vencimiento de la prueba.
+- `active` puede tener `ends_at = null`, que significa acceso vigente sin fecha final definida.
+- No se agrega `company_id` en esta tabla. La contratacion vive en `customer_accounts`; las empresas operativas cuelgan de la cuenta cliente.
+- Si a futuro una cuenta multiempresa requiere productos distintos por empresa, se agregara una tabla separada `company_product_entitlements`.
+
+Comportamiento inicial:
+
+```text
+trial / active / past_due = producto operativo
+suspended / cancelled = producto no operativo
+```
+
+Jobs de VERA Time:
+
+```text
+trial / active / past_due: los jobs de Time pueden procesar.
+suspended / cancelled: los jobs de Time no deben generar nueva operacion automatica.
+```
+
+Migracion de datos existentes:
+
+Implementado en `2026_09_11_000000_create_products_and_customer_account_products_tables.php`:
+
+1. Crea `products`.
+2. Crea `customer_account_products`.
+3. Registra `products.key = time` de forma idempotente.
+4. Crea `customer_account_products` activo para todas las cuentas existentes.
+
+Validaciones de despliegue:
+
+1. Validar que toda empresa tenga `customer_account_id`.
+2. Validar que toda cuenta tenga VERA Time antes de activar el middleware `product:time`.
 
 ## 5.1 `companies`
 
@@ -2441,23 +2536,40 @@ Reglas de datos:
 
 ### A2 - cuenta cliente y suscripcion
 
-A2 queda implementado parcialmente para modelar formalmente:
+A2 queda implementado para modelar formalmente:
 
 - cuenta cliente comercial;
 - relacion cuenta cliente -> una o varias empresas.
+- capa minima de productos contratados mediante `products` y `customer_account_products`.
 
 Queda pendiente:
 
-- suscripcion;
+- billing/facturacion;
 - plan;
 - limites;
-- estado comercial;
+- historial comercial detallado;
+- permisos por producto a nivel usuario.
 
 Decision provisional:
 
 - No amarrar definitivamente la suscripcion solo a `companies`.
 - Preparar el modelo para que una cuenta cliente pueda tener una empresa en el flujo normal o varias empresas en planes especiales para despachos/grupos.
 - Mantener `company_id` como frontera operativa innegociable aunque exista una cuenta cliente multiempresa.
+- `customer_account_products` define que productos VERA tiene disponibles una cuenta cliente.
+- VERA Time se siembra como `products.key = time` y se asigna como activo a todas las cuentas existentes antes de activar cualquier bloqueo por producto.
+- La relacion `customer_account_id + product_id` es unica y representa el estado actual; el historial de cancelacion/reactivacion queda para `customer_account_product_events` futuro.
+- No agregar `company_id` en `customer_account_products`; si se requiere licenciamiento por empresa dentro de una cuenta multiempresa, usar una tabla futura `company_product_entitlements`.
+- Jobs y cron de Time deben procesar `trial`, `active` y `past_due`; no deben generar nueva operacion automatica para `suspended` o `cancelled`.
+
+Implementacion A2.1:
+
+- `products` y `customer_account_products` existen con migracion y modelos.
+- `ProductSeeder` registra `time`, `payroll` y `rh`; solo `time` queda activo.
+- Nuevas cuentas cliente creadas por alta guiada, creacion de empresa, edicion de empresa o factory reciben VERA Time activo por defecto.
+- `ProductAccess` resuelve acceso desde empresa -> cuenta cliente -> producto contratado.
+- `/customer-accounts` permite al `super_admin` administrar estado y fechas del producto contratado.
+- `product:time` protege rutas operativas de VERA Time.
+- `work-days:refresh`, `work-days:auto-refresh` y el job de recalculo por evento respetan el estado operativo de VERA Time.
 
 ### A3 - estados y suspension
 

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\User;
@@ -9,6 +10,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateCompanyAction
 {
+    public function __construct(
+        private readonly EnsureCustomerAccountHasProductAction $ensureCustomerAccountHasProduct,
+    ) {}
+
     public function handle(Company $company, array $data, ?User $actor = null): Company
     {
         if ($actor && ! $actor->isSuperAdmin() && in_array($data['status'] ?? $company->status, ['suspended', 'cancelled'], true)) {
@@ -51,6 +56,8 @@ class UpdateCompanyAction
                     'account_type' => $data['account_type'],
                 ])->save();
             }
+
+            $this->ensureCustomerAccountHasProduct->handle($customerAccount);
         }
 
         return $company->refresh();

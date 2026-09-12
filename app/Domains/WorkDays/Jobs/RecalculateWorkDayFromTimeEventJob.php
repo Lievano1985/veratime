@@ -2,9 +2,11 @@
 
 namespace App\Domains\WorkDays\Jobs;
 
+use App\Domains\Products\Support\ProductAccess;
 use App\Domains\WorkDays\Actions\ProcessSingleWorkDayAction;
 use App\Models\TimeEvent;
 use App\Models\WorkDayCalculation;
+use App\Support\ProductKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -31,10 +33,10 @@ class RecalculateWorkDayFromTimeEventJob implements ShouldBeUnique, ShouldQueue
         return 'time_event:'.$this->timeEventId.':'.$this->trigger;
     }
 
-    public function handle(ProcessSingleWorkDayAction $processSingleWorkDay): void
+    public function handle(ProcessSingleWorkDayAction $processSingleWorkDay, ProductAccess $productAccess): void
     {
         $event = TimeEvent::query()
-            ->with(['company', 'employmentRelationship.center'])
+            ->with(['company.customerAccount', 'employmentRelationship.center'])
             ->find($this->timeEventId);
 
         if (! $event || ! $event->company || ! $event->employmentRelationship) {
@@ -42,6 +44,10 @@ class RecalculateWorkDayFromTimeEventJob implements ShouldBeUnique, ShouldQueue
         }
 
         if ($event->company->status !== 'active') {
+            return;
+        }
+
+        if (! $productAccess->companyHasOperationalProduct($event->company, ProductKey::TIME)) {
             return;
         }
 

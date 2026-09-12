@@ -2,6 +2,7 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\Role;
@@ -11,10 +12,15 @@ use Illuminate\Support\Facades\DB;
 
 class CreateCompanyAction
 {
+    public function __construct(
+        private readonly EnsureCustomerAccountHasProductAction $ensureCustomerAccountHasProduct,
+    ) {}
+
     public function handle(User $user, array $data): Company
     {
         return DB::transaction(function () use ($user, $data): Company {
             $customerAccount = $this->resolveCustomerAccountFor($user, $data);
+            $this->ensureCustomerAccountHasProduct->handle($customerAccount);
 
             $company = Company::query()->create([
                 'customer_account_id' => $customerAccount->id,

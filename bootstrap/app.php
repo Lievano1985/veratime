@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Tenancy\Middleware\EnsureCurrentCompany;
+use App\Domains\Products\Middleware\EnsureProductAccess;
 use App\Http\Middleware\EnsureActiveUser;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'current.company' => EnsureCurrentCompany::class,
+            'product' => EnsureProductAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

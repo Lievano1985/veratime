@@ -65,6 +65,9 @@ Ejemplos:
 ```text
 companies
 company_settings
+customer_accounts
+products
+customer_account_products
 plans
 subscriptions
 usage_snapshots
@@ -115,6 +118,17 @@ access_logs
 notifications
 notification_deliveries
 ```
+
+Nota vigente Admin A2.1:
+
+- `customer_accounts` es la cuenta cliente/comercial.
+- `companies` sigue siendo el tenant operativo y la frontera por `company_id`.
+- `products` es el catalogo de productos VERA.
+- `customer_account_products` indica que producto tiene contratado una cuenta cliente.
+- VERA Time debe existir como `products.key = time`.
+- La verificacion `hasProduct('time')` debe resolverse desde empresa -> cuenta cliente -> producto contratado.
+- `customer_account_products` no debe tener `company_id`; si se requiere licenciamiento por empresa dentro de una cuenta multiempresa, usar tabla futura `company_product_entitlements`.
+- `trial`, `active` y `past_due` permiten jobs de Time; `suspended` y `cancelled` detienen nueva operacion automatica.
 
 ---
 

@@ -780,23 +780,53 @@ Fuera de A1:
 
 ## Bloque Admin A2 - cuenta cliente, planes y suscripciones
 
-Estado: implementado parcial / candidato a cierre.
+Estado: implementado / candidato a cierre.
 
 Historias propuestas:
 
 | ID | Historia | Prioridad | Criterio de aceptacion |
 |---|---|---:|---|
 | BL-ADM-A2-001 | Cuenta cliente comercial | P1 | Implementado/candidato a cierre: `customer_accounts` separa cuenta cliente de empresa operativa |
-| BL-ADM-A2-002 | Planes y limites | P1 | Definir limites por trabajadores, empresas y funcionalidades |
+| BL-ADM-A2-002 | Productos VERA | P1 | Implementado: `products` con producto inicial `time` y claves preparadas para `payroll` y `rh` |
 | BL-ADM-A2-003 | Suscripcion simple | P1 | Implementado parcial: cuenta cliente con una empresa operativa sin cobro automatico |
 | BL-ADM-A2-004 | Suscripcion multiempresa especial | P2 | Preparado: cuenta cliente puede agrupar varias empresas sin mezclar tenants |
 | BL-ADM-A2-005 | Estado comercial | P1 | Piloto, activa, suspendida o cancelada sin borrar historial |
+| BL-ADM-A2-006 | Productos contratados por cuenta | P1 | Implementado: `customer_account_products` asigna VERA Time activo a todas las cuentas existentes |
+| BL-ADM-A2-007 | Verificacion `hasProduct` | P1 | Implementado: `ProductAccess` valida acceso a `time` desde empresa -> cuenta cliente -> producto contratado |
+| BL-ADM-A2-008 | Middleware `product:time` | P1 | Implementado: rutas operativas de Time se bloquean por producto sin duplicar logica |
+| BL-ADM-A2-009 | Jobs respetan producto contratado | P1 | Implementado: jobs/comandos de Time procesan `trial/active/past_due` y no procesan `suspended/cancelled` |
+| BL-ADM-A2-010 | Administracion de productos contratados | P1 | Implementado: `super_admin` administra estado y fechas de producto desde Cuentas cliente |
 
 Decision:
 
 - El flujo comercial principal del MVP sera una cuenta con una empresa.
 - Multiempresa queda reservado para despachos contables, grupos o casos especiales.
 - La suspension formal de cuenta cliente, empresa, usuario y membresia queda en Admin A3.
+- La capa minima de productos contratados queda definida por ADR-0007.
+- `customer_account_products` representa estado actual del producto, con unique `customer_account_id + product_id`.
+- Reactivar un producto actualiza la misma fila; historial comercial detallado queda para `customer_account_product_events` futuro.
+- No se agrega `company_id` a `customer_account_products`; si se requiere licenciamiento por empresa se agregara `company_product_entitlements` futuro.
+- `trial`, `active` y `past_due` permiten jobs de Time; `suspended` y `cancelled` los detienen.
+
+Implementacion A2.1:
+
+- Migracion de `products` y `customer_account_products`.
+- Seeder idempotente de productos VERA.
+- Backfill de VERA Time activo para cuentas existentes.
+- Nuevas cuentas cliente reciben VERA Time activo en los flujos actuales.
+- Cuentas cliente muestra productos contratados y permite cambiar estado/fechas del producto.
+- Middleware `product:time` protege rutas operativas.
+- `work-days:refresh`, `work-days:auto-refresh` y jobs de recalculo por evento respetan producto operativo.
+
+Fuera de A2 actual:
+
+- cobro automatico;
+- facturacion;
+- precios finales;
+- planes completos;
+- portal publico de compra;
+- permisos por producto a nivel usuario;
+- historial comercial detallado.
 
 ## Bloque Admin A3 - suspensiones y acceso
 

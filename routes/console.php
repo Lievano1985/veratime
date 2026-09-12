@@ -2,13 +2,15 @@
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use App\Domains\Products\Support\ProductAccess;
 use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Domains\WorkDays\Actions\RunDueWorkDaysAutoRefreshAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\WorkDayCalculation;
+use App\Support\ProductKey;
 
-Artisan::command('work-days:refresh {--company=} {--from=} {--to=} {--center=} {--reason=}', function (ProcessCompanyWorkDaysAction $action): int {
+Artisan::command('work-days:refresh {--company=} {--from=} {--to=} {--center=} {--reason=}', function (ProcessCompanyWorkDaysAction $action, ProductAccess $productAccess): int {
     $companyId = $this->option('company');
     $reason = trim((string) $this->option('reason'));
 
@@ -28,6 +30,12 @@ Artisan::command('work-days:refresh {--company=} {--from=} {--to=} {--center=} {
 
     if (! $company) {
         $this->error('Empresa no encontrada.');
+
+        return 1;
+    }
+
+    if (! $productAccess->companyHasOperationalProduct($company, ProductKey::TIME)) {
+        $this->error('VERA Time no esta activo para la cuenta cliente de esta empresa.');
 
         return 1;
     }

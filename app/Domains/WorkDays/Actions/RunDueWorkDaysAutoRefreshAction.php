@@ -2,8 +2,10 @@
 
 namespace App\Domains\WorkDays\Actions;
 
+use App\Domains\Products\Support\ProductAccess;
 use App\Models\Company;
 use App\Models\WorkDayCalculation;
+use App\Support\ProductKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -11,6 +13,7 @@ class RunDueWorkDaysAutoRefreshAction
 {
     public function __construct(
         private readonly ProcessCompanyWorkDaysAction $processCompany,
+        private readonly ProductAccess $productAccess,
     ) {}
 
     /**
@@ -28,6 +31,10 @@ class RunDueWorkDaysAutoRefreshAction
             ->orderBy('id')
             ->chunkById(100, function ($companies) use ($nowUtc, $results): void {
                 foreach ($companies as $company) {
+                    if (! $this->productAccess->companyHasOperationalProduct($company, ProductKey::TIME)) {
+                        continue;
+                    }
+
                     if (! $this->isDue($company, $nowUtc)) {
                         continue;
                     }

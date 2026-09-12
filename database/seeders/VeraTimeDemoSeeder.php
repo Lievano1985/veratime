@@ -6,6 +6,7 @@ use App\Domains\MandatoryRestDays\Actions\CreateMandatoryRestDayAction;
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
@@ -18,6 +19,7 @@ use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
 use App\Models\LaborCondition;
 use App\Models\MandatoryRestDay;
@@ -76,6 +78,8 @@ class VeraTimeDemoSeeder extends Seeder
             ],
         );
 
+        $this->ensureCustomerAccount($company);
+
         CompanySetting::query()->updateOrCreate(
             ['company_id' => $company->id],
             array_replace(Company::defaultSettings(), [
@@ -86,6 +90,24 @@ class VeraTimeDemoSeeder extends Seeder
         );
 
         return $company->refresh();
+    }
+
+    private function ensureCustomerAccount(Company $company): void
+    {
+        $customerAccount = $company->customerAccount;
+
+        if (! $customerAccount) {
+            $customerAccount = CustomerAccount::query()->create([
+                'name' => 'Vera Time Demo Completo',
+                'account_type' => 'single_company',
+                'status' => 'active',
+                'metadata' => ['demo' => true, 'local_only' => true],
+            ]);
+
+            $company->forceFill(['customer_account_id' => $customerAccount->id])->save();
+        }
+
+        app(EnsureCustomerAccountHasProductAction::class)->handle($customerAccount);
     }
 
     /**

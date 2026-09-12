@@ -762,6 +762,10 @@ La prioridad inicial será demostrar:
 13. El precio no será el único diferenciador.
 14. Las actualizaciones del núcleo regulatorio formarán parte de la suscripción.
 15. Las integraciones especiales serán ingresos adicionales.
+16. VERA evolucionará como suite modular: VERA Time, VERA Payroll y VERA RH podrán contratarse por separado.
+17. La cuenta cliente comercial será el nivel base para productos contratados.
+18. VERA Time será el primer producto activo y deberá quedar registrado como producto `time` en la capa `products` / `customer_account_products`.
+19. La contratación por empresa dentro de una cuenta multiempresa queda fuera del MVP inicial y se resolverá con una tabla futura si el caso comercial lo exige.
 
 ---
 
@@ -820,5 +824,4 @@ Ahí el alcance comercial del MVP se convertirá en:
   https://www.worky.mx/precios-y-planes-software-rrhh
 - Ley Federal del Trabajo vigente:  
   https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
-
 

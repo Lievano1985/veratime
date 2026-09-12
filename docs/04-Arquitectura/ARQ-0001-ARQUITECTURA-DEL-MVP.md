@@ -1285,6 +1285,33 @@ No implementar en A1/A2:
 - multiempresa comercial completa;
 - suspension formal por cuenta cliente.
 
+### A2.1 - productos contratados VERA
+
+Decision aceptada en `docs/12-Decisiones/ADR-0007-CAPA-DE-PRODUCTOS-CONTRATADOS.md`.
+
+Antes de crecer hacia VERA Payroll o VERA RH, la plataforma agrega una capa minima de productos contratados:
+
+```text
+products
+customer_account_products
+```
+
+`products` define el catalogo de productos VERA (`time`, `payroll`, `rh`). `customer_account_products` define que productos tiene habilitados una cuenta cliente.
+
+Reglas arquitectonicas implementadas:
+
+- VERA Time se siembra como producto `time`.
+- Todas las cuentas cliente existentes reciben `time` activo mediante migracion/backfill y seeder idempotente.
+- La verificacion de producto vive en `App\Domains\Products\Support\ProductAccess`, no en Livewire ni controllers.
+- Las rutas operativas de Time usan middleware `product:time`.
+- Jobs y comandos reutilizan `ProductAccess` para procesos automaticos y reprocesos.
+- `customer_account_products` no lleva `company_id`; la compra vive en cuenta cliente.
+- Si en el futuro se requiere habilitar productos por empresa dentro de una cuenta multiempresa, se agregara `company_product_entitlements`.
+- `trial`, `active` y `past_due` permiten operacion de jobs de Time.
+- `suspended` y `cancelled` bloquean nueva operacion automatica de Time.
+
+La fila `customer_account_products(customer_account_id, product_id)` representa el estado actual del producto. El historial de eventos comerciales se pospone para `customer_account_product_events`.
+
 ### A3 - suspension por niveles
 
 A3 agrega bloqueo operativo por cuenta cliente sin mezclarlo con el estado individual de empresa.

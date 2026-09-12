@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
 use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
@@ -16,6 +17,7 @@ use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
@@ -271,6 +273,8 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
             ],
         );
 
+        $this->ensureCustomerAccount($company, $name);
+
         CompanySetting::query()->updateOrCreate(
             ['company_id' => $company->id],
             Company::defaultSettings() + [
@@ -280,6 +284,24 @@ class VeraTimeScheduleProfileScenarioSeeder extends Seeder
         );
 
         return $company->refresh();
+    }
+
+    private function ensureCustomerAccount(Company $company, string $name): void
+    {
+        $customerAccount = $company->customerAccount;
+
+        if (! $customerAccount) {
+            $customerAccount = CustomerAccount::query()->create([
+                'name' => $name,
+                'account_type' => 'single_company',
+                'status' => 'active',
+                'metadata' => ['demo' => true, 'scenario' => 'schedule_profiles'],
+            ]);
+
+            $company->forceFill(['customer_account_id' => $customerAccount->id])->save();
+        }
+
+        app(EnsureCustomerAccountHasProductAction::class)->handle($customerAccount);
     }
 
     /**

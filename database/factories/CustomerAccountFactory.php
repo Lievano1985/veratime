@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\CustomerAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,5 +21,12 @@ class CustomerAccountFactory extends Factory
             'status' => 'active',
             'metadata' => [],
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (CustomerAccount $account): void {
+            app(EnsureCustomerAccountHasProductAction::class)->handle($account);
+        });
     }
 }

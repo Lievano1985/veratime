@@ -4,15 +4,18 @@ namespace Tests\Feature\WorkDays;
 
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\CustomerAccountProduct;
 use App\Models\DailyScheduleAssignment;
 use App\Models\DailyScheduleSegment;
 use App\Models\EmploymentRelationship;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\ScheduleBatch;
 use App\Models\User;
 use App\Models\WorkDay;
 use App\Models\Worker;
 use App\Support\RoleKey;
+use App\Support\ProductKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -111,6 +114,23 @@ class WorkDayOperationalRefreshTest extends TestCase
         $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
     }
 
+    public function test_manual_command_does_not_refresh_when_time_product_is_suspended(): void
+    {
+        [$company] = $this->companyUserAndPublishedDay();
+        $this->setTimeProductStatus($company, CustomerAccountProduct::STATUS_SUSPENDED);
+
+        $exitCode = Artisan::call('work-days:refresh', [
+            '--company' => $company->id,
+            '--from' => '2026-08-03',
+            '--to' => '2026-08-03',
+            '--reason' => 'Reproceso por consola de prueba',
+        ]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('VERA Time no esta activo', Artisan::output());
+        $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
+    }
+
     public function test_auto_refresh_runs_only_when_company_local_time_is_due(): void
     {
         [$company] = $this->companyUserAndPublishedDay();
@@ -143,6 +163,25 @@ class WorkDayOperationalRefreshTest extends TestCase
         }
 
         $this->assertSame(1, WorkDay::query()->where('company_id', $company->id)->count());
+    }
+
+    public function test_auto_refresh_skips_companies_without_operational_time_product(): void
+    {
+        [$company] = $this->companyUserAndPublishedDay();
+        $company->setting->forceFill([
+            'default_timezone' => 'America/Mexico_City',
+            'work_days_auto_refresh_time' => '02:00',
+        ])->save();
+        $this->setTimeProductStatus($company, CustomerAccountProduct::STATUS_CANCELLED);
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-03 08:00:00', 'UTC'));
+
+        try {
+            Artisan::call('work-days:auto-refresh');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+
+        $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
     }
 
     /**
@@ -199,5 +238,15 @@ class WorkDayOperationalRefreshTest extends TestCase
         ]);
 
         return [$company->refresh(), $user, $relationship];
+    }
+
+    private function setTimeProductStatus(Company $company, string $status): void
+    {
+        $timeProduct = Product::query()->where('key', ProductKey::TIME)->firstOrFail();
+
+        CustomerAccountProduct::query()
+            ->where('customer_account_id', $company->customer_account_id)
+            ->where('product_id', $timeProduct->id)
+            ->update(['status' => $status]);
     }
 }
