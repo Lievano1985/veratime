@@ -1,42 +1,460 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{{ config('app.name', 'Vera Time') }}</title>
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-zinc-950 text-white antialiased">
-        <main class="flex min-h-screen items-center justify-center px-6 py-12">
-            <section class="w-full max-w-xl space-y-8 text-center">
-                <div class="flex justify-center">
-                    <x-app-logo class="h-24 w-72" />
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ config('app.name', 'Vera Time') }} — Registro y evidencia de jornadas laborales</title>
+    <meta name="description"
+        content="Vera Time convierte cada entrada y salida en jornadas calculadas, incidencias revisables y reportes listos para nómina.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <style>
+        .hero-gradient {
+            background:
+                radial-gradient(circle at 12% 15%, color-mix(in oklab, var(--color-brand-sky), transparent 84%), transparent 42%),
+                radial-gradient(circle at 88% 65%, color-mix(in oklab, var(--color-brand-blue), transparent 86%), transparent 48%);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp .6s ease-out both;
+        }
+
+        .animate-in-delay {
+            animation: fadeInUp .6s ease-out .15s both;
+        }
+
+        .float-badge {
+            box-shadow: 0 10px 24px -12px rgba(2, 25, 57, .35);
+        }
+
+        @keyframes heroSlide {
+
+            0%,
+            42% {
+                opacity: 1;
+            }
+
+            50%,
+            92% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .hero-slide {
+            animation: heroSlide 14s ease-in-out infinite;
+        }
+
+        .hero-slide:nth-child(2) {
+            animation-delay: -7s;
+        }
+
+        .hero-slider+img {
+            display: none;
+        }
+
+        .screenshot-frame {
+            box-shadow:
+                0 28px 54px -34px rgba(0, 103, 228, .55),
+                0 10px 24px -18px rgba(2, 25, 57, .28);
+        }
+
+        .screenshot-frame::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-brand-sky), var(--color-brand-blue));
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-surface-bg font-sans text-surface-text antialiased">
+
+    {{-- Nav --}}
+    <header class="sticky top-0 z-10 border-b border-surface-line bg-white/80 backdrop-blur">
+        <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+            <a href="{{ url('/') }}" class="flex items-center gap-2">
+                <img src="{{ asset('images/logo vera time.png') }}" alt="Vera Time" class="h-10 w-auto">
+            </a>
+
+            <nav class="hidden items-center gap-8 text-sm font-medium text-surface-muted md:flex">
+                <a href="#producto" class="transition hover:text-brand-navy">Producto</a>
+                <a href="#reforma" class="transition hover:text-brand-navy">Reforma 2027</a>
+                <a href="#kiosco" class="transition hover:text-brand-navy">Registro de asistencia</a>
+                <a href="#suite" class="transition hover:text-brand-navy">La suite VERA</a>
+            </nav>
+
+            @if (Route::has('login'))
+                <div class="flex items-center gap-3">
+                    @auth
+                        <a href="{{ url('/dashboard') }}" class="btn-primary">Ir al inicio</a>
+                    @else
+                        <a href="{{ route('login') }}" class="btn-outline">Iniciar sesión</a>
+                    @endauth
+                </div>
+            @endif
+        </div>
+    </header>
+
+    {{-- Hero --}}
+    <section id="producto" class="hero-gradient relative overflow-hidden">
+        <div class="w-full px-6 py-20 sm:py-28 lg:px-12 xl:px-16">
+            <div class="grid items-center gap-14 lg:grid-cols-[minmax(0,55fr)_minmax(320px,45fr)] lg:gap-12">
+                <div class="animate-in max-w-2xl">
+                    <h1 class="font-display text-4xl leading-[1.1] tracking-tight text-brand-navy sm:text-5xl">
+                        El tiempo de tu equipo, con <span class="text-brand-blue">evidencia real</span>.
+                    </h1>
+                    <p class="mt-6 max-w-md text-base leading-relaxed text-surface-muted sm:text-lg">
+                        Vera Time convierte cada entrada y salida en jornadas calculadas, incidencias revisables y
+                        reportes listos para nómina.
+                    </p>
+
+                    @if (Route::has('login'))
+                        <div class="mt-8 flex flex-wrap items-center gap-3">
+                            @guest
+                                <a href="{{ route('login') }}" class="btn-primary btn-lg">Iniciar sesión</a>
+                            @else
+                                <a href="{{ url('/dashboard') }}" class="btn-primary btn-lg">Ir al inicio</a>
+                            @endguest
+                            <a href="#kiosco" class="btn-ghost btn-lg">Ver cómo funciona</a>
+                        </div>
+                    @endif
+
+                    <div class="mt-10 flex flex-wrap gap-0">
+                        <div class="mr-6 border-r border-surface-line pr-6">
+                            <span class="font-display block text-xl text-brand-navy">13</span>
+                            <span class="text-xs text-surface-muted">tipos de incidencia detectados</span>
+                        </div>
+                        <div class="mr-6 border-r border-surface-line pr-6">
+                            <span class="font-display block text-xl text-brand-navy">3</span>
+                            <span class="text-xs text-surface-muted">formas de registrar asistencia</span>
+                        </div>
+                        <div>
+                            <span class="font-display block text-xl text-brand-navy">4</span>
+                            <span class="text-xs text-surface-muted">pasos: de horario a nómina</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="space-y-3">
-                    <h1 class="text-3xl font-semibold sm:text-4xl">Vera Time</h1>
-                    <p class="text-base text-zinc-300 sm:text-lg">
-                        Plataforma para administrar, registrar y evidenciar el tiempo laboral.
+                <div class="animate-in-delay relative mx-auto w-full">
+                    <div class="hero-slider relative aspect-[16/10] w-full lg:w-[118%] lg:-translate-x-[9%]">
+                        <img src="{{ asset('images/marketing/slide 1.png') }}" alt="Panel de Vera Time"
+                            class="hero-slide absolute inset-0 h-full w-full object-contain">
+                        <img src="{{ asset('images/marketing/slide 2.png') }}" alt="Registro de jornada en Vera Time"
+                            class="hero-slide absolute inset-0 h-full w-full object-contain">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Funcionalidades --}}
+    <section class="border-t border-surface-line bg-white">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <h2 class="font-display max-w-lg text-2xl leading-snug text-brand-navy sm:text-3xl">
+                Todo lo que necesitas para controlar el tiempo de tu equipo.
+            </h2>
+
+            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ([
+        ['Organización y equipo', ['Directorio de trabajadores', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Administración de supervisores y responsables'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
+        ['Registro de asistencia', ['Kiosco de asistencia', 'Registro de entrada, salida y pausas', 'Captura manual justificada'], true, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round" stroke-linejoin="round"/>'],
+        ['Horarios y turnos', ['Programación semanal de horarios', 'Turnos fijos, nocturnos, mixtos, flexibles, rotativos y guardias', 'Descansos programados y obligatorios', 'Importación CSV de programación'], true, '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke-linecap="round"/>'],
+        ['Cálculo de jornadas', ['Horas ordinarias, extra dobles y extra triples', 'Domingos, descansos y festivos trabajados', 'Recálculo automático de jornadas', 'Cierre de periodos de asistencia'], true, '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8h8M8 12h3M8 16h3M14 12h2M14 16h2" stroke-linecap="round"/>'],
+        ['Incidencias', ['Faltas, retardos y salidas anticipadas', 'Vacaciones, incapacidades y permisos', 'Gestión de incidencias y ausencias', 'Dictamen y corrección de jornadas', 'Alertas operativas'], true, '<path d="M12 3.5l8 4.5v8l-8 4.5-8-4.5v-8L12 3.5z"/><path d="M12 9v4.5M12 16.5h.01" stroke-linecap="round"/>'],
+        ['Nómina y evidencia', ['Exportación CSV para nómina', 'Evidencia histórica y trazabilidad', 'Seguridad por empresa, rol y alcance'], true, '<path d="M5 4.5h11l3 3V19a1 1 0 01-1 1H5a1 1 0 01-1-1V5.5a1 1 0 011-1z"/><path d="M8 9h6M8 13h6M8 17h4" stroke-linecap="round"/>'],
+        ['Próximamente', ['Conexión con dispositivos biométricos', 'App Android para asistencia', 'Flujo avanzado de aprobación de incidencias', 'API e integraciones', 'VERA Payroll y VERA RH'], false, '<path d="M12 2.5c2.5 2 4 5.5 4 9 0 2-1 4-1 4h-6s-1-2-1-4c0-3.5 1.5-7 4-9z"/><path d="M9.5 15.5L8 20l4-2 4 2-1.5-4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10.5" r="1.6"/>'],
+    ] as [$category, $items, $available, $icon])
+                    <div
+                        class="rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5">
+                        <div
+                            class="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] {{ $available ? 'bg-[#d8eafe] text-status-shift-text' : 'bg-surface-bg text-surface-muted' }}">
+                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.6">{!! $icon !!}</svg>
+                        </div>
+                        <h3
+                            class="text-xs font-bold uppercase tracking-wide {{ $available ? 'text-brand-blue' : 'text-surface-muted' }}">
+                            {{ $category }}</h3>
+                        <ul class="mt-3 space-y-1.5">
+                            @foreach ($items as $item)
+                                <li
+                                    class="flex gap-2 text-[13.5px] leading-snug {{ $available ? 'text-surface-text' : 'text-surface-muted' }}">
+                                    <span
+                                        class="mt-[7px] h-[5px] w-[5px] flex-shrink-0 rounded-full {{ $available ? 'bg-status-shift-text' : 'bg-surface-muted' }}"></span>
+                                    {{ $item }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+    {{-- Cómo funciona --}}
+    <section id="como-funciona" class="border-t border-surface-line">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <h2 class="font-display max-w-lg text-2xl leading-snug text-brand-navy sm:text-3xl">Cómo funciona</h2>
+
+            <div class="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+                @foreach ([['01', 'Programación esperada', 'Defines turnos, horarios y descansos por trabajador, centro o unidad.'], ['02', 'Eventos reales', 'Kiosco, captura manual o importación CSV — y pronto biométricos y app móvil.'], ['03', 'Cálculo automático', 'Vera Time compara lo programado con lo ocurrido y genera jornadas e incidencias.'], ['04', 'Dictamen y exportación', 'RH revisa, dictamina y exporta el periodo listo para nómina.']] as [$n, $title, $body])
+                    <div class="border-t-2 border-brand-blue pt-4">
+                        <span class="font-display text-sm font-semibold text-brand-blue">{{ $n }}</span>
+                        <h3 class="mt-2 text-base font-semibold text-brand-navy">{{ $title }}</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-surface-muted">{{ $body }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- Registro de asistencia / kiosco --}}
+    <section id="kiosco" class="border-t border-surface-line bg-white">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
+                <div>
+                    <h2 class="font-display max-w-lg text-2xl leading-snug text-brand-navy sm:text-3xl">
+                        Registra asistencia desde donde tu equipo esté.
+                    </h2>
+                    <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
+                        El kiosco se coloca en un dispositivo dentro del centro de trabajo. Cada colaborador registra su
+                        entrada, salida o pausa con su código y NIP — sin apps que instalar, sin fricción.
+                    </p>
+                    <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
+                        También puedes capturar eventos manualmente o importarlos por CSV. Próximamente: checado desde
+                        dispositivos biométricos y desde app móvil.
+                    </p>
+
+                    <div class="mt-5 flex flex-wrap gap-2">
+                        <span
+                            class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Kiosco</span>
+                        <span
+                            class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Captura
+                            manual</span>
+                        <span
+                            class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Importación
+                            CSV</span>
+                        <span class="badge-muted">Biométrico · próximamente</span>
+                        <span class="badge-muted">App móvil · próximamente</span>
+                    </div>
+                </div>
+
+                <div
+                    class="screenshot-frame relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card">
+                    <img src="{{ asset('images/marketing/shot-kiosco.png') }}" alt="Pantalla de kiosco de Vera Time"
+                        class="block w-full">
+                </div>
+            </div>
+
+            <div class="mt-16 rounded-2xl bg-brand-navy px-6 py-8 text-white shadow-[0_24px_48px_-32px_rgba(2,25,57,0.45)] sm:px-8">
+                <h3 class="font-display text-base text-white">Cada periodo cerrado exporta, listo para tu
+                    proveedor de nómina</h3>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @foreach (['RFC', 'CURP', 'NSS', 'Horas normales', 'Extra dobles', 'Extra triples', 'Retardos', 'Domingos trabajados', 'Vacaciones e incapacidades'] as $field)
+                        <span
+                            class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white">{{ $field }}</span>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Feature rows: real screenshots --}}
+    <section class="border-t border-surface-line bg-white">
+        <div class="mx-auto max-w-6xl px-6">
+            <div class="grid items-center gap-10 border-b border-surface-line py-16 lg:grid-cols-2 lg:gap-14">
+                <div>
+                    <h3 class="font-display text-xl text-brand-navy sm:text-2xl">Turnos que se arman una vez y se
+                        reutilizan.</h3>
+                    <p class="mt-3 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
+                        Crea plantillas de turno con sus segmentos, tolerancias y descansos. Después solo las aplicas a
+                        la programación semanal de cada trabajador, centro o unidad.
                     </p>
                 </div>
-
-                @if (Route::has('login'))
-                    <div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        @auth
-                            <a href="{{ url('/dashboard') }}" class="inline-flex min-h-10 items-center justify-center rounded-md bg-white px-5 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200">
-                                Ir al inicio
-                            </a>
-                        @else
-                            <a href="{{ route('login') }}" class="inline-flex min-h-10 items-center justify-center rounded-md bg-white px-5 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200">
-                                Iniciar sesion
-                            </a>
-                        @endauth
+                <div
+                    class="screenshot-frame relative overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card">
+                    <div class="flex items-center gap-1.5 border-b border-surface-line px-3.5 py-2.5">
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
                     </div>
-                @endif
-            </section>
-        </main>
-    </body>
+                    <img src="{{ asset('images/marketing/shot-turnos.png') }}" alt="Catálogo de turnos en Vera Time"
+                        class="block w-full">
+                </div>
+            </div>
+
+            <div class="grid items-center gap-10 border-b border-surface-line py-16 lg:grid-cols-2 lg:gap-14">
+                <div class="lg:order-2">
+                    <h3 class="font-display text-xl text-brand-navy sm:text-2xl">Tu plantilla, organizada y siempre a
+                        la mano.</h3>
+                    <p class="mt-3 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
+                        Administra trabajadores, su centro, puesto y estado de credencial desde un solo lugar. Base para
+                        todo lo demás: horarios, jornadas y, más adelante, nómina y RH.
+                    </p>
+                </div>
+                <div
+                    class="screenshot-frame relative overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:order-1">
+                    <div class="flex items-center gap-1.5 border-b border-surface-line px-3.5 py-2.5">
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                    </div>
+                    <img src="{{ asset('images/marketing/shot-trabajadores.png') }}"
+                        alt="Listado de trabajadores en Vera Time" class="block w-full">
+                </div>
+            </div>
+
+            <div class="grid items-center gap-10 py-16 lg:grid-cols-2 lg:gap-14">
+                <div>
+                    <h3 class="font-display text-xl text-brand-navy sm:text-2xl">Un portal para que cada colaborador
+                        vea su historial.</h3>
+                    <p class="mt-3 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
+                        Cada trabajador puede consultar sus horarios, el estado de sus incidencias y su historial
+                        laboral, sin tener que preguntarle a RH.
+                    </p>
+                </div>
+                <div
+                    class="screenshot-frame relative overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card">
+                    <div class="flex items-center gap-1.5 border-b border-surface-line px-3.5 py-2.5">
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                        <span class="h-2 w-2 rounded-full bg-surface-line"></span>
+                    </div>
+                    <img src="{{ asset('images/marketing/shot-portal.png') }}" alt="Portal de empleados de Vera Time"
+                        class="block w-full">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Reforma laboral 2027 --}}
+    <section id="reforma" class="bg-brand-navy text-white">
+        <div class="mx-auto max-w-6xl px-6 py-16">
+            <span class="text-xs font-bold uppercase tracking-wide text-brand-sky">Reforma laboral 2027</span>
+            <div class="mt-16 grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:gap-20">
+                <div>
+                    <h2 class="font-display mt-0 max-w-xl text-2xl leading-snug text-white sm:text-3xl">
+                        No vendemos un reloj checador. Vendemos tranquilidad legal.
+                    </h2>
+                    <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/85">
+                La reforma a la Ley Federal del Trabajo (DOF, mayo 2026) obliga a registrar electrónicamente la jornada
+                de cada trabajador —hora de entrada y salida— y a entregar ese registro a la autoridad si lo pide. Los
+                lineamientos de la STPS sobre cómo debe verse ese registro entran en vigor el 1 de enero de 2027, junto
+                con la reducción gradual de la jornada semanal.
+                    </p>
+
+                    <div class="mt-9 flex flex-wrap gap-2">
+                    @foreach ([['48h', '2026', false], ['46h', '2027', true], ['44h', '2028', false], ['42h', '2029', false], ['40h', '2030', false]] as [$hours, $year, $active])
+                        <div
+                            class="w-20 rounded-lg border {{ $active ? 'border-brand-sky bg-brand-sky/10' : 'border-white/15' }} px-3 py-3 text-center">
+                            <span class="font-display block text-lg">{{ $hours }}</span>
+                            <span class="block text-xs text-white/55">{{ $year }}</span>
+                        </div>
+                    @endforeach
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="screenshot-frame relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
+                        <img src="{{ asset('images/marketing/sectionimg.png') }}" alt="Evidencia laboral en Vera Time"
+                            class="block w-full">
+                    </div>
+
+                    <ul class="space-y-3">
+                    @foreach (['Hora de entrada y salida registradas', 'Tiempo efectivamente trabajado, calculado', 'Horas extraordinarias identificadas', 'Registro exportable para mostrar a la autoridad', 'No importa el dispositivo: kiosco, biométrico o app, todo cuenta como registro electrónico válido'] as $item)
+                        <li class="flex items-start gap-2.5 text-sm text-white/90">
+                            <span
+                                class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand-sky text-xs font-bold text-brand-navy">✓</span>
+                            {{ $item }}
+                        </li>
+                    @endforeach
+                    </ul>
+                </div>
+            </div>
+
+            <p class="mx-auto mt-16 max-w-2xl text-center text-xs leading-relaxed text-white/55">
+                La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
+                trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
+                informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
+                pendientes de publicación.
+            </p>
+        </div>
+    </section>
+
+    {{-- La suite VERA --}}
+    <section id="suite" class="border-t border-surface-line bg-white">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <h2 class="font-display max-w-lg text-2xl leading-snug text-brand-navy sm:text-3xl">Una suite. Soluciones
+                para cada necesidad.</h2>
+            <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted">
+                Cada producto VERA se contrata por separado y comparte la misma cuenta. Cuando actives otro, ya tiene
+                los datos que necesita.
+            </p>
+
+            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="rounded-xl border-2 border-brand-blue bg-[#eaf3fe] p-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-display text-base font-semibold text-brand-navy">Vera Time</h3>
+                        <span class="badge-success">Disponible</span>
+                    </div>
+                    <p class="mt-2 text-sm leading-relaxed text-surface-muted">Registro de jornada laboral.</p>
+                </div>
+
+                @foreach ([['Vera HR', 'Recursos humanos.'], ['Vera Payroll', 'Nómina y pagos.']] as [$name, $desc])
+                    <div class="rounded-xl border border-surface-line p-5">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-display text-base font-semibold text-surface-muted">{{ $name }}
+                            </h3>
+                            <span class="badge-muted">Próximamente</span>
+                        </div>
+                        <p class="mt-2 text-sm leading-relaxed text-surface-muted">{{ $desc }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- Footer --}}
+    <footer class="border-t border-surface-line">
+        <div
+            class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-12 sm:flex-row sm:items-center">
+            <div>
+                <x-app-logo class="h-7 w-auto" />
+                <p class="mt-3 text-sm text-surface-muted">Orden y evidencia para el tiempo laboral de tu equipo.</p>
+            </div>
+
+            @if (Route::has('login'))
+                <a href="{{ auth()->check() ? url('/dashboard') : route('login') }}" class="btn-outline">
+                    @auth Ir al inicio
+                    @else
+                    Iniciar sesión @endauth
+                </a>
+            @endif
+        </div>
+    </footer>
+
+</body>
+
 </html>
