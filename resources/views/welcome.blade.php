@@ -180,7 +180,7 @@
                         class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
                 </div>
                 <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
-                    class="absolute left-3 top-[9rem] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-left-5 lg:top-1/2">
+                    class="absolute -left-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 lg:flex">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
 
@@ -199,7 +199,7 @@
                         @continue
                     @endif
                     <div
-                        class="feature-carousel-card w-[min(20rem,calc(100vw-3rem))] flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 sm:w-[21rem] lg:w-[calc((100%-1rem)/2)]">
+                        class="feature-carousel-card w-full flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 lg:w-[calc((100%-1rem)/2)]">
                         <div
                             class="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] {{ $available ? 'bg-[#d8eafe] text-status-shift-text' : 'bg-surface-bg text-surface-muted' }}">
                             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -244,9 +244,20 @@
                 @endforeach
                 </div>
                 <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
-                    class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-right-5">
+                    class="absolute -right-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 lg:flex">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
+                </div>
+                <div class="flex items-center justify-between lg:hidden">
+                    <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <span class="text-xs font-medium text-surface-muted">Desliza para ver más</span>
+                    <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
