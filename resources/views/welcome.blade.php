@@ -387,8 +387,8 @@
                         <div class="w-full rounded-2xl bg-[#0c1220] p-2.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/5">
                             <div class="mx-auto mb-2 h-1.5 w-1.5 rounded-full bg-[#2a3446]"></div>
                             <div class="overflow-hidden rounded-md bg-white leading-none">
-                                <img src="{{ asset('images/marketing/shot-programacion.png') }}"
-                                    alt="Programación semanal en Vera Time" class="block w-full">
+                                <img src="{{ asset('images/marketing/slide 1.png') }}"
+                                    alt="Panel de Vera Time" class="block w-full">
                             </div>
                         </div>
                         <div class="-mt-0.5 h-4 w-28"
