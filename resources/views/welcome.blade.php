@@ -236,6 +236,61 @@
             </div>
         </div>
     </section>
+
+    {{-- Reforma laboral 2027 --}}
+    <section id="reforma" class="bg-brand-navy text-white">
+        <div class="mx-auto max-w-6xl px-6 py-16">
+            <span class="text-xs font-bold uppercase tracking-wide text-brand-sky">Reforma laboral 2027</span>
+            <div class="mt-16 grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:gap-20">
+                <div>
+                    <h2 class="font-display mt-0 max-w-xl text-2xl font-bold leading-snug text-white sm:text-3xl">
+                        No vendemos un reloj checador. Vendemos tranquilidad legal.
+                    </h2>
+                    <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/85">
+                        La reforma a la Ley Federal del Trabajo (DOF, mayo 2026) obliga a registrar electrónicamente la jornada
+                        de cada trabajador —hora de entrada y salida— y a entregar ese registro a la autoridad si lo pide. Los
+                        lineamientos de la STPS sobre cómo debe verse ese registro entran en vigor el 1 de enero de 2027, junto
+                        con la reducción gradual de la jornada semanal.
+                    </p>
+
+                    <div class="mt-9 flex flex-wrap gap-2">
+                    @foreach ([['48h', '2026', false], ['46h', '2027', true], ['44h', '2028', false], ['42h', '2029', false], ['40h', '2030', false]] as [$hours, $year, $active])
+                        <div
+                            class="w-20 rounded-lg border {{ $active ? 'border-brand-sky bg-brand-sky/10' : 'border-white/15' }} px-3 py-3 text-center">
+                            <span class="font-display block text-lg">{{ $hours }}</span>
+                            <span class="block text-xs text-white/55">{{ $year }}</span>
+                        </div>
+                    @endforeach
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="screenshot-frame relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
+                        <img src="{{ asset('images/marketing/sectionimg.png') }}" alt="Evidencia laboral en Vera Time"
+                            class="block w-full">
+                    </div>
+
+                    <ul class="space-y-3">
+                    @foreach (['Hora de entrada y salida registradas', 'Tiempo efectivamente trabajado, calculado', 'Horas extraordinarias identificadas', 'Registro exportable para mostrar a la autoridad', 'No importa el dispositivo: kiosco, biométrico o app, todo cuenta como registro electrónico válido'] as $item)
+                        <li class="flex items-start gap-2.5 text-sm text-white/90">
+                            <span
+                                class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand-sky text-xs font-bold text-brand-navy">✓</span>
+                            {{ $item }}
+                        </li>
+                    @endforeach
+                    </ul>
+                </div>
+            </div>
+
+            <p class="mx-auto mt-16 max-w-2xl text-center text-xs leading-relaxed text-white/55">
+                La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
+                trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
+                informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
+                pendientes de publicación.
+            </p>
+        </div>
+    </section>
+
     {{-- Registro de asistencia / kiosco --}}
     <section id="kiosco" class="border-t border-surface-line bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
@@ -286,60 +341,6 @@
                 </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    {{-- Reforma laboral 2027 --}}
-    <section id="reforma" class="bg-brand-navy text-white">
-        <div class="mx-auto max-w-6xl px-6 py-16">
-            <span class="text-xs font-bold uppercase tracking-wide text-brand-sky">Reforma laboral 2027</span>
-            <div class="mt-16 grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:gap-20">
-                <div>
-                    <h2 class="font-display mt-0 max-w-xl text-2xl font-bold leading-snug text-white sm:text-3xl">
-                        No vendemos un reloj checador. Vendemos tranquilidad legal.
-                    </h2>
-                    <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/85">
-                La reforma a la Ley Federal del Trabajo (DOF, mayo 2026) obliga a registrar electrónicamente la jornada
-                de cada trabajador —hora de entrada y salida— y a entregar ese registro a la autoridad si lo pide. Los
-                lineamientos de la STPS sobre cómo debe verse ese registro entran en vigor el 1 de enero de 2027, junto
-                con la reducción gradual de la jornada semanal.
-                    </p>
-
-                    <div class="mt-9 flex flex-wrap gap-2">
-                    @foreach ([['48h', '2026', false], ['46h', '2027', true], ['44h', '2028', false], ['42h', '2029', false], ['40h', '2030', false]] as [$hours, $year, $active])
-                        <div
-                            class="w-20 rounded-lg border {{ $active ? 'border-brand-sky bg-brand-sky/10' : 'border-white/15' }} px-3 py-3 text-center">
-                            <span class="font-display block text-lg">{{ $hours }}</span>
-                            <span class="block text-xs text-white/55">{{ $year }}</span>
-                        </div>
-                    @endforeach
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="screenshot-frame relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-                        <img src="{{ asset('images/marketing/sectionimg.png') }}" alt="Evidencia laboral en Vera Time"
-                            class="block w-full">
-                    </div>
-
-                    <ul class="space-y-3">
-                    @foreach (['Hora de entrada y salida registradas', 'Tiempo efectivamente trabajado, calculado', 'Horas extraordinarias identificadas', 'Registro exportable para mostrar a la autoridad', 'No importa el dispositivo: kiosco, biométrico o app, todo cuenta como registro electrónico válido'] as $item)
-                        <li class="flex items-start gap-2.5 text-sm text-white/90">
-                            <span
-                                class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand-sky text-xs font-bold text-brand-navy">✓</span>
-                            {{ $item }}
-                        </li>
-                    @endforeach
-                    </ul>
-                </div>
-            </div>
-
-            <p class="mx-auto mt-16 max-w-2xl text-center text-xs leading-relaxed text-white/55">
-                La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
-                trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
-                informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
-                pendientes de publicación.
-            </p>
         </div>
     </section>
 
