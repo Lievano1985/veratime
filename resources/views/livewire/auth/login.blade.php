@@ -84,7 +84,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div class="relative z-10 mt-14">
                 <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.12em] text-white/75">
                     <span class="h-1.5 w-1.5 rounded-full bg-status-good-soft shadow-[0_0_0_3px_rgba(95,227,161,0.25)]"></span>
-                    Portal de empleados
+                    Portal de acceso
                 </span>
 
                 <h1 class="mt-4 font-display text-[42px] font-extrabold leading-[1.12] tracking-[-0.01em]">
