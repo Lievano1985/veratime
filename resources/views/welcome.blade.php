@@ -251,7 +251,7 @@
                 </div>
 
                 <div
-                    class="screenshot-frame relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card">
+                    class="screenshot-frame relative mx-auto w-full overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card">
                     <img src="{{ asset('images/marketing/shot-kiosco.png') }}" alt="Pantalla de kiosco de Vera Time"
                         class="block w-full">
                 </div>
