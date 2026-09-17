@@ -78,7 +78,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div class="pointer-events-none absolute -bottom-[200px] -right-[180px] h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(41,182,246,0.35),transparent_65%)]"></div>
 
             <div class="relative z-10 inline-flex w-fit items-center rounded-2xl bg-white px-4 py-2.5 shadow-[0_10px_24px_-8px_rgba(2,25,57,0.35)]">
-                <img src="{{ asset('images/logo vera time.png') }}" alt="Vera Time" class="h-10 w-auto">
+                <img src="{{ asset('images/vera_suit_logo.png') }}" alt="Vera Suite" class="h-10 w-auto">
             </div>
 
             <div class="relative z-10 mt-14">
