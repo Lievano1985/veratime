@@ -12,8 +12,8 @@ use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\ScheduleAssignment;
 use App\Models\User;
-use App\Support\RoleKey;
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
@@ -617,7 +617,7 @@ it('employment relationship must belong to same worker and company', function ()
         'worker_id' => $otherWorker->id,
     ]);
 
-    $this->expectException(\InvalidArgumentException::class);
+    $this->expectException(InvalidArgumentException::class);
 
     app(ReplaceScheduleAssignmentAction::class)->handle($company, $worker, $schedule, $otherRelationship, [
         'effective_from' => '2026-08-01',
@@ -683,7 +683,7 @@ it('does not allow overlapping active assignments', function (): void {
         'effective_to' => '2026-08-31',
     ]);
 
-    $this->expectException(\InvalidArgumentException::class);
+    $this->expectException(InvalidArgumentException::class);
 
     app(CreateScheduleAssignmentAction::class)->handle($company, $worker, $otherSchedule, null, [
         'effective_from' => '2026-08-15',
@@ -851,6 +851,7 @@ function scheduleAssignmentFixture(): array
     $relationship = EmploymentRelationship::factory()->create([
         'company_id' => $company->id,
         'worker_id' => $worker->id,
+        'started_at' => '2026-01-01',
     ]);
 
     return [$company, $user, $worker, $schedule, $relationship];

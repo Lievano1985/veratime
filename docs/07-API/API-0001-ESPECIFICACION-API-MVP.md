@@ -56,7 +56,7 @@ Domain Service
         ↓
 Persistence
 
-API /api/v1
+API /api/v1/time
         ↓
 Application Action / Service
         ↓
@@ -122,13 +122,13 @@ Queda para fase posterior o habilitación controlada:
 En producción:
 
 ```text
-https://app.veratime.com/api/v1
+https://app.veratime.com/api/v1/time
 ```
 
 En desarrollo/staging:
 
 ```text
-https://staging.veratime.com/api/v1
+https://staging.veratime.com/api/v1/time
 ```
 
 o según el hosting disponible.
@@ -138,7 +138,7 @@ o según el hosting disponible.
 Toda la API inicia en:
 
 ```text
-/api/v1
+/api/v1/time
 ```
 
 No se crearán endpoints sin versión.
@@ -228,13 +228,13 @@ No se usará `company_id` como parámetro principal en endpoints externos P0.
 Ejemplo correcto:
 
 ```http
-GET /api/v1/workers
+GET /api/v1/time/workers
 ```
 
 Ejemplo a evitar en API externa P0:
 
 ```http
-GET /api/v1/companies/{company_id}/workers
+GET /api/v1/time/companies/{company_id}/workers
 ```
 
 La empresa se infiere por token.
@@ -453,7 +453,7 @@ per_page
 Ejemplo:
 
 ```http
-GET /api/v1/workers?status=active&search=juan
+GET /api/v1/time/workers?status=active&search=juan
 ```
 
 Respuesta:
@@ -1414,8 +1414,8 @@ Respuesta estándar:
 con estado consultable:
 
 ```http
-GET /api/v1/imports/{id}
-GET /api/v1/exports/{id}
+GET /api/v1/time/imports/{id}
+GET /api/v1/time/exports/{id}
 ```
 
 ---
@@ -1659,7 +1659,7 @@ La publicacion API debe generar version consecutiva por centro y periodo, snapsh
 
 La API del MVP se considera aceptada cuando:
 
-1. Usa `/api/v1`.
+1. Usa `/api/v1/time`.
 2. Requiere token Bearer.
 3. Resuelve empresa por token.
 4. Aplica alcances por token.
@@ -1706,3 +1706,21 @@ Ahí se definirán:
 ## Nota Bloque F4
 
 F4 implementa correcciones versionadas desde dominio e interfaz web. No agrega endpoints API WFM. Cuando se exponga por API, debera reutilizar las mismas Actions de dominio: crear correccion, comparar versiones, validar y publicar correccion.
+
+---
+
+## Decision MVP - identidad humana, movil y kiosco
+
+Una cuenta humana de `users` sera la identidad unica para el portal web y el cliente movil responsive/PWA. Al autenticarse para API, el token personal debera conservar el usuario, la empresa autorizada y sus scopes. Si tiene membresias en varias empresas, la empresa se selecciona por un flujo autorizado antes de emitir o renovar el token; nunca por un `company_id` libre enviado en cada solicitud.
+
+La vinculacion entre la cuenta y `workers` sera explicita y acotada por empresa. Permitira que la persona consulte solo sus propios horarios, eventos, incidencias y reportes autorizados. Revocar un token movil no desactiva automaticamente la cuenta web ni la relacion laboral.
+
+El kiosco es un canal distinto: se activa con una clave tecnica de empresa y usa una credencial de marcaje codigo/NIP ligada al trabajador y, cuando exista, a la misma cuenta humana. El NIP se conserva hasheado y la contrasena principal nunca se captura ni se reutiliza en la terminal. Un kiosco solo puede identificar y registrar los eventos permitidos; no obtiene una sesion de portal ni acceso a datos personales, incidencias, reportes o administracion.
+
+La aplicacion nativa sigue fuera de P0. Cualquier cliente nativo futuro consumira este mismo contrato API y no una autenticacion paralela.
+
+## Convencion de rutas por producto
+
+La API publica se versiona antes de segmentarse por producto. Vera Time usara `/api/v1/time/...`; Payroll y HR reservaran `/api/v1/payroll/...` y `/api/v1/hr/...`. El prefijo identifica el producto, pero no sustituye autenticacion, scopes ni resolucion de empresa por token.
+
+La interfaz web sigue la misma convencion: `/time/...`, `/payroll/...` y `/hr/...`. Login, seleccion de empresa y administracion SaaS son rutas globales y no pertenecen a un producto.

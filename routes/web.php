@@ -10,11 +10,9 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
-
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified', 'current.company'])
-    ->name('dashboard');
+Route::prefix('time')->group(function (): void {
+    Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
+});
 
 Route::middleware(['auth'])->group(function () {
     Volt::route('customer-accounts', 'customer-accounts.index')->name('customer-accounts.index');
@@ -22,7 +20,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'current.company'])->group(function () {
-    Route::middleware('product:time')->group(function () {
+    Route::prefix('time')->middleware('product:time')->group(function (): void {
+        Route::view('dashboard', 'dashboard')
+            ->middleware('verified')
+            ->name('dashboard');
         Volt::route('users', 'users.index')->name('users.index');
         Volt::route('company-settings', 'company-settings.index')->name('company-settings.index');
         Volt::route('centers', 'centers.index')->name('centers.index');

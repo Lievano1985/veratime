@@ -861,3 +861,19 @@ Pendiente posterior:
 - vista global de identidades si se requiere gestionar usuarios sin entrar a una empresa activa;
 - invitaciones por correo;
 - recuperacion operativa de accesos multiempresa desde soporte.
+
+## Decision MVP - identidad unica y marcaje por kiosco
+
+Se incorpora al MVP una identidad humana unica: la misma cuenta de usuario podra acceder al portal web y al cliente movil responsive/PWA. Cuando el usuario represente a una persona trabajadora, se creara una vinculacion explicita y acotada por empresa entre `users` y `workers`.
+
+La credencial de kiosco seguira siendo una credencial de marcaje separada, asociada al trabajador y vinculable a su cuenta humana. Usara codigo/NIP hasheado, con alta, bloqueo, restablecimiento y revocacion propios. La contrasena principal no se captura ni se reutiliza como NIP en una terminal compartida.
+
+Historias que se agregan al alcance P0:
+
+| ID | Historia | Criterio de aceptacion |
+|---|---|---|
+| BL-0108 | Vinculo usuario-trabajador | La cuenta se vincula solo al trabajador de la empresa autorizada y no otorga acceso horizontal. |
+| BL-0613 | Acceso personal web/movil por API | Un token personal conserva usuario, empresa y scopes; la empresa no se acepta desde el cliente como contexto manipulable. |
+| BL-1408 | Pruebas de identidad por canal | Se prueban vinculo, estados, revocacion y aislamiento de portal, token personal y kiosco. |
+
+La aplicacion nativa iOS/Android continua fuera de P0. El contrato API y el portal responsive/PWA seran la base movil inicial.
