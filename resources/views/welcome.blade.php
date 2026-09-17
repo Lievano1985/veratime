@@ -348,10 +348,6 @@
     <section class="bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
             <div class="relative overflow-hidden rounded-[28px] bg-brand-navy px-8 py-16 sm:px-14">
-                <div class="pointer-events-none absolute inset-0"
-                    style="background: radial-gradient(circle at 15% 20%, #0a2a52, transparent 55%), radial-gradient(circle at 90% 80%, rgba(41,182,246,.25), transparent 50%);">
-                </div>
-
                 <div class="relative grid items-center gap-12 lg:grid-cols-2">
                     <div>
                         <h2 class="font-display text-3xl font-bold leading-[1.15] text-white sm:text-4xl">
