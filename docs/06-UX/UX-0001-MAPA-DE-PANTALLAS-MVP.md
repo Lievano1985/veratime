@@ -2246,3 +2246,22 @@ La pantalla Usuarios debe distinguir:
 Para usuarios que no son `super_admin`, el estado global se muestra como informacion y no como control editable.
 
 El control operativo para `admin_empresa` y `rh_admin` es el acceso a la empresa activa.
+
+---
+
+## Decision MVP - una identidad, tres canales
+
+La persona trabajadora tendra una cuenta unica para portal web y cliente movil responsive/PWA. La interfaz de perfil o administracion debera permitir vincular esa cuenta con el trabajador dentro de la empresa activa, mostrar si el acceso esta activo y revocarlo sin eliminar historial laboral.
+
+El kiosco no muestra ni abre el portal personal. Despues de activar la terminal con la clave tecnica de la empresa, solicitara codigo/NIP de marcaje. Esa credencial puede pertenecer a la misma persona con cuenta web/movil, pero tiene ciclo de vida separado y nunca expone ni solicita la contrasena principal.
+
+Flujo esperado:
+
+```text
+Cuenta de usuario
+  -> portal web: horarios, incidencias y reportes autorizados
+  -> movil/PWA: la misma informacion y acciones autorizadas
+  -> kiosco: codigo/NIP -> accion de asistencia -> confirmacion -> cierre de contexto
+```
+
+La aplicacion nativa iOS/Android sigue fuera de P0. El diseno movil inicial corresponde al portal responsive/PWA.

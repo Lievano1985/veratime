@@ -14,7 +14,6 @@ Route::get('/', function () {
 Route::post('demo-requests', [DemoRequestController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('demo-requests.store');
-
 Route::prefix('time')->group(function (): void {
     Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
 });
