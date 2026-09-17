@@ -413,12 +413,13 @@
         class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true"
         aria-labelledby="demo-modal-title">
         <div data-demo-modal-close class="absolute inset-0 bg-brand-navy/70 backdrop-blur-sm"></div>
-        <div class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+        <div class="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
             <button type="button" data-demo-modal-close aria-label="Cerrar formulario de demo"
-                class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-surface-muted transition hover:bg-surface-bg hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full text-surface-muted transition hover:bg-surface-bg hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-blue">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18" stroke-linecap="round"/></svg>
             </button>
 
+            <div class="max-h-[90vh] overflow-y-auto p-6 sm:p-8">
             <h2 id="demo-modal-title" class="font-display pr-10 text-2xl font-bold text-brand-navy">Agenda tu demo</h2>
             <p class="mt-2 max-w-xl text-sm leading-relaxed text-surface-muted">
                 Cuéntanos un poco sobre tu empresa y te contactaremos para elegir el mejor horario.
@@ -489,6 +490,7 @@
                     <button type="submit" class="btn-primary btn-lg">Solicitar demo</button>
                 </div>
             </form>
+            </div>
         </div>
     </div>
 
