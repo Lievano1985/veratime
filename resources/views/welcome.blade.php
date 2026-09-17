@@ -92,6 +92,9 @@
         <div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-10">
             <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
                 <div class="animate-in max-w-2xl">
+                    <p class="mb-4 text-sm font-semibold italic tracking-wide text-brand-blue">
+                        Preparado para la Reforma Laboral 2027
+                    </p>
                     <h1 class="font-display text-4xl font-bold leading-[1.1] tracking-tight text-brand-navy sm:text-5xl">
                         El tiempo de tu equipo, con <span class="text-brand-blue">evidencia real</span>.
                     </h1>
