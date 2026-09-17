@@ -56,6 +56,14 @@
             background: linear-gradient(90deg, var(--color-brand-sky), var(--color-brand-blue));
             z-index: 1;
         }
+
+        .feature-carousel {
+            scrollbar-width: none;
+        }
+
+        .feature-carousel::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 
@@ -153,11 +161,13 @@
                 @endforeach
             </div>
 
-            <h2 class="mt-20 border-t border-surface-line pt-16 font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
+            <div class="relative left-1/2 mt-20 w-screen -translate-x-1/2 border-t border-surface-line"></div>
+            <h2 class="mt-16 font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
                 Todo lo que necesitas para controlar el tiempo de tu equipo.
             </h2>
 
-            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="feature-carousel-shell relative mt-10">
+                <div id="feature-carousel" class="feature-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3">
                 @foreach ([
         ['Organización y equipo', ['Directorio de trabajadores', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Administración de supervisores y responsables'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
         ['Registro de asistencia', ['Kiosco de asistencia', 'Registro de entrada, salida y pausas', 'Captura manual justificada'], true, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round" stroke-linejoin="round"/>'],
@@ -171,7 +181,7 @@
                         @continue
                     @endif
                     <div
-                        class="rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5">
+                        class="feature-carousel-card w-[min(20rem,calc(100vw-3rem))] flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 sm:w-[21rem] lg:w-[22rem]">
                         <div
                             class="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] {{ $available ? 'bg-[#d8eafe] text-status-shift-text' : 'bg-surface-bg text-surface-muted' }}">
                             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -214,6 +224,15 @@
                         </ul>
                     </div>
                 @endforeach
+                </div>
+                <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
+                    class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
+                    class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
             </div>
         </div>
     </section>
@@ -442,6 +461,55 @@
                 </a>
             @endif        </div>
     </footer>
+
+    <script>
+        (() => {
+            const carousel = document.getElementById('feature-carousel');
+
+            if (!carousel) {
+                return;
+            }
+
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const card = () => carousel.querySelector('.feature-carousel-card');
+            const step = () => card().offsetWidth + parseFloat(getComputedStyle(carousel).gap || 0);
+            const move = (direction) => {
+                const isAtStart = carousel.scrollLeft <= 4;
+                const isAtEnd = carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 4;
+
+                if (direction === 'next' && isAtEnd) {
+                    carousel.scrollTo({ left: 0, behavior: 'smooth' });
+                    return;
+                }
+
+                if (direction === 'previous' && isAtStart) {
+                    carousel.scrollTo({ left: carousel.scrollWidth, behavior: 'smooth' });
+                    return;
+                }
+
+                carousel.scrollBy({ left: direction === 'next' ? step() : -step(), behavior: 'smooth' });
+            };
+
+            let autoplay = prefersReducedMotion ? null : setInterval(() => move('next'), 5000);
+            const restartAutoplay = () => {
+                clearInterval(autoplay);
+                autoplay = prefersReducedMotion ? null : setInterval(() => move('next'), 5000);
+            };
+
+            document.querySelectorAll('[data-carousel-direction]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    move(button.dataset.carouselDirection);
+                    restartAutoplay();
+                });
+            });
+
+            carousel.addEventListener('mouseenter', () => clearInterval(autoplay));
+            carousel.addEventListener('mouseleave', restartAutoplay);
+            carousel.addEventListener('focusin', () => clearInterval(autoplay));
+            carousel.addEventListener('focusout', restartAutoplay);
+        })();
+    </script>
 
 </body>
 
