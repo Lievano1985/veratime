@@ -166,7 +166,7 @@
                 Todo lo que necesitas para controlar el tiempo de tu equipo.
             </h2>
 
-            <div class="mt-10 grid gap-4 lg:grid-cols-3">
+            <div class="relative mt-10 grid gap-4 lg:grid-cols-3">
                 <div class="relative min-h-[18rem] overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:min-h-0">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-kiosco.png') }}"
                         alt="Kiosco de Vera Time"
@@ -178,6 +178,10 @@
                         alt="Portal de colaboradores en Vera Time"
                         class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
                 </div>
+                <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
+                    class="absolute left-3 top-[9rem] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-left-5 lg:top-1/2">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
 
                 <div class="feature-carousel-shell relative lg:col-span-2">
                 <div id="feature-carousel" class="feature-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3">
@@ -238,10 +242,6 @@
                     </div>
                 @endforeach
                 </div>
-                <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
-                    class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-left-5">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
                 <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
                     class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-right-5">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
