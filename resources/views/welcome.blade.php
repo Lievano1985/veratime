@@ -171,13 +171,13 @@
                 <div class="relative aspect-video overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:aspect-auto">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-kiosco.png') }}"
                         alt="Kiosco de Vera Time"
-                        class="absolute inset-0 h-full w-full object-cover transition-opacity duration-700 lg:object-contain lg:p-3">
+                        class="absolute inset-0 h-full w-full object-contain transition-opacity duration-700">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-trabajadores.png') }}"
                         alt="Trabajadores en Vera Time"
-                        class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 lg:object-contain lg:p-3">
+                        class="absolute inset-0 h-full w-full object-contain opacity-0 transition-opacity duration-700">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-portal.png') }}"
                         alt="Portal de colaboradores en Vera Time"
-                        class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 lg:object-contain lg:p-3">
+                        class="absolute inset-0 h-full w-full object-contain opacity-0 transition-opacity duration-700">
                 </div>
                 <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
                     class="absolute -left-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 lg:flex">
