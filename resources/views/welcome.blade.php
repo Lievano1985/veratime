@@ -262,11 +262,17 @@
                         </div>
                     @endforeach
                     </div>
+                    <p class="mt-8 max-w-xl text-xs leading-relaxed text-white/55">
+                        La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
+                        trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
+                        informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
+                        pendientes de publicación.
+                    </p>
                 </div>
 
                 <div class="space-y-6">
                     <div class="screenshot-frame relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-                        <img src="{{ asset('images/marketing/sectionimg.png') }}" alt="Evidencia laboral en Vera Time"
+                        <img src="{{ asset('images/marketing/lft.png') }}" alt="Reforma laboral 2027"
                             class="block w-full">
                     </div>
 
@@ -282,12 +288,6 @@
                 </div>
             </div>
 
-            <p class="mx-auto mt-16 max-w-2xl text-center text-xs leading-relaxed text-white/55">
-                La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
-                trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
-                informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
-                pendientes de publicación.
-            </p>
         </div>
     </section>
 
