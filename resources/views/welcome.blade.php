@@ -344,6 +344,52 @@
         </div>
     </section>
 
+    {{-- Solicita un demo --}}
+    <section class="bg-white">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <div class="relative overflow-hidden rounded-[28px] bg-brand-navy px-8 py-16 sm:px-14">
+                <div class="pointer-events-none absolute inset-0"
+                    style="background: radial-gradient(circle at 15% 20%, #0a2a52, transparent 55%), radial-gradient(circle at 90% 80%, rgba(41,182,246,.25), transparent 50%);">
+                </div>
+
+                <div class="relative grid items-center gap-12 lg:grid-cols-2">
+                    <div>
+                        <h2 class="font-display text-3xl font-bold leading-[1.15] text-white sm:text-4xl">
+                            Solicita un demo — en vivo o a tu ritmo
+                        </h2>
+                        <p class="mt-5 max-w-md text-[15.5px] leading-relaxed text-white/75">
+                            Te mostramos cómo Vera Time organiza turnos, registra asistencia y prepara a tu empresa
+                            para la Reforma Laboral 2027 — con la plataforma real, no una versión genérica.
+                        </p>
+
+                        <div class="mt-8 flex flex-wrap gap-3">
+                            <button type="button" class="btn-primary btn-lg">Agendar demo</button>
+                            <a href="#como-funciona"
+                                class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-[14.5px] font-semibold text-white transition hover:bg-white/15">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><path d="M8 5v14l11-7z"/></svg>
+                                Ver cómo funciona
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="relative mx-auto flex w-full max-w-[520px] flex-col items-center">
+                        <div class="w-full rounded-2xl bg-[#0c1220] p-2.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/5">
+                            <div class="mx-auto mb-2 h-1.5 w-1.5 rounded-full bg-[#2a3446]"></div>
+                            <div class="overflow-hidden rounded-md bg-white leading-none">
+                                <img src="{{ asset('images/marketing/shot-programacion.png') }}"
+                                    alt="Programación semanal en Vera Time" class="block w-full">
+                            </div>
+                        </div>
+                        <div class="-mt-0.5 h-4 w-28"
+                            style="background: linear-gradient(180deg, #1c2434, #0c1220); clip-path: polygon(38% 0, 62% 0, 78% 100%, 22% 100%);">
+                        </div>
+                        <div class="mt-0.5 h-2.5 w-48 rounded-md bg-[#0c1220] shadow-[0_6px_16px_-4px_rgba(0,0,0,0.4)]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     {{-- La suite VERA --}}
     <section id="suite" class="border-t border-surface-line bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
