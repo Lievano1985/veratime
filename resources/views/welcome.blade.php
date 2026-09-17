@@ -138,10 +138,22 @@
         </div>
     </section>
 
-    {{-- Funcionalidades --}}
-    <section class="border-t border-surface-line bg-white">
+    {{-- Cómo funciona y funcionalidades --}}
+    <section id="como-funciona" class="border-t border-surface-line bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
-            <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
+            <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">Cómo funciona</h2>
+
+            <div class="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+                @foreach ([['01', 'Programación esperada', 'Defines turnos, horarios y descansos por trabajador, centro o unidad.'], ['02', 'Eventos reales', 'Kiosco, captura manual o importación CSV — y pronto biométricos y app móvil.'], ['03', 'Cálculo automático', 'Vera Time compara lo programado con lo ocurrido y genera jornadas e incidencias.'], ['04', 'Dictamen y exportación', 'RH revisa, dictamina y exporta el periodo listo para nómina.']] as [$n, $title, $body])
+                    <div class="border-t-2 border-brand-blue pt-4">
+                        <span class="font-display text-sm font-semibold text-brand-blue">{{ $n }}</span>
+                        <h3 class="mt-2 text-base font-bold text-brand-navy">{{ $title }}</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-surface-muted">{{ $body }}</p>
+                    </div>
+                @endforeach
+            </div>
+
+            <h2 class="mt-20 border-t border-surface-line pt-16 font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
                 Todo lo que necesitas para controlar el tiempo de tu equipo.
             </h2>
 
@@ -205,23 +217,6 @@
             </div>
         </div>
     </section>
-    {{-- Cómo funciona --}}
-    <section id="como-funciona" class="border-t border-surface-line">
-        <div class="mx-auto max-w-6xl px-6 py-20">
-            <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">Cómo funciona</h2>
-
-            <div class="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                @foreach ([['01', 'Programación esperada', 'Defines turnos, horarios y descansos por trabajador, centro o unidad.'], ['02', 'Eventos reales', 'Kiosco, captura manual o importación CSV — y pronto biométricos y app móvil.'], ['03', 'Cálculo automático', 'Vera Time compara lo programado con lo ocurrido y genera jornadas e incidencias.'], ['04', 'Dictamen y exportación', 'RH revisa, dictamina y exporta el periodo listo para nómina.']] as [$n, $title, $body])
-                    <div class="border-t-2 border-brand-blue pt-4">
-                        <span class="font-display text-sm font-semibold text-brand-blue">{{ $n }}</span>
-                        <h3 class="mt-2 text-base font-bold text-brand-navy">{{ $title }}</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-surface-muted">{{ $body }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
     {{-- Registro de asistencia / kiosco --}}
     <section id="kiosco" class="border-t border-surface-line bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
