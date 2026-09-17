@@ -168,16 +168,16 @@
             </h2>
 
             <div class="relative mt-10 grid gap-4 lg:grid-cols-3">
-                <div class="relative min-h-[18rem] overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:min-h-0">
+                <div class="relative aspect-video overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:aspect-auto">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-kiosco.png') }}"
                         alt="Kiosco de Vera Time"
-                        class="absolute inset-0 h-full w-full object-contain p-3 transition-opacity duration-700">
+                        class="absolute inset-0 h-full w-full object-cover transition-opacity duration-700 lg:object-contain lg:p-3">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-trabajadores.png') }}"
                         alt="Trabajadores en Vera Time"
-                        class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
+                        class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 lg:object-contain lg:p-3">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-portal.png') }}"
                         alt="Portal de colaboradores en Vera Time"
-                        class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
+                        class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 lg:object-contain lg:p-3">
                 </div>
                 <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
                     class="absolute -left-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 lg:flex">
@@ -185,6 +185,17 @@
                 </button>
 
                 <div class="feature-carousel-shell relative lg:col-span-2">
+                <div class="mb-3 flex items-center justify-between lg:hidden">
+                    <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <span class="text-xs font-medium text-surface-muted">Desliza para ver más</span>
+                    <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
                 <div id="feature-carousel" class="feature-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3">
                 @foreach ([
         ['Organización y equipo', ['Directorio de trabajadores', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Administración de supervisores y responsables'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
@@ -247,17 +258,6 @@
                     class="absolute -right-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 lg:flex">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
-                </div>
-                <div class="flex items-center justify-between lg:hidden">
-                    <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
-                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
-                    <span class="text-xs font-medium text-surface-muted">Desliza para ver más</span>
-                    <button type="button" data-carousel-direction="next" aria-label="Ver siguientes tarjetas"
-                        class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
                 </div>
             </div>
         </div>
