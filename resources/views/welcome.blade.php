@@ -78,9 +78,10 @@
 
             <nav class="hidden items-center gap-8 text-sm font-medium text-surface-muted md:flex">
                 <a href="#producto" class="transition hover:text-brand-navy">Producto</a>
+                <a href="#como-funciona" class="transition hover:text-brand-navy">Cómo funciona</a>
                 <a href="#reforma" class="transition hover:text-brand-navy">Reforma 2027</a>
                 <a href="#kiosco" class="transition hover:text-brand-navy">Registro de asistencia</a>
-                <a href="#suite" class="transition hover:text-brand-navy">La suite VERA</a>
+                <a href="#demo" class="transition hover:text-brand-navy">Agenda una demo</a>
             </nav>
 
             @if (Route::has('login'))
@@ -118,7 +119,7 @@
                             @else
                                 <a href="{{ url('/dashboard') }}" class="btn-primary btn-lg">Ir al inicio</a>
                             @endguest
-                            <a href="#kiosco" class="btn-ghost btn-lg">Ver cómo funciona</a>
+                            <a href="#como-funciona" class="btn-ghost btn-lg">Ver cómo funciona</a>
                         </div>
                     @endif
 
@@ -359,7 +360,7 @@
     </section>
 
     {{-- Solicita un demo --}}
-    <section class="bg-white">
+    <section id="demo" class="bg-white">
         <div class="mx-auto max-w-6xl px-6 py-20">
             <div class="relative overflow-hidden rounded-[28px] bg-brand-navy px-8 py-16 sm:px-14">
                 <div class="relative grid items-center gap-12 lg:grid-cols-2">
@@ -373,7 +374,7 @@
                         </p>
 
                         <div class="mt-8 flex flex-wrap gap-3">
-                            <button type="button" class="btn-primary btn-lg">Agendar demo</button>
+                            <button type="button" data-demo-modal-open class="btn-primary btn-lg">Agendar demo</button>
                             <a href="#como-funciona"
                                 class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-[14.5px] font-semibold text-white transition hover:bg-white/15">
                                 <svg viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><path d="M8 5v14l11-7z"/></svg>
@@ -399,6 +400,97 @@
             </div>
         </div>
     </section>
+
+    @if (session('demo_request_success'))
+        <div class="mx-auto max-w-6xl px-6 pb-6" role="status">
+            <div class="rounded-xl border border-brand-sky/30 bg-[#edf7ff] px-4 py-3 text-sm text-brand-navy">
+                {{ session('demo_request_success') }}
+            </div>
+        </div>
+    @endif
+
+    <div data-demo-modal data-demo-modal-open-on-load="{{ $errors->getBag('demoRequest')->any() ? 'true' : 'false' }}"
+        class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true"
+        aria-labelledby="demo-modal-title">
+        <div data-demo-modal-close class="absolute inset-0 bg-brand-navy/70 backdrop-blur-sm"></div>
+        <div class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            <button type="button" data-demo-modal-close aria-label="Cerrar formulario de demo"
+                class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-surface-muted transition hover:bg-surface-bg hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18" stroke-linecap="round"/></svg>
+            </button>
+
+            <h2 id="demo-modal-title" class="font-display pr-10 text-2xl font-bold text-brand-navy">Agenda tu demo</h2>
+            <p class="mt-2 max-w-xl text-sm leading-relaxed text-surface-muted">
+                Cuéntanos un poco sobre tu empresa y te contactaremos para elegir el mejor horario.
+            </p>
+
+            <form method="POST" action="{{ route('demo-requests.store') }}" class="mt-7 space-y-5">
+                @csrf
+                <div class="hidden" aria-hidden="true">
+                    <label for="website">Sitio web</label>
+                    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+                </div>
+
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="contact_name" class="form-label">Nombre completo *</label>
+                        <input id="contact_name" name="contact_name" type="text" value="{{ old('contact_name') }}" required autocomplete="name"
+                            class="w-full rounded-xl border border-surface-line px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
+                        @error('contact_name', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="company_name" class="form-label">Empresa</label>
+                        <input id="company_name" name="company_name" type="text" value="{{ old('company_name') }}" autocomplete="organization"
+                            class="w-full rounded-xl border border-surface-line px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
+                        @error('company_name', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="email" class="form-label">Correo de trabajo *</label>
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email"
+                            class="w-full rounded-xl border border-surface-line px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
+                        @error('email', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="phone" class="form-label">Teléfono *</label>
+                        <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" required autocomplete="tel"
+                            class="w-full rounded-xl border border-surface-line px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
+                        @error('phone', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div>
+                    <label for="team_size" class="form-label">Personas en tu equipo</label>
+                    <select id="team_size" name="team_size"
+                        class="w-full rounded-xl border border-surface-line bg-white px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">
+                        <option value="">Selecciona una opción</option>
+                        @foreach ([10, 25, 50, 100, 250, 500, 1000] as $size)
+                            <option value="{{ $size }}" @selected((string) old('team_size') === (string) $size)>{{ $size }}{{ $size === 1000 ? '+' : '' }}</option>
+                        @endforeach
+                    </select>
+                    @error('team_size', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label for="message" class="form-label">¿Qué te gustaría revisar? <span class="font-normal text-surface-muted">(opcional)</span></label>
+                    <textarea id="message" name="message" rows="3" maxlength="1000"
+                        class="w-full resize-y rounded-xl border border-surface-line px-3.5 py-2.5 text-sm text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20">{{ old('message') }}</textarea>
+                    @error('message', 'demoRequest')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                </div>
+
+                <label class="flex items-start gap-3 text-xs leading-relaxed text-surface-muted">
+                    <input name="consent" type="checkbox" value="1" @checked(old('consent')) required
+                        class="mt-0.5 h-4 w-4 rounded border-surface-line text-brand-blue focus:ring-brand-blue">
+                    <span>Acepto que Vera Time use estos datos para contactarme y agendar una demostración.</span>
+                </label>
+                @error('consent', 'demoRequest')<p class="-mt-3 text-xs text-red-600">{{ $message }}</p>@enderror
+
+                <div class="flex flex-wrap justify-end gap-3 pt-2">
+                    <button type="button" data-demo-modal-close class="btn-ghost">Cancelar</button>
+                    <button type="submit" class="btn-primary btn-lg">Solicitar demo</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     {{-- La suite VERA --}}
     <section id="suite" class="border-t border-surface-line bg-white">
@@ -513,6 +605,43 @@
             carousel.addEventListener('mouseleave', restartAutoplay);
             carousel.addEventListener('focusin', () => clearInterval(autoplay));
             carousel.addEventListener('focusout', restartAutoplay);
+
+            const demoModal = document.querySelector('[data-demo-modal]');
+            const openDemoModal = () => {
+                if (!demoModal) {
+                    return;
+                }
+
+                demoModal.classList.remove('hidden');
+                demoModal.classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+                demoModal.querySelector('#contact_name')?.focus();
+            };
+            const closeDemoModal = () => {
+                if (!demoModal) {
+                    return;
+                }
+
+                demoModal.classList.add('hidden');
+                demoModal.classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+            };
+
+            document.querySelectorAll('[data-demo-modal-open]').forEach((button) => {
+                button.addEventListener('click', openDemoModal);
+            });
+            document.querySelectorAll('[data-demo-modal-close]').forEach((button) => {
+                button.addEventListener('click', closeDemoModal);
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && demoModal && !demoModal.classList.contains('hidden')) {
+                    closeDemoModal();
+                }
+            });
+
+            if (demoModal?.dataset.demoModalOpenOnLoad === 'true') {
+                openDemoModal();
+            }
         })();
     </script>
 

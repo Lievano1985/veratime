@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
+use App\Http\Controllers\Marketing\DemoRequestController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvTemplateController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,10 @@ use Livewire\Volt\Volt;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+Route::post('demo-requests', [DemoRequestController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('demo-requests.store');
 
 Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
 
