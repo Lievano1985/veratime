@@ -270,7 +270,7 @@
                     </p>
                 </div>
 
-                <div class="space-y-6">
+                <div class="space-y-6 lg:-mt-8">
                     <div class="screenshot-frame relative overflow-hidden rounded-2xl border border-white/15 bg-white/5">
                         <img src="{{ asset('images/marketing/lft.png') }}" alt="Reforma laboral 2027"
                             class="block w-full">
