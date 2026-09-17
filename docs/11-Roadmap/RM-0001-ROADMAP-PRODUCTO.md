@@ -203,5 +203,3 @@ Una función permanece dentro del MVP si cumple al menos una de estas condicione
 - Es necesaria para operar el piloto antes de enero de 2027.
 
 Toda función que no cumpla estos criterios deberá enviarse a una fase posterior.
-
-
