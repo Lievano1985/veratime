@@ -166,7 +166,20 @@
                 Todo lo que necesitas para controlar el tiempo de tu equipo.
             </h2>
 
-            <div class="feature-carousel-shell relative mt-10">
+            <div class="mt-10 grid gap-4 lg:grid-cols-3">
+                <div class="relative min-h-[18rem] overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:min-h-0">
+                    <img data-feature-preview src="{{ asset('images/marketing/shot-kiosco.png') }}"
+                        alt="Kiosco de Vera Time"
+                        class="absolute inset-0 h-full w-full object-contain p-3 transition-opacity duration-700">
+                    <img data-feature-preview src="{{ asset('images/marketing/shot-trabajadores.png') }}"
+                        alt="Trabajadores en Vera Time"
+                        class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
+                    <img data-feature-preview src="{{ asset('images/marketing/shot-portal.png') }}"
+                        alt="Portal de colaboradores en Vera Time"
+                        class="absolute inset-0 h-full w-full object-contain p-3 opacity-0 transition-opacity duration-700">
+                </div>
+
+                <div class="feature-carousel-shell relative lg:col-span-2">
                 <div id="feature-carousel" class="feature-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3">
                 @foreach ([
         ['Organización y equipo', ['Directorio de trabajadores', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Administración de supervisores y responsables'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
@@ -181,7 +194,7 @@
                         @continue
                     @endif
                     <div
-                        class="feature-carousel-card w-[min(20rem,calc(100vw-3rem))] flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 sm:w-[21rem] lg:w-[22rem]">
+                        class="feature-carousel-card w-[min(20rem,calc(100vw-3rem))] flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 sm:w-[21rem] lg:w-[calc((100%-1rem)/2)]">
                         <div
                             class="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] {{ $available ? 'bg-[#d8eafe] text-status-shift-text' : 'bg-surface-bg text-surface-muted' }}">
                             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -233,6 +246,7 @@
                     class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-md transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 sm:-right-5">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
+                </div>
             </div>
         </div>
     </section>
@@ -446,9 +460,20 @@
             }
 
             const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const previews = [...document.querySelectorAll('[data-feature-preview]')];
+            let previewIndex = 0;
 
             const card = () => carousel.querySelector('.feature-carousel-card');
             const step = () => card().offsetWidth + parseFloat(getComputedStyle(carousel).gap || 0);
+            const rotatePreview = (direction = 'next') => {
+                if (!previews.length) {
+                    return;
+                }
+
+                previews[previewIndex].classList.add('opacity-0');
+                previewIndex = (previewIndex + (direction === 'previous' ? -1 : 1) + previews.length) % previews.length;
+                previews[previewIndex].classList.remove('opacity-0');
+            };
             const move = (direction) => {
                 const isAtStart = carousel.scrollLeft <= 4;
                 const isAtEnd = carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 4;
@@ -466,15 +491,20 @@
                 carousel.scrollBy({ left: direction === 'next' ? step() : -step(), behavior: 'smooth' });
             };
 
-            let autoplay = prefersReducedMotion ? null : setInterval(() => move('next'), 5000);
+            const advance = () => {
+                move('next');
+                rotatePreview();
+            };
+            let autoplay = prefersReducedMotion ? null : setInterval(advance, 5000);
             const restartAutoplay = () => {
                 clearInterval(autoplay);
-                autoplay = prefersReducedMotion ? null : setInterval(() => move('next'), 5000);
+                autoplay = prefersReducedMotion ? null : setInterval(advance, 5000);
             };
 
             document.querySelectorAll('[data-carousel-direction]').forEach((button) => {
                 button.addEventListener('click', () => {
                     move(button.dataset.carouselDirection);
+                    rotatePreview(button.dataset.carouselDirection);
                     restartAutoplay();
                 });
             });
