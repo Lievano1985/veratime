@@ -6,7 +6,7 @@ version: 1.0.0
 status: Draft
 owner: Product Architecture
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-09-18
 tags:
   - backlog
   - mvp
@@ -148,6 +148,8 @@ Una historia se considera terminada cuando:
 | BL-0204 | Zona horaria por centro | P0 | Eventos usan zona horaria correcta |
 | BL-0205 | Dashboard inicial | P0 | Muestra trabajadores, jornadas, alertas e incidencias bÃ¡sicas |
 
+Nota de avance API de centros: `GET /api/v1/time/centers` y `GET /api/v1/time/centers/{centerId}` están disponibles con `centers:read`, consulta paginada, Policy y aislamiento por empresa del token. No exponen operaciones mutables de centros.
+
 ---
 
 ## EPIC-03 â€” Trabajadores y relaciones laborales
@@ -202,12 +204,12 @@ EPIC-04 debe evolucionar hacia programacion diaria publicada como fuente de verd
 | BL-0601 | Configurar Sanctum | P0 | Tokens API funcionando |
 | BL-0602 | Token ligado a empresa | P0 | Token resuelve `company_id` |
 | BL-0603 | Scopes API | P0 | Token sin permiso recibe 403 |
-| BL-0604 | Endpoint trabajadores | P0 | Crear/consultar trabajadores por API |
-| BL-0605 | Endpoint relaciones laborales | P0 | Crear/consultar relaciones por API |
+| BL-0604 | Endpoint trabajadores | P0 | Crear, consultar y actualizar trabajadores por API sin alterar evidencia o vigencias protegidas |
+| BL-0605 | Endpoint relaciones laborales | P0 | Consultar historial de relaciones por API sin alterar vigencias ni evidencia |
 | BL-0606 | Endpoint eventos | P0 | Registrar evento por API |
 | BL-0607 | Idempotencia API | P0 | No duplica eventos repetidos |
 | BL-0608 | Endpoint jornadas | P0 | Consultar jornadas calculadas |
-| BL-0609 | Endpoint alertas | P0 | Consultar alertas |
+| BL-0609 | Endpoint alertas | P0 | Consultar listado y detalle de alertas sin cambiar su estado |
 | BL-0610 | Endpoint incidencias | P0 | Crear/consultar incidencias |
 | BL-0611 | Error estÃ¡ndar API | P0 | Respuestas con `message`, `errors`, `trace_id` |
 | BL-0612 | Logs de integraciÃ³n | P0 | Registra operaciÃ³n, estado y trace ID |
@@ -690,8 +692,8 @@ Jornadas como tablero de incidencias inicia en `feature/work-day-incidence-board
 | E. Perfiles cycle, flexible y on_call | Agregar ciclos, ventanas/minutos y disponibilidad bajo demanda | D | cycle rules, flexible rules, on_call rules, UI perfiles | dominio, resolucion y UI | E1/E2 implementados/candidatos a cierre: dominio e interfaz cycle/flexible/on_call disponibles sin programacion diaria | Complejidad UX | 5 |
 | F. Calendario diario y publicacion | Crear batches obligatorios por centro y daily schedules publicados | D/E | `schedule_batches`, `daily_schedule_assignments`, `daily_schedule_segments` | publicacion no destructiva | F1/F2/F3A/F3B/F4 implementados/candidatos a cierre: nucleo diario, generacion draft, publicacion atomica, interfaz y correcciones versionadas | Versionado incorrecto | 6 |
 | G. Importacion CSV/XLSX | Importar programacion por calendario a draft | F | import batches/rows, parser, validadores | errores por fila | F5B implementado/candidato a cierre: CSV web disponible para lotes draft; sin API, sin jobs y sin XLSX; importacion nunca publica directo | Calidad de archivos | 7 |
-| H. Periodos de asistencia por alcance | Generar paquetes de asistencia por centro o unidades y rango libre | Work days / alertas base | `attendance_periods`, `attendance_period_scopes`, `attendance_incidents`, UI | crear, validar, cerrar, reportar periodo, registrar ausencias operativas y exportar CSV base | H1/H2/H3/H4 implementados/candidatos a cierre: CSV base de periodo cerrado disponible; no calcula nomina | Confundir periodo con nomina | 8 |
-| I. Exportacion/API del periodo | Consolidar entrega externa del periodo | H | exportacion controlada, contrato API | CSV/API | CSV base implementado con retardos y salidas anticipadas configurables y alertas visibles; pendiente API y entrega directa externa | Formato requerido por nomina externa | 9 |
+| H. Periodos de asistencia por alcance | Generar paquetes de asistencia por centro o unidades y rango libre | Work days / alertas base | `attendance_periods`, `attendance_period_scopes`, `attendance_incidents`, UI | crear, validar, cerrar, reportar periodo, registrar ausencias operativas y exportar CSV base | H1/H2/H3/H4 implementados/candidatos a cierre: API administrativa de listado y detalle disponible con `work-days:read`; no calcula nomina | Confundir periodo con nomina | 8 |
+| I. Exportacion/API del periodo | Consolidar entrega externa del periodo | H | exportacion controlada, contrato API | CSV/API | CSV base y descarga API `GET /api/v1/time/attendance-periods/{periodId}/payroll-csv` implementadas; requiere `exports:read`, Policy y periodo cerrado; no hay entrega externa directa | Formato requerido por nomina externa | 9 |
 | J. Eliminacion del modelo legacy | Retirar schedules legacy | F estable | borrar/convertir legacy | regresion Sprint 2 | No queda dependencia activa | Migracion incompleta | 10 |
 
 ## 9.2 Modelo legacy
@@ -872,8 +874,16 @@ Historias que se agregan al alcance P0:
 
 | ID | Historia | Criterio de aceptacion |
 |---|---|---|
-| BL-0108 | Vinculo usuario-trabajador | La cuenta se vincula solo al trabajador de la empresa autorizada y no otorga acceso horizontal. |
-| BL-0613 | Acceso personal web/movil por API | Un token personal conserva usuario, empresa y scopes; la empresa no se acepta desde el cliente como contexto manipulable. |
-| BL-1408 | Pruebas de identidad por canal | Se prueban vinculo, estados, revocacion y aislamiento de portal, token personal y kiosco. |
+| BL-0108 | Vinculo usuario-trabajador | La cuenta se vincula explícitamente y sólo al trabajador de la empresa autorizada; no se infiere por datos coincidentes ni otorga acceso horizontal. |
+| BL-0613 | Acceso personal web/movil por API | Token personal con usuario y empresa resueltos por servidor; `self:read` consulta y `self:write` permite marcaje individual y sincronización de hasta 25 eventos para el trabajador vinculado activo. Incluye recuperación de contraseña sin enumeración de cuentas; no acepta contexto manipulable de empresa/trabajador/centro, exige `Idempotency-Key` o `client_event_id` según el canal y `DELETE /api/v1/time/me/access-token` revoca sólo el token actual. |
+| BL-1408 | Pruebas de identidad por canal | Se prueban vínculo, estados, revocación, scopes, recuperación sin enumeración e idempotencia de portal, token personal y kiosco; la API personal no devuelve información ajena ni permite sustituir contexto aunque reciba identificadores externos. |
+
+Estado de avance del incremento:
+
+- BL-0606 amplía su contrato administrativo con `POST /api/v1/time/time-events/{eventId}/void`, `/approve` y `/reject`: exigen `time-events:write`, token y tenant válidos y rol administrativo. La anulación exige motivo, es lógica y encola el recálculo cuando hay relación laboral; aprobar/rechazar sólo opera capturas `admin_manual` en `pending_review`, el rechazo exige motivo y deja el evento en `ignored`. Un evento de otra empresa responde `404` y las tres operaciones preservan evidencia.
+- BL-0610 está implementada en su contrato inicial: `GET /api/v1/time/attendance-incidents` exige `incidents:read` y lista por empresa del token con filtros de trabajador, estado, tipo y fechas; `GET /api/v1/time/attendance-incidents/{incidentId}` exige el mismo scope, busca sólo dentro del tenant, pasa por la Policy `view`, responde `404` ante un identificador ajeno y devuelve `AttendanceIncidentResource` con `trace_id` sin mutar datos. `POST /api/v1/time/attendance-incidents` exige `incidents:write` y reutiliza `CreateAttendanceIncidentAction`. `POST /api/v1/time/attendance-incidents/{incidentId}/cancel` reutiliza `CancelAttendanceIncidentAction`, exige motivo y realiza una cancelación lógica que conserva la incidencia, actor, fecha UTC y motivo. Las cuatro rutas exigen token, tenant, producto y rol administrativo válidos. No incluye por ahora comentarios, adjuntos ni correcciones por API.
+- BL-0108 está implementada en `user_worker_links`: el vínculo se gestiona desde `/time/users`, se limita por empresa y puede revocarse sin borrar historial laboral.
+- BL-0613 está implementada para consulta y marcaje personal: token Sanctum con `company_id`, emisión desde sesión web o `POST /api/v1/time/auth/login` con vínculo activo y scopes `self:read` + `self:write`; listados y detalle propios de eventos y jornadas bajo `/api/v1/time/me`, más marcaje individual y `POST /api/v1/time/me/time-events/sync` de hasta 25 eventos. El marcaje individual exige `Idempotency-Key`; la sincronización usa `client_event_id` como idempotencia por evento y reporta `accepted`, `already_registered` o `rejected`. `POST /api/v1/time/auth/forgot-password` responde de forma uniforme para no enumerar cuentas. El canal deriva empresa del token y trabajador del vínculo, fija `source` a `pwa` y el usuario fuente en servidor, y rechaza con `422` identificadores o campos que intentarían sustituir el contexto; no implementa biometría, app nativa ni geolocalización.
+- BL-1408 permanece **en revisión**: existen pruebas de aislamiento, revocación, scopes, contexto prohibido, recuperación sin enumeración e idempotencia individual y por lote del canal personal; faltan cerrar la matriz de estados de cuenta, membresía, producto y la verificación manual de los canales portal/PWA y kiosco.
 
 La aplicacion nativa iOS/Android continua fuera de P0. El contrato API y el portal responsive/PWA seran la base movil inicial.
