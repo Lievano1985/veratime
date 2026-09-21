@@ -6,7 +6,7 @@ version: 1.0.0
 status: Draft
 owner: Founder
 created: 2026-07-01
-updated: 2026-07-03
+updated: 2026-09-16
 tags:
   - roadmap
   - producto
@@ -21,6 +21,8 @@ tags:
 Definir las fases de producto necesarias para construir el MVP de Vera Time antes de enero de 2027, manteniendo el alcance alineado con la investigación legal, el modelo de negocio y el presupuesto preliminar.
 
 Este roadmap no cambia la fecha final del MVP. Organiza las capacidades dentro de las fases existentes para evitar que funciones relacionadas con alertas, conformidad digital y evidencia se traten como módulos nuevos.
+
+El estado de implementación, la secuencia de cierre y los criterios verificables posteriores al núcleo operativo se documentan en `RM-0003-PLAN-DE-CONTINUIDAD-MVP.md`.
 
 ## 2. Fecha objetivo
 
@@ -203,5 +205,3 @@ Una función permanece dentro del MVP si cumple al menos una de estas condicione
 - Es necesaria para operar el piloto antes de enero de 2027.
 
 Toda función que no cumpla estos criterios deberá enviarse a una fase posterior.
-
-

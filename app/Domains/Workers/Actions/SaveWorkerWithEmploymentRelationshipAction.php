@@ -37,7 +37,7 @@ class SaveWorkerWithEmploymentRelationshipAction
                 'position_name' => $data['position_name'] ?? null,
                 'started_at' => $data['started_at'],
                 'status' => 'active',
-                'source' => 'web',
+                'source' => $data['relationship_source'] ?? 'web',
             ];
 
             $relationship = $worker->activeEmploymentRelationship()->first();

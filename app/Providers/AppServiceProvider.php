@@ -30,8 +30,8 @@ use App\Policies\AttendancePeriodPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\CompanyPolicy;
 use App\Policies\CustomerAccountPolicy;
-use App\Policies\EmploymentUnitAssignmentPolicy;
 use App\Policies\EmploymentRelationshipPolicy;
+use App\Policies\EmploymentUnitAssignmentPolicy;
 use App\Policies\LaborConditionPolicy;
 use App\Policies\MandatoryRestDayPolicy;
 use App\Policies\OperationalScopeAssignmentPolicy;
@@ -43,9 +43,12 @@ use App\Policies\ShiftTemplatePolicy;
 use App\Policies\TimeEventPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\WorkDayPolicy;
-use App\Policies\WorkerPolicy;
 use App\Policies\WorkerCredentialPolicy;
+use App\Policies\WorkerPolicy;
+use App\Support\RoleKey;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -64,6 +67,32 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('api', function ($request): Limit {
+            $token = $request->user()?->currentAccessToken();
+            $tokenId = $token && method_exists($token, 'getKey') ? $token->getKey() : $request->ip();
+            $companyId = $request->attributes->get('api.company')?->id ?? 'unknown';
+
+            return Limit::perMinute(60)->by($companyId.'|'.$tokenId);
+        });
+
+        RateLimiter::for('mobile-login', function ($request): Limit {
+            $email = mb_strtolower(trim((string) $request->input('email')));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('mobile-password-reset', function ($request): Limit {
+            $email = mb_strtolower(trim((string) $request->input('email')));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
+
+        Gate::define('manageApiTokens', function (User $user, Company $company): bool {
+            return $company->status === 'active'
+                && $user->belongsToCompany($company)
+                && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
+        });
+
         Gate::policy(Alert::class, AlertPolicy::class);
         Gate::policy(AttendanceIncident::class, AttendanceIncidentPolicy::class);
         Gate::policy(AttendancePeriod::class, AttendancePeriodPolicy::class);

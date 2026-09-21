@@ -19,6 +19,11 @@ class CenterPolicy
         return $this->canManageCompanyCenters($user, $company);
     }
 
+    public function view(User $user, Center $center): bool
+    {
+        return $this->canManageCompanyCenters($user, $center->company);
+    }
+
     public function update(User $user, Center $center): bool
     {
         return $this->canManageCompanyCenters($user, $center->company);

@@ -462,8 +462,8 @@ it('manual capture creates only time events and no future modules', function ():
         ->and(Schema::hasTable('alerts'))->toBeTrue()
         ->and(Schema::hasTable('incidents'))->toBeFalse()
         ->and(Schema::hasTable('reports'))->toBeFalse()
-        ->and(route('kiosk.index'))->toContain('/kiosk')
-        ->and(route('time-events.manual'))->toContain('/time-events/manual');
+        ->and(route('kiosk.index'))->toContain('/time/kiosk')
+        ->and(route('time-events.manual'))->toContain('/time/time-events/manual');
 });
 
 /**

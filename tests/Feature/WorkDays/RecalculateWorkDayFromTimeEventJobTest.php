@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\WorkDays;
 
+use App\Domains\Products\Support\ProductAccess;
 use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
@@ -23,6 +24,7 @@ use App\Models\Worker;
 use App\Support\RoleKey;
 use Database\Seeders\AlertTypeSeeder;
 use Database\Seeders\LegalRuleSeeder;
+use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -35,6 +37,7 @@ class RecalculateWorkDayFromTimeEventJobTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(ProductSeeder::class);
         $this->seed(LegalRuleSeeder::class);
         $this->seed(AlertTypeSeeder::class);
     }
@@ -141,7 +144,7 @@ class RecalculateWorkDayFromTimeEventJobTest extends TestCase
         $clockOut = $this->timeEvent($company, $relationship, 'clock_out', '2026-08-04', '06:00:00', '2026-08-04 12:00:00');
 
         $job = new RecalculateWorkDayFromTimeEventJob($clockOut->id, 'time_event_created');
-        $job->handle(app(ProcessSingleWorkDayAction::class));
+        $job->handle(app(ProcessSingleWorkDayAction::class), app(ProductAccess::class));
 
         $workDay = WorkDay::query()
             ->where('company_id', $company->id)

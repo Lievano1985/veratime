@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Support\Facades\Password;
+use App\Domains\Identity\Actions\RequestPasswordResetAction;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -16,7 +16,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'email' => ['required', 'string', 'email'],
         ]);
 
-        Password::sendResetLink($this->only('email'));
+        app(RequestPasswordResetAction::class)->handle($this->email);
 
         session()->flash('status', __('A reset link will be sent if the account exists.'));
     }
