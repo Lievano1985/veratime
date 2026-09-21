@@ -97,7 +97,7 @@
     </header>
 
     {{-- Hero --}}
-    <section id="producto" class="hero-gradient relative overflow-hidden">
+    <section id="producto" class="hero-gradient relative mx-4 overflow-hidden sm:mx-6 lg:mx-8">
         <div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-10">
             <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
                 <div class="animate-in max-w-2xl">
