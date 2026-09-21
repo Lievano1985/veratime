@@ -70,9 +70,13 @@
             @php($canManageUsers = $activeCompany && auth()->user()->can('viewAny', [\App\Models\User::class, $activeCompany]))
             @php($roleKey = $activeCompany ? auth()->user()->roleKeyForCompany($activeCompany) : null)
             @php($isSupervisor = $roleKey === \App\Support\RoleKey::SUPERVISOR)
+            @php($hasPersonalTimeAccess = $activeCompany && \App\Models\UserWorkerLink::query()->where('company_id', $activeCompany->id)->where('user_id', auth()->id())->where('status', 'active')->exists())
 
             <flux:navlist variant="outline">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Inicio</flux:navlist.item>
+                @if ($hasPersonalTimeAccess)
+                    <flux:navlist.item icon="clock" :href="route('personal.my-day')" :current="request()->routeIs('personal.my-day')" wire:navigate>Mi jornada</flux:navlist.item>
+                @endif
 
                 @if (auth()->user()->isSuperAdmin())
                     <flux:navlist.group heading="Plataforma" class="grid">
@@ -150,6 +154,9 @@
 
                         @if ($canManageUsers)
                             <flux:navlist.item icon="user-plus" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>Usuarios</flux:navlist.item>
+                        @endif
+                        @if ($activeCompany && auth()->user()->can('manageApiTokens', $activeCompany))
+                            <flux:navlist.item icon="key" :href="route('api-tokens.index')" :current="request()->routeIs('api-tokens.*')" wire:navigate>Credenciales API</flux:navlist.item>
                         @endif
                     </flux:navlist.group>
                 @endif

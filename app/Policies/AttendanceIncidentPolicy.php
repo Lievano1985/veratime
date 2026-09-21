@@ -19,6 +19,11 @@ class AttendanceIncidentPolicy
         return $this->canManage($user, $company);
     }
 
+    public function view(User $user, AttendanceIncident $incident): bool
+    {
+        return $incident->company && $this->canManage($user, $incident->company);
+    }
+
     public function cancel(User $user, AttendanceIncident $incident): bool
     {
         return $incident->company && $this->canManage($user, $incident->company);

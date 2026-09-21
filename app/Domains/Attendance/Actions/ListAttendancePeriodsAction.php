@@ -8,7 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ListAttendancePeriodsAction
 {
-    public function handle(Company $company, array $filters = []): LengthAwarePaginator
+    public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
         return AttendancePeriod::query()
             ->with(['center', 'creator', 'validatedBy', 'closedBy', 'scopes.organizationalUnit'])
@@ -19,6 +19,6 @@ class ListAttendancePeriodsAction
             ->when(filled($filters['date_to'] ?? null), fn ($query) => $query->whereDate('period_start', '<=', $filters['date_to']))
             ->orderByDesc('period_start')
             ->orderBy('center_id')
-            ->paginate(10);
+            ->paginate($perPage);
     }
 }

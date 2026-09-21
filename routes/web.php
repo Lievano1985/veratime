@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
 use App\Http\Controllers\Marketing\DemoRequestController;
+use App\Http\Controllers\PersonalAccessTokenController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvTemplateController;
 use Illuminate\Support\Facades\Route;
@@ -25,10 +26,13 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'current.company'])->group(function () {
     Route::prefix('time')->middleware('product:time')->group(function (): void {
+        Route::post('personal-access-token', [PersonalAccessTokenController::class, 'store'])->name('personal-access-token.store');
         Route::view('dashboard', 'dashboard')
             ->middleware('verified')
             ->name('dashboard');
+        Volt::route('my-day', 'personal.my-day')->name('personal.my-day');
         Volt::route('users', 'users.index')->name('users.index');
+        Volt::route('api-tokens', 'api-tokens.index')->name('api-tokens.index');
         Volt::route('company-settings', 'company-settings.index')->name('company-settings.index');
         Volt::route('centers', 'centers.index')->name('centers.index');
         Volt::route('workers', 'workers.index')->name('workers.index');

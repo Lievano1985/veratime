@@ -9,7 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListAlertsAction
 {
     /**
-     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, status?: ?string, severity?: ?string, search?: ?string} $filters
+     * @param  array{date_from?: ?string, date_to?: ?string, worker_id?: ?int, center_id?: ?int, status?: ?string, severity?: ?string, alert_type?: ?string, assigned_to?: ?int, search?: ?string}  $filters
      * @return LengthAwarePaginator<int, Alert>
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
@@ -25,7 +25,10 @@ class ListAlertsAction
                 fn ($query) => $query->whereIn('status', Alert::OPEN_STATUSES),
             )
             ->when($filters['severity'] ?? null, fn ($query, $severity) => $query->where('severity', $severity))
+            ->when($filters['worker_id'] ?? null, fn ($query, $workerId) => $query->where('worker_id', $workerId))
             ->when($filters['center_id'] ?? null, fn ($query, $centerId) => $query->whereHas('workDay', fn ($workDayQuery) => $workDayQuery->where('center_id', $centerId)))
+            ->when($filters['alert_type'] ?? null, fn ($query, $code) => $query->whereHas('alertType', fn ($types) => $types->where('code', $code)))
+            ->when($filters['assigned_to'] ?? null, fn ($query, $userId) => $query->where('assigned_to', $userId))
             ->when($filters['search'] ?? null, function ($query, $search): void {
                 $term = trim((string) $search);
 

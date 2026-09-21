@@ -2,8 +2,8 @@
 
 namespace App\Domains\WorkDays\Actions;
 
-use App\Models\Company;
 use App\Models\Alert;
+use App\Models\Company;
 use App\Models\WorkDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -11,7 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListWorkDaysAction
 {
     /**
-     * @param array{date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, situation?: ?string, attention?: ?string, search?: ?string} $filters
+     * @param  array{worker_id?: ?int, employee_code?: ?string, date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, situation?: ?string, attention?: ?string, search?: ?string}  $filters
      * @return LengthAwarePaginator<int, WorkDay>
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
@@ -74,6 +74,8 @@ class ListWorkDaysAction
                 });
             })
             ->when($filters['center_id'] ?? null, fn ($query, $centerId) => $query->where('center_id', $centerId))
+            ->when($filters['worker_id'] ?? null, fn ($query, $workerId) => $query->where('worker_id', $workerId))
+            ->when($filters['employee_code'] ?? null, fn ($query, $employeeCode) => $query->whereHas('worker', fn ($workerQuery) => $workerQuery->where('employee_code', $employeeCode)))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['schedule_status'] ?? null, fn ($query, $status) => $query->where('schedule_status', $status))
             ->when($filters['situation'] ?? null, fn ($query, $situation) => $this->applySituationFilter($query, $situation))
@@ -267,7 +269,7 @@ class ListWorkDaysAction
     }
 
     /**
-     * @param list<string> $types
+     * @param  list<string>  $types
      */
     private function whereAttendanceIncidentType($query, array $types): void
     {

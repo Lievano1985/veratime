@@ -4,9 +4,13 @@ use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\Users\Actions\CreateCompanyUserAction;
 use App\Domains\Users\Actions\ResetCompanyUserPasswordAction;
 use App\Domains\Users\Actions\UpdateCompanyUserAction;
+use App\Domains\Workers\Actions\LinkUserToWorkerAction;
+use App\Domains\Workers\Actions\RevokeUserWorkerLinkAction;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserWorkerLink;
+use App\Models\Worker;
 use App\Support\RoleKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
@@ -15,19 +19,35 @@ use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
-new class extends Component {
+new class extends Component
+{
     use WithPagination;
 
     public array $filters = [];
+
     public array $form = [];
+
     public array $editForm = [];
+
     public array $resetForm = [];
+
     public bool $showCreatePanel = false;
+
     public bool $showEditPanel = false;
+
     public bool $showResetPanel = false;
+
     public ?int $editingUserId = null;
+
     public ?int $resettingUserId = null;
+
     public ?string $temporaryPassword = null;
+
+    public bool $showWorkerLinkPanel = false;
+
+    public ?int $linkingUserId = null;
+
+    public string $linkedWorkerId = '';
 
     public function mount(): void
     {
@@ -171,6 +191,37 @@ new class extends Component {
         $this->resetValidation('form');
     }
 
+    public function openWorkerLinkPanel(int $userId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $user = $this->userForCompany($company, $userId);
+        Gate::authorize('update', [$user, $company]);
+        $this->linkingUserId = $user->id;
+        $this->linkedWorkerId = (string) (UserWorkerLink::query()->where('company_id', $company->id)->where('user_id', $user->id)->where('status', 'active')->value('worker_id') ?? '');
+        $this->showWorkerLinkPanel = true;
+    }
+
+    public function saveWorkerLink(CurrentCompany $currentCompany, LinkUserToWorkerAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        Gate::authorize('update', [$user, $company]);
+        $this->validate(['linkedWorkerId' => ['required', Rule::exists('workers', 'id')->where('company_id', $company->id)->where('status', 'active')]]);
+        $action->handle($company, $user, Worker::query()->where('company_id', $company->id)->findOrFail($this->linkedWorkerId));
+        $this->showWorkerLinkPanel = false;
+        Session::flash('status', 'Cuenta vinculada con la persona trabajadora.');
+    }
+
+    public function revokeWorkerLink(CurrentCompany $currentCompany, RevokeUserWorkerLinkAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        Gate::authorize('update', [$user, $company]);
+        $action->handle($company, $user);
+        $this->linkedWorkerId = '';
+        Session::flash('status', 'Vínculo revocado; el historial laboral se conserva.');
+    }
+
     public function closeEditPanel(): void
     {
         $this->showEditPanel = false;
@@ -205,6 +256,7 @@ new class extends Component {
         $roleIdsByKey = Role::query()->pluck('id', 'key');
 
         $users = $company->users()
+            ->with(['workerLinks' => fn ($query) => $query->where('company_id', $company->id)->where('status', 'active')->with('worker')])
             ->withPivot(['role_id', 'status', 'is_default'])
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
@@ -222,6 +274,7 @@ new class extends Component {
             'users' => $users,
             'roles' => Role::query()->whereIn('key', $this->assignableRoleKeys($company))->orderBy('name')->get(),
             'isSuperAdmin' => auth()->user()->isSuperAdmin(),
+            'linkWorkers' => $company->workers()->where('status', 'active')->orderBy('full_name')->get(),
         ];
     }
 
@@ -309,6 +362,7 @@ new class extends Component {
     }
 }; ?>
 
+<div>
 <section class="w-full space-y-6 bg-surface-bg p-6 text-surface-text">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -369,6 +423,7 @@ new class extends Component {
                         <th class="table-head-cell">Rol</th>
                         <th class="table-head-cell">Estado usuario</th>
                         <th class="table-head-cell">Acceso empresa</th>
+                        <th class="table-head-cell">Trabajador vinculado</th>
                         <th class="table-head-cell text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -380,6 +435,7 @@ new class extends Component {
                                 <div class="font-semibold text-brand-navy">{{ $user->name }}</div>
                                 <div class="text-xs text-surface-muted">{{ $user->email }}</div>
                             </td>
+                            <td class="table-cell">{{ $user->workerLinks->first()?->worker?->full_name ?? 'Sin vínculo' }}</td>
                             <td class="table-cell">{{ $this->roleLabel($roleKey) }}</td>
                             <td class="table-cell">
                                 <x-ui.badge variant="{{ $user->status === 'active' ? 'success' : 'neutral' }}">
@@ -396,6 +452,7 @@ new class extends Component {
                                     <button type="button" class="btn-icon" wire:click="openEditPanel({{ $user->id }})" aria-label="Editar usuario" title="Editar">
                                         <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </button>
+                                    <button type="button" class="btn-icon" wire:click="openWorkerLinkPanel({{ $user->id }})" aria-label="Vincular trabajador" title="Vincular trabajador">↔</button>
                                     <button type="button" class="btn-icon" wire:click="openResetPanel({{ $user->id }})" aria-label="Resetear contraseña" title="Resetear contraseña">
                                         <svg class="h-4 w-4 text-brand-blue" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 0 0-13.5-3.5L4 8m16 8-2.5 2.5A8 8 0 0 1 4 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </button>
@@ -404,7 +461,7 @@ new class extends Component {
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="table-cell py-8 text-center text-surface-muted">
+                            <td colspan="6" class="table-cell py-8 text-center text-surface-muted">
                                 No hay usuarios con estos filtros.
                             </td>
                         </tr>
@@ -491,3 +548,18 @@ new class extends Component {
         </form>
     </x-side-panel>
 </section>
+
+<x-side-panel wire:model="showWorkerLinkPanel" title="Vínculo con trabajador" subheading="Acceso personal web/PWA; no modifica el kiosco." max-width="max-w-lg">
+    <form wire:submit="saveWorkerLink" class="flex flex-1 flex-col">
+        <div class="flex-1 space-y-4 p-6">
+            <flux:select label="Trabajador activo" wire:model="linkedWorkerId">
+                <flux:select.option value="">Seleccionar</flux:select.option>
+                @foreach ($linkWorkers as $worker)
+                    <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        </div>
+        <div class="flex justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
+    </form>
+</x-side-panel>
+</div>

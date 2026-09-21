@@ -75,4 +75,9 @@ class Worker extends Model
     {
         return $this->hasMany(AttendanceIncident::class);
     }
+
+    public function userLinks(): HasMany
+    {
+        return $this->hasMany(UserWorkerLink::class);
+    }
 }
