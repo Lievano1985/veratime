@@ -177,3 +177,11 @@ Pospuesto explícitamente:
 - El horario sólo muestra programación publicada de la relación activa y las alertas sólo pertenecen al trabajador vinculado.
 - Cerrar sesión revoca únicamente el token móvil actual.
 - No se presenta biometría, geolocalización ni app nativa como funcionalidad disponible.
+
+## 9. Plan de implementación
+
+La guía técnica de arquitectura cliente, fases, ejemplos de conexión API y matriz de pruebas está en:
+
+```text
+docs/06-UX/UX-0003-PLAN-DE-IMPLEMENTACION-PWA.md
+```
