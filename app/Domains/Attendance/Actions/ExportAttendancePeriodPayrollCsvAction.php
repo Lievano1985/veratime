@@ -5,23 +5,29 @@ namespace App\Domains\Attendance\Actions;
 use App\Models\Alert;
 use App\Models\AttendanceIncident;
 use App\Models\AttendancePeriod;
+use App\Models\PayrollExportTemplate;
 use App\Models\WorkDay;
 use App\Models\WorkDayCalculation;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportAttendancePeriodPayrollCsvAction
 {
-    public function __construct(private readonly BuildAttendancePeriodWorkDayQuery $workDayQuery)
-    {
-    }
+    public function __construct(private readonly BuildAttendancePeriodWorkDayQuery $workDayQuery) {}
 
-    public function handle(AttendancePeriod $period): StreamedResponse
+    public function handle(AttendancePeriod $period, ?PayrollExportTemplate $template = null): StreamedResponse
     {
         if ($period->status !== AttendancePeriod::STATUS_CLOSED) {
             throw new \InvalidArgumentException('Solo se pueden exportar periodos cerrados.');
         }
 
         $period->loadMissing(['company', 'center']);
+        $template?->loadMissing('columns');
+        $columns = $template instanceof PayrollExportTemplate
+            ? $template->columns
+                ->map(fn ($column): array => ['key' => $column->source_key, 'header' => $column->header])
+                ->all()
+            : self::defaultColumns();
+        $delimiter = $template?->delimiter ?: ',';
         $filename = sprintf(
             'vera-time-asistencia-%s-%s-%s.csv',
             $this->slug((string) $period->center?->name),
@@ -29,10 +35,10 @@ class ExportAttendancePeriodPayrollCsvAction
             $period->period_end?->format('Ymd'),
         );
 
-        return response()->streamDownload(function () use ($period): void {
+        return response()->streamDownload(function () use ($period, $columns, $delimiter): void {
             echo "\xEF\xBB\xBF";
             $output = fopen('php://output', 'wb');
-            fputcsv($output, $this->headers());
+            fputcsv($output, array_column($columns, 'header'), $delimiter);
 
             $this->workDayQuery->handle($period)
                 ->with([
@@ -46,9 +52,16 @@ class ExportAttendancePeriodPayrollCsvAction
                 ])
                 ->orderBy('work_date')
                 ->orderBy('worker_id')
-                ->chunk(200, function ($workDays) use ($output, $period): void {
+                ->chunk(200, function ($workDays) use ($output, $period, $columns, $delimiter): void {
                     foreach ($workDays as $workDay) {
-                        fputcsv($output, $this->row($period, $workDay));
+                        $values = array_combine(
+                            array_column(self::defaultColumns(), 'key'),
+                            $this->row($period, $workDay),
+                        );
+                        fputcsv($output, array_map(
+                            fn (array $column): string|int => $values[$column['key']] ?? '',
+                            $columns,
+                        ), $delimiter);
                     }
                 });
 
@@ -62,9 +75,9 @@ class ExportAttendancePeriodPayrollCsvAction
     /**
      * @return list<string>
      */
-    private function headers(): array
+    public static function defaultColumns(): array
     {
-        return [
+        return array_map(fn (string $header): array => ['key' => $header, 'header' => $header], [
             'empresa',
             'centro',
             'unidad',
@@ -109,7 +122,7 @@ class ExportAttendancePeriodPayrollCsvAction
             'incidencia_pagada',
             'incidencia_no_pagada',
             'observaciones',
-        ];
+        ]);
     }
 
     /**
@@ -237,7 +250,7 @@ class ExportAttendancePeriodPayrollCsvAction
     }
 
     /**
-     * @param array<string, mixed> $incident
+     * @param  array<string, mixed>  $incident
      */
     private function absenceMinutes(WorkDay $workDay, array $incident): int
     {
@@ -262,7 +275,7 @@ class ExportAttendancePeriodPayrollCsvAction
     }
 
     /**
-     * @param array<string, mixed> $incident
+     * @param  array<string, mixed>  $incident
      */
     private function observations(array $incident, ?Alert $alert): string
     {
@@ -320,7 +333,7 @@ class ExportAttendancePeriodPayrollCsvAction
     }
 
     /**
-     * @param list<string|int> $row
+     * @param  list<string|int>  $row
      * @return list<string|int>
      */
     private function sanitizeRow(array $row): array

@@ -34,6 +34,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
         Volt::route('users', 'users.index')->name('users.index');
         Volt::route('api-tokens', 'api-tokens.index')->name('api-tokens.index');
         Volt::route('company-settings', 'company-settings.index')->name('company-settings.index');
+        Volt::route('configuration/csv-periodos', 'payroll-export-templates.index')->name('payroll-export-templates.index');
         Volt::route('centers', 'centers.index')->name('centers.index');
         Volt::route('workers', 'workers.index')->name('workers.index');
         Volt::route('schedules', 'schedules.index')->name('schedules.index');

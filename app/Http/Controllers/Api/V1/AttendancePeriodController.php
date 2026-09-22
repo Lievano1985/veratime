@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domains\Attendance\Actions\ExportAttendancePeriodPayrollCsvAction;
 use App\Domains\Attendance\Actions\ListAttendancePeriodsAction;
+use App\Domains\Attendance\Actions\ResolvePayrollExportTemplateAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ListAttendancePeriodsRequest;
 use App\Http\Resources\Api\V1\AttendancePeriodResource;
@@ -37,12 +38,12 @@ class AttendancePeriodController extends Controller
         return response()->json(['data' => (new AttendancePeriodResource($period))->resolve(), 'meta' => ['trace_id' => $request->attributes->get('api.trace_id')]]);
     }
 
-    public function exportPayrollCsv(Request $request, int $periodId, ExportAttendancePeriodPayrollCsvAction $action): StreamedResponse
+    public function exportPayrollCsv(Request $request, int $periodId, ExportAttendancePeriodPayrollCsvAction $action, ResolvePayrollExportTemplateAction $resolveTemplate): StreamedResponse
     {
         /** @var Company $company */ $company = $request->attributes->get('api.company');
         $period = AttendancePeriod::query()->where('company_id', $company->id)->findOrFail($periodId);
         Gate::authorize('exportPayrollCsv', $period);
 
-        return $action->handle($period);
+        return $action->handle($period, $resolveTemplate->handle($company, $request->integer('template_id') ?: null));
     }
 }

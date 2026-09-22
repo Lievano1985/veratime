@@ -71,6 +71,12 @@
             @php($roleKey = $activeCompany ? auth()->user()->roleKeyForCompany($activeCompany) : null)
             @php($isSupervisor = $roleKey === \App\Support\RoleKey::SUPERVISOR)
             @php($hasPersonalTimeAccess = $activeCompany && \App\Models\UserWorkerLink::query()->where('company_id', $activeCompany->id)->where('user_id', auth()->id())->where('status', 'active')->exists())
+            @php($canViewCenters = $activeCompany && auth()->user()->can('viewAny', [\App\Models\Center::class, $activeCompany]))
+            @php($canViewShiftTemplates = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ShiftTemplate::class, $activeCompany]))
+            @php($canViewScheduleProfiles = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleProfile::class, $activeCompany]))
+            @php($canViewScheduleBatches = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleBatch::class, $activeCompany]))
+            @php($canViewMandatoryRestDays = $activeCompany && auth()->user()->can('viewAny', [\App\Models\MandatoryRestDay::class, $activeCompany]))
+            @php($hasScheduleNavigation = $canViewShiftTemplates || $canViewScheduleProfiles || $canViewScheduleBatches || $canViewMandatoryRestDays)
 
             <flux:navlist variant="outline">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Inicio</flux:navlist.item>
@@ -87,7 +93,7 @@
                 <flux:navlist.group heading="Organización" class="grid">
                     @unless ($isSupervisor)
                         <flux:navlist.item icon="building-office" :href="route('companies.index')" :current="request()->routeIs('companies.*')" wire:navigate>Empresas</flux:navlist.item>
-                        @if ($activeCompany)
+                        @if ($canViewCenters)
                             <flux:navlist.item icon="map-pin" :href="route('centers.index')" :current="request()->routeIs('centers.*')" wire:navigate>Centros</flux:navlist.item>
                         @endif
                     @endunless
@@ -104,24 +110,24 @@
                     @endif
                 </flux:navlist.group>
 
-                @if ($activeCompany)
+                @if ($hasScheduleNavigation)
                 <flux:navlist.group heading="Horarios" class="grid">
-                    @if (! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\ShiftTemplate::class, $activeCompany]))
+                    @if (! $isSupervisor && $canViewShiftTemplates)
                         <flux:navlist.item icon="calendar-days" :href="route('scheduling.shifts')" :current="request()->routeIs('scheduling.shifts')" wire:navigate>Catálogo de turnos</flux:navlist.item>
                     @endif
 
-                    @if (! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleProfile::class, $activeCompany]))
+                    @if (! $isSupervisor && $canViewScheduleProfiles)
                         <flux:navlist.item icon="calendar" :href="route('scheduling.profiles')" :current="request()->routeIs('scheduling.profiles')" wire:navigate>Modelos de horario</flux:navlist.item>
                         <flux:navlist.item icon="queue-list" :href="route('scheduling.profile-assignments')" :current="request()->routeIs('scheduling.profile-assignments')" wire:navigate>Aplicacion de modelos</flux:navlist.item>
                     @endif
 
-                    @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleBatch::class, $activeCompany]))
+                    @if ($canViewScheduleBatches)
                         <flux:navlist.item icon="calendar-days" :href="route('scheduling.daily')" :current="request()->routeIs('scheduling.daily')" wire:navigate>Programacion semanal</flux:navlist.item>
                     @endif
 
-                    @unless ($isSupervisor)
+                    @if (! $isSupervisor && $canViewMandatoryRestDays)
                         <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
-                    @endunless
+                    @endif
                 </flux:navlist.group>
                 @endif
 
@@ -150,6 +156,10 @@
                     <flux:navlist.group heading="Configuración" class="grid">
                         @if ($canManageCompanySettings)
                             <flux:navlist.item icon="cog-6-tooth" :href="route('company-settings.index')" :current="request()->routeIs('company-settings.*')" wire:navigate>Configuración de empresa</flux:navlist.item>
+                        @endif
+
+                        @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\PayrollExportTemplate::class, $activeCompany]))
+                            <flux:navlist.item icon="table-cells" :href="route('payroll-export-templates.index')" :current="request()->routeIs('payroll-export-templates.*')" wire:navigate>CSV de períodos</flux:navlist.item>
                         @endif
 
                         @if ($canManageUsers)

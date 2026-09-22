@@ -296,6 +296,7 @@ El cierre deja de ser una configuracion unica por empresa. Se agregaran perfiles
 | BL-1102 | Exportar PDF | P0 | Archivo guardado con hash |
 | BL-1103 | Exportar CSV/XLSX | P0 | Descarga con permisos |
 | BL-1104 | ExportaciÃ³n prenÃ³mina | P0/P1 alto | Ordinarias, extras, domingo, descanso e incidencias |
+| BL-1108 | Plantillas configurables de CSV de periodos | P1 alto | Cada empresa ajusta encabezados, orden y formatos desde Configuracion; incluye vista previa, snapshot y auditoria de cada archivo |
 | BL-1105 | Expediente por trabajador/periodo | P0 | Solo alcance solicitado |
 | BL-1106 | Manifiesto de expediente | P0 | Lista de elementos y hash |
 | BL-1107 | AuditorÃ­a de descarga | P0 | Registra generaciÃ³n/descarga |

@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
@@ -114,6 +114,11 @@ class Company extends Model
         return $this->hasMany(AttendancePeriod::class);
     }
 
+    public function payrollExportTemplates(): HasMany
+    {
+        return $this->hasMany(PayrollExportTemplate::class);
+    }
+
     public function attendanceIncidents(): HasMany
     {
         return $this->hasMany(AttendanceIncident::class);
@@ -213,6 +218,7 @@ class Company extends Model
     {
         return $this->hasMany(TimeEvent::class);
     }
+
     public function organizationalUnits(): HasMany
     {
         return $this->hasMany(OrganizationalUnit::class);
