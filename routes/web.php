@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
+use App\Http\Controllers\Attendance\AttendancePeriodPayrollXlsxController;
 use App\Http\Controllers\Marketing\DemoRequestController;
 use App\Http\Controllers\PersonalAccessTokenController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
@@ -58,6 +59,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
         Volt::route('alerts', 'alerts.index')->name('alerts.index');
         Volt::route('attendance-periods', 'attendance-periods.index')->name('attendance-periods.index');
         Route::get('attendance-periods/{attendancePeriod}/payroll-csv', AttendancePeriodPayrollCsvController::class)->name('attendance-periods.payroll-csv');
+        Route::get('attendance-periods/{attendancePeriod}/payroll-xlsx', AttendancePeriodPayrollXlsxController::class)->name('attendance-periods.payroll-xlsx');
     });
 
     Route::redirect('settings', 'settings/profile');

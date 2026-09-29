@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 use Livewire\Volt\Volt;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 it('creates the base CSV de periodos template for a company', function (): void {
     [$company, $user] = payrollTemplateCompanyUser();
@@ -53,6 +54,44 @@ it('exports a closed period with a company custom column order and headers', fun
 
     $response->assertOk();
     expect($response->streamedContent())->toContain('CLAVE;"HORAS NORMALES"');
+});
+
+it('exports a closed period as Excel using the selected company template', function (): void {
+    [$company, $user] = payrollTemplateCompanyUser();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $period = AttendancePeriod::factory()->create([
+        'company_id' => $company->id,
+        'center_id' => $center->id,
+        'status' => AttendancePeriod::STATUS_CLOSED,
+    ]);
+    $template = app(SavePayrollExportTemplateAction::class)->handle($company, [
+        'name' => 'Excel proveedor',
+        'status' => PayrollExportTemplate::STATUS_ACTIVE,
+        'is_default' => false,
+        'delimiter' => ',',
+        'columns' => [
+            ['source_key' => 'numero_empleado', 'header' => 'CLAVE'],
+            ['source_key' => 'horas_ordinarias', 'header' => 'HORAS NORMALES'],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->withSession(['current_company_id' => $company->id])
+        ->get(route('attendance-periods.payroll-xlsx', ['attendancePeriod' => $period, 'template_id' => $template->id]));
+
+    $response->assertOk()->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+    $path = tempnam(sys_get_temp_dir(), 'vera-time-xlsx-');
+    file_put_contents($path, $response->streamedContent());
+
+    try {
+        $sheet = IOFactory::load($path)->getActiveSheet();
+
+        expect($sheet->getCell('A1')->getValue())->toBe('CLAVE')
+            ->and($sheet->getCell('B1')->getValue())->toBe('HORAS NORMALES');
+    } finally {
+        @unlink($path);
+    }
 });
 
 it('saves a custom template from the configuration component', function (): void {

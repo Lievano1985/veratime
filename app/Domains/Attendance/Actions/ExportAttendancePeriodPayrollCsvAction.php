@@ -16,60 +16,90 @@ class ExportAttendancePeriodPayrollCsvAction
 
     public function handle(AttendancePeriod $period, ?PayrollExportTemplate $template = null): StreamedResponse
     {
-        if ($period->status !== AttendancePeriod::STATUS_CLOSED) {
-            throw new \InvalidArgumentException('Solo se pueden exportar periodos cerrados.');
-        }
-
-        $period->loadMissing(['company', 'center']);
-        $template?->loadMissing('columns');
-        $columns = $template instanceof PayrollExportTemplate
-            ? $template->columns
-                ->map(fn ($column): array => ['key' => $column->source_key, 'header' => $column->header])
-                ->all()
-            : self::defaultColumns();
+        $columns = $this->columnsFor($template);
         $delimiter = $template?->delimiter ?: ',';
-        $filename = sprintf(
-            'vera-time-asistencia-%s-%s-%s.csv',
-            $this->slug((string) $period->center?->name),
-            $period->period_start?->format('Ymd'),
-            $period->period_end?->format('Ymd'),
-        );
+        $filename = $this->filename($period, 'csv');
 
         return response()->streamDownload(function () use ($period, $columns, $delimiter): void {
             echo "\xEF\xBB\xBF";
             $output = fopen('php://output', 'wb');
-            fputcsv($output, array_column($columns, 'header'), $delimiter);
+            fputcsv($output, $this->sanitizeRow(array_column($columns, 'header')), $delimiter);
 
-            $this->workDayQuery->handle($period)
-                ->with([
-                    'company',
-                    'worker',
-                    'center',
-                    'employmentRelationship',
-                    'dailyScheduleAssignment.organizationalUnit',
-                    'activeCalculation',
-                    'alerts',
-                ])
-                ->orderBy('work_date')
-                ->orderBy('worker_id')
-                ->chunk(200, function ($workDays) use ($output, $period, $columns, $delimiter): void {
-                    foreach ($workDays as $workDay) {
-                        $values = array_combine(
-                            array_column(self::defaultColumns(), 'key'),
-                            $this->row($period, $workDay),
-                        );
-                        fputcsv($output, array_map(
-                            fn (array $column): string|int => $values[$column['key']] ?? '',
-                            $columns,
-                        ), $delimiter);
-                    }
-                });
+            $this->writeRows($period, $columns, function (array $row) use ($output, $delimiter): void {
+                fputcsv($output, $this->sanitizeRow($row), $delimiter);
+            });
 
             fclose($output);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
+    }
+
+    /**
+     * @return list<array{key: string, header: string}>
+     */
+    public function columnsFor(?PayrollExportTemplate $template = null): array
+    {
+        $template?->loadMissing('columns');
+
+        return $template instanceof PayrollExportTemplate
+            ? $template->columns
+                ->map(fn ($column): array => ['key' => $column->source_key, 'header' => $column->header])
+                ->all()
+            : self::defaultColumns();
+    }
+
+    public function filename(AttendancePeriod $period, string $extension): string
+    {
+        $period->loadMissing('center');
+
+        return sprintf(
+            'vera-time-asistencia-%s-%s-%s.%s',
+            $this->slug((string) $period->center?->name),
+            $period->period_start?->format('Ymd'),
+            $period->period_end?->format('Ymd'),
+            $extension,
+        );
+    }
+
+    /**
+     * @param  list<array{key: string, header: string}>  $columns
+     * @param  callable(list<string|int>): void  $writeRow
+     */
+    public function writeRows(AttendancePeriod $period, array $columns, callable $writeRow): void
+    {
+        if ($period->status !== AttendancePeriod::STATUS_CLOSED) {
+            throw new \InvalidArgumentException('Solo se pueden exportar periodos cerrados.');
+        }
+
+        $period->loadMissing(['company', 'center']);
+
+        $this->workDayQuery->handle($period)
+            ->with([
+                'company',
+                'worker',
+                'center',
+                'employmentRelationship',
+                'dailyScheduleAssignment.organizationalUnit',
+                'activeCalculation',
+                'alerts',
+            ])
+            ->orderBy('work_date')
+            ->orderBy('worker_id')
+            ->chunk(200, function ($workDays) use ($writeRow, $period, $columns): void {
+                foreach ($workDays as $workDay) {
+                    $values = array_combine(
+                        array_column(self::defaultColumns(), 'key'),
+                        $this->row($period, $workDay),
+                    );
+
+                    $writeRow(array_map(
+                        fn (array $column): string|int => $values[$column['key']] ?? '',
+                        $columns,
+                    ));
+                }
+            });
     }
 
     /**
@@ -141,7 +171,7 @@ class ExportAttendancePeriodPayrollCsvAction
         $scheduledRestWorked = $scheduledRest && (int) ($calculation?->total_work_minutes ?? 0) > 0;
         $sundayRestWorked = $scheduledRestWorked && ($workDay->work_date?->isSunday() ?? false);
 
-        return $this->sanitizeRow([
+        return [
             $period->company?->name ?? '',
             $workDay->center?->name ?? '',
             $workDay->dailyScheduleAssignment?->organizationalUnit?->name ?? '',
@@ -186,7 +216,7 @@ class ExportAttendancePeriodPayrollCsvAction
             $this->yesNo(($incident['payment_status'] ?? null) === AttendanceIncident::PAYMENT_PAID),
             $this->yesNo(($incident['payment_status'] ?? null) === AttendanceIncident::PAYMENT_UNPAID),
             $this->observations($incident, $primaryAlert),
-        ]);
+        ];
     }
 
     private function mandatoryRestReference(?WorkDayCalculation $calculation): string

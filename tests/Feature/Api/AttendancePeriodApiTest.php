@@ -37,6 +37,12 @@ it('exports only closed attendance periods from the token company', function ():
 
     $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     expect($response->streamedContent())->toContain('empresa,centro,unidad');
+    $this->withToken($token)
+        ->get('/api/v1/time/attendance-periods/'.$closedPeriod->id.'/payroll-xlsx')
+        ->assertOk()
+        ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$openPeriod->id.'/payroll-csv')->assertForbidden();
+    $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$openPeriod->id.'/payroll-xlsx')->assertForbidden();
     $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$foreignPeriod->id.'/payroll-csv')->assertNotFound();
+    $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$foreignPeriod->id.'/payroll-xlsx')->assertNotFound();
 });

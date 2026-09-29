@@ -33,6 +33,7 @@ Route::prefix('v1/time')
         Route::post('attendance-incidents/{incidentId}/cancel', [AttendanceIncidentController::class, 'cancel'])->middleware('api.ability:incidents:write');
         Route::get('attendance-periods', [AttendancePeriodController::class, 'index'])->middleware('api.ability:work-days:read');
         Route::get('attendance-periods/{periodId}/payroll-csv', [AttendancePeriodController::class, 'exportPayrollCsv'])->middleware('api.ability:exports:read');
+        Route::get('attendance-periods/{periodId}/payroll-xlsx', [AttendancePeriodController::class, 'exportPayrollXlsx'])->middleware('api.ability:exports:read');
         Route::get('attendance-periods/{periodId}', [AttendancePeriodController::class, 'show'])->middleware('api.ability:work-days:read');
         Route::put('workers/{workerId}', [WorkerController::class, 'update'])->middleware('api.ability:workers:write');
         Route::post('time-events', [TimeEventController::class, 'store'])->middleware('api.ability:time-events:write');

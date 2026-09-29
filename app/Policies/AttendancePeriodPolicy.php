@@ -44,8 +44,12 @@ class AttendancePeriodPolicy
 
     public function exportPayrollCsv(User $user, AttendancePeriod $period): bool
     {
-        return $period->status === AttendancePeriod::STATUS_CLOSED
-            && $this->canManageAttendancePeriods($user, $period->company);
+        return $this->canExportPayroll($user, $period);
+    }
+
+    public function exportPayrollXlsx(User $user, AttendancePeriod $period): bool
+    {
+        return $this->canExportPayroll($user, $period);
     }
 
     private function canManageAttendancePeriods(User $user, Company $company): bool
@@ -54,5 +58,11 @@ class AttendancePeriodPolicy
             && $user->status === 'active'
             && $user->belongsToCompany($company)
             && in_array($user->roleKeyForCompany($company), RoleKey::companyManagers(), true);
+    }
+
+    private function canExportPayroll(User $user, AttendancePeriod $period): bool
+    {
+        return $period->status === AttendancePeriod::STATUS_CLOSED
+            && $this->canManageAttendancePeriods($user, $period->company);
     }
 }

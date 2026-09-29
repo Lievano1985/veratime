@@ -1,23 +1,23 @@
 ---
 id: BL-1108
-title: Plantillas configurables de CSV de periodos
+title: Plantillas configurables de exportación de periodos
 project: Vera Time
 status: In review
 priority: P1 alto
 owner: Product
 ---
 
-# BL-1108 — Plantillas configurables de CSV de periodos
+# BL-1108 — Plantillas configurables de exportación de periodos
 
 ## Estado de implementación
 
-El incremento actual implementa la plantilla base **CSV de períodos** por empresa, la pantalla de Configuración con pizarra drag-and-drop, duplicación, edición de plantillas propias, encabezados personalizados, orden de columnas, delimitador y selección de plantilla predeterminada. La descarga existente de un período cerrado reutiliza esa plantilla predeterminada o acepta una plantilla propia por `template_id`.
+El incremento actual implementa la plantilla base **CSV de períodos** por empresa, la pantalla de Configuración con pizarra drag-and-drop, duplicación, edición de plantillas propias, encabezados personalizados, orden de columnas, delimitador y selección de plantilla predeterminada. La descarga de un período cerrado reutiliza esa plantilla predeterminada o acepta una plantilla propia por `template_id`, tanto en **CSV** como en **Excel (.xlsx)**.
 
-Quedan para un incremento posterior la vista previa con filas reales del período dentro de la pantalla, el historial persistente de descargas con snapshot/hash por archivo y los endpoints API para administrar plantillas. Estos pendientes no impiden configurar ni descargar el CSV personalizado por web.
+Quedan para un incremento posterior la vista previa con filas reales del período dentro de la pantalla, el historial persistente de descargas con snapshot/hash por archivo y los endpoints API para administrar plantillas. Estos pendientes no impiden configurar ni descargar el CSV o Excel personalizado por web.
 
 ## Objetivo
 
-Permitir que cada empresa entregue su información de asistencia a distintos proveedores de nómina mediante un archivo CSV con los encabezados, orden y formatos que el proveedor solicite.
+Permitir que cada empresa entregue su información de asistencia a distintos proveedores de nómina mediante un archivo CSV o Excel (.xlsx) con los encabezados, orden y formatos que el proveedor solicite.
 
 Vera Time no calcula nómina ni se integra directamente con el proveedor. Produce un archivo de asistencia trazable a partir de un período cerrado.
 
@@ -78,7 +78,7 @@ Al descargar, Vera Time conserva un snapshot inmutable de la plantilla utilizada
 - Pueden administrar plantillas `super_admin`, `admin_empresa` y `rh_admin` autorizados en la empresa.
 - Sólo roles con permiso de exportación pueden descargar un período usando una plantilla.
 - No se permiten fórmulas, macros, SQL libre, código ni transformaciones arbitrarias.
-- Se protege el contenido CSV frente a inyección de fórmulas.
+- Se protege el contenido CSV frente a inyección de fórmulas y Excel guarda los valores como texto, sin fórmulas ni macros.
 - No incluye salarios, percepciones, deducciones, impuestos, timbrado ni integración directa con nómina.
 
 ## Flujo de uso
@@ -87,7 +87,7 @@ Al descargar, Vera Time conserva un snapshot inmutable de la plantilla utilizada
 2. Conserva la plantilla **CSV de períodos** o la duplica.
 3. Arrastra campos a la pizarra, los ordena y renombra sus encabezados.
 4. Guarda y activa la plantilla.
-5. Desde un período cerrado selecciona la plantilla, revisa la vista previa y descarga el CSV.
+5. Desde un período cerrado selecciona la plantilla, revisa la vista previa y descarga el CSV o Excel (.xlsx).
 6. El sistema registra la exportación y el snapshot de la plantilla usada.
 
 ## Criterios de aceptación
@@ -96,14 +96,14 @@ Al descargar, Vera Time conserva un snapshot inmutable de la plantilla utilizada
 2. Una empresa puede crear una plantilla propia sin alterar la plantilla base ni plantillas de otra empresa.
 3. La pizarra permite agregar, quitar, ordenar y renombrar encabezados de columnas permitidas.
 4. No se puede guardar una plantilla con encabezados vacíos/duplicados ni sin un identificador de trabajador.
-5. La vista previa y el CSV final respetan exactamente el orden y los encabezados configurados.
+5. La vista previa, el CSV y el Excel (.xlsx) respetan exactamente el orden y los encabezados configurados.
 6. Sólo se exportan períodos cerrados y el archivo guarda el snapshot/hash de la plantilla utilizada.
 7. Cambiar una plantilla no cambia archivos ya generados ni información laboral histórica.
 8. Se prueban permisos, aislamiento multi-tenant, validación, inyección CSV, vista previa y exactitud del archivo.
 
 ## Dependencias y secuencia
 
-Depende de la exportación CSV base de períodos y reutilizará la misma Action de exportación; no se creará una lógica distinta para web, API, jobs o descarga CSV.
+Depende de la exportación base de períodos y reutiliza la misma Action de datos para CSV, Excel, web y API; no se crea una lógica distinta para calcular la información de cada formato.
 
 Secuencia recomendada:
 

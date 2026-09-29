@@ -424,6 +424,11 @@ new class extends Component {
                                         Descargar CSV
                                     </a>
                                 @endcan
+                                @can('exportPayrollXlsx', $period)
+                                    <a href="{{ route('attendance-periods.payroll-xlsx', $period) }}" class="inline-flex items-center rounded-md border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-800">
+                                        Descargar Excel
+                                    </a>
+                                @endcan
                             </div>
                         </td>
                     </tr>

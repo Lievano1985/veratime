@@ -87,7 +87,10 @@
             @if (Route::has('login'))
                 <div class="flex items-center gap-3">
                     @auth
-                        <a href="{{ route('dashboard') }}" class="btn-primary">Ir al inicio</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="btn-outline">Cerrar sesión</button>
+                        </form>
                     @else
                         <a href="{{ route('login') }}" class="btn-outline">Iniciar sesión</a>
                     @endauth
@@ -117,7 +120,10 @@
                             @guest
                                 <a href="{{ route('login') }}" class="btn-primary btn-lg">Iniciar sesión</a>
                             @else
-                                <a href="{{ route('dashboard') }}" class="btn-primary btn-lg">Ir al inicio</a>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="btn-primary btn-lg">Cerrar sesión</button>
+                                </form>
                             @endguest
                             <a href="#como-funciona" class="btn-ghost btn-lg">Ver cómo funciona</a>
                         </div>
@@ -551,11 +557,14 @@
             </div>
 
             @if (Route::has('login'))
-                <a href="{{ auth()->check() ? route('dashboard') : route('login') }}" class="btn-outline">
-                    @auth Ir al inicio
-                    @else
-                    Iniciar sesión @endauth
-                </a>
+                @auth
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn-outline">Cerrar sesión</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="btn-outline">Iniciar sesión</a>
+                @endauth
             @endif        </div>
     </footer>
 
