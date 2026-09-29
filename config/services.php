@@ -28,6 +28,18 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'brevo' => [
+        'enabled' => env('BREVO_ENABLED', false),
+        'api_key' => env('BREVO_API_KEY'),
+        'endpoint' => env('BREVO_API_ENDPOINT', 'https://api.brevo.com/v3/smtp/email'),
+        'timeout' => env('BREVO_API_TIMEOUT', 10),
+        'sender' => [
+            'address' => env('BREVO_SENDER_ADDRESS'),
+            'name' => env('BREVO_SENDER_NAME', env('MAIL_FROM_NAME')),
+        ],
+        'contact_recipient' => env('BREVO_CONTACT_RECIPIENT'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

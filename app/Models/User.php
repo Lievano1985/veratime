@@ -3,8 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domains\Identity\Actions\SendPasswordResetWithBrevoAction;
+use App\Domains\Integrations\Services\BrevoTransactionalEmailService;
 use App\Support\RoleKey;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,6 +55,17 @@ class User extends Authenticatable // implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        if (app(BrevoTransactionalEmailService::class)->isEnabled()) {
+            app(SendPasswordResetWithBrevoAction::class)->handle($this, $token);
+
+            return;
+        }
+
+        $this->notify(new ResetPassword($token));
     }
 
     public function companies(): BelongsToMany

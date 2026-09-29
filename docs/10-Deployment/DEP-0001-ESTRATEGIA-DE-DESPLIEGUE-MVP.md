@@ -385,7 +385,30 @@ SESSION_DRIVER=file
 FILESYSTEM_DISK=local
 ```
 
-## 7.3 Staging
+## 7.3 Correo transaccional con Brevo API
+
+Cuando el hosting no permita conexiones SMTP salientes, VERA Time puede enviar correos transaccionales por la API HTTPS de Brevo. Esta integración se usa para recuperación de contraseña y para avisar al buzón de soporte sobre solicitudes de demostración. HTTPS usa el puerto 443; no depende de los puertos SMTP 465, 587 o 2525.
+
+```env
+BREVO_ENABLED=true
+BREVO_API_KEY=
+BREVO_API_ENDPOINT=https://api.brevo.com/v3/smtp/email
+BREVO_API_TIMEOUT=10
+BREVO_SENDER_ADDRESS=soporte@gotvera.com
+BREVO_SENDER_NAME="VERA Time"
+BREVO_CONTACT_RECIPIENT=soporte@gotvera.com
+```
+
+Antes de activarlo, el dominio del remitente y la dirección `BREVO_SENDER_ADDRESS` deben estar verificados en Brevo. La clave debe ser una API key exclusiva de VERA Time, almacenada sólo en `.env`; no es una clave SMTP ni debe copiarse al repositorio, a logs o a capturas. Al cambiar variables de entorno, ejecutar:
+
+```bash
+php artisan optimize:clear
+php artisan config:cache
+```
+
+Validar en producción una solicitud de recuperación con una cuenta de prueba y una solicitud de demo. Revisar los logs de Laravel sólo para el estado de entrega; nunca registrar claves, tokens de restablecimiento ni datos completos de los formularios.
+
+## 7.4 Staging
 
 ```env
 APP_ENV=staging
@@ -394,7 +417,7 @@ APP_URL=https://staging.veratime.com
 LOG_LEVEL=debug
 ```
 
-## 7.4 Seguridad
+## 7.5 Seguridad
 
 Nunca versionar:
 
@@ -1336,4 +1359,3 @@ docs/13-Backlog/BL-0001-BACKLOG-MVP-INICIAL.md
 ```
 
 Ese documento convertirá todo lo definido en épicas, módulos, historias y prioridades para iniciar desarrollo con Codex.
-

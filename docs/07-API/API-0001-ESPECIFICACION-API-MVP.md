@@ -285,7 +285,7 @@ La respuesta exitosa contiene `data.token`, `data.token_type` (`Bearer`), `data.
 
 ### Recuperación de contraseña móvil
 
-`POST /api/v1/time/auth/forgot-password` recibe únicamente `email`, está limitado a cinco solicitudes por minuto por correo normalizado e IP y responde `202 Accepted` con el mismo mensaje tanto para correos existentes como inexistentes. Cuando la cuenta existe, usa el flujo estándar de restablecimiento; la respuesta no emite token ni revela si el correo está registrado.
+`POST /api/v1/time/auth/forgot-password` recibe únicamente `email`, está limitado a cinco solicitudes por minuto por correo normalizado e IP y responde `202 Accepted` con el mismo mensaje tanto para correos existentes como inexistentes. Cuando la cuenta existe, usa el flujo estándar de restablecimiento y el proveedor transaccional configurado; la respuesta no emite token ni revela si el correo está registrado. Un fallo de entrega se registra de forma segura y conserva la misma respuesta neutral.
 
 ### Contrato personal de consulta y marcaje
 

@@ -18,6 +18,8 @@ use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Database\Seeders\ProductSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(function (): void {
@@ -136,6 +138,32 @@ it('requests password recovery without revealing whether the mobile account exis
     $this->postJson('/api/v1/time/auth/forgot-password', ['email' => 'no-existe@veratime.test'])
         ->assertAccepted()
         ->assertJsonPath('message', 'Si la cuenta existe, se enviaron instrucciones para restablecer la contraseña.');
+});
+
+it('sends a mobile password recovery through Brevo HTTPS when configured', function (): void {
+    config()->set('services.brevo', [
+        'enabled' => true,
+        'api_key' => 'brevo-test-key',
+        'endpoint' => 'https://api.brevo.test/v3/smtp/email',
+        'timeout' => 10,
+        'sender' => ['address' => 'soporte@gotvera.test', 'name' => 'VERA Time'],
+        'contact_recipient' => 'soporte@gotvera.test',
+    ]);
+    Http::fake([
+        'https://api.brevo.test/v3/smtp/email' => Http::response(['messageId' => 'test-message-id'], 201),
+    ]);
+    $user = User::factory()->create();
+
+    $this->postJson('/api/v1/time/auth/forgot-password', ['email' => $user->email])
+        ->assertAccepted();
+
+    Http::assertSent(function (Request $request) use ($user): bool {
+        $payload = $request->data();
+
+        return $request->url() === 'https://api.brevo.test/v3/smtp/email'
+            && data_get($payload, 'to.0.email') === $user->email
+            && data_get($payload, 'tags.0') === 'password-reset';
+    });
 });
 
 it('syncs queued personal events idempotently without allowing a worker override', function (): void {
