@@ -112,8 +112,8 @@ new class extends Component {
                 @foreach($calendarWeeks as $week)
                     <section>
                         <p class="mb-2 text-sm font-medium text-surface-muted">{{ $week['label'] }}</p>
-                        <div class="overflow-x-auto pb-1">
-                            <div class="grid min-w-[980px] grid-cols-7 gap-3">
+                        <div class="overflow-x-auto pb-1" style="overflow-x: auto;">
+                            <div class="gap-3" style="display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); gap: 0.75rem; min-width: 980px;">
                                 @foreach($week['days'] as $day)
                                     @php($assignment = $day['assignment'])
                                     @php($workSegments = $assignment?->segments->where('segment_type', 'work'))
