@@ -1457,6 +1457,7 @@ Incluye:
 
 Incluye:
 
+- Horarios publicados de los proximos 14 dias, solo para la persona trabajadora vinculada.
 - Entrada.
 - Salida.
 - Pausas.
