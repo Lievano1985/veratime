@@ -70,6 +70,7 @@ class PasswordResetTest extends TestCase
                 && data_get($payload, 'sender.email') === 'soporte@gotvera.test'
                 && data_get($payload, 'to.0.email') === $user->email
                 && data_get($payload, 'tags.0') === 'password-reset'
+                && str_contains((string) data_get($payload, 'subject'), "contrase\u{00F1}a")
                 && str_contains((string) data_get($payload, 'htmlContent'), '/reset-password/');
         });
     }

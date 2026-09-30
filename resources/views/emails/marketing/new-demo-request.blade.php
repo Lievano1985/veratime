@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <body>
-    <h1>Nueva solicitud de demostraciÃ³n</h1>
+    <h1>Nueva solicitud de demostraci&#243;n</h1>
 
     <dl>
         <dt>Nombre</dt>
@@ -13,10 +13,10 @@
         <dt>Correo</dt>
         <dd>{{ $demoRequest->email }}</dd>
 
-        <dt>TelÃ©fono</dt>
+        <dt>Tel&#233;fono</dt>
         <dd>{{ $demoRequest->phone }}</dd>
 
-        <dt>TamaÃ±o de equipo</dt>
+        <dt>Tama&#241;o de equipo</dt>
         <dd>{{ $demoRequest->team_size ?: 'No indicado' }}</dd>
 
         <dt>Mensaje</dt>

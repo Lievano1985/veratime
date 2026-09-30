@@ -24,15 +24,15 @@ class SendDemoRequestNotificationWithBrevoAction
 
         $this->transactionalEmail->send(
             recipients: [['email' => $recipient]],
-            subject: 'Nueva solicitud de demostraciÃ³n en '.config('app.name'),
+            subject: "Nueva solicitud de demostraci\u{00F3}n en ".config('app.name'),
             htmlContent: view('emails.marketing.new-demo-request', compact('demoRequest'))->render(),
             textContent: implode("\n", [
-                'Nueva solicitud de demostraciÃ³n',
+                "Nueva solicitud de demostraci\u{00F3}n",
                 "Nombre: {$demoRequest->contact_name}",
                 'Empresa: '.($demoRequest->company_name ?: 'No indicada'),
                 "Correo: {$demoRequest->email}",
-                "TelÃ©fono: {$demoRequest->phone}",
-                'TamaÃ±o de equipo: '.($demoRequest->team_size ?: 'No indicado'),
+                "Tel\u{00E9}fono: {$demoRequest->phone}",
+                "Tama\u{00F1}o de equipo: ".($demoRequest->team_size ?: 'No indicado'),
                 'Mensaje: '.($demoRequest->message ?: 'Sin mensaje'),
             ]),
             tags: ['demo-request'],

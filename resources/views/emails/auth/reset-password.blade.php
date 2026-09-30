@@ -3,9 +3,9 @@
 <body>
     <p>Hola {{ $user->name }},</p>
 
-    <p>Recibimos una solicitud para restablecer la contraseÃ±a de tu cuenta en {{ config('app.name') }}.</p>
+    <p>Recibimos una solicitud para restablecer la contrase&#241;a de tu cuenta en {{ config('app.name') }}.</p>
 
-    <p><a href="{{ $resetUrl }}">Restablecer contraseÃ±a</a></p>
+    <p><a href="{{ $resetUrl }}">Restablecer contrase&#241;a</a></p>
 
     <p>Este enlace vence en {{ $expiresInMinutes }} minutos.</p>
 
