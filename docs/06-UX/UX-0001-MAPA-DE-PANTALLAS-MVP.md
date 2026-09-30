@@ -1457,7 +1457,7 @@ Incluye:
 
 Incluye:
 
-- Horarios publicados de los proximos 14 dias, solo para la persona trabajadora vinculada.
+- Horarios publicados en calendario de dos semanas completas (lunes a domingo), solo para la persona trabajadora vinculada.
 - Entrada.
 - Salida.
 - Pausas.

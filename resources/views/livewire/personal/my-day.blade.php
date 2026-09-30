@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\CarbonImmutable;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\Scheduling\Actions\ListPersonalScheduleAction;
 use App\Domains\Workers\Actions\ResolvePersonalWorkerAction;
@@ -15,12 +16,45 @@ new class extends Component {
         $company = $currentCompany->get();
         abort_unless($company, 403);
         $worker = $resolve->handle(auth()->user(), $company);
+        $calendarStart = CarbonImmutable::now($company->timezone)->startOfWeek();
+        $calendarEnd = $calendarStart->addDays(13);
+        $schedule = $listSchedule->handle($company, $worker, [
+            'date_from' => $calendarStart->toDateString(),
+            'date_to' => $calendarEnd->toDateString(),
+        ]);
+
         return [
             'worker' => $worker,
-            'schedule' => $listSchedule->handle($company, $worker, []),
+            'calendarWeeks' => $this->calendarWeeks($schedule, $calendarStart),
+            'hasPublishedSchedule' => $schedule->isNotEmpty(),
             'events' => TimeEvent::query()->where('company_id', $company->id)->where('worker_id', $worker->id)->latest('occurred_at_utc')->limit(10)->get(),
             'workDays' => WorkDay::query()->where('company_id', $company->id)->where('worker_id', $worker->id)->latest('work_date')->limit(7)->get(),
         ];
+    }
+
+    private function calendarWeeks($schedule, CarbonImmutable $calendarStart): array
+    {
+        $assignmentsByDate = $schedule->keyBy(fn (DailyScheduleAssignment $assignment) => $assignment->work_date->toDateString());
+
+        return collect(range(0, 1))
+            ->map(function (int $weekOffset) use ($assignmentsByDate, $calendarStart): array {
+                $weekStart = $calendarStart->addWeeks($weekOffset);
+
+                return [
+                    'label' => 'Semana del '.$weekStart->format('d/m'). ' al '.$weekStart->endOfWeek()->format('d/m'),
+                    'days' => collect(range(0, 6))
+                        ->map(function (int $dayOffset) use ($assignmentsByDate, $weekStart): array {
+                            $date = $weekStart->addDays($dayOffset);
+
+                            return [
+                                'date' => $date,
+                                'assignment' => $assignmentsByDate->get($date->toDateString()),
+                            ];
+                        })
+                        ->all(),
+                ];
+            })
+            ->all();
     }
 
     public function dayTypeLabel(DailyScheduleAssignment $assignment): string
@@ -70,45 +104,64 @@ new class extends Component {
     <section class="rounded-lg border p-5">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
             <flux:heading>Mi horario publicado</flux:heading>
-            <p class="text-sm text-surface-muted">Pr&oacute;ximos 14 d&iacute;as</p>
+            <p class="text-sm text-surface-muted">Esta semana y la siguiente</p>
         </div>
 
-        <div class="mt-4 space-y-3">
-            @forelse($schedule as $assignment)
-                @php($workSegments = $assignment->segments->where('segment_type', 'work'))
-                @php($breakSegments = $assignment->segments->where('segment_type', 'break'))
-                <article class="rounded-lg border border-surface-line bg-surface-bg px-4 py-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="font-semibold text-surface-text">{{ $assignment->work_date?->translatedFormat('l d \d\e F') }}</p>
-                            <p class="text-sm text-surface-muted">{{ $this->dayTypeLabel($assignment) }}@if($assignment->shiftTemplate) &middot; {{ $assignment->shiftTemplate->name }}@endif</p>
-                        </div>
-                        @if($this->requiredMinutesLabel($assignment->required_minutes))
-                            <span class="text-sm font-medium text-brand-navy">{{ $this->requiredMinutesLabel($assignment->required_minutes) }}</span>
-                        @endif
-                    </div>
+        @if($hasPublishedSchedule)
+            <div class="mt-4 space-y-5">
+                @foreach($calendarWeeks as $week)
+                    <section>
+                        <p class="mb-2 text-sm font-medium text-surface-muted">{{ $week['label'] }}</p>
+                        <div class="overflow-x-auto pb-1">
+                            <div class="grid min-w-[980px] grid-cols-7 gap-3">
+                                @foreach($week['days'] as $day)
+                                    @php($assignment = $day['assignment'])
+                                    @php($workSegments = $assignment?->segments->where('segment_type', 'work'))
+                                    @php($breakSegments = $assignment?->segments->where('segment_type', 'break'))
+                                    <article class="min-h-44 rounded-lg border border-surface-line bg-surface-bg px-3 py-3">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <p class="text-sm font-semibold text-surface-text">{{ $day['date']->translatedFormat('D') }}</p>
+                                            <span class="shrink-0 text-sm text-surface-muted">{{ $day['date']->format('d/m') }}</span>
+                                        </div>
 
-                    @if($workSegments->isNotEmpty())
-                        <div class="mt-3 space-y-1 text-sm">
-                            @foreach($workSegments as $segment)
-                                <p><span class="text-surface-muted">Turno:</span> {{ $this->segmentRange($segment) }}</p>
-                            @endforeach
-                            @foreach($breakSegments as $segment)
-                                <p><span class="text-surface-muted">Pausa:</span> {{ $this->segmentRange($segment) }}</p>
-                            @endforeach
+                                        @if($assignment)
+                                            <p class="mt-3 text-sm font-medium text-surface-text">{{ $this->dayTypeLabel($assignment) }}</p>
+                                            @if($assignment->shiftTemplate)
+                                                <p class="mt-1 truncate text-xs text-surface-muted" title="{{ $assignment->shiftTemplate->name }}">{{ $assignment->shiftTemplate->name }}</p>
+                                            @endif
+                                            @if($this->requiredMinutesLabel($assignment->required_minutes))
+                                                <p class="mt-2 text-sm font-medium text-brand-navy">{{ $this->requiredMinutesLabel($assignment->required_minutes) }}</p>
+                                            @endif
+
+                                            @if($workSegments?->isNotEmpty())
+                                                <div class="mt-2 space-y-1 text-xs">
+                                                    @foreach($workSegments as $segment)
+                                                        <p>{{ $this->segmentRange($segment) }}</p>
+                                                    @endforeach
+                                                    @foreach($breakSegments as $segment)
+                                                        <p class="text-surface-muted">Pausa: {{ $this->segmentRange($segment) }}</p>
+                                                    @endforeach
+                                                </div>
+                                            @elseif($assignment->day_type === 'rest')
+                                                <p class="mt-2 text-xs text-surface-muted">Sin jornada.</p>
+                                            @elseif($assignment->day_type === 'on_call')
+                                                <p class="mt-2 text-xs text-surface-muted">Disponibilidad.</p>
+                                            @else
+                                                <p class="mt-2 text-xs text-surface-muted">Detalle por confirmar.</p>
+                                            @endif
+                                        @else
+                                            <p class="mt-3 text-xs text-surface-muted">Sin horario publicado.</p>
+                                        @endif
+                                    </article>
+                                @endforeach
+                            </div>
                         </div>
-                    @elseif($assignment->day_type === 'rest')
-                        <p class="mt-3 text-sm text-surface-muted">No tienes jornada programada este d&iacute;a.</p>
-                    @elseif($assignment->day_type === 'on_call')
-                        <p class="mt-3 text-sm text-surface-muted">Tienes disponibilidad programada para este d&iacute;a.</p>
-                    @else
-                        <p class="mt-3 text-sm text-surface-muted">Consulta con tu empresa para conocer los detalles de este horario.</p>
-                    @endif
-                </article>
-            @empty
-                <p class="rounded-lg border border-dashed border-surface-line px-4 py-5 text-sm text-surface-muted">No tienes horarios publicados para los pr&oacute;ximos 14 d&iacute;as.</p>
-            @endforelse
-        </div>
+                    </section>
+                @endforeach
+            </div>
+        @else
+            <p class="mt-4 rounded-lg border border-dashed border-surface-line px-4 py-5 text-sm text-surface-muted">No tienes horarios publicados para esta semana ni la siguiente.</p>
+        @endif
     </section>
     <div class="grid gap-6 lg:grid-cols-2">
         <section class="rounded-lg border p-5"><flux:heading>Mis eventos recientes</flux:heading><div class="mt-4 space-y-2">@forelse($events as $event)<p class="text-sm">{{ $event->occurred_at_utc?->setTimezone($event->timezone)->format('d/m H:i') }} · {{ $event->event_type }}</p>@empty<p class="text-sm text-surface-muted">Sin eventos.</p>@endforelse</div></section>

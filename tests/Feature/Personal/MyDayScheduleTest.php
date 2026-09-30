@@ -85,6 +85,8 @@ class MyDayScheduleTest extends TestCase
             ->get(route('personal.my-day'))
             ->assertOk()
             ->assertSee('Mi horario publicado')
+            ->assertSee('Semana del 21/09 al 27/09')
+            ->assertSee('Semana del 28/09 al 04/10')
             ->assertSee('Turno programado')
             ->assertSee('08:00 - 16:00')
             ->assertSee('8 h')
@@ -119,7 +121,7 @@ class MyDayScheduleTest extends TestCase
             ->get(route('personal.my-day'))
             ->assertOk()
             ->assertSee('Mi horario publicado')
-            ->assertSee('No tienes horarios publicados para los')
+            ->assertSee('No tienes horarios publicados para esta semana ni la siguiente.')
             ->assertDontSee('10:00 - 18:00');
     }
 
