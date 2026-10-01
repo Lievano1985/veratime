@@ -45,6 +45,18 @@ it('unknown code fails with neutral message', function (): void {
         ->assertSee('No se pudo validar la credencial.');
 });
 
+it('keeps legacy activation available until the company explicitly requires authorized terminals', function (): void {
+    [$company] = sprint2fKioskFixture(pin: '1234');
+
+    $company->setting()->update(['require_authorized_kiosk_devices' => true]);
+
+    Volt::test('kiosk.index')
+        ->set('kioskKey', 'KIOSK-KEY1!')
+        ->call('activateKiosk')
+        ->assertHasErrors(['kioskKey'])
+        ->assertSee('Esta empresa requiere una terminal autorizada.');
+});
+
 it('wrong pin fails increments attempts and never exposes pin or hash', function (): void {
     [, , , , $credential] = sprint2fKioskFixture(pin: '1234');
 
@@ -144,7 +156,8 @@ it('kiosk clock in creates time event with source kiosk and current system time'
 it('kiosk action does not accept explicit occurrence time in sprint 2f', function (): void {
     $method = new ReflectionMethod(RegisterKioskTimeEventAction::class, 'handle');
 
-    expect($method->getNumberOfParameters())->toBe(2);
+    expect($method->getNumberOfRequiredParameters())->toBe(2)
+        ->and($method->getNumberOfParameters())->toBe(3);
 });
 
 it('handles kiosk clock out and break sequence and blocks invalid actions', function (): void {

@@ -3,13 +3,14 @@
 namespace App\Domains\TimeRecords\Actions;
 
 use App\Models\Company;
+use App\Models\KioskDevice;
 use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
 
 class ResolveKioskCredentialAction
 {
-    public function handle(Company $company, string $accessCode, string $pin): WorkerCredential
+    public function handle(Company $company, string $accessCode, string $pin, ?KioskDevice $device = null): WorkerCredential
     {
         $accessCode = trim($accessCode);
 
@@ -28,6 +29,7 @@ class ResolveKioskCredentialAction
         }
 
         $this->assertCredentialCanUseKiosk($credential);
+        $this->assertCredentialCanUseDeviceCenter($credential, $device);
 
         if (! $credential->pin_hash || ! Hash::check($pin, $credential->pin_hash)) {
             $credential->forceFill([
@@ -78,6 +80,23 @@ class ResolveKioskCredentialAction
         }
 
         if ($credential->worker->company_id !== $credential->company_id) {
+            throw new InvalidArgumentException('No se pudo validar la credencial.');
+        }
+    }
+
+    private function assertCredentialCanUseDeviceCenter(WorkerCredential $credential, ?KioskDevice $device): void
+    {
+        if (! $device || ! $device->center_id) {
+            return;
+        }
+
+        if ($device->company_id !== $credential->company_id || $device->status !== 'active') {
+            throw new InvalidArgumentException('No se pudo validar la credencial.');
+        }
+
+        $relationship = $credential->worker?->activeEmploymentRelationship()->first();
+
+        if (! $relationship || $relationship->company_id !== $credential->company_id || $relationship->center_id !== $device->center_id) {
             throw new InvalidArgumentException('No se pudo validar la credencial.');
         }
     }

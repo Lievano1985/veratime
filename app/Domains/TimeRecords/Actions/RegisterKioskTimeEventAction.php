@@ -2,9 +2,9 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
-use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\KioskDevice;
 use App\Models\TimeEvent;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
@@ -18,7 +18,7 @@ class RegisterKioskTimeEventAction
         private readonly ResolveCurrentTimeRecordStateAction $resolveCurrentState,
     ) {}
 
-    public function handle(WorkerCredential $credential, string $eventType): TimeEvent
+    public function handle(WorkerCredential $credential, string $eventType, ?KioskDevice $device = null): TimeEvent
     {
         $credential->loadMissing(['company', 'worker']);
 
@@ -26,6 +26,7 @@ class RegisterKioskTimeEventAction
         $worker = $credential->worker;
 
         $this->assertCredentialCanRegister($credential, $company, $worker);
+        $this->assertDeviceCanRegister($device, $company, $worker);
 
         $employmentRelationship = $this->resolveActiveEmploymentRelationship($company, $worker);
         $center = $employmentRelationship?->center;
@@ -52,6 +53,7 @@ class RegisterKioskTimeEventAction
                 'metadata' => [
                     'channel' => 'kiosk',
                     'credential_id' => $credential->id,
+                    'kiosk_device_id' => $device?->id,
                     'context' => 'kiosk_time_registration',
                 ],
             ],
@@ -73,6 +75,27 @@ class RegisterKioskTimeEventAction
 
         if (! $worker || $worker->company_id !== $company->id || $worker->status !== 'active') {
             throw new InvalidArgumentException('La persona trabajadora debe estar activa y pertenecer a la empresa de la credencial.');
+        }
+    }
+
+    private function assertDeviceCanRegister(?KioskDevice $device, ?Company $company, ?Worker $worker): void
+    {
+        if (! $device) {
+            return;
+        }
+
+        if (! $company || $device->status !== 'active' || $device->company_id !== $company->id) {
+            throw new InvalidArgumentException('La terminal autorizada ya no esta disponible.');
+        }
+
+        if (! $device->center_id) {
+            return;
+        }
+
+        $relationship = $worker?->activeEmploymentRelationship()->first();
+
+        if (! $relationship || $relationship->company_id !== $company->id || $relationship->center_id !== $device->center_id) {
+            throw new InvalidArgumentException('Esta terminal solo puede registrar personas de su centro asignado.');
         }
     }
 

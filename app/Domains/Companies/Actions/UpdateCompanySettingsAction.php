@@ -11,6 +11,13 @@ class UpdateCompanySettingsAction
 {
     public function handle(Company $company, array $data): CompanySetting
     {
+        if (($data['require_authorized_kiosk_devices'] ?? false)
+            && ! $company->kioskDevices()->where('status', 'active')->exists()) {
+            throw ValidationException::withMessages([
+                'settingsForm.require_authorized_kiosk_devices' => 'Autoriza al menos una terminal antes de exigir terminales autorizadas.',
+            ]);
+        }
+
         $kioskKeyHash = filled($data['kiosk_key'] ?? null)
             ? KioskKey::hash((string) $data['kiosk_key'])
             : ($company->setting?->kiosk_key_hash);
@@ -36,6 +43,7 @@ class UpdateCompanySettingsAction
             'allow_worker_corrections' => (bool) ($data['allow_worker_corrections'] ?? false),
             'require_pin_for_kiosk' => (bool) ($data['require_pin_for_kiosk'] ?? false),
             'kiosk_key_hash' => $kioskKeyHash,
+            'require_authorized_kiosk_devices' => (bool) ($data['require_authorized_kiosk_devices'] ?? false),
             'require_pin_for_confirmation' => (bool) ($data['require_pin_for_confirmation'] ?? false),
             'metadata' => [],
         ]);

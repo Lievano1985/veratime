@@ -5,6 +5,7 @@ use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCompanyAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
 use App\Models\Company;
+use App\Models\KioskDevice;
 use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
@@ -17,11 +18,17 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     private const KIOSK_COMPANY_SESSION_KEY = 'kiosk_company_id';
 
+    private const DEVICE_COOKIE = 'vera_kiosk_device';
+
     public string $kioskKey = '';
 
     public ?int $kioskCompanyId = null;
 
     public ?string $kioskCompanyName = null;
+
+    public ?int $kioskDeviceId = null;
+
+    public ?string $kioskDeviceName = null;
 
     public string $accessCode = '';
 
@@ -43,7 +50,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public function mount(): void
     {
-        $this->loadKioskCompanyFromSession();
+        if (! $this->loadKioskCompanyFromDevice()) {
+            $this->loadKioskCompanyFromSession();
+        }
     }
 
     public function activateKiosk(ResolveKioskCompanyAction $resolveCompany): void
@@ -59,6 +68,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             throw ValidationException::withMessages([
                 'kioskKey' => 'No se pudo activar el kiosco.',
+            ]);
+        }
+
+        if ($this->requiresAuthorizedDevice($company)) {
+            $this->kioskKey = '';
+
+            throw ValidationException::withMessages([
+                'kioskKey' => 'Esta empresa requiere una terminal autorizada. Solicita un codigo de autorizacion al administrador.',
             ]);
         }
 
@@ -79,9 +96,23 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->resetKioskState(keepConfirmation: false);
     }
 
+    public function refreshAuthorizedTerminal(): void
+    {
+        if (! $this->loadKioskCompanyFromDevice() && $this->isDeviceCookiePresent()) {
+            $this->resetKioskState();
+        }
+    }
+
     public function identify(ResolveKioskCredentialAction $resolveCredential, ResolveCurrentTimeRecordStateAction $resolveState): void
     {
         $company = $this->kioskCompanyOrFail();
+        $device = $this->authorizedDeviceOrNull();
+
+        if ($this->requiresAuthorizedDevice($company) && ! $device) {
+            throw ValidationException::withMessages([
+                'kioskKey' => 'Esta empresa requiere una terminal autorizada. Solicita un codigo de autorizacion al administrador.',
+            ]);
+        }
 
         $this->validate([
             'accessCode' => ['required', 'string', 'max:50'],
@@ -89,7 +120,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         ]);
 
         try {
-            $credential = $resolveCredential->handle($company, $this->accessCode, $this->pin);
+            $credential = $resolveCredential->handle($company, $this->accessCode, $this->pin, $device);
         } catch (\InvalidArgumentException) {
             $this->pin = '';
 
@@ -104,6 +135,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'company_id' => $credential->company_id,
             'credential_id' => $credential->id,
             'worker_id' => $credential->worker_id,
+            'kiosk_device_id' => $device?->id,
             'issued_at' => now()->timestamp,
         ], JSON_THROW_ON_ERROR));
         $this->workerName = $credential->worker->full_name;
@@ -118,9 +150,26 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public function record(string $eventType, RegisterKioskTimeEventAction $register, ResolveCurrentTimeRecordStateAction $resolveState): void
     {
         $credential = $this->credentialFromToken();
+        $device = $this->authorizedDeviceOrNull();
+
+        if ($this->requiresAuthorizedDevice($credential->company) && ! $device) {
+            $this->resetKioskState();
+
+            throw ValidationException::withMessages([
+                'accessCode' => 'La terminal ya no esta autorizada. Vuelve a solicitar autorizacion al administrador.',
+            ]);
+        }
+
+        if ((int) ($this->credentialTokenPayload()['kiosk_device_id'] ?? 0) !== (int) ($device?->id ?? 0)) {
+            $this->resetKioskState();
+
+            throw ValidationException::withMessages([
+                'accessCode' => 'Vuelve a identificarte para continuar.',
+            ]);
+        }
 
         try {
-            $event = $register->handle($credential, $eventType);
+            $event = $register->handle($credential, $eventType, $device);
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages([
                 'accessCode' => $exception->getMessage(),
@@ -166,8 +215,55 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->kioskCompanyName = $company->name;
     }
 
+    private function loadKioskCompanyFromDevice(): bool
+    {
+        $device = $this->authorizedDeviceOrNull();
+
+        if (! $device) {
+            return false;
+        }
+
+        $this->kioskCompanyId = $device->company_id;
+        $this->kioskCompanyName = $device->company->name;
+        $this->kioskDeviceId = $device->id;
+        $this->kioskDeviceName = $device->name;
+
+        return true;
+    }
+
+    private function authorizedDeviceOrNull(): ?KioskDevice
+    {
+        $token = request()->cookie(self::DEVICE_COOKIE);
+
+        if (blank($token)) {
+            return null;
+        }
+
+        $device = app(\App\Domains\TimeRecords\Actions\ResolveKioskDeviceAction::class)
+            ->handle($token, request()->ip(), request()->userAgent());
+
+        if (! $device) {
+            $this->kioskDeviceId = null;
+            $this->kioskDeviceName = null;
+        }
+
+        return $device;
+    }
+
+    private function isDeviceCookiePresent(): bool
+    {
+        return filled(request()->cookie(self::DEVICE_COOKIE));
+    }
+
     private function kioskCompanyOrFail(): Company
     {
+        if ($this->loadKioskCompanyFromDevice()) {
+            return Company::query()
+                ->whereKey($this->kioskCompanyId)
+                ->where('status', 'active')
+                ->firstOrFail();
+        }
+
         $this->loadKioskCompanyFromSession();
 
         if (! $this->kioskCompanyId) {
@@ -191,7 +287,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         }
 
         try {
-            $payload = json_decode(Crypt::decryptString($this->credentialToken), true, 512, JSON_THROW_ON_ERROR);
+            $payload = $this->credentialTokenPayload();
         } catch (\Throwable) {
             $this->resetKioskState();
 
@@ -236,6 +332,20 @@ new #[Layout('components.layouts.auth')] class extends Component {
         return $credential;
     }
 
+    private function credentialTokenPayload(): array
+    {
+        if (! $this->credentialToken) {
+            return [];
+        }
+
+        return json_decode(Crypt::decryptString($this->credentialToken), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    private function requiresAuthorizedDevice(Company $company): bool
+    {
+        return (bool) $company->setting?->require_authorized_kiosk_devices;
+    }
+
     private function stateForCredential(WorkerCredential $credential, ResolveCurrentTimeRecordStateAction $resolveState): array
     {
         $relationship = $credential->worker?->activeEmploymentRelationship()->with('center')->first();
@@ -270,7 +380,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         };
     }
 }; ?>
-<div class="min-h-screen">
+<div class="min-h-screen" @if ($kioskDeviceId) wire:poll.60s="refreshAuthorizedTerminal" @endif>
     <div class="fixed left-0 right-0 top-0 h-1.5 bg-gradient-to-r from-brand-blue-bright via-brand-sky to-brand-deep"></div>
 
     <div class="flex min-h-screen items-center justify-center bg-[radial-gradient(140%_100%_at_50%_-10%,#DCEEFF_0%,#EAF3FC_45%,#F4F9FF_100%)] p-5 font-sans text-surface-text sm:p-7">
@@ -344,7 +454,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
                                 <h1 class="font-display text-[24px] font-bold text-brand-navy">Identificación</h1>
                                 <p class="mt-1 text-[13.5px] text-surface-muted">Captura tu código y NIP para continuar.</p>
                             </div>
-                            <button type="button" class="btn-ghost" wire:click="clearKioskCompany">Cambiar</button>
+                            @if ($kioskDeviceId)
+                                <span class="rounded-full border border-status-rest-line bg-status-rest-bg px-3 py-1.5 text-xs font-semibold text-status-rest-text">Terminal autorizada</span>
+                            @else
+                                <button type="button" class="btn-ghost" wire:click="clearKioskCompany">Cambiar</button>
+                            @endif
                         </div>
 
                         @if ($errors->any())

@@ -927,6 +927,12 @@ admin_manual
 
 # 12. Kiosco
 
+## 12.0 Terminal autorizada
+
+La empresa puede registrar terminales desde **Configuracion de empresa > Terminales de kiosco**. La pantalla genera un QR y un codigo manual de un solo uso vigente por una hora. La terminal abre `/time/kiosk/authorize`, escanea el QR o pega el codigo y queda asociada a la empresa; si se asigna centro, solo admite personas de ese centro.
+
+La lista administrativa muestra nombre, centro, estado, ultima conexion y quien genero la autorizacion. Revocar bloquea nuevos marcajes inmediatamente. La clave compartida sigue operando hasta que la empresa active expresamente el modo de solo terminales autorizadas.
+
 ## 12.1 Pantalla de identificación
 
 **Prioridad:** P0

@@ -18,6 +18,7 @@ Route::post('demo-requests', [DemoRequestController::class, 'store'])
     ->name('demo-requests.store');
 Route::prefix('time')->group(function (): void {
     Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
+    Volt::route('kiosk/authorize', 'kiosk.authorize')->name('kiosk.authorize');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -3,8 +3,13 @@
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
+use App\Domains\TimeRecords\Actions\CreateKioskDevicePairingAction;
+use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
+use App\Models\KioskDevice;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -17,6 +22,11 @@ new class extends Component {
 
     public array $settingsForm = [];
     public array $legalParameterForm = [];
+    public array $kioskDeviceForm = ['name' => '', 'center_id' => ''];
+    public ?string $pairingCode = null;
+    public ?string $pairingQrCode = null;
+    public ?string $pairingExpiresAt = null;
+    public ?string $pairingDeviceName = null;
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -46,6 +56,7 @@ new class extends Component {
             'settingsForm.allow_worker_corrections' => ['boolean'],
             'settingsForm.require_pin_for_kiosk' => ['boolean'],
             'settingsForm.kiosk_key' => ['nullable', 'string', 'min:8', 'max:80', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
+            'settingsForm.require_authorized_kiosk_devices' => ['boolean'],
             'settingsForm.require_pin_for_confirmation' => ['boolean'],
         ])['settingsForm'];
 
@@ -53,6 +64,45 @@ new class extends Component {
         $this->loadSettingsForm($company->refresh());
 
         Session::flash('status', 'Configuracion de empresa actualizada.');
+    }
+
+    public function createKioskDevicePairing(CreateKioskDevicePairingAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('create', [KioskDevice::class, $company]);
+
+        $validated = $this->validate([
+            'kioskDeviceForm.name' => ['required', 'string', 'max:120'],
+            'kioskDeviceForm.center_id' => ['nullable', 'integer'],
+        ])['kioskDeviceForm'];
+
+        try {
+            $pairing = $action->handle(
+                $company,
+                auth()->user(),
+                $validated['name'],
+                filled($validated['center_id'] ?? null) ? (int) $validated['center_id'] : null,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['kioskDeviceForm.center_id' => $exception->getMessage()]);
+        }
+
+        $this->kioskDeviceForm = ['name' => '', 'center_id' => ''];
+        $this->pairingCode = $pairing['pairing_code'];
+        $this->pairingDeviceName = $pairing['device']->name;
+        $this->pairingExpiresAt = $pairing['device']->pairing_expires_at?->format('d/m/Y H:i');
+        $pairingUrl = route('kiosk.authorize', ['code' => $this->pairingCode]);
+        $this->pairingQrCode = (new SvgWriter())->write(new QrCode(data: $pairingUrl, size: 320, margin: 10))->getDataUri();
+    }
+
+    public function revokeKioskDevice(int $deviceId, RevokeKioskDeviceAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $device = KioskDevice::query()->where('company_id', $company->id)->findOrFail($deviceId);
+
+        $action->handle($device, auth()->user());
+        Session::flash('status', 'La terminal fue revocada. Ya no puede registrar marcajes.');
     }
 
     public function updateLegalParameter(string $code, UpdateCompanyLegalParameterAction $action, CurrentCompany $currentCompany): void
@@ -90,6 +140,12 @@ new class extends Component {
         return [
             'currentCompany' => $company,
             'legalConfiguration' => app(ResolveCompanyLegalConfigurationAction::class)->handle($company),
+            'kioskDevices' => KioskDevice::query()
+                ->with(['center', 'createdBy', 'revokedBy'])
+                ->where('company_id', $company->id)
+                ->latest()
+                ->get(),
+            'activeCenters' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
         ];
     }
 
@@ -104,7 +160,7 @@ new class extends Component {
 
     private function ensureValidTab(): void
     {
-        if (! in_array($this->activeTab, ['operation', 'legal', 'users'], true)) {
+        if (! in_array($this->activeTab, ['operation', 'legal', 'users', 'kiosk'], true)) {
             $this->activeTab = 'operation';
         }
     }
@@ -126,6 +182,7 @@ new class extends Component {
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
             'kiosk_key' => '',
             'kiosk_key_configured' => filled($settings['kiosk_key_hash'] ?? null),
+            'require_authorized_kiosk_devices' => (bool) ($settings['require_authorized_kiosk_devices'] ?? false),
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
         ];
     }
@@ -193,6 +250,9 @@ new class extends Component {
         <button type="button" wire:click="$set('activeTab', 'users')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'users' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'users' ? 'true' : 'false' }}">
             Usuarios
         </button>
+        <button type="button" wire:click="$set('activeTab', 'kiosk')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'kiosk' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'kiosk' ? 'true' : 'false' }}">
+            Terminales de kiosco
+        </button>
     </nav>
 
     @if ($activeTab === 'operation')
@@ -242,6 +302,8 @@ new class extends Component {
                 <div class="space-y-3">
                     <flux:checkbox wire:model="settingsForm.allow_worker_corrections" label="Permitir solicitudes de correccion" />
                     <flux:checkbox wire:model="settingsForm.require_pin_for_kiosk" label="Requerir NIP en kiosco" />
+                    <flux:checkbox wire:model="settingsForm.require_authorized_kiosk_devices" label="Permitir marcajes solo desde terminales autorizadas" />
+                    <p class="-mt-2 text-xs text-surface-muted">Activalo cuando todas las terminales de la empresa ya esten autorizadas. La clave compartida de kiosco dejara de activar equipos nuevos.</p>
                     <flux:checkbox wire:model="settingsForm.require_pin_for_confirmation" label="Requerir NIP para conformidad" />
                 </div>
 
@@ -349,6 +411,85 @@ new class extends Component {
             <div class="mt-5 rounded-lg border border-surface-line bg-surface-bg p-4">
                 <p class="text-sm text-surface-text">La administración de usuarios se realiza en su pantalla especializada para mantener los permisos y el historial de acceso en un solo lugar.</p>
                 <a href="{{ route('users.index') }}" wire:navigate class="btn-primary mt-4 inline-flex">Administrar usuarios</a>
+            </div>
+        </section>
+    @endif
+
+    @if ($activeTab === 'kiosk')
+        <section class="space-y-5 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <div>
+                <flux:heading>Terminales autorizadas</flux:heading>
+                <flux:subheading>Autoriza cada computadora o tableta antes de usarla como kiosco. El codigo de emparejamiento vence una hora despues de generarse.</flux:subheading>
+            </div>
+
+            <form wire:submit="createKioskDevicePairing" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-[1fr_240px_auto] md:items-end">
+                <flux:input wire:model="kioskDeviceForm.name" label="Nombre de la terminal" placeholder="Ej. Recepcion planta norte" />
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro (opcional)</label>
+                    <x-ui.select wire:model="kioskDeviceForm.center_id">
+                        <option value="">Todos los centros</option>
+                        @foreach ($activeCenters as $center)
+                            <option value="{{ $center->id }}">{{ $center->name }}</option>
+                        @endforeach
+                    </x-ui.select>
+                    @error('kioskDeviceForm.center_id')
+                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+                <button type="submit" class="btn-primary">Generar codigo</button>
+            </form>
+
+            @if ($pairingCode)
+                <div class="grid gap-5 rounded-lg border border-brand-blue/30 bg-blue-50 p-5 dark:bg-blue-950/20 md:grid-cols-[180px_1fr]">
+                    <img src="{{ $pairingQrCode }}" alt="Codigo QR para autorizar {{ $pairingDeviceName }}" class="h-44 w-44 rounded bg-white p-2">
+                    <div>
+                        <p class="font-semibold text-brand-navy">Autoriza: {{ $pairingDeviceName }}</p>
+                        <p class="mt-1 text-sm text-surface-muted">Escanea el QR desde la terminal o abre <span class="font-mono">/time/kiosk/authorize</span> y pega este codigo.</p>
+                        <p class="mt-3 break-all rounded border border-blue-200 bg-white px-3 py-2 font-mono text-sm text-surface-text">{{ $pairingCode }}</p>
+                        <p class="mt-3 text-xs font-medium text-status-pending-text">Vence el {{ $pairingExpiresAt }}. Al completar el emparejamiento, este codigo deja de servir.</p>
+                    </div>
+                </div>
+            @endif
+
+            <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                    <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        <tr>
+                            <th class="px-3 py-2">Terminal</th>
+                            <th class="px-3 py-2">Centro</th>
+                            <th class="px-3 py-2">Estado</th>
+                            <th class="px-3 py-2">Ultima conexion</th>
+                            <th class="px-3 py-2">Autorizada por</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                        @forelse ($kioskDevices as $device)
+                            <tr>
+                                <td class="px-3 py-3 font-medium">{{ $device->name }}</td>
+                                <td class="px-3 py-3">{{ $device->center?->name ?? 'Todos los centros' }}</td>
+                                <td class="px-3 py-3">
+                                    @if ($device->status === 'active')
+                                        <x-ui.badge variant="success">{{ $device->isOnline() ? 'Conectada' : 'Autorizada' }}</x-ui.badge>
+                                    @elseif ($device->status === 'pending')
+                                        <x-ui.badge variant="warning">Pendiente</x-ui.badge>
+                                    @else
+                                        <x-ui.badge variant="danger">Revocada</x-ui.badge>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3 text-xs text-surface-muted">{{ $device->last_seen_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') ?? 'Sin conexion' }}</td>
+                                <td class="px-3 py-3">{{ $device->createdBy?->name ?? 'No disponible' }}</td>
+                                <td class="px-3 py-3 text-right">
+                                    @if (in_array($device->status, ['active', 'pending'], true))
+                                        <button type="button" wire:click="revokeKioskDevice({{ $device->id }})" wire:confirm="La terminal dejara de poder registrar marcajes. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6" class="px-3 py-8 text-center text-surface-muted">Aun no hay terminales autorizadas.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </section>
     @endif

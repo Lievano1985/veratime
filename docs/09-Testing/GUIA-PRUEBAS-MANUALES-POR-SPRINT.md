@@ -788,6 +788,8 @@ El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, m
 ### Rutas o pantallas
 
 - `/kiosk`
+- `/time/kiosk/authorize`
+- `/time/company-settings?tab=kiosk`
 - `/time-events/manual`
 
 ### Pruebas manuales
@@ -803,6 +805,11 @@ El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, m
 | Terminar pausa | Despues de iniciar pausa, terminar pausa. | Se crea evento `break_end`. |
 | Registrar salida | Despues de entrada o pausa terminada, registrar salida. | Se crea evento `clock_out`. |
 | Evitar duplicados simples | Intentar doble entrada o doble pausa. | El sistema bloquea la accion no permitida por estado actual. |
+| Autorizar terminal con QR | En Configuracion de empresa > Terminales de kiosco, generar codigo y escanearlo desde la terminal. | La terminal abre el kiosco ya asociado a la empresa; el codigo deja de servir. |
+| Autorizar terminal sin camara | Abrir `/time/kiosk/authorize` en una PC y pegar el codigo generado. | La terminal queda autorizada igual que con QR. |
+| Codigo vencido | Esperar mas de una hora o usar de nuevo un codigo utilizado. | No se autoriza la terminal y se muestra mensaje neutral. |
+| Solo terminales autorizadas | Con al menos una terminal activa, activar la opcion desde Operacion y abrir kiosco en un navegador distinto. | La clave compartida no activa un equipo nuevo; la terminal autorizada conserva su empresa. |
+| Revocar terminal | Revocar una terminal activa y tratar de usar el kiosco en ella. | El siguiente intento de identificacion o marcaje queda bloqueado. |
 | Token temporal | Identificarse y dejar pasar la ventana de expiracion. | El sistema pide volver a identificarse antes de registrar. |
 | Abrir captura manual | Entrar a `/time-events/manual` con rol autorizado. | La pantalla carga y muestra trabajadores de la empresa activa. |
 | Rol no autorizado | Entrar a `/time-events/manual` con rol sin permiso. | El acceso queda bloqueado. |
