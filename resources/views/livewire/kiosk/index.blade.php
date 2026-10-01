@@ -318,7 +318,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 @endif
 
                 @if (! $confirmationMessage && ! $kioskCompanyId)
-                    <form wire:submit="activateKiosk" class="space-y-5">
+                    <form wire:submit="activateKiosk" autocomplete="off" data-form-type="other" class="space-y-5">
                         <div>
                             <h1 class="font-display text-[24px] font-bold text-brand-navy">Activar kiosco</h1>
                             <p class="mt-2 text-[13.5px] leading-relaxed text-surface-muted">Ingresa la clave de kiosco de la empresa para configurar este dispositivo.</p>
@@ -330,7 +330,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                         <div>
                             <label for="kiosk-key" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Clave de kiosco</label>
-                            <input id="kiosk-key" wire:model="kioskKey" type="password" autocomplete="off" autofocus class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 text-base outline-none transition focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                            <input id="kiosk-key" wire:model="kioskKey" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" autofocus class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 text-base outline-none transition focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
                         </div>
 
                         <button type="submit" class="w-full rounded-2xl bg-gradient-to-r from-brand-blue-bright via-brand-blue to-brand-deep py-4 font-display text-base font-bold tracking-wide text-white shadow-[0_14px_26px_-10px_rgba(0,103,228,0.55)] transition hover:-translate-y-0.5 active:translate-y-0">
@@ -338,7 +338,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         </button>
                     </form>
                 @elseif (! $confirmationMessage && ! $credentialToken)
-                    <form wire:submit="identify" class="space-y-4">
+                    <form wire:submit="identify" autocomplete="off" data-form-type="other" class="space-y-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <h1 class="font-display text-[24px] font-bold text-brand-navy">Identificación</h1>
@@ -355,12 +355,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                         <div>
                             <label for="kiosk-access-code" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Código de acceso o número de empleado</label>
-                            <input id="kiosk-access-code" wire:model="accessCode" type="text" autocomplete="off" autofocus placeholder="Ej. 00457" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 font-mono text-base tracking-wider outline-none transition placeholder:font-sans placeholder:tracking-normal placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                            <input id="kiosk-access-code" wire:model="accessCode" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" autofocus placeholder="Ej. 00457" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 font-mono text-base tracking-wider outline-none transition placeholder:font-sans placeholder:tracking-normal placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
                         </div>
 
                         <div>
                             <label for="kiosk-pin" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">NIP</label>
-                            <input id="kiosk-pin" wire:model="pin" type="password" autocomplete="off" inputmode="numeric" maxlength="20" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 font-mono text-base tracking-wider outline-none transition placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                            <input id="kiosk-pin" wire:model="pin" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" inputmode="numeric" maxlength="20" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 font-mono text-base tracking-wider outline-none transition placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
                         </div>
 
                         <div class="my-3.5 grid grid-cols-3 gap-2.5">

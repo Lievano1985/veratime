@@ -9,10 +9,10 @@ use App\Models\EmploymentRelationship;
 use App\Models\TimeEvent;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
+use App\Support\KioskKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
-use App\Support\KioskKey;
 use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
@@ -27,7 +27,9 @@ it('loads kiosk screen without authenticated user', function (): void {
     $this->get(route('kiosk.index'))
         ->assertOk()
         ->assertSee('Kiosco')
-        ->assertSee('Clave de kiosco');
+        ->assertSee('Clave de kiosco')
+        ->assertSee('autocomplete="new-password"', false)
+        ->assertSee('data-1p-ignore="true"', false);
 });
 
 it('unknown code fails with neutral message', function (): void {
@@ -242,7 +244,6 @@ it('kiosk blocks manipulated credential token for another worker', function (): 
         ->call('record', 'clock_in')
         ->assertHasErrors(['accessCode']);
 });
-
 
 it('uses kiosk company context when access code and pin exist in multiple companies', function (): void {
     [$companyA, $workerA, , , $credentialA] = sprint2fKioskFixture(pin: '1234');

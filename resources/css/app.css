@@ -200,7 +200,29 @@ select:focus[data-flux-control] {
     }
 
     .table-wrap {
-        @apply overflow-hidden rounded-2xl border border-surface-line;
+        @apply overflow-x-auto rounded-2xl border border-surface-line;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-color: color-mix(in oklab, var(--color-zinc-400), transparent 25%) color-mix(in oklab, var(--color-zinc-200), transparent 45%);
+        scrollbar-width: thin;
+    }
+
+    .table-wrap::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb {
+        background: color-mix(in oklab, var(--color-zinc-400), transparent 25%);
+        border-radius: 999px;
+    }
+
+    .table-wrap::-webkit-scrollbar-track {
+        background: color-mix(in oklab, var(--color-zinc-200), transparent 45%);
+        border-radius: 999px;
+    }
+
+    .table-wrap > table,
+    .table-wrap > div > table {
+        min-width: 820px;
     }
 
     .table-head-cell {
@@ -506,7 +528,7 @@ select:focus[data-flux-control] {
 
     .overflow-hidden:has(> table)::-webkit-scrollbar,
     .overflow-x-auto:has(> table)::-webkit-scrollbar {
-        height: 8px;
+        height: 6px;
     }
 
     .overflow-hidden:has(> table)::-webkit-scrollbar-thumb,

@@ -337,6 +337,7 @@ Incluye:
 - RFC.
 - Zona horaria principal.
 - Estado.
+- Pestañas: Operación, Configuración legal y Usuarios.
 - Periodo de cierre por defecto.
 - Día de cierre.
 - Configuración de conformidad digital.

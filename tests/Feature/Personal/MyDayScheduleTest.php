@@ -88,6 +88,7 @@ class MyDayScheduleTest extends TestCase
             ->assertSee('Semana del 21/09 al 27/09')
             ->assertSee('Semana del 28/09 al 04/10')
             ->assertSee('Turno programado')
+            ->assertSee('shift-turno')
             ->assertSee('08:00 - 16:00')
             ->assertSee('8 h')
             ->assertDontSee('09:00 - 17:00');

@@ -8,14 +8,20 @@ use App\Models\Company;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    #[Url(as: 'tab', except: 'operation')]
+    public string $activeTab = 'operation';
+
     public array $settingsForm = [];
     public array $legalParameterForm = [];
 
     public function mount(CurrentCompany $currentCompany): void
     {
+        $this->ensureValidTab();
+
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('update', $company);
@@ -96,6 +102,13 @@ new class extends Component {
         return $company;
     }
 
+    private function ensureValidTab(): void
+    {
+        if (! in_array($this->activeTab, ['operation', 'legal', 'users'], true)) {
+            $this->activeTab = 'operation';
+        }
+    }
+
     private function loadSettingsForm(Company $company): void
     {
         $settings = array_merge(Company::defaultSettings(), $company->setting?->toArray() ?? []);
@@ -170,8 +183,20 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+    <nav class="flex gap-1 overflow-x-auto border-b border-surface-line" aria-label="Secciones de configuración de empresa">
+        <button type="button" wire:click="$set('activeTab', 'operation')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'operation' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'operation' ? 'true' : 'false' }}">
+            Operación
+        </button>
+        <button type="button" wire:click="$set('activeTab', 'legal')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'legal' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'legal' ? 'true' : 'false' }}">
+            Configuración legal
+        </button>
+        <button type="button" wire:click="$set('activeTab', 'users')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'users' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'users' ? 'true' : 'false' }}">
+            Usuarios
+        </button>
+    </nav>
+
+    @if ($activeTab === 'operation')
+        <section class="max-w-2xl rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <div class="mb-4">
                 <flux:heading>Operacion</flux:heading>
                 <flux:subheading>Parametros iniciales de cierre, kiosco, correcciones y conformidad.</flux:subheading>
@@ -223,7 +248,9 @@ new class extends Component {
                 <button type="submit" class="btn-primary">Guardar configuración</button>
             </form>
         </section>
+    @endif
 
+    @if ($activeTab === 'legal')
         <section class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <div class="mb-4">
                 <flux:heading>Configuracion legal</flux:heading>
@@ -312,5 +339,17 @@ new class extends Component {
                 </div>
             </div>
         </section>
-    </div>
+    @endif
+
+    @if ($activeTab === 'users')
+        <section class="max-w-2xl rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:heading>Usuarios de la empresa</flux:heading>
+            <flux:subheading>Administra el acceso, rol y estado de las personas con cuenta en la empresa activa.</flux:subheading>
+
+            <div class="mt-5 rounded-lg border border-surface-line bg-surface-bg p-4">
+                <p class="text-sm text-surface-text">La administración de usuarios se realiza en su pantalla especializada para mantener los permisos y el historial de acceso en un solo lugar.</p>
+                <a href="{{ route('users.index') }}" wire:navigate class="btn-primary mt-4 inline-flex">Administrar usuarios</a>
+            </div>
+        </section>
+    @endif
 </section>

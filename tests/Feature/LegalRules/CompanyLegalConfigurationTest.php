@@ -6,7 +6,6 @@ use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\ResolveLegalParameterForDateAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Models\Company;
-use App\Models\LegalParameter;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
@@ -102,7 +101,8 @@ class CompanyLegalConfigurationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('company-settings.index')
-            ->assertSee('Configuracion legal')
+            ->set('activeTab', 'legal')
+            ->assertSee('Reglas base del pais')
             ->set('legalParameterForm.company_daily_limit_diurnal_minutes.value', 450)
             ->set('legalParameterForm.company_daily_limit_diurnal_minutes.effective_from', '2026-08-03')
             ->set('legalParameterForm.company_daily_limit_diurnal_minutes.reason', 'Politica interna')

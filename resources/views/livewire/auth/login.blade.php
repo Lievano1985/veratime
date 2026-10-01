@@ -141,7 +141,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     @enderror
                 </div>
 
-                <div>
+                <div x-data="{ showPassword: false }">
                     <div class="mb-1.5 flex items-center justify-between gap-3">
                         <label for="password" class="block text-[12.5px] font-semibold text-brand-navy">Contraseña</label>
                         @if (Route::has('password.request'))
@@ -150,9 +150,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
                             </a>
                         @endif
                     </div>
+                    <div class="relative">
                     <input
                         wire:model="password"
                         id="password"
+                        x-bind:type="showPassword ? 'text' : 'password'"
                         type="password"
                         name="password"
                         required
@@ -160,6 +162,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         placeholder="••••••••"
                         class="w-full rounded-xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 text-[14.5px] outline-none transition placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10"
                     >
+                    </div>
+                    <label class="mt-2 flex w-fit cursor-pointer items-center gap-2 text-[12.5px] text-surface-muted">
+                        <input x-model="showPassword" type="checkbox" class="h-4 w-4 rounded border-surface-line accent-brand-blue">
+                        Mostrar contrase&ntilde;a
+                    </label>
                     @error('password')
                         <p class="mt-1.5 text-[12px] text-status-pending-text">{{ $message }}</p>
                     @enderror

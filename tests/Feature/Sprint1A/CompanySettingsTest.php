@@ -59,6 +59,34 @@ class CompanySettingsTest extends TestCase
         ]);
     }
 
+    public function test_company_settings_separates_operation_legal_configuration_and_users_into_tabs(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->assertSee('Operación')
+            ->assertSee('Configuración legal')
+            ->assertSee('Usuarios')
+            ->assertSee('Periodo de cierre')
+            ->assertDontSee('Reglas base del pais')
+            ->set('activeTab', 'legal')
+            ->assertSee('Reglas base del pais')
+            ->assertDontSee('Periodo de cierre')
+            ->set('activeTab', 'users')
+            ->assertSee('Administrar usuarios')
+            ->assertDontSee('Reglas base del pais');
+    }
+
     public function test_settings_validation_rejects_invalid_closure_day(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
@@ -78,6 +106,7 @@ class CompanySettingsTest extends TestCase
             ->call('updateSettings')
             ->assertHasErrors(['settingsForm.default_closure_day']);
     }
+
     public function test_kiosk_key_requires_uppercase_number_and_symbol(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
@@ -97,6 +126,7 @@ class CompanySettingsTest extends TestCase
             ->call('updateSettings')
             ->assertHasErrors(['settingsForm.kiosk_key']);
     }
+
     public function test_kiosk_key_must_be_unique_between_companies(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);

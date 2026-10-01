@@ -68,6 +68,15 @@ new class extends Component {
         };
     }
 
+    public function calendarCardClasses(?DailyScheduleAssignment $assignment): string
+    {
+        return match ($assignment?->day_type) {
+            'shift', 'flexible', 'on_call' => 'shift-turno',
+            'rest' => 'shift-descanso',
+            default => 'rounded-xl border border-dashed border-surface-line bg-surface-bg',
+        };
+    }
+
     public function segmentRange(DailyScheduleSegment $segment): string
     {
         $start = $this->timeLabel($segment->start_local_time);
@@ -118,7 +127,7 @@ new class extends Component {
                                     @php($assignment = $day['assignment'])
                                     @php($workSegments = $assignment?->segments->where('segment_type', 'work'))
                                     @php($breakSegments = $assignment?->segments->where('segment_type', 'break'))
-                                    <article class="min-h-44 rounded-lg border border-surface-line bg-surface-bg px-3 py-3">
+                                    <article class="{{ $this->calendarCardClasses($assignment) }} min-h-44 px-3 py-3">
                                         <div class="flex items-start justify-between gap-2">
                                             <p class="text-sm font-semibold text-surface-text">{{ $day['date']->translatedFormat('D') }}</p>
                                             <span class="shrink-0 text-sm text-surface-muted">{{ $day['date']->format('d/m') }}</span>
