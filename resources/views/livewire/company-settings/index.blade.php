@@ -477,7 +477,7 @@ new class extends Component {
                         <img src="{{ $pairingQrCode }}" alt="Codigo QR para autorizar {{ $pairingDeviceName }}" class="h-44 w-44 rounded bg-white p-2">
                     @else
                         <div class="flex h-44 w-44 items-center justify-center rounded border border-blue-200 bg-white p-4 text-center text-xs text-surface-muted">
-                            QR no disponible. Usa el cÃ³digo manual.
+                            QR no disponible. Usa el codigo manual.
                         </div>
                     @endif
                     <div>
@@ -486,7 +486,7 @@ new class extends Component {
                         <p class="mt-3 break-all rounded border border-blue-200 bg-white px-3 py-2 font-mono text-sm text-surface-text">{{ $pairingCode }}</p>
                         <p class="mt-3 text-xs font-medium text-status-pending-text">Vence el {{ $pairingExpiresAt }}. Al completar el emparejamiento, este codigo deja de servir.</p>
                         @if ($pairingQrUnavailable)
-                            <p class="mt-2 text-xs text-surface-muted">El cÃ³digo manual sigue siendo vÃ¡lido. Revisa la instalaciÃ³n de la dependencia QR en el servidor para volver a mostrar la imagen.</p>
+                            <p class="mt-2 text-xs text-surface-muted">El codigo manual sigue siendo valido. Revisa la instalacion de la dependencia QR en el servidor para volver a mostrar la imagen.</p>
                         @endif
                     </div>
                 </div>
