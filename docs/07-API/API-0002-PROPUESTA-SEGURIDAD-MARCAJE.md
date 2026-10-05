@@ -1,10 +1,10 @@
 # API-0002 — Seguridad de marcaje móvil
 
-**Estado:** alcance aprobado para el MVP; contrato técnico pendiente de implementación.
+**Estado:** alcance aprobado para el MVP; BL-0614 implementada. Vinculación, firma y validación de marcajes continúan pendientes.
 
 **Fecha de decisión:** 2026-10-05.
 
-Este documento complementa [API-0001](API-0001-ESPECIFICACION-API-MVP.md). Define el incremento de seguridad aplicable al marcaje personal desde PWA o cliente Android. Los nombres de rutas y esquemas de este documento son el contrato objetivo: no existen todavía en producción hasta que se implementen con pruebas.
+Este documento complementa [API-0001](API-0001-ESPECIFICACION-API-MVP.md). Define el incremento de seguridad aplicable al marcaje personal desde PWA o cliente Android. `GET /api/v1/time/me/marking-security` está disponible con BL-0614; las rutas de vinculación y la evidencia firmada siguen siendo contrato objetivo hasta su implementación con pruebas.
 
 ## Decisión de alcance
 
@@ -37,11 +37,7 @@ Respuesta conceptual:
 {
   "data": {
     "security_version": 1,
-    "binding": {
-      "id": "opaque-binding",
-      "status": "active",
-      "biometric_required": true
-    },
+    "binding": null,
     "policy": {
       "id": "opaque-policy",
       "version": 2,
@@ -55,14 +51,17 @@ Respuesta conceptual:
     },
     "time_reference": {
       "id": "opaque-time-reference",
-      "server_time": "2026-10-05T12:00:00Z"
+      "server_time": "2026-10-05T12:00:00Z",
+      "expires_at": "2026-10-05T12:05:00Z"
     }
   },
   "meta": {"trace_id": "trc_example"}
 }
 ```
 
-Los valores son ilustrativos, no límites aprobados. `mode: free` omite centro y radio, pero no elimina los demás requisitos que tenga la política. `enrolled` no equivale a `active`.
+Los valores de radio, precisión y antigüedad son ilustrativos, no límites aprobados. `mode: free` omite centro y radio, pero no elimina los demás requisitos que tenga la política. Mientras BL-0615 no esté implementada, `binding` es `null` y la política sólo informa requisitos, sin bloquear el marcaje actual.
+
+BL-0614 resuelve primero una política activa específica del centro de la relación laboral del trabajador y, si no existe, una política activa general de la empresa. Si no hay política vigente, `policy` y `binding` son `null`. La respuesta crea una referencia de tiempo opaca, separada por empresa, usuario y trabajador, que vence en cinco minutos. Esta referencia prueba que el servidor emitió ese contexto; por sí sola no convierte el reloj local del cliente en hora confiable.
 
 ### Vinculación de dispositivo
 

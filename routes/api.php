@@ -50,6 +50,7 @@ Route::prefix('v1/time/me')
     ->middleware(['auth:sanctum', 'api.trace', 'api.tenant', 'product:time', 'throttle:api', 'api.ability:self:read'])
     ->group(function (): void {
         Route::get('/', [PersonalTimeController::class, 'context']);
+        Route::get('marking-security', [PersonalTimeController::class, 'markingSecurity']);
         Route::get('alerts', [PersonalTimeController::class, 'alerts']);
         Route::post('time-events', [PersonalTimeController::class, 'storeEvent'])->middleware('api.ability:self:write');
         Route::post('time-events/sync', [PersonalTimeController::class, 'syncEvents'])->middleware('api.ability:self:write');
