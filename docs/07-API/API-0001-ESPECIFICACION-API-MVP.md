@@ -2171,7 +2171,7 @@ Una cuenta humana de `users` es la identidad unica para el portal web y el clien
 
 La vinculacion entre la cuenta y `workers` es explicita y acotada por empresa. En esta fase permite consultar solo eventos y jornadas propios; horarios, incidencias y reportes personales quedan para incrementos posteriores autorizados. Revocar un token movil no desactiva automaticamente la cuenta web ni la relacion laboral.
 
-El kiosco es un canal distinto: cada terminal se autoriza mediante QR o código temporal y después usa una credencial de marcaje código/NIP ligada al trabajador y, cuando exista, a la misma cuenta humana. El NIP se conserva hasheado y la contraseña principal nunca se captura ni se reutiliza en la terminal. Un kiosco solo puede identificar y registrar los eventos permitidos; no obtiene una sesión de portal ni acceso a datos personales, incidencias, reportes o administración.
+El kiosco es un canal distinto: un equipo nuevo solicita acceso con codigo publico de empresa y clave de solicitud, y un administrador lo acepta o rechaza. La clave nunca autoriza marcajes por si sola. Solo el navegador solicitante reclama la aprobacion y recibe una credencial de terminal; despues usa codigo/NIP ligado al trabajador y, cuando exista, a la misma cuenta humana. El NIP se conserva hasheado y la contraseña principal nunca se captura ni se reutiliza en la terminal. Un kiosco solo puede identificar y registrar los eventos permitidos; no obtiene una sesion de portal ni acceso a datos personales, incidencias, reportes o administracion.
 
 El cliente Android/PWA usará este mismo contrato API y no una autenticación paralela. La implementación de la aplicación permanece separada del backend.
 

@@ -1,6 +1,7 @@
 <?php
 
-use App\Domains\TimeRecords\Actions\PairKioskDeviceAction;
+use App\Domains\TimeRecords\Actions\ClaimKioskTerminalAccessRequestAction;
+use App\Domains\TimeRecords\Actions\RequestKioskTerminalAccessAction;
 use Flux\Flux;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
@@ -10,37 +11,64 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.auth')] class extends Component {
     private const DEVICE_COOKIE = 'vera_kiosk_device';
 
-    public string $pairingCode = '';
+    private const REQUEST_COOKIE = 'vera_kiosk_terminal_request';
+
+    public string $companyIdentifier = '';
+
+    public string $enrollmentKey = '';
+
+    public string $terminalName = '';
+
+    public bool $waitingForApproval = false;
 
     public function mount(): void
     {
-        $this->pairingCode = trim((string) request()->query('code', ''));
+        $this->waitingForApproval = filled(request()->cookie(self::REQUEST_COOKIE));
     }
 
-    public function authorizeDevice(PairKioskDeviceAction $action)
+    public function requestAuthorization(RequestKioskTerminalAccessAction $action): void
     {
-        $pairingCode = trim($this->pairingCode);
+        $identifier = trim($this->companyIdentifier);
+        $key = $this->enrollmentKey;
+        $name = trim($this->terminalName);
 
-        if ($pairingCode === '' || mb_strlen($pairingCode) > 100) {
-            $this->showAuthorizationError('Escribe un codigo de autorizacion valido.');
+        if ($name === '' || mb_strlen($name) > 120) {
+            $this->showRequestError('Escribe un nombre valido para esta terminal.');
 
             return;
         }
 
-        $throttleKey = 'kiosk-pairing:'.request()->ip();
+        if ($identifier === '' || mb_strlen($identifier) > 32) {
+            $this->showRequestError('Escribe un codigo de empresa valido.');
+
+            return;
+        }
+
+        if (mb_strlen($key) < 12 || mb_strlen($key) > 120) {
+            $this->showRequestError('La clave de solicitud debe tener entre 12 y 120 caracteres.');
+
+            return;
+        }
+
+        $throttleKey = 'kiosk-terminal-request:'.request()->ip().'|'.mb_strtoupper($identifier);
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $this->showAuthorizationError('Espera un minuto antes de intentar otro codigo.');
+            $this->showRequestError('Espera un minuto antes de solicitar otra autorizacion.');
 
             return;
         }
 
         try {
-            $pairing = $action->handle($pairingCode, request()->ip(), request()->userAgent());
-        } catch (\InvalidArgumentException) {
+            $request = $action->handle(
+                $identifier,
+                $key,
+                $name,
+                request()->ip(),
+                request()->userAgent(),
+            );
+        } catch (\InvalidArgumentException $exception) {
             RateLimiter::hit($throttleKey, 60);
-
-            $this->showAuthorizationError('El codigo de autorizacion no es valido o ya vencio.');
+            $this->showRequestError($exception->getMessage());
 
             return;
         }
@@ -48,9 +76,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
         RateLimiter::clear($throttleKey);
 
         Cookie::queue(Cookie::make(
-            self::DEVICE_COOKIE,
-            $pairing['device_token'],
-            60 * 24 * 365,
+            self::REQUEST_COOKIE,
+            $request['request_secret'],
+            15,
             '/time/kiosk',
             null,
             request()->isSecure() || app()->environment('production'),
@@ -59,24 +87,73 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'strict',
         ));
 
-        session()->flash('kiosk_toast', [
-            'text' => 'Terminal autorizada para '.$pairing['device']->company->name.'.',
-            'heading' => 'Terminal lista para usarse',
-            'variant' => 'success',
-        ]);
+        $this->enrollmentKey = '';
+        $this->waitingForApproval = true;
 
-        return redirect()->route('kiosk.index');
+        Flux::toast('La solicitud fue enviada. Espera la aprobacion de un administrador.', 'Solicitud enviada', 6000, 'success', 'top end');
     }
 
-    private function showAuthorizationError(string $message): void
+    public function checkRequestStatus(ClaimKioskTerminalAccessRequestAction $action)
     {
-        $this->addError('pairingCode', $message);
+        $requestSecret = request()->cookie(self::REQUEST_COOKIE);
 
-        Flux::toast($message, 'No fue posible autorizar la terminal', 6000, 'danger', 'top end');
+        if (blank($requestSecret)) {
+            $this->waitingForApproval = false;
+
+            return;
+        }
+
+        $result = $action->handle($requestSecret, request()->ip(), request()->userAgent());
+
+        if ($result['status'] === 'claimed') {
+            Cookie::queue(Cookie::make(
+                self::DEVICE_COOKIE,
+                $result['device_token'],
+                60 * 24 * 365,
+                '/time/kiosk',
+                null,
+                request()->isSecure() || app()->environment('production'),
+                true,
+                false,
+                'strict',
+            ));
+            Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
+
+            session()->flash('kiosk_toast', [
+                'text' => 'Esta terminal fue autorizada y ya esta lista para registrar asistencias.',
+                'heading' => 'Terminal autorizada',
+                'variant' => 'success',
+            ]);
+
+            return redirect()->route('kiosk.index');
+        }
+
+        if ($result['status'] === 'pending') {
+            return;
+        }
+
+        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
+        $this->waitingForApproval = false;
+
+        $message = match ($result['status']) {
+            'rejected' => 'La solicitud de esta terminal fue rechazada por un administrador.',
+            'expired' => 'La solicitud vencio antes de ser autorizada. Puedes enviar una nueva.',
+            'claimed' => 'La solicitud ya fue utilizada por esta terminal.',
+            default => 'La solicitud ya no esta disponible. Puedes enviar una nueva.',
+        };
+
+        Flux::toast($message, 'Solicitud de terminal', 6000, 'warning', 'top end');
+    }
+
+    private function showRequestError(string $message): void
+    {
+        $this->addError('enrollmentKey', $message);
+
+        Flux::toast($message, 'No fue posible solicitar la terminal', 6000, 'danger', 'top end');
     }
 }; ?>
 
-<div class="min-h-screen">
+<div class="min-h-screen" @if ($waitingForApproval) wire:poll.5s="checkRequestStatus" @endif>
     <div class="fixed left-0 right-0 top-0 h-1.5 bg-gradient-to-r from-brand-blue-bright via-brand-sky to-brand-deep"></div>
 
     <div class="flex min-h-screen items-center justify-center bg-[radial-gradient(140%_100%_at_50%_-10%,#DCEEFF_0%,#EAF3FC_45%,#F4F9FF_100%)] p-5 font-sans text-surface-text sm:p-7">
@@ -95,24 +172,41 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                 <div class="mt-6 inline-flex items-center gap-2 rounded-full border border-status-warn-line bg-status-warn-bg px-3.5 py-2 text-[12.5px] font-semibold text-status-warn-text">
                     <span class="h-1.5 w-1.5 rounded-full bg-status-warn-text shadow-[0_0_0_3px_rgba(147,101,11,0.18)]"></span>
-                    Pendiente de autorizacion
+                    {{ $waitingForApproval ? 'Solicitud pendiente' : 'Terminal sin autorizar' }}
                 </div>
             </section>
 
             <section class="flex flex-col justify-center md:pl-6">
-                <form wire:submit="authorizeDevice" autocomplete="off" data-form-type="other" class="space-y-5">
-                    <div>
-                        <h1 class="font-display text-[24px] font-bold text-brand-navy">Autorizar terminal</h1>
-                        <p class="mt-2 text-[13.5px] leading-relaxed text-surface-muted">Escanea el QR o pega el codigo generado desde Configuracion de empresa. El codigo solo funciona durante una hora y una sola vez.</p>
+                @if ($waitingForApproval)
+                    <div class="rounded-[24px] border border-status-pending-line bg-status-pending-bg px-6 py-7 text-center text-status-pending-text">
+                        <p class="font-display text-2xl font-bold">Solicitud enviada</p>
+                        <p class="mt-3 text-sm leading-relaxed">Un administrador debe aceptar esta terminal desde Configuracion de empresa. Esta pantalla permanecera lista y continuara automaticamente al aprobarse.</p>
                     </div>
+                @else
+                    <form wire:submit="requestAuthorization" autocomplete="off" data-form-type="other" class="space-y-5">
+                        <div>
+                            <h1 class="font-display text-[24px] font-bold text-brand-navy">Solicitar terminal</h1>
+                            <p class="mt-2 text-[13.5px] leading-relaxed text-surface-muted">Captura el codigo de empresa y la clave de solicitud. Un administrador debe aprobar este equipo antes de registrar asistencias.</p>
+                        </div>
 
-                    <div>
-                        <label for="pairing-code" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Codigo de autorizacion</label>
-                        <textarea id="pairing-code" wire:model="pairingCode" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" autofocus class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 font-mono text-sm outline-none transition focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10"></textarea>
-                    </div>
+                        <div>
+                            <label for="terminal-name" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Nombre de la terminal</label>
+                            <input id="terminal-name" wire:model="terminalName" type="text" maxlength="120" autocomplete="off" autocapitalize="words" data-lpignore="true" data-1p-ignore="true" autofocus placeholder="Ej. Recepcion planta norte" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 text-sm outline-none transition placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                        </div>
 
-                    <button type="submit" class="w-full rounded-2xl bg-gradient-to-r from-brand-blue-bright via-brand-blue to-brand-deep py-4 font-display text-base font-bold tracking-wide text-white shadow-[0_14px_26px_-10px_rgba(0,103,228,0.55)] transition hover:-translate-y-0.5 active:translate-y-0">Autorizar esta terminal</button>
-                </form>
+                        <div>
+                            <label for="company-identifier" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Codigo de empresa</label>
+                            <input id="company-identifier" wire:model="companyIdentifier" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="Ej. VT-AB12CD34EF" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 font-mono text-sm uppercase outline-none transition placeholder:font-sans placeholder:normal-case placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                        </div>
+
+                        <div>
+                            <label for="enrollment-key" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Clave de solicitud</label>
+                            <input id="enrollment-key" wire:model="enrollmentKey" type="password" maxlength="120" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 font-mono text-sm outline-none transition focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                        </div>
+
+                        <button type="submit" wire:loading.attr="disabled" wire:target="requestAuthorization" class="w-full rounded-2xl bg-gradient-to-r from-brand-blue-bright via-brand-blue to-brand-deep py-4 font-display text-base font-bold tracking-wide text-white shadow-[0_14px_26px_-10px_rgba(0,103,228,0.55)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 active:translate-y-0">Enviar solicitud</button>
+                    </form>
+                @endif
 
                 <a href="{{ route('kiosk.index') }}" class="btn-ghost mt-5 flex w-full justify-center">Volver al kiosco</a>
                 <div class="mt-5 text-center text-[11.5px] text-[#A6B3C4]">Vera Time · Terminal de registro</div>

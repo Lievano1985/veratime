@@ -805,9 +805,11 @@ El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, m
 | Terminar pausa | Despues de iniciar pausa, terminar pausa. | Se crea evento `break_end`. |
 | Registrar salida | Despues de entrada o pausa terminada, registrar salida. | Se crea evento `clock_out`. |
 | Evitar duplicados simples | Intentar doble entrada o doble pausa. | El sistema bloquea la accion no permitida por estado actual. |
-| Autorizar terminal con QR | En Configuracion de empresa > Terminales de kiosco, generar codigo y escanearlo desde la terminal. | La terminal abre el kiosco ya asociado a la empresa; el codigo deja de servir. |
-| Autorizar terminal sin camara | Abrir `/time/kiosk/authorize` en una PC y pegar el codigo generado. | La terminal queda autorizada igual que con QR. |
-| Codigo vencido | Esperar mas de una hora o usar de nuevo un codigo utilizado. | No se autoriza la terminal y se muestra mensaje neutral. |
+| Configurar solicitud de terminal | En Configuracion de empresa > Terminales de kiosco, guardar una clave de solicitud. | Se muestra un codigo publico de empresa y la clave no vuelve a mostrarse. |
+| Solicitar terminal | En un navegador sin terminal autorizada abrir `/time/kiosk`, capturar nombre, codigo de empresa y clave de solicitud. | La pantalla queda en espera y aparece una solicitud pendiente en la empresa correcta. No se puede registrar asistencia todavia. |
+| Aprobar solicitud | En la bandeja de solicitudes, revisar el equipo, elegir centro opcional y aceptar. | La terminal solicitante se activa automaticamente sin copiar QR ni codigo; aparece en la lista de terminales autorizadas. |
+| Rechazar solicitud | Rechazar una solicitud pendiente. | La terminal recibe el aviso y no obtiene credencial ni puede registrar asistencias. |
+| Terminal persistente | Cerrar y volver a abrir `/time/kiosk` en un navegador autorizado. | Regresa al kiosco de la empresa sin pedir clave ni inicio de sesion administrativo. Revocar o borrar la terminal bloquea el siguiente uso. |
 | Terminal obligatoria | Abrir kiosco en un navegador sin una terminal vinculada. | Redirige a autorizacion; no existe clave compartida para activar el equipo. |
 | Revocar terminal | Revocar una terminal activa y tratar de usar el kiosco en ella. | El siguiente intento de identificacion o marcaje queda bloqueado. |
 | Eliminar terminal | Eliminar una terminal desde Configuracion de empresa y volver a abrir el kiosco en ese equipo. | Desaparece de la lista, deja de funcionar y conserva su identidad tecnica para evidencia. |

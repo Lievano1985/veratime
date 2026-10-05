@@ -25,6 +25,8 @@ class CompanySetting extends Model
         'early_departure_tolerance_minutes',
         'allow_worker_corrections',
         'require_pin_for_kiosk',
+        'kiosk_enrollment_identifier',
+        'kiosk_enrollment_key_hash',
         'require_pin_for_confirmation',
         'metadata',
     ];

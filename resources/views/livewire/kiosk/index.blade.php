@@ -370,7 +370,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     <div class="rounded-[24px] border border-status-warn-line bg-status-warn-bg px-6 py-7 text-center text-status-warn-text">
                         <p class="font-display text-2xl font-bold">Terminal no autorizada</p>
                         <p class="mt-2 text-sm">Solicita un codigo de autorizacion al administrador para vincular este equipo.</p>
-                        <a href="{{ route('kiosk.authorize') }}" class="btn-primary mt-5 w-full justify-center">Autorizar terminal</a>
+                        <a href="{{ route('kiosk.authorize') }}" class="btn-primary mt-5 w-full justify-center">Solicitar autorizacion</a>
                     </div>
                 @elseif (! $confirmationMessage && ! $credentialToken)
                     <form wire:submit="identify" autocomplete="off" data-form-type="other" class="space-y-4">

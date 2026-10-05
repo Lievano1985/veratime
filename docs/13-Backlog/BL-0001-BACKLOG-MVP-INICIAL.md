@@ -871,7 +871,7 @@ Se incorpora al MVP una identidad humana unica: la misma cuenta de usuario podra
 
 La credencial de kiosco seguira siendo una credencial de marcaje separada, asociada al trabajador y vinculable a su cuenta humana. Usara codigo/NIP hasheado, con alta, bloqueo, restablecimiento y revocacion propios. La contrasena principal no se captura ni se reutiliza como NIP en una terminal compartida.
 
-Incremento de seguridad de kiosco implementado: terminales autorizadas obligatorias con QR/codigo manual valido por una hora, secreto de terminal hasheado y revocable, asignacion opcional a centro y eliminacion segura. La clave compartida anterior ya no existe como metodo de activacion. Ver `ADR-0009-TERMINALES-AUTORIZADAS-DE-KIOSCO.md`.
+Incremento de seguridad de kiosco implementado: una terminal nueva solicita acceso con codigo publico de empresa y clave de solicitud; un administrador acepta o rechaza desde su bandeja. La clave nunca activa por si sola ni entrega una credencial. Solo el navegador solicitante puede reclamar una aprobacion de un solo uso y entonces recibe el secreto de terminal hasheado y revocable. La terminal puede tener centro opcional y eliminacion segura. Ver `ADR-0009-TERMINALES-AUTORIZADAS-DE-KIOSCO.md`.
 
 Historias que se agregan al alcance P0:
 

@@ -162,7 +162,7 @@ Cuando se definan índices únicos sobre columnas nullable, se deberá validar e
 | Centros | `centers` |
 | Trabajadores | `workers`, `employment_relationships`, `labor_conditions`, `worker_credentials` |
 | Horarios | `schedules`, `schedule_days`, `schedule_breaks`, `schedule_assignments`, `mandatory_rest_days` |
-| Registro | `time_events`, `devices`, `kiosk_sessions` |
+| Registro | `time_events`, `devices`, `kiosk_sessions`, `kiosk_devices`, `kiosk_terminal_access_requests` |
 | Motor legal | `legal_rules`, `legal_rule_versions`, `legal_parameters` |
 | Cálculos | `work_days`, `work_day_calculations`, `calculation_events` |
 | Alertas | `alert_types`, `alerts`, `alert_comments` |
@@ -680,6 +680,28 @@ No se crearon en Sprint 1D:
 - time_events
 - kiosk_sessions
 ```
+
+## 8.5 `kiosk_devices` y `kiosk_terminal_access_requests`
+
+Una terminal de kiosco es una credencial tecnica revocable, separada del codigo/NIP de la persona trabajadora. `kiosk_terminal_access_requests` conserva el intento temporal iniciado por el equipo; `kiosk_devices` solo se crea cuando la solicitud aprobada es reclamada por ese mismo navegador.
+
+| Tabla | Campos relevantes | Regla |
+|---|---|---|
+| `company_settings` | `kiosk_enrollment_identifier`, `kiosk_enrollment_key_hash` | El identificador es publico y unico; la clave se guarda hasheada y se rota sin revocar terminales existentes. |
+| `kiosk_terminal_access_requests` | `company_id`, `public_id`, `request_secret_hash`, `requested_name`, `status`, `center_id`, `expires_at`, datos tecnicos minimos, revisor y `kiosk_device_id` | Toda solicitud pertenece a una empresa, vence a los quince minutos y solo puede ser reclamada una vez. Nunca guarda el secreto plano. |
+| `kiosk_devices` | `company_id`, `center_id`, `device_token_hash`, `status`, `paired_at`, datos tecnicos y auditoria de revocacion | Solo contiene terminales que ya recibieron su credencial. Revocar o eliminar invalida el token inmediatamente. |
+
+Indices minimos:
+
+```text
+unique(company_settings.kiosk_enrollment_identifier)
+unique(kiosk_terminal_access_requests.public_id)
+unique(kiosk_terminal_access_requests.request_secret_hash)
+index(kiosk_terminal_access_requests.company_id, status)
+index(kiosk_terminal_access_requests.company_id, expires_at)
+```
+
+La solicitud no sustituye la credencial de terminal: conocer el codigo de empresa y la clave solo permite entrar a la bandeja pendiente. La credencial final se entrega una sola vez como cookie protegida despues de la aprobacion administrativa.
 
 ---
 

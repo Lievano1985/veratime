@@ -16,8 +16,6 @@ class KioskDevice extends Model
         'center_id',
         'name',
         'status',
-        'pairing_code_hash',
-        'pairing_expires_at',
         'paired_at',
         'device_token_hash',
         'created_by_user_id',
@@ -31,7 +29,6 @@ class KioskDevice extends Model
     protected function casts(): array
     {
         return [
-            'pairing_expires_at' => 'immutable_datetime',
             'paired_at' => 'immutable_datetime',
             'revoked_at' => 'immutable_datetime',
             'last_seen_at' => 'immutable_datetime',

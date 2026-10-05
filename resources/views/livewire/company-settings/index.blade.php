@@ -3,14 +3,15 @@
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
-use App\Domains\TimeRecords\Actions\CreateKioskDevicePairingAction;
+use App\Domains\TimeRecords\Actions\ApproveKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
+use App\Domains\TimeRecords\Actions\RejectKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
+use App\Domains\TimeRecords\Actions\SetKioskEnrollmentKeyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use App\Models\KioskDevice;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\SvgWriter;
+use App\Models\KioskTerminalAccessRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -24,13 +25,8 @@ new class extends Component {
 
     public array $settingsForm = [];
     public array $legalParameterForm = [];
-    public array $kioskDeviceForm = ['name' => '', 'center_id' => ''];
-    public ?string $pairingCode = null;
-    public ?string $pairingQrCode = null;
-    public bool $pairingQrUnavailable = false;
-    public ?int $pairingDeviceId = null;
-    public ?string $pairingExpiresAt = null;
-    public ?string $pairingDeviceName = null;
+    public array $kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
+    public array $pendingRequestCenters = [];
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -68,43 +64,57 @@ new class extends Component {
         Session::flash('status', 'Configuracion de empresa actualizada.');
     }
 
-    public function createKioskDevicePairing(CreateKioskDevicePairingAction $action, CurrentCompany $currentCompany): void
+    public function updateKioskEnrollmentKey(SetKioskEnrollmentKeyAction $action, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
-        Gate::authorize('create', [KioskDevice::class, $company]);
+        Gate::authorize('update', $company);
 
         $validated = $this->validate([
-            'kioskDeviceForm.name' => ['required', 'string', 'max:120'],
-            'kioskDeviceForm.center_id' => ['nullable', 'integer'],
-        ])['kioskDeviceForm'];
+            'kioskEnrollmentKeyForm.key' => ['required', 'string', 'min:12', 'max:120', 'confirmed'],
+        ])['kioskEnrollmentKeyForm'];
+
+        $settings = $action->handle($company, auth()->user(), $validated['key']);
+
+        $this->kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
+        Session::flash('status', 'La clave de solicitud fue guardada. Las solicitudes pendientes anteriores fueron invalidadas.');
+    }
+
+    public function approveKioskTerminalRequest(int $requestId, ApproveKioskTerminalAccessRequestAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $request = KioskTerminalAccessRequest::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($requestId);
+
+        $centerId = filled($this->pendingRequestCenters[$requestId] ?? null)
+            ? (int) $this->pendingRequestCenters[$requestId]
+            : null;
 
         try {
-            $pairing = $action->handle(
-                $company,
-                auth()->user(),
-                $validated['name'],
-                filled($validated['center_id'] ?? null) ? (int) $validated['center_id'] : null,
-            );
+            $action->handle($request, auth()->user(), $centerId);
         } catch (\InvalidArgumentException $exception) {
-            throw ValidationException::withMessages(['kioskDeviceForm.center_id' => $exception->getMessage()]);
+            throw ValidationException::withMessages(["pendingRequestCenters.{$requestId}" => $exception->getMessage()]);
         }
 
-        $this->kioskDeviceForm = ['name' => '', 'center_id' => ''];
-        $this->pairingCode = $pairing['pairing_code'];
-        $this->pairingDeviceId = $pairing['device']->id;
-        $this->pairingDeviceName = $pairing['device']->name;
-        $this->pairingExpiresAt = $pairing['device']->pairing_expires_at?->format('d/m/Y H:i');
-        $this->pairingQrCode = null;
-        $this->pairingQrUnavailable = false;
+        unset($this->pendingRequestCenters[$requestId]);
+        Session::flash('status', 'La terminal fue aprobada. El equipo terminara su activacion automaticamente.');
+    }
+
+    public function rejectKioskTerminalRequest(int $requestId, RejectKioskTerminalAccessRequestAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $request = KioskTerminalAccessRequest::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($requestId);
 
         try {
-            $pairingUrl = route('kiosk.authorize', ['code' => $this->pairingCode]);
-            $this->pairingQrCode = (new SvgWriter())->write(new QrCode(data: $pairingUrl, size: 320, margin: 10))->getDataUri();
-        } catch (\Throwable $exception) {
-            report($exception);
-            $this->pairingQrUnavailable = true;
+            $action->handle($request, auth()->user());
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(["pendingRequestCenters.{$requestId}" => $exception->getMessage()]);
         }
+
+        Session::flash('status', 'La solicitud de terminal fue rechazada.');
     }
 
     public function revokeKioskDevice(int $deviceId, RevokeKioskDeviceAction $action, CurrentCompany $currentCompany): void
@@ -122,15 +132,6 @@ new class extends Component {
         $device = KioskDevice::query()->where('company_id', $company->id)->findOrFail($deviceId);
 
         $action->handle($device, auth()->user());
-
-        if ($this->pairingDeviceId === $device->id) {
-            $this->pairingCode = null;
-            $this->pairingQrCode = null;
-            $this->pairingQrUnavailable = false;
-            $this->pairingDeviceId = null;
-            $this->pairingDeviceName = null;
-            $this->pairingExpiresAt = null;
-        }
 
         Session::flash('status', 'La terminal fue eliminada. Ya no puede registrar marcajes.');
     }
@@ -175,6 +176,13 @@ new class extends Component {
                 ->where('company_id', $company->id)
                 ->latest()
                 ->get(),
+            'pendingKioskTerminalRequests' => KioskTerminalAccessRequest::query()
+                ->where('company_id', $company->id)
+                ->where('status', 'pending')
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->get(),
+            'kioskEnrollmentIdentifier' => $company->setting?->kiosk_enrollment_identifier,
             'activeCenters' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
         ];
     }
@@ -431,46 +439,78 @@ new class extends Component {
         <section class="space-y-5 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <div>
                 <flux:heading>Terminales autorizadas</flux:heading>
-                <flux:subheading>Autoriza cada computadora o tableta antes de usarla como kiosco. El codigo de emparejamiento vence una hora despues de generarse.</flux:subheading>
+                <flux:subheading>Una terminal solicita acceso con el codigo de empresa y su clave. Solo puede registrar asistencias despues de que un administrador la apruebe.</flux:subheading>
             </div>
 
-            <form wire:submit="createKioskDevicePairing" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-[1fr_240px_auto] md:items-end">
-                <flux:input wire:model="kioskDeviceForm.name" label="Nombre de la terminal" placeholder="Ej. Recepcion planta norte" />
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro (opcional)</label>
-                    <x-ui.select wire:model="kioskDeviceForm.center_id">
-                        <option value="">Todos los centros</option>
-                        @foreach ($activeCenters as $center)
-                            <option value="{{ $center->id }}">{{ $center->name }}</option>
-                        @endforeach
-                    </x-ui.select>
-                    @error('kioskDeviceForm.center_id')
-                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
+            <div class="rounded-lg border border-brand-blue/30 bg-blue-50 p-4 dark:bg-blue-950/20">
+                <p class="text-sm font-semibold text-brand-navy">Codigo de empresa</p>
+                @if ($kioskEnrollmentIdentifier)
+                    <p class="mt-2 inline-flex rounded border border-blue-200 bg-white px-3 py-2 font-mono text-base font-semibold tracking-wide text-surface-text">{{ $kioskEnrollmentIdentifier }}</p>
+                    <p class="mt-2 text-xs text-surface-muted">Comparte este codigo con la persona que prepara el equipo. No es una credencial de marcaje y puede mostrarse en esta pantalla.</p>
+                @else
+                    <p class="mt-2 text-sm text-status-pending-text">Guarda la clave de solicitud para generar el codigo de empresa.</p>
+                @endif
+            </div>
+
+            <form wire:submit="updateKioskEnrollmentKey" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-2 md:items-end">
+                <flux:input wire:model="kioskEnrollmentKeyForm.key" type="password" label="{{ $kioskEnrollmentIdentifier ? 'Nueva clave de solicitud' : 'Clave de solicitud' }}" autocomplete="new-password" description="Minimo 12 caracteres. Permite solicitar una terminal, pero nunca registra asistencias sin aprobacion." />
+                <flux:input wire:model="kioskEnrollmentKeyForm.key_confirmation" type="password" label="Confirmar clave" autocomplete="new-password" />
+                <div class="md:col-span-2">
+                    <button type="submit" class="btn-primary">{{ $kioskEnrollmentIdentifier ? 'Cambiar clave de solicitud' : 'Guardar clave de solicitud' }}</button>
                 </div>
-                <button type="submit" class="btn-primary">Generar codigo</button>
             </form>
 
-            @if ($pairingCode)
-                <div class="grid gap-5 rounded-lg border border-brand-blue/30 bg-blue-50 p-5 dark:bg-blue-950/20 md:grid-cols-[180px_1fr]">
-                    @if ($pairingQrCode)
-                        <img src="{{ $pairingQrCode }}" alt="Codigo QR para autorizar {{ $pairingDeviceName }}" class="h-44 w-44 rounded bg-white p-2">
-                    @else
-                        <div class="flex h-44 w-44 items-center justify-center rounded border border-blue-200 bg-white p-4 text-center text-xs text-surface-muted">
-                            QR no disponible. Usa el codigo manual.
-                        </div>
-                    @endif
-                    <div>
-                        <p class="font-semibold text-brand-navy">Autoriza: {{ $pairingDeviceName }}</p>
-                        <p class="mt-1 text-sm text-surface-muted">Escanea el QR desde la terminal o abre <span class="font-mono">/time/kiosk/authorize</span> y pega este codigo.</p>
-                        <p class="mt-3 break-all rounded border border-blue-200 bg-white px-3 py-2 font-mono text-sm text-surface-text">{{ $pairingCode }}</p>
-                        <p class="mt-3 text-xs font-medium text-status-pending-text">Vence el {{ $pairingExpiresAt }}. Al completar el emparejamiento, este codigo deja de servir.</p>
-                        @if ($pairingQrUnavailable)
-                            <p class="mt-2 text-xs text-surface-muted">El codigo manual sigue siendo valido. Revisa la instalacion de la dependencia QR en el servidor para volver a mostrar la imagen.</p>
-                        @endif
-                    </div>
+            <div class="space-y-3 rounded-lg border border-surface-line p-4">
+                <div>
+                    <flux:heading size="lg">Solicitudes pendientes</flux:heading>
+                    <flux:subheading>Revisa el equipo, selecciona un centro si aplica y acepta o rechaza. La terminal sigue esperando en su pantalla hasta recibir tu decision.</flux:subheading>
                 </div>
-            @endif
+
+                <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            <tr>
+                                <th class="px-3 py-2">Terminal</th>
+                                <th class="px-3 py-2">Informacion del equipo</th>
+                                <th class="px-3 py-2">Centro al aprobar</th>
+                                <th class="px-3 py-2">Solicitada</th>
+                                <th class="px-3 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                            @forelse ($pendingKioskTerminalRequests as $request)
+                                <tr wire:key="kiosk-request-{{ $request->id }}">
+                                    <td class="px-3 py-3 font-medium">{{ $request->requested_name }}</td>
+                                    <td class="px-3 py-3 text-xs text-surface-muted">
+                                        <div>{{ $request->requested_ip ?? 'IP no disponible' }}</div>
+                                        <div class="mt-1 max-w-xs truncate" title="{{ $request->requested_user_agent }}">{{ $request->requested_user_agent ?: 'Navegador no disponible' }}</div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <x-ui.select wire:model="pendingRequestCenters.{{ $request->id }}">
+                                            <option value="">Todos los centros</option>
+                                            @foreach ($activeCenters as $center)
+                                                <option value="{{ $center->id }}">{{ $center->name }}</option>
+                                            @endforeach
+                                        </x-ui.select>
+                                        @error("pendingRequestCenters.{$request->id}")
+                                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </td>
+                                    <td class="px-3 py-3 text-xs text-surface-muted">{{ $request->created_at->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
+                                    <td class="px-3 py-3 text-right">
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" wire:click="approveKioskTerminalRequest({{ $request->id }})" class="btn-primary btn-sm">Aceptar</button>
+                                            <button type="button" wire:click="rejectKioskTerminalRequest({{ $request->id }})" wire:confirm="La terminal no podra registrar asistencias. ¿Rechazar solicitud?" class="btn-secondary btn-sm">Rechazar</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-3 py-8 text-center text-surface-muted">No hay solicitudes pendientes.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
                 <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
