@@ -47,6 +47,20 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         if (! $this->loadKioskCompanyFromDevice()) {
             $this->redirectRoute('kiosk.authorize');
+
+            return;
+        }
+
+        $toast = session()->pull('kiosk_toast');
+
+        if (is_array($toast)) {
+            \Flux\Flux::toast(
+                $toast['text'] ?? '',
+                $toast['heading'] ?? null,
+                5000,
+                $toast['variant'] ?? 'info',
+                'top end',
+            );
         }
     }
 

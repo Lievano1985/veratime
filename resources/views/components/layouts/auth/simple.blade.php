@@ -4,8 +4,9 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        @if (request()->routeIs('login', 'kiosk.index'))
+        @if (request()->routeIs('login', 'kiosk.*'))
             {{ $slot }}
+            <flux:toast position="top end" />
         @else
             <div class="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
                 <div class="flex w-full max-w-sm flex-col gap-2">
