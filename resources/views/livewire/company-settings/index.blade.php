@@ -452,10 +452,15 @@ new class extends Component {
                 @endif
             </div>
 
-            <form wire:submit="updateKioskEnrollmentKey" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-2 md:items-start">
-                <flux:input wire:model="kioskEnrollmentKeyForm.key" type="password" label="{{ $kioskEnrollmentIdentifier ? 'Nueva clave de solicitud' : 'Clave de solicitud' }}" autocomplete="new-password" description="Minimo 8 caracteres. Permite solicitar una terminal, pero nunca registra asistencias sin aprobacion." />
-                <flux:input wire:model="kioskEnrollmentKeyForm.key_confirmation" type="password" label="Confirmar clave" autocomplete="new-password" />
-                <div class="md:col-span-2">
+            <form wire:submit="updateKioskEnrollmentKey" class="rounded-lg border border-surface-line bg-surface-bg p-4">
+                <p class="mb-3 text-xs text-surface-muted">Minimo 8 caracteres. Permite solicitar una terminal, pero nunca registra asistencias sin aprobacion.</p>
+
+                <div class="grid gap-3 md:grid-cols-2 md:items-start">
+                    <flux:input wire:model="kioskEnrollmentKeyForm.key" type="password" label="{{ $kioskEnrollmentIdentifier ? 'Nueva clave de solicitud' : 'Clave de solicitud' }}" autocomplete="new-password" />
+                    <flux:input wire:model="kioskEnrollmentKeyForm.key_confirmation" type="password" label="Confirmar clave" autocomplete="new-password" />
+                </div>
+
+                <div class="mt-3">
                     <button type="submit" class="btn-primary">{{ $kioskEnrollmentIdentifier ? 'Cambiar clave de solicitud' : 'Guardar clave de solicitud' }}</button>
                 </div>
             </form>
