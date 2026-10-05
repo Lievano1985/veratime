@@ -295,6 +295,7 @@ Los endpoints personales viven bajo el mismo producto y versión, pero con un es
 POST /api/v1/time/auth/login
 POST /api/v1/time/auth/forgot-password
 GET /api/v1/time/me
+GET /api/v1/time/me/marking-security
 GET /api/v1/time/me/alerts
 GET /api/v1/time/me/schedule
 GET /api/v1/time/me/time-events
@@ -304,9 +305,11 @@ GET /api/v1/time/me/time-events/{eventId}
 GET /api/v1/time/me/work-days
 GET /api/v1/time/me/work-days/{workDayId}
 DELETE /api/v1/time/me/access-token
+POST /api/v1/time/me/device-binding/challenge
+POST /api/v1/time/me/device-binding/complete
 ```
 
-Requieren token Bearer personal, empresa/producto Time operativos, usuario y membresía activos y vínculo activo con un trabajador de esa empresa. Las consultas y la revocación requieren `self:read`; el marcaje requiere `self:read` y `self:write`. No requieren ni habilitan los roles administrativos del grupo operativo.
+Requieren token Bearer personal, empresa/producto Time operativos, usuario y membresía activos y vínculo activo con un trabajador de esa empresa. Las consultas y la revocación requieren `self:read`; el marcaje requiere `self:read` y `self:write`. No requieren ni habilitan los roles administrativos del grupo operativo. La seguridad de marcaje, la vinculación y las rutas aún por implementar se norman en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md`; se activarán de forma gradual por política de empresa.
 
 #### `GET /me`
 
@@ -364,12 +367,12 @@ Registra un evento de jornada desde el cliente responsive/PWA de la persona vinc
 - El cuerpo permite únicamente `event_type` (`clock_in`, `clock_out`, `break_start`, `break_end`), `occurred_at`, `timezone` opcional, `metadata` opcional y `device` opcional con `device.code` y `device.name`. `occurred_at` se valida como fecha y `timezone` como zona horaria válida.
 - `company_id`, `worker_id`, `employee_code`, `center_id`, `user_id` y `external_id` están prohibidos. El centro y la relación laboral se resuelven desde la relación activa del trabajador; no pueden ser elegidos ni sustituidos por el cliente.
 - El servidor fija `source` a `pwa` y registra al usuario autenticado como `source_user_id`; el cliente no puede modificar esos valores. La respuesta incluye el evento y `meta.trace_id`.
-- No incorpora biometría, aplicación nativa ni geolocalización. `device` y `metadata` conservan información declarada por el cliente, pero este contrato no obtiene, verifica ni exige coordenadas, huella o rostro.
+- El contrato base no acepta huellas, rostros ni otros datos biométricos. Cuando una política de seguridad móvil esté activa, el evento debe adjuntar el objeto `security` definido en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md`; el backend valida vínculo, versión de política, evidencia de ubicación y firma sin almacenar biometría cruda.
 - El marcaje no administra trabajadores, centros, incidencias, alertas ni datos de otras personas. Las correcciones, anulaciones y revisiones conservan sus flujos administrativos y de evidencia separados.
 
 #### `POST /me/time-events/sync`
 
-Sincroniza de uno a 25 marcajes personales pendientes. Requiere `self:read` y `self:write`; cada elemento de `events` exige `client_event_id` único dentro del lote, `event_type` y `occurred_at`, y puede incluir zona horaria, metadatos y datos de dispositivo. `client_event_id` se usa como la llave de idempotencia de ese evento.
+Sincroniza de uno a 25 marcajes personales pendientes. Requiere `self:read` y `self:write`; cada elemento de `events` exige `client_event_id` único dentro del lote, `event_type` y `occurred_at`, y puede incluir zona horaria, metadatos y datos de dispositivo. Cuando la política efectiva lo exija, incluye la evidencia `security` definida en API-0002. `client_event_id` se usa como la llave de idempotencia de ese evento.
 
 El servidor conserva el tenant, trabajador, relación, centro, fuente `pwa` y usuario fuente resueltos desde el token. Prohíbe `company_id`, `worker_id`, `employee_code`, `center_id`, `user_id` y `external_id` tanto en el lote como en cada elemento. La respuesta `200` devuelve por evento `accepted`, `already_registered` o `rejected`, con evento o error según corresponda, además de los contadores `meta.accepted`, `meta.already_registered`, `meta.rejected` y `trace_id`. Un lote inválido estructuralmente responde `422`.
 
@@ -386,10 +389,10 @@ El servidor conserva el tenant, trabajador, relación, centro, fuente `pwa` y us
 | Canal | Autenticación | Alcance permitido | No permitido |
 |---|---|---|---|
 | API operativa administrativa | Token de empresa con rol administrativo y scope del recurso | Listados/operaciones de la empresa, según policy | Usarse como acceso personal de trabajador sin los permisos correspondientes |
-| API personal `/me` | Inicio de sesión por correo/contraseña con selección explícita de empresa cuando aplica; token personal, membresía y vínculo `user`-`worker` activos; `self:read` para consulta y `self:read` + `self:write` para marcaje | Consultar contexto, alertas, programación publicada, eventos y jornadas propios; registrar y sincronizar los propios marcajes PWA | Elegir trabajador/empresa/centro/relación/responsable después de emitir token, ver datos ajenos, administrar empresa, asignar o resolver alertas, enviar `source` o `source_user_id`, usar biometría, geolocalización o app nativa |
+| API personal `/me` | Inicio de sesión por correo/contraseña con selección explícita de empresa cuando aplica; token personal, membresía y vínculo `user`-`worker` activos; `self:read` para consulta y `self:read` + `self:write` para marcaje | Consultar contexto, alertas, programación publicada, eventos y jornadas propios; registrar y sincronizar los propios marcajes PWA; cuando una política lo exija, enviar evidencia de seguridad definida por servidor | Elegir trabajador/empresa/centro/relación/responsable después de emitir token, ver datos ajenos, administrar empresa, asignar o resolver alertas, enviar `source` o `source_user_id`, transmitir biometría cruda o sustituir la política/vínculo emitidos por servidor |
 | Kiosco | Activación técnica de empresa y código/NIP de marcaje | Identificar y registrar los eventos permitidos al trabajador | Crear sesión de portal, consultar `/me`, usar contraseña principal, ver jornadas/incidencias/reportes o administrar tokens |
 
-La aplicación nativa permanece fuera de P0. Si se incorpora después, consumirá este contrato personal sin crear una autenticación ni rutas paralelas.
+El cliente Android/PWA podrá consumir este mismo contrato personal y de seguridad sin crear una autenticación ni rutas paralelas. La seguridad del dispositivo se incorpora al MVP conforme a API-0002; el desarrollo de la aplicación continúa como proyecto independiente.
 
 ---
 
@@ -2168,9 +2171,9 @@ Una cuenta humana de `users` es la identidad unica para el portal web y el clien
 
 La vinculacion entre la cuenta y `workers` es explicita y acotada por empresa. En esta fase permite consultar solo eventos y jornadas propios; horarios, incidencias y reportes personales quedan para incrementos posteriores autorizados. Revocar un token movil no desactiva automaticamente la cuenta web ni la relacion laboral.
 
-El kiosco es un canal distinto: se activa con una clave tecnica de empresa y usa una credencial de marcaje codigo/NIP ligada al trabajador y, cuando exista, a la misma cuenta humana. El NIP se conserva hasheado y la contrasena principal nunca se captura ni se reutiliza en la terminal. Un kiosco solo puede identificar y registrar los eventos permitidos; no obtiene una sesion de portal ni acceso a datos personales, incidencias, reportes o administracion.
+El kiosco es un canal distinto: cada terminal se autoriza mediante QR o código temporal y después usa una credencial de marcaje código/NIP ligada al trabajador y, cuando exista, a la misma cuenta humana. El NIP se conserva hasheado y la contraseña principal nunca se captura ni se reutiliza en la terminal. Un kiosco solo puede identificar y registrar los eventos permitidos; no obtiene una sesión de portal ni acceso a datos personales, incidencias, reportes o administración.
 
-La aplicacion nativa sigue fuera de P0. Cualquier cliente nativo futuro consumira este mismo contrato API y no una autenticacion paralela.
+El cliente Android/PWA usará este mismo contrato API y no una autenticación paralela. La implementación de la aplicación permanece separada del backend.
 
 ## Convencion de rutas por producto
 

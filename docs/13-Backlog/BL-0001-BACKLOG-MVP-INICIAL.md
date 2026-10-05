@@ -880,6 +880,11 @@ Historias que se agregan al alcance P0:
 | BL-0108 | Vinculo usuario-trabajador | La cuenta se vincula explícitamente y sólo al trabajador de la empresa autorizada; no se infiere por datos coincidentes ni otorga acceso horizontal. |
 | BL-0613 | Acceso personal web/movil por API | Token personal con usuario y empresa resueltos por servidor; `self:read` consulta y `self:write` permite marcaje individual y sincronización de hasta 25 eventos para el trabajador vinculado activo. Incluye recuperación de contraseña sin enumeración de cuentas; no acepta contexto manipulable de empresa/trabajador/centro, exige `Idempotency-Key` o `client_event_id` según el canal y `DELETE /api/v1/time/me/access-token` revoca sólo el token actual. |
 | BL-1408 | Pruebas de identidad por canal | Se prueban vínculo, estados, revocación, scopes, recuperación sin enumeración e idempotencia de portal, token personal y kiosco; la API personal no devuelve información ajena ni permite sustituir contexto aunque reciba identificadores externos. |
+| BL-0614 | Politica efectiva de seguridad movil | El cliente obtiene solo la politica, vinculo y referencia de tiempo aplicables a su token; no puede seleccionar empresa, trabajador o centro. |
+| BL-0615 | Vinculo supervisado de dispositivo | RH autoriza un desafio de un solo uso; el dispositivo prueba posesion de su clave y el vinculo puede revocarse sin borrar evidencia. |
+| BL-0616 | Evidencia firmada de marcaje | Los marcajes sujetos a politica preservan version, vinculo, ubicacion y firma; no almacenan huella, rostro, IMEI ni plantilla biometrica. |
+| BL-0617 | Validacion y conciliacion de seguridad | Sync conserva idempotencia, rechazos y pendientes; UUID con payload distinto es conflicto y no se pierden eventos por fallas de red. |
+| BL-0618 | Pruebas de seguridad y privacidad movil | Se prueban aislamiento por empresa, revocacion, firma, politica vencida, ubicacion no verificable, offline y ausencia de coordenadas en logs. |
 
 Estado de avance del incremento:
 
@@ -889,4 +894,10 @@ Estado de avance del incremento:
 - BL-0613 está implementada para consulta y marcaje personal: token Sanctum con `company_id`, emisión desde sesión web o `POST /api/v1/time/auth/login` con vínculo activo y scopes `self:read` + `self:write`; listados y detalle propios de eventos y jornadas bajo `/api/v1/time/me`, más marcaje individual y `POST /api/v1/time/me/time-events/sync` de hasta 25 eventos. El marcaje individual exige `Idempotency-Key`; la sincronización usa `client_event_id` como idempotencia por evento y reporta `accepted`, `already_registered` o `rejected`. `POST /api/v1/time/auth/forgot-password` responde de forma uniforme para no enumerar cuentas. El canal deriva empresa del token y trabajador del vínculo, fija `source` a `pwa` y el usuario fuente en servidor, y rechaza con `422` identificadores o campos que intentarían sustituir el contexto; no implementa biometría, app nativa ni geolocalización.
 - BL-1408 permanece **en revisión**: existen pruebas de aislamiento, revocación, scopes, contexto prohibido, recuperación sin enumeración e idempotencia individual y por lote del canal personal; faltan cerrar la matriz de estados de cuenta, membresía, producto y la verificación manual de los canales portal/PWA y kiosco.
 
-La aplicacion nativa iOS/Android continua fuera de P0. El contrato API y el portal responsive/PWA seran la base movil inicial.
+La aplicacion nativa iOS/Android continua como proyecto independiente. El contrato API y el portal responsive/PWA son la base movil inicial.
+
+### Bloque P0 adicional - Seguridad de marcaje movil
+
+BL-0614 a BL-0618 se incorporan al MVP por decision expresa de producto. El contrato aprobado esta en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md` y la decision arquitectonica en `ADR-0010-SEGURIDAD-DE-MARCAJE-MOVIL.md`. Aun no existen las rutas, persistencia, administracion ni pruebas de este bloque.
+
+La biometria se limita al desbloqueo local de una clave criptografica y no implica capturar, transmitir o almacenar datos biometricos. Esta decision sustituye, solo para este bloque de seguridad movil, la nota previa que excluia geolocalizacion y biometria del canal personal. El reconocimiento facial y el almacenamiento de biometria continúan fuera del MVP.
