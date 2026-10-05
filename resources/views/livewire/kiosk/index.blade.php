@@ -6,6 +6,7 @@ use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
 use App\Models\Company;
 use App\Models\KioskDevice;
 use App\Models\WorkerCredential;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
@@ -194,7 +195,24 @@ new #[Layout('components.layouts.auth')] class extends Component {
             $this->kioskCompanyName = null;
             $this->kioskDeviceId = null;
             $this->kioskDeviceName = null;
+
+            return null;
         }
+
+        // Livewire updates use a route outside /time/kiosk. Reissue the
+        // terminal cookie at the application root so polling keeps receiving it.
+        Cookie::queue(Cookie::make(
+            self::DEVICE_COOKIE,
+            $token,
+            60 * 24 * 365,
+            '/',
+            null,
+            request()->isSecure() || app()->environment('production'),
+            true,
+            false,
+            'strict',
+        ));
+        Cookie::queue(Cookie::forget(self::DEVICE_COOKIE, '/time/kiosk'));
 
         return $device;
     }

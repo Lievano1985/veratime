@@ -71,7 +71,7 @@ new class extends Component {
         Gate::authorize('update', $company);
 
         $validated = $this->validate([
-            'kioskEnrollmentKeyForm.key' => ['required', 'string', 'min:12', 'max:120', 'confirmed'],
+            'kioskEnrollmentKeyForm.key' => ['required', 'string', 'min:8', 'max:120', 'confirmed'],
         ])['kioskEnrollmentKeyForm'];
 
         $settings = $action->handle($company, auth()->user(), $validated['key']);
@@ -452,8 +452,8 @@ new class extends Component {
                 @endif
             </div>
 
-            <form wire:submit="updateKioskEnrollmentKey" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-2 md:items-end">
-                <flux:input wire:model="kioskEnrollmentKeyForm.key" type="password" label="{{ $kioskEnrollmentIdentifier ? 'Nueva clave de solicitud' : 'Clave de solicitud' }}" autocomplete="new-password" description="Minimo 12 caracteres. Permite solicitar una terminal, pero nunca registra asistencias sin aprobacion." />
+            <form wire:submit="updateKioskEnrollmentKey" class="grid gap-3 rounded-lg border border-surface-line bg-surface-bg p-4 md:grid-cols-2 md:items-start">
+                <flux:input wire:model="kioskEnrollmentKeyForm.key" type="password" label="{{ $kioskEnrollmentIdentifier ? 'Nueva clave de solicitud' : 'Clave de solicitud' }}" autocomplete="new-password" description="Minimo 8 caracteres. Permite solicitar una terminal, pero nunca registra asistencias sin aprobacion." />
                 <flux:input wire:model="kioskEnrollmentKeyForm.key_confirmation" type="password" label="Confirmar clave" autocomplete="new-password" />
                 <div class="md:col-span-2">
                     <button type="submit" class="btn-primary">{{ $kioskEnrollmentIdentifier ? 'Cambiar clave de solicitud' : 'Guardar clave de solicitud' }}</button>

@@ -19,9 +19,10 @@ class SetKioskEnrollmentKeyAction
 
         return DB::transaction(function () use ($company, $key): CompanySetting {
             $settings = $company->setting()->lockForUpdate()->firstOrFail();
+            $identifier = $settings->kiosk_enrollment_identifier;
 
             $settings->forceFill([
-                'kiosk_enrollment_identifier' => $settings->kiosk_enrollment_identifier ?: $this->newIdentifier(),
+                'kiosk_enrollment_identifier' => $this->isCurrentIdentifier($identifier) ? $identifier : $this->newIdentifier(),
                 'kiosk_enrollment_key_hash' => Hash::make($key),
             ])->save();
 
@@ -37,9 +38,14 @@ class SetKioskEnrollmentKeyAction
     private function newIdentifier(): string
     {
         do {
-            $identifier = 'VT-'.Str::upper(Str::random(10));
+            $identifier = 'VT-'.Str::upper(Str::random(6));
         } while (CompanySetting::query()->where('kiosk_enrollment_identifier', $identifier)->exists());
 
         return $identifier;
+    }
+
+    private function isCurrentIdentifier(?string $identifier): bool
+    {
+        return is_string($identifier) && preg_match('/^VT-[A-Z0-9]{6}$/', $identifier) === 1;
     }
 }

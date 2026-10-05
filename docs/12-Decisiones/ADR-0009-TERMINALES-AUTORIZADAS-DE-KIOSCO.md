@@ -25,7 +25,7 @@ La direccion IP, MAC, navegador o numero de serie no son una identidad confiable
 
 Se agregan `kiosk_devices` y `kiosk_terminal_access_requests`, ambos separados por `company_id`. Las solicitudes representan un equipo que espera aprobacion; los dispositivos representan exclusivamente terminales que ya reclamaron su credencial.
 
-1. Un administrador configura desde **Configuracion de empresa > Terminales de kiosco** una clave de solicitud. Vera genera tambien un codigo publico de empresa. La clave se guarda con hash y nunca se muestra despues de guardarla.
+1. Un administrador configura desde **Configuracion de empresa > Terminales de kiosco** una clave de solicitud de minimo ocho caracteres. Vera genera tambien un codigo publico corto de empresa (`VT-` y seis caracteres). La clave se guarda con hash y nunca se muestra despues de guardarla.
 2. Un equipo nuevo abre `/time/kiosk`, captura su nombre, el codigo de empresa y la clave de solicitud. Esto crea una solicitud temporal pendiente; conocer la clave no permite registrar asistencias ni recibir una credencial de terminal.
 3. El administrador ve la bandeja de solicitudes de su propia empresa, revisa nombre, IP y navegador, y puede elegir un centro opcional antes de aceptar o rechazar.
 4. Aceptar una solicitud no crea todavia una terminal activa. El mismo navegador solicitante reclama la aprobacion usando un secreto aleatorio propio, de un solo uso y valido por quince minutos. Solo al reclamarlo se crea `kiosk_devices` y se emite el secreto de terminal.

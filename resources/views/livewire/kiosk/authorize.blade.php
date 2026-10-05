@@ -23,7 +23,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public function mount(): void
     {
-        $this->waitingForApproval = filled(request()->cookie(self::REQUEST_COOKIE));
+        $requestSecret = request()->cookie(self::REQUEST_COOKIE);
+        $this->waitingForApproval = filled($requestSecret);
+
+        if ($this->waitingForApproval) {
+            $this->queueRequestCookie($requestSecret);
+        }
     }
 
     public function requestAuthorization(RequestKioskTerminalAccessAction $action): void
@@ -44,8 +49,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
             return;
         }
 
-        if (mb_strlen($key) < 12 || mb_strlen($key) > 120) {
-            $this->showRequestError('La clave de solicitud debe tener entre 12 y 120 caracteres.');
+        if (mb_strlen($key) < 8 || mb_strlen($key) > 120) {
+            $this->showRequestError('La clave de solicitud debe tener entre 8 y 120 caracteres.');
 
             return;
         }
@@ -79,13 +84,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
             self::REQUEST_COOKIE,
             $request['request_secret'],
             15,
-            '/time/kiosk',
+            '/',
             null,
             request()->isSecure() || app()->environment('production'),
             true,
             false,
             'strict',
         ));
+        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
 
         $this->enrollmentKey = '';
         $this->waitingForApproval = true;
@@ -106,18 +112,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $result = $action->handle($requestSecret, request()->ip(), request()->userAgent());
 
         if ($result['status'] === 'claimed') {
-            Cookie::queue(Cookie::make(
-                self::DEVICE_COOKIE,
-                $result['device_token'],
-                60 * 24 * 365,
-                '/time/kiosk',
-                null,
-                request()->isSecure() || app()->environment('production'),
-                true,
-                false,
-                'strict',
-            ));
-            Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
+            $this->queueDeviceCookie($result['device_token']);
+            $this->forgetRequestCookie();
 
             session()->flash('kiosk_toast', [
                 'text' => 'Esta terminal fue autorizada y ya esta lista para registrar asistencias.',
@@ -132,7 +128,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             return;
         }
 
-        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
+        $this->forgetRequestCookie();
         $this->waitingForApproval = false;
 
         $message = match ($result['status']) {
@@ -150,6 +146,44 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->addError('enrollmentKey', $message);
 
         Flux::toast($message, 'No fue posible solicitar la terminal', 6000, 'danger', 'top end');
+    }
+
+    private function queueRequestCookie(string $requestSecret): void
+    {
+        Cookie::queue(Cookie::make(
+            self::REQUEST_COOKIE,
+            $requestSecret,
+            15,
+            '/',
+            null,
+            request()->isSecure() || app()->environment('production'),
+            true,
+            false,
+            'strict',
+        ));
+        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
+    }
+
+    private function queueDeviceCookie(string $deviceToken): void
+    {
+        Cookie::queue(Cookie::make(
+            self::DEVICE_COOKIE,
+            $deviceToken,
+            60 * 24 * 365,
+            '/',
+            null,
+            request()->isSecure() || app()->environment('production'),
+            true,
+            false,
+            'strict',
+        ));
+        Cookie::queue(Cookie::forget(self::DEVICE_COOKIE, '/time/kiosk'));
+    }
+
+    private function forgetRequestCookie(): void
+    {
+        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/'));
+        Cookie::queue(Cookie::forget(self::REQUEST_COOKIE, '/time/kiosk'));
     }
 }; ?>
 
@@ -196,7 +230,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                         <div>
                             <label for="company-identifier" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Codigo de empresa</label>
-                            <input id="company-identifier" wire:model="companyIdentifier" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="Ej. VT-AB12CD34EF" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 font-mono text-sm uppercase outline-none transition placeholder:font-sans placeholder:normal-case placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
+                            <input id="company-identifier" wire:model="companyIdentifier" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="Ej. VT-AB12CD" class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3 font-mono text-sm uppercase outline-none transition placeholder:font-sans placeholder:normal-case placeholder:text-[#9AA8BB] focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
                         </div>
 
                         <div>

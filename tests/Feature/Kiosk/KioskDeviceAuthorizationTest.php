@@ -18,7 +18,9 @@ use App\Models\User;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\Cookie;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-01 15:00:00', 'UTC'));
@@ -41,6 +43,7 @@ it('creates a pending terminal request without storing its secret in plain text'
     );
 
     expect($request['request']->status)->toBe('pending')
+        ->and($settings->kiosk_enrollment_identifier)->toMatch('/^VT-[A-Z0-9]{6}$/')
         ->and($request['request']->expires_at?->toDateTimeString())->toBe('2026-10-01 15:15:00')
         ->and($request['request']->request_secret_hash)->toBe(hash('sha256', $request['request_secret']))
         ->and($request['request']->getAttributes())->not->toHaveKey('request_secret')
@@ -67,6 +70,16 @@ it('uses a popup notification when the terminal request is incomplete', function
         });
 });
 
+it('reissues a pending request cookie at the application root for Livewire polling', function (): void {
+    $requestSecret = 'test-kiosk-request-secret';
+
+    $response = $this->withCookie('vera_kiosk_terminal_request', $requestSecret)
+        ->get(route('kiosk.authorize'))
+        ->assertOk();
+
+    expect(responseCookieValue($response, 'vera_kiosk_terminal_request', '/'))->not->toBeNull();
+});
+
 it('shows a success popup after a terminal has been authorized', function (): void {
     [$company] = kioskDeviceManager();
     $deviceToken = 'test-kiosk-device-token';
@@ -88,6 +101,22 @@ it('shows a success popup after a terminal has been authorized', function (): vo
         ->assertOk()
         ->assertSee('toast-show', false)
         ->assertSee('Terminal autorizada para '.$company->name.'.');
+});
+
+it('reissues a legacy terminal cookie at the application root for kiosco polling', function (): void {
+    [$company] = kioskDeviceManager();
+    $deviceToken = 'test-kiosk-device-token';
+
+    KioskDevice::factory()->active()->create([
+        'company_id' => $company->id,
+        'device_token_hash' => hash('sha256', $deviceToken),
+    ]);
+
+    $response = $this->withCookie('vera_kiosk_device', $deviceToken)
+        ->get(route('kiosk.index'))
+        ->assertOk();
+
+    expect(responseCookieValue($response, 'vera_kiosk_device', '/'))->not->toBeNull();
 });
 
 it('only creates an active terminal when its approved request is claimed once', function (): void {
@@ -270,4 +299,11 @@ function authorizedKioskTerminal(Company $company, User $manager): array
     app(ApproveKioskTerminalAccessRequestAction::class)->handle($request['request'], $manager);
 
     return app(ClaimKioskTerminalAccessRequestAction::class)->handle($request['request_secret']);
+}
+
+function responseCookieValue(TestResponse $response, string $name, string $path): ?string
+{
+    return collect($response->headers->getCookies())
+        ->first(fn (Cookie $cookie): bool => $cookie->getName() === $name && $cookie->getPath() === $path)
+        ?->getValue();
 }
