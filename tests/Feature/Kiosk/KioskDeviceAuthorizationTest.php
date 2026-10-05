@@ -13,6 +13,8 @@ use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
+use Livewire\Livewire;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-01 15:00:00', 'UTC'));
@@ -39,7 +41,43 @@ it('shows the public manual authorization screen without an administrator sessio
     $this->get(route('kiosk.authorize'))
         ->assertOk()
         ->assertSee('Autorizar terminal')
-        ->assertSee('Codigo de autorizacion');
+        ->assertSee('Codigo de autorizacion')
+        ->assertSee('ui-toast', false)
+        ->assertDontSee('class="flex w-full max-w-sm flex-col gap-2"', false);
+});
+
+it('uses a popup notification when the authorization code is missing', function (): void {
+    Livewire::test('kiosk.authorize')
+        ->call('authorizeDevice')
+        ->assertHasErrors('pairingCode')
+        ->assertDispatched('toast-show', function (string $name, array $params): bool {
+            return $name === 'toast-show'
+                && $params['slots']['text'] === 'Escribe un codigo de autorizacion valido.'
+                && $params['dataset']['variant'] === 'danger';
+        });
+});
+
+it('shows a success popup after a terminal has been authorized', function (): void {
+    [$company] = kioskDeviceManager();
+    $deviceToken = 'test-kiosk-device-token';
+
+    KioskDevice::factory()->active()->create([
+        'company_id' => $company->id,
+        'device_token_hash' => hash('sha256', $deviceToken),
+    ]);
+
+    $this->withSession([
+        'kiosk_toast' => [
+            'text' => 'Terminal autorizada para '.$company->name.'.',
+            'heading' => 'Terminal lista para usarse',
+            'variant' => 'success',
+        ],
+    ])
+        ->withCookie('vera_kiosk_device', $deviceToken)
+        ->get(route('kiosk.index'))
+        ->assertOk()
+        ->assertSee('toast-show', false)
+        ->assertSee('Terminal autorizada para '.$company->name.'.');
 });
 
 it('pairs a terminal once, resolves it only with its device secret, and records its last connection', function (): void {
@@ -103,7 +141,7 @@ it('does not let a manager delete a terminal from another company', function ():
     $otherDevice = KioskDevice::factory()->active()->create(['company_id' => $otherCompany->id]);
 
     expect(fn () => app(DeleteKioskDeviceAction::class)->handle($otherDevice, $manager))
-        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+        ->toThrow(AuthorizationException::class);
 
     $this->assertDatabaseHas('kiosk_devices', ['id' => $otherDevice->id, 'deleted_at' => null]);
 });
@@ -115,7 +153,6 @@ it('cannot create a pairing for another company center', function (): void {
     expect(fn () => app(CreateKioskDevicePairingAction::class)->handle($company, $manager, 'Recepcion', $otherCenter->id))
         ->toThrow(InvalidArgumentException::class);
 });
-
 
 /** @return array{0: Company, 1: User} */
 function kioskDeviceManager(): array

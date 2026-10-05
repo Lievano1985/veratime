@@ -1,9 +1,9 @@
 <?php
 
 use App\Domains\TimeRecords\Actions\PairKioskDeviceAction;
+use Flux\Flux;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -19,26 +19,30 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public function authorizeDevice(PairKioskDeviceAction $action)
     {
-        $this->validate([
-            'pairingCode' => ['required', 'string', 'max:100'],
-        ]);
+        $pairingCode = trim($this->pairingCode);
+
+        if ($pairingCode === '' || mb_strlen($pairingCode) > 100) {
+            $this->showAuthorizationError('Escribe un codigo de autorizacion valido.');
+
+            return;
+        }
 
         $throttleKey = 'kiosk-pairing:'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            throw ValidationException::withMessages([
-                'pairingCode' => 'Espera un minuto antes de intentar otro codigo.',
-            ]);
+            $this->showAuthorizationError('Espera un minuto antes de intentar otro codigo.');
+
+            return;
         }
 
         try {
-            $pairing = $action->handle($this->pairingCode, request()->ip(), request()->userAgent());
+            $pairing = $action->handle($pairingCode, request()->ip(), request()->userAgent());
         } catch (\InvalidArgumentException) {
             RateLimiter::hit($throttleKey, 60);
 
-            throw ValidationException::withMessages([
-                'pairingCode' => 'El codigo de autorizacion no es valido o ya vencio.',
-            ]);
+            $this->showAuthorizationError('El codigo de autorizacion no es valido o ya vencio.');
+
+            return;
         }
 
         RateLimiter::clear($throttleKey);
@@ -55,9 +59,20 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'strict',
         ));
 
-        session()->flash('status', 'Terminal autorizada para '.$pairing['device']->company->name.'.');
+        session()->flash('kiosk_toast', [
+            'text' => 'Terminal autorizada para '.$pairing['device']->company->name.'.',
+            'heading' => 'Terminal lista para usarse',
+            'variant' => 'success',
+        ]);
 
         return redirect()->route('kiosk.index');
+    }
+
+    private function showAuthorizationError(string $message): void
+    {
+        $this->addError('pairingCode', $message);
+
+        Flux::toast($message, 'No fue posible autorizar la terminal', 6000, 'danger', 'top end');
     }
 }; ?>
 
@@ -90,10 +105,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         <h1 class="font-display text-[24px] font-bold text-brand-navy">Autorizar terminal</h1>
                         <p class="mt-2 text-[13.5px] leading-relaxed text-surface-muted">Escanea el QR o pega el codigo generado desde Configuracion de empresa. El codigo solo funciona durante una hora y una sola vez.</p>
                     </div>
-
-                    @error('pairingCode')
-                        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-[13px] text-status-pending-text">{{ $message }}</div>
-                    @enderror
 
                     <div>
                         <label for="pairing-code" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Codigo de autorizacion</label>
