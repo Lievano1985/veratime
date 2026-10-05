@@ -25,8 +25,6 @@ class CompanySetting extends Model
         'early_departure_tolerance_minutes',
         'allow_worker_corrections',
         'require_pin_for_kiosk',
-        'kiosk_key_hash',
-        'require_authorized_kiosk_devices',
         'require_pin_for_confirmation',
         'metadata',
     ];
@@ -41,7 +39,6 @@ class CompanySetting extends Model
             'early_departure_tolerance_minutes' => 'integer',
             'allow_worker_corrections' => 'boolean',
             'require_pin_for_kiosk' => 'boolean',
-            'require_authorized_kiosk_devices' => 'boolean',
             'require_pin_for_confirmation' => 'boolean',
             'metadata' => 'array',
         ];

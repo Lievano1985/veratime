@@ -5,7 +5,6 @@ namespace Tests\Feature\Sprint1A;
 use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
-use App\Support\KioskKey;
 use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
@@ -37,7 +36,6 @@ class CompanySettingsTest extends TestCase
             ->set('settingsForm.early_departure_tolerance_minutes', 9)
             ->set('settingsForm.allow_worker_corrections', true)
             ->set('settingsForm.require_pin_for_kiosk', false)
-            ->set('settingsForm.kiosk_key', 'KIOSK-DEMO1!')
             ->set('settingsForm.require_pin_for_confirmation', true)
             ->call('updateSettings');
 
@@ -50,7 +48,6 @@ class CompanySettingsTest extends TestCase
             'early_departure_tolerance_minutes' => 9,
             'allow_worker_corrections' => true,
             'require_pin_for_kiosk' => false,
-            'kiosk_key_hash' => KioskKey::hash('KIOSK-DEMO1!'),
             'require_pin_for_confirmation' => true,
         ]);
         $this->assertDatabaseHas('companies', [
@@ -78,6 +75,7 @@ class CompanySettingsTest extends TestCase
             ->assertSee('Configuración legal')
             ->assertSee('Usuarios')
             ->assertSee('Periodo de cierre')
+            ->assertDontSee('Clave de kiosco')
             ->assertDontSee('Reglas base del pais')
             ->set('activeTab', 'legal')
             ->assertSee('Reglas base del pais')
@@ -107,76 +105,4 @@ class CompanySettingsTest extends TestCase
             ->assertHasErrors(['settingsForm.default_closure_day']);
     }
 
-    public function test_kiosk_key_requires_uppercase_number_and_symbol(): void
-    {
-        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
-        $company = Company::factory()->create();
-        $user = User::factory()->create();
-
-        $user->companies()->attach($company, [
-            'role_id' => $role->id,
-            'status' => 'active',
-            'is_default' => true,
-        ]);
-
-        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-        Volt::test('company-settings.index')
-            ->set('settingsForm.kiosk_key', 'kioskodemo')
-            ->call('updateSettings')
-            ->assertHasErrors(['settingsForm.kiosk_key']);
-    }
-
-    public function test_kiosk_key_must_be_unique_between_companies(): void
-    {
-        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
-        $company = Company::factory()->create();
-        $otherCompany = Company::factory()->create();
-        $user = User::factory()->create();
-
-        $otherCompany->setting()->create(array_replace(Company::defaultSettings(), [
-            'kiosk_key_hash' => KioskKey::hash('KIOSK-REPETIDO1!'),
-        ]));
-
-        $user->companies()->attach($company, [
-            'role_id' => $role->id,
-            'status' => 'active',
-            'is_default' => true,
-        ]);
-
-        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-        Volt::test('company-settings.index')
-            ->set('settingsForm.kiosk_key', 'KIOSK-REPETIDO1!')
-            ->call('updateSettings')
-            ->assertHasErrors(['settingsForm.kiosk_key']);
-    }
-
-    public function test_admin_receives_the_manual_pairing_code_when_authorizing_a_kiosk_terminal(): void
-    {
-        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
-        $company = Company::factory()->create();
-        $user = User::factory()->create();
-
-        $user->companies()->attach($company, [
-            'role_id' => $role->id,
-            'status' => 'active',
-            'is_default' => true,
-        ]);
-
-        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-        Volt::test('company-settings.index')
-            ->set('activeTab', 'kiosk')
-            ->set('kioskDeviceForm.name', 'Recepcion')
-            ->call('createKioskDevicePairing')
-            ->assertSee('Autoriza: Recepcion')
-            ->assertSee('VTK-');
-
-        $this->assertDatabaseHas('kiosk_devices', [
-            'company_id' => $company->id,
-            'name' => 'Recepcion',
-            'status' => 'pending',
-        ]);
-    }
 }

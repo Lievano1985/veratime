@@ -213,8 +213,6 @@ class Company extends Model
             'early_departure_tolerance_minutes' => 0,
             'allow_worker_corrections' => false,
             'require_pin_for_kiosk' => true,
-            'kiosk_key_hash' => null,
-            'require_authorized_kiosk_devices' => false,
             'require_pin_for_confirmation' => true,
             'metadata' => [],
         ];

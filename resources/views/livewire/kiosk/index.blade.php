@@ -2,7 +2,6 @@
 
 use App\Domains\TimeRecords\Actions\RegisterKioskTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
-use App\Domains\TimeRecords\Actions\ResolveKioskCompanyAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
 use App\Models\Company;
 use App\Models\KioskDevice;
@@ -16,11 +15,7 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.auth')] class extends Component {
     private const TOKEN_TTL_MINUTES = 5;
 
-    private const KIOSK_COMPANY_SESSION_KEY = 'kiosk_company_id';
-
     private const DEVICE_COOKIE = 'vera_kiosk_device';
-
-    public string $kioskKey = '';
 
     public ?int $kioskCompanyId = null;
 
@@ -51,55 +46,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public function mount(): void
     {
         if (! $this->loadKioskCompanyFromDevice()) {
-            $this->loadKioskCompanyFromSession();
+            $this->redirectRoute('kiosk.authorize');
         }
-    }
-
-    public function activateKiosk(ResolveKioskCompanyAction $resolveCompany): void
-    {
-        $this->validate([
-            'kioskKey' => ['required', 'string', 'max:80'],
-        ]);
-
-        try {
-            $company = $resolveCompany->handle($this->kioskKey);
-        } catch (\InvalidArgumentException) {
-            $this->kioskKey = '';
-
-            throw ValidationException::withMessages([
-                'kioskKey' => 'No se pudo activar el kiosco.',
-            ]);
-        }
-
-        if ($this->requiresAuthorizedDevice($company)) {
-            $this->kioskKey = '';
-
-            throw ValidationException::withMessages([
-                'kioskKey' => 'Esta empresa requiere una terminal autorizada. Solicita un codigo de autorizacion al administrador.',
-            ]);
-        }
-
-        session([self::KIOSK_COMPANY_SESSION_KEY => $company->id]);
-
-        $this->kioskCompanyId = $company->id;
-        $this->kioskCompanyName = $company->name;
-        $this->kioskKey = '';
-        $this->resetKioskState(keepConfirmation: false);
-    }
-
-    public function clearKioskCompany(): void
-    {
-        session()->forget(self::KIOSK_COMPANY_SESSION_KEY);
-        $this->kioskCompanyId = null;
-        $this->kioskCompanyName = null;
-        $this->kioskKey = '';
-        $this->resetKioskState(keepConfirmation: false);
     }
 
     public function refreshAuthorizedTerminal(): void
     {
-        if (! $this->loadKioskCompanyFromDevice() && $this->isDeviceCookiePresent()) {
+        if (! $this->loadKioskCompanyFromDevice()) {
             $this->resetKioskState();
+            $this->redirectRoute('kiosk.authorize');
         }
     }
 
@@ -108,9 +63,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $company = $this->kioskCompanyOrFail();
         $device = $this->authorizedDeviceOrNull();
 
-        if ($this->requiresAuthorizedDevice($company) && ! $device) {
+        if (! $device) {
             throw ValidationException::withMessages([
-                'kioskKey' => 'Esta empresa requiere una terminal autorizada. Solicita un codigo de autorizacion al administrador.',
+                'accessCode' => 'Esta terminal ya no esta autorizada. Solicita un codigo de autorizacion al administrador.',
             ]);
         }
 
@@ -152,7 +107,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $credential = $this->credentialFromToken();
         $device = $this->authorizedDeviceOrNull();
 
-        if ($this->requiresAuthorizedDevice($credential->company) && ! $device) {
+        if (! $device) {
             $this->resetKioskState();
 
             throw ValidationException::withMessages([
@@ -181,38 +136,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
         Session::flash('status', $this->confirmationMessage);
 
         $this->resetKioskState(keepConfirmation: true);
-        $this->loadKioskCompanyFromSession();
     }
 
     public function resetKiosk(): void
     {
         $this->resetKioskState(keepConfirmation: false);
-        $this->loadKioskCompanyFromSession();
-    }
-
-    private function loadKioskCompanyFromSession(): void
-    {
-        $companyId = session(self::KIOSK_COMPANY_SESSION_KEY);
-
-        if (! $companyId) {
-            return;
-        }
-
-        $company = Company::query()
-            ->whereKey($companyId)
-            ->where('status', 'active')
-            ->first();
-
-        if (! $company) {
-            session()->forget(self::KIOSK_COMPANY_SESSION_KEY);
-            $this->kioskCompanyId = null;
-            $this->kioskCompanyName = null;
-
-            return;
-        }
-
-        $this->kioskCompanyId = $company->id;
-        $this->kioskCompanyName = $company->name;
     }
 
     private function loadKioskCompanyFromDevice(): bool
@@ -236,6 +164,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $token = request()->cookie(self::DEVICE_COOKIE);
 
         if (blank($token)) {
+            $this->kioskCompanyId = null;
+            $this->kioskCompanyName = null;
+            $this->kioskDeviceId = null;
+            $this->kioskDeviceName = null;
+
             return null;
         }
 
@@ -243,16 +176,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
             ->handle($token, request()->ip(), request()->userAgent());
 
         if (! $device) {
+            $this->kioskCompanyId = null;
+            $this->kioskCompanyName = null;
             $this->kioskDeviceId = null;
             $this->kioskDeviceName = null;
         }
 
         return $device;
-    }
-
-    private function isDeviceCookiePresent(): bool
-    {
-        return filled(request()->cookie(self::DEVICE_COOKIE));
     }
 
     private function kioskCompanyOrFail(): Company
@@ -264,16 +194,16 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 ->firstOrFail();
         }
 
-        $this->loadKioskCompanyFromSession();
+        $device = $this->authorizedDeviceOrNull();
 
-        if (! $this->kioskCompanyId) {
+        if (! $device) {
             throw ValidationException::withMessages([
-                'kioskKey' => 'Activa el kiosco para continuar.',
+                'accessCode' => 'Esta terminal no esta autorizada.',
             ]);
         }
 
         return Company::query()
-            ->whereKey($this->kioskCompanyId)
+            ->whereKey($device->company_id)
             ->where('status', 'active')
             ->firstOrFail();
     }
@@ -339,11 +269,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
         }
 
         return json_decode(Crypt::decryptString($this->credentialToken), true, 512, JSON_THROW_ON_ERROR);
-    }
-
-    private function requiresAuthorizedDevice(Company $company): bool
-    {
-        return (bool) $company->setting?->require_authorized_kiosk_devices;
     }
 
     private function stateForCredential(WorkerCredential $credential, ResolveCurrentTimeRecordStateAction $resolveState): array
@@ -428,25 +353,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 @endif
 
                 @if (! $confirmationMessage && ! $kioskCompanyId)
-                    <form wire:submit="activateKiosk" autocomplete="off" data-form-type="other" class="space-y-5">
-                        <div>
-                            <h1 class="font-display text-[24px] font-bold text-brand-navy">Activar kiosco</h1>
-                            <p class="mt-2 text-[13.5px] leading-relaxed text-surface-muted">Ingresa la clave de kiosco de la empresa para configurar este dispositivo.</p>
-                        </div>
-
-                        @error('kioskKey')
-                            <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-[13px] text-status-pending-text">{{ $message }}</div>
-                        @enderror
-
-                        <div>
-                            <label for="kiosk-key" class="mb-1.5 block text-[12.5px] font-semibold text-brand-navy">Clave de kiosco</label>
-                            <input id="kiosk-key" wire:model="kioskKey" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" autofocus class="w-full rounded-2xl border-[1.5px] border-surface-line bg-[#FBFCFE] px-4 py-3.5 text-base outline-none transition focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue/10">
-                        </div>
-
-                        <button type="submit" class="w-full rounded-2xl bg-gradient-to-r from-brand-blue-bright via-brand-blue to-brand-deep py-4 font-display text-base font-bold tracking-wide text-white shadow-[0_14px_26px_-10px_rgba(0,103,228,0.55)] transition hover:-translate-y-0.5 active:translate-y-0">
-                            Activar kiosco
-                        </button>
-                    </form>
+                    <div class="rounded-[24px] border border-status-warn-line bg-status-warn-bg px-6 py-7 text-center text-status-warn-text">
+                        <p class="font-display text-2xl font-bold">Terminal no autorizada</p>
+                        <p class="mt-2 text-sm">Solicita un codigo de autorizacion al administrador para vincular este equipo.</p>
+                        <a href="{{ route('kiosk.authorize') }}" class="btn-primary mt-5 w-full justify-center">Autorizar terminal</a>
+                    </div>
                 @elseif (! $confirmationMessage && ! $credentialToken)
                     <form wire:submit="identify" autocomplete="off" data-form-type="other" class="space-y-4">
                         <div class="flex items-start justify-between gap-3">
@@ -454,11 +365,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                                 <h1 class="font-display text-[24px] font-bold text-brand-navy">Identificación</h1>
                                 <p class="mt-1 text-[13.5px] text-surface-muted">Captura tu código y NIP para continuar.</p>
                             </div>
-                            @if ($kioskDeviceId)
-                                <span class="rounded-full border border-status-rest-line bg-status-rest-bg px-3 py-1.5 text-xs font-semibold text-status-rest-text">Terminal autorizada</span>
-                            @else
-                                <button type="button" class="btn-ghost" wire:click="clearKioskCompany">Cambiar</button>
-                            @endif
+                            <span class="rounded-full border border-status-rest-line bg-status-rest-bg px-3 py-1.5 text-xs font-semibold text-status-rest-text">Terminal autorizada</span>
                         </div>
 
                         @if ($errors->any())
@@ -479,10 +386,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                         <div class="my-3.5 grid grid-cols-3 gap-2.5">
                             @foreach ([1,2,3,4,5,6,7,8,9] as $n)
-                                <button type="button" data-kiosk-key="{{ $n }}" class="kiosk-key">{{ $n }}</button>
+                                <button type="button" data-pin-key="{{ $n }}" class="kiosk-key">{{ $n }}</button>
                             @endforeach
                             <button type="button" data-kiosk-clear class="kiosk-key kiosk-key-action text-[15px]">Borrar</button>
-                            <button type="button" data-kiosk-key="0" class="kiosk-key">0</button>
+                            <button type="button" data-pin-key="0" class="kiosk-key">0</button>
                             <button type="button" data-kiosk-backspace class="kiosk-key kiosk-key-action">⌫</button>
                         </div>
 
@@ -554,7 +461,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             };
 
             document.addEventListener('click', (event) => {
-                const key = event.target.closest('[data-kiosk-key]');
+                const key = event.target.closest('[data-pin-key]');
                 const clear = event.target.closest('[data-kiosk-clear]');
                 const backspace = event.target.closest('[data-kiosk-backspace]');
                 const pin = document.getElementById('kiosk-pin');
@@ -562,7 +469,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 if (!pin) return;
 
                 if (key) {
-                    setPinValue((pin.value + key.dataset.kioskKey).slice(0, 20));
+                    setPinValue((pin.value + key.dataset.pinKey).slice(0, 20));
                 }
 
                 if (clear) {

@@ -808,8 +808,9 @@ El seeder no crea anulacion logica, eventos tardios/fuera de orden como flujo, m
 | Autorizar terminal con QR | En Configuracion de empresa > Terminales de kiosco, generar codigo y escanearlo desde la terminal. | La terminal abre el kiosco ya asociado a la empresa; el codigo deja de servir. |
 | Autorizar terminal sin camara | Abrir `/time/kiosk/authorize` en una PC y pegar el codigo generado. | La terminal queda autorizada igual que con QR. |
 | Codigo vencido | Esperar mas de una hora o usar de nuevo un codigo utilizado. | No se autoriza la terminal y se muestra mensaje neutral. |
-| Solo terminales autorizadas | Con al menos una terminal activa, activar la opcion desde Operacion y abrir kiosco en un navegador distinto. | La clave compartida no activa un equipo nuevo; la terminal autorizada conserva su empresa. |
+| Terminal obligatoria | Abrir kiosco en un navegador sin una terminal vinculada. | Redirige a autorizacion; no existe clave compartida para activar el equipo. |
 | Revocar terminal | Revocar una terminal activa y tratar de usar el kiosco en ella. | El siguiente intento de identificacion o marcaje queda bloqueado. |
+| Eliminar terminal | Eliminar una terminal desde Configuracion de empresa y volver a abrir el kiosco en ese equipo. | Desaparece de la lista, deja de funcionar y conserva su identidad tecnica para evidencia. |
 | Token temporal | Identificarse y dejar pasar la ventana de expiracion. | El sistema pide volver a identificarse antes de registrar. |
 | Abrir captura manual | Entrar a `/time-events/manual` con rol autorizado. | La pantalla carga y muestra trabajadores de la empresa activa. |
 | Rol no autorizado | Entrar a `/time-events/manual` con rol sin permiso. | El acceso queda bloqueado. |

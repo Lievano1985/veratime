@@ -59,8 +59,6 @@ new class extends Component {
             'settingsForm.early_departure_tolerance_minutes' => ['required', 'integer', 'min:0', 'max:240'],
             'settingsForm.allow_worker_corrections' => ['boolean'],
             'settingsForm.require_pin_for_kiosk' => ['boolean'],
-            'settingsForm.kiosk_key' => ['nullable', 'string', 'min:8', 'max:80', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
-            'settingsForm.require_authorized_kiosk_devices' => ['boolean'],
             'settingsForm.require_pin_for_confirmation' => ['boolean'],
         ])['settingsForm'];
 
@@ -212,9 +210,6 @@ new class extends Component {
             'early_departure_tolerance_minutes' => (int) ($settings['early_departure_tolerance_minutes'] ?? 0),
             'allow_worker_corrections' => (bool) $settings['allow_worker_corrections'],
             'require_pin_for_kiosk' => (bool) $settings['require_pin_for_kiosk'],
-            'kiosk_key' => '',
-            'kiosk_key_configured' => filled($settings['kiosk_key_hash'] ?? null),
-            'require_authorized_kiosk_devices' => (bool) ($settings['require_authorized_kiosk_devices'] ?? false),
             'require_pin_for_confirmation' => (bool) $settings['require_pin_for_confirmation'],
         ];
     }
@@ -318,24 +313,9 @@ new class extends Component {
                 </div>
                 <p class="text-xs text-surface-muted">Estas tolerancias ajustan los minutos de retardo y salida anticipada que se reportan en jornadas y CSV de periodo.</p>
 
-                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
-                    <flux:input wire:model="settingsForm.kiosk_key" label="Clave de kiosco" type="password" autocomplete="new-password" placeholder="Dejar vacio para conservar la actual" />
-                    <p class="mt-2 text-xs text-zinc-500">Esta clave activa el kiosco en un dispositivo y fija el contexto de la empresa. Debe tener minimo 8 caracteres, una mayuscula, un numero y un simbolo. No se muestra despues de guardarla.</p>
-                    @if ($settingsForm['kiosk_key_configured'] ?? false)
-                        <x-ui.badge variant="success" class="mt-2">Clave configurada</x-ui.badge>
-                    @else
-                        <x-ui.badge variant="warning" class="mt-2">Sin clave configurada</x-ui.badge>
-                    @endif
-                    @error('settingsForm.kiosk_key')
-                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 <div class="space-y-3">
                     <flux:checkbox wire:model="settingsForm.allow_worker_corrections" label="Permitir solicitudes de correccion" />
                     <flux:checkbox wire:model="settingsForm.require_pin_for_kiosk" label="Requerir NIP en kiosco" />
-                    <flux:checkbox wire:model="settingsForm.require_authorized_kiosk_devices" label="Permitir marcajes solo desde terminales autorizadas" />
-                    <p class="-mt-2 text-xs text-surface-muted">Activalo cuando todas las terminales de la empresa ya esten autorizadas. La clave compartida de kiosco dejara de activar equipos nuevos.</p>
                     <flux:checkbox wire:model="settingsForm.require_pin_for_confirmation" label="Requerir NIP para conformidad" />
                 </div>
 

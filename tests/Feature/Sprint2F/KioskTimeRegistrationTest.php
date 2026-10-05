@@ -6,13 +6,15 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\EmploymentRelationship;
+use App\Models\KioskDevice;
 use App\Models\TimeEvent;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
-use App\Support\KioskKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
@@ -23,21 +25,15 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('loads kiosk screen without authenticated user', function (): void {
+it('redirects an unauthorized device to terminal authorization', function (): void {
     $this->get(route('kiosk.index'))
-        ->assertOk()
-        ->assertSee('Kiosco')
-        ->assertSee('Clave de kiosco')
-        ->assertSee('autocomplete="new-password"', false)
-        ->assertSee('data-1p-ignore="true"', false);
+        ->assertRedirect(route('kiosk.authorize'));
 });
 
 it('unknown code fails with neutral message', function (): void {
-    sprint2fKioskFixture(pin: '1234');
+    [$company] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', 'NO-EXISTE')
         ->set('pin', '1234')
         ->call('identify')
@@ -45,24 +41,10 @@ it('unknown code fails with neutral message', function (): void {
         ->assertSee('No se pudo validar la credencial.');
 });
 
-it('keeps legacy activation available until the company explicitly requires authorized terminals', function (): void {
-    [$company] = sprint2fKioskFixture(pin: '1234');
-
-    $company->setting()->update(['require_authorized_kiosk_devices' => true]);
-
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
-        ->assertHasErrors(['kioskKey'])
-        ->assertSee('Esta empresa requiere una terminal autorizada.');
-});
-
 it('wrong pin fails increments attempts and never exposes pin or hash', function (): void {
-    [, , , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [$company, , , , $credential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '9999')
         ->call('identify')
@@ -74,11 +56,9 @@ it('wrong pin fails increments attempts and never exposes pin or hash', function
 });
 
 it('correct pin identifies worker and clears pin from component state', function (): void {
-    [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [$company, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -93,11 +73,9 @@ it('correct pin identifies worker and clears pin from component state', function
 });
 
 it('can identify by employee code when access code is not used', function (): void {
-    [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [$company, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $worker->employee_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -107,11 +85,9 @@ it('can identify by employee code when access code is not used', function (): vo
 });
 
 it('blocked and reset required credentials cannot register', function (string $status): void {
-    [, , , , $credential] = sprint2fKioskFixture(pin: '1234', credentialAttributes: ['status' => $status]);
+    [$company, , , , $credential] = sprint2fKioskFixture(pin: '1234', credentialAttributes: ['status' => $status]);
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -185,11 +161,9 @@ it('handles kiosk clock out and break sequence and blocks invalid actions', func
 });
 
 it('kiosk livewire records event then returns to safe start state', function (): void {
-    [, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
+    [$company, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -205,9 +179,7 @@ it('kiosk livewire records event then returns to safe start state', function ():
 it('kiosk temporary token allows current registration and expires safely', function (): void {
     [$company, $worker, , , $credential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -218,7 +190,7 @@ it('kiosk temporary token allows current registration and expires safely', funct
 
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-17 15:10:00', 'UTC'));
 
-    Volt::test('kiosk.index')
+    kioskVoltTest($company)
         ->set('credentialToken', encrypt(json_encode([
             'company_id' => $company->id,
             'credential_id' => $credential->id,
@@ -240,11 +212,9 @@ it('kiosk temporary token allows current registration and expires safely', funct
 
 it('kiosk blocks manipulated credential token for another worker', function (): void {
     [$company, , , , $credential] = sprint2fKioskFixture(pin: '1234');
-    [, , , , $otherCredential] = sprint2fKioskFixture(pin: '1234', kioskKey: 'KIOSK-OTHER1!');
+    [, , , , $otherCredential] = sprint2fKioskFixture(pin: '1234');
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
+    kioskVoltTest($company)
         ->set('accessCode', $credential->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -260,15 +230,12 @@ it('kiosk blocks manipulated credential token for another worker', function (): 
 
 it('uses kiosk company context when access code and pin exist in multiple companies', function (): void {
     [$companyA, $workerA, , , $credentialA] = sprint2fKioskFixture(pin: '1234');
-    [$companyB, $workerB, , , $credentialB] = sprint2fKioskFixture(pin: '1234', kioskKey: 'KIOSK-B1!');
+    [$companyB, $workerB, , , $credentialB] = sprint2fKioskFixture(pin: '1234');
 
     $credentialB->forceFill(['access_code' => $credentialA->access_code])->save();
     $workerB->forceFill(['employee_code' => $workerA->employee_code])->save();
-    $companyB->setting()->update(['kiosk_key_hash' => KioskKey::hash('KIOSK-B1!')]);
 
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-B1!')
-        ->call('activateKiosk')
+    kioskVoltTest($companyB)
         ->set('accessCode', $credentialA->access_code)
         ->set('pin', '1234')
         ->call('identify')
@@ -303,7 +270,6 @@ function sprint2fKioskFixture(
     array $companyAttributes = [],
     array $workerAttributes = [],
     array $credentialAttributes = [],
-    string $kioskKey = 'KIOSK-KEY1!',
 ): array {
     $company = Company::factory()->create(array_replace([
         'status' => 'active',
@@ -328,7 +294,6 @@ function sprint2fKioskFixture(
         ['company_id' => $company->id],
         array_replace(Company::defaultSettings(), [
             'company_id' => $company->id,
-            'kiosk_key_hash' => KioskKey::hash($kioskKey),
         ]),
     );
 
@@ -341,4 +306,18 @@ function sprint2fKioskFixture(
     ], $credentialAttributes));
 
     return [$company, $worker, $relationship, $center, $credential];
+}
+
+function kioskVoltTest(Company $company)
+{
+    $deviceToken = 'vtd_'.Str::random(64);
+
+    KioskDevice::factory()->active()->create([
+        'company_id' => $company->id,
+        'device_token_hash' => hash('sha256', $deviceToken),
+    ]);
+
+    Livewire::withCookie('vera_kiosk_device', $deviceToken);
+
+    return Volt::test('kiosk.index');
 }

@@ -1,6 +1,5 @@
 <?php
 
-use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\TimeRecords\Actions\CreateKioskDevicePairingAction;
 use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\PairKioskDeviceAction;
@@ -12,11 +11,8 @@ use App\Models\CompanySetting;
 use App\Models\KioskDevice;
 use App\Models\Role;
 use App\Models\User;
-use App\Support\KioskKey;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
-use Illuminate\Validation\ValidationException;
-use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-01 15:00:00', 'UTC'));
@@ -120,38 +116,6 @@ it('cannot create a pairing for another company center', function (): void {
         ->toThrow(InvalidArgumentException::class);
 });
 
-it('does not allow strict authorized-terminal mode until a terminal is active', function (): void {
-    [$company] = kioskDeviceManager();
-
-    expect(fn () => app(UpdateCompanySettingsAction::class)->handle($company, kioskSettings(['require_authorized_kiosk_devices' => true])))
-        ->toThrow(ValidationException::class);
-
-    KioskDevice::query()->create([
-        'company_id' => $company->id,
-        'name' => 'Recepcion',
-        'status' => 'active',
-        'device_token_hash' => hash('sha256', 'active-terminal-secret'),
-    ]);
-
-    app(UpdateCompanySettingsAction::class)->handle($company, kioskSettings(['require_authorized_kiosk_devices' => true]));
-
-    expect($company->setting()->firstOrFail()->require_authorized_kiosk_devices)->toBeTrue();
-});
-
-it('does not activate a strict company from the legacy shared key', function (): void {
-    [$company] = kioskDeviceManager();
-    KioskDevice::factory()->active()->create(['company_id' => $company->id]);
-    $company->setting()->update([
-        'kiosk_key_hash' => KioskKey::hash('KIOSK-KEY1!'),
-        'require_authorized_kiosk_devices' => true,
-    ]);
-
-    Volt::test('kiosk.index')
-        ->set('kioskKey', 'KIOSK-KEY1!')
-        ->call('activateKiosk')
-        ->assertHasErrors(['kioskKey'])
-        ->assertSee('Esta empresa requiere una terminal autorizada.');
-});
 
 /** @return array{0: Company, 1: User} */
 function kioskDeviceManager(): array
@@ -176,8 +140,6 @@ function kioskSettings(array $override = []): array
         'early_departure_tolerance_minutes' => 0,
         'allow_worker_corrections' => false,
         'require_pin_for_kiosk' => true,
-        'kiosk_key' => '',
-        'require_authorized_kiosk_devices' => false,
         'require_pin_for_confirmation' => true,
     ], $override);
 }

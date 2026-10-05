@@ -34,7 +34,6 @@ use App\Models\ShiftTemplate;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
-use App\Support\KioskKey;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
@@ -45,7 +44,6 @@ class VeraTimeDemoSeeder extends Seeder
     private const COMPANY_TAX_ID = 'VTD260712XX1';
     private const DEMO_PASSWORD = 'VeraDemo123!';
     private const DEMO_PIN = '1234';
-    private const DEMO_KIOSK_KEY = 'VERA-DEMO1!';
     private const DEMO_ATTENDANCE_START = '2026-07-20';
     private const DEMO_ATTENDANCE_END = '2026-08-05';
 
@@ -84,8 +82,7 @@ class VeraTimeDemoSeeder extends Seeder
             ['company_id' => $company->id],
             array_replace(Company::defaultSettings(), [
                 'company_id' => $company->id,
-                'kiosk_key_hash' => KioskKey::hash(self::DEMO_KIOSK_KEY),
-                'metadata' => ['demo' => true, 'kiosk_key_demo' => self::DEMO_KIOSK_KEY],
+                'metadata' => ['demo' => true],
             ]),
         );
 
