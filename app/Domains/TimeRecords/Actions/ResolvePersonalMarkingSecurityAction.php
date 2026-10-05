@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
 use App\Models\Company;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
@@ -11,6 +12,10 @@ use Carbon\CarbonImmutable;
 
 class ResolvePersonalMarkingSecurityAction
 {
+    public function __construct(
+        private readonly ResolveEmploymentUnitsForDateAction $resolveEmploymentUnits,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -76,7 +81,11 @@ class ResolvePersonalMarkingSecurityAction
 
     private function effectivePolicy(Company $company, Worker $worker, CarbonImmutable $now): ?MobileMarkingPolicy
     {
-        $centerId = $worker->activeEmploymentRelationship()->value('center_id');
+        $relationship = $worker->activeEmploymentRelationship()->with('center')->first();
+        $centerId = $relationship?->center_id;
+        $unitId = $relationship
+            ? $this->resolveEmploymentUnits->handle($company, $relationship, $now->toDateString())['primary']?->id
+            : null;
 
         return MobileMarkingPolicy::query()
             ->where('company_id', $company->id)
@@ -87,13 +96,27 @@ class ResolvePersonalMarkingSecurityAction
             ->where(function ($query) use ($now): void {
                 $query->whereNull('valid_until')->orWhere('valid_until', '>=', $now);
             })
-            ->when($centerId, function ($query, $centerId): void {
-                $query->where(function ($query) use ($centerId): void {
-                    $query->whereNull('center_id')->orWhere('center_id', $centerId);
-                })->orderByRaw('CASE WHEN center_id = ? THEN 0 ELSE 1 END', [$centerId]);
-            }, function ($query): void {
-                $query->whereNull('center_id');
+            ->where(function ($query) use ($centerId, $unitId): void {
+                if ($unitId) {
+                    $query->where('organizational_unit_id', $unitId)
+                        ->orWhere(function ($query) use ($centerId): void {
+                            $query->whereNull('organizational_unit_id')
+                                ->when($centerId, fn ($query) => $query->where('center_id', $centerId), fn ($query) => $query->whereNull('center_id'));
+                        })
+                        ->orWhere(function ($query): void {
+                            $query->whereNull('organizational_unit_id')->whereNull('center_id');
+                        });
+
+                    return;
+                }
+
+                $query->whereNull('organizational_unit_id')
+                    ->when($centerId, fn ($query) => $query->where('center_id', $centerId), fn ($query) => $query->whereNull('center_id'))
+                    ->orWhere(function ($query): void {
+                        $query->whereNull('organizational_unit_id')->whereNull('center_id');
+                    });
             })
+            ->orderByRaw('CASE WHEN organizational_unit_id = ? THEN 0 WHEN center_id = ? THEN 1 ELSE 2 END', [$unitId ?? 0, $centerId ?? 0])
             ->orderByDesc('version')
             ->first();
     }

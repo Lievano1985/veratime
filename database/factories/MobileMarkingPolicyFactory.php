@@ -16,6 +16,7 @@ class MobileMarkingPolicyFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'center_id' => null,
+            'organizational_unit_id' => null,
             'status' => MobileMarkingPolicy::STATUS_DRAFT,
             'version' => 1,
             'mode' => MobileMarkingPolicy::MODE_FREE,

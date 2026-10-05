@@ -5,8 +5,10 @@ use App\Models\Center;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
+use App\Models\EmploymentUnitAssignment;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
+use App\Models\OrganizationalUnit;
 use App\Models\User;
 use App\Models\UserWorkerLink;
 use App\Models\Worker;
@@ -128,6 +130,51 @@ it('prefers the active policy for the worker center over the general company pol
         ->assertJsonPath('data.policy.id', $centerPolicy->public_id)
         ->assertJsonPath('data.policy.center.latitude', 19.4)
         ->assertJsonMissing(['id' => $generalPolicy->public_id]);
+});
+
+it('prefers the active policy for the workers organizational unit over the center policy', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    $center = Center::factory()->for($company)->create();
+    $relationship = EmploymentRelationship::factory()->create([
+        'company_id' => $company->id,
+        'worker_id' => $worker->id,
+        'center_id' => $center->id,
+        'status' => 'active',
+        'started_at' => now()->subDay()->toDateString(),
+    ]);
+    $unit = OrganizationalUnit::factory()->forCenter($center)->create();
+    EmploymentUnitAssignment::query()->forceCreate([
+        'company_id' => $company->id,
+        'employment_relationship_id' => $relationship->id,
+        'organizational_unit_id' => $unit->id,
+        'assignment_type' => 'primary',
+        'status' => 'active',
+        'effective_from' => now()->toDateString(),
+        'source' => 'manual',
+        'metadata' => [],
+    ]);
+    $centerPolicy = MobileMarkingPolicy::factory()->for($company)->active()->create([
+        'center_id' => $center->id,
+        'version' => 7,
+        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'center_latitude' => 19.4000000,
+        'center_longitude' => -99.1000000,
+        'radius_meters' => 100,
+    ]);
+    $unitPolicy = MobileMarkingPolicy::factory()->for($company)->active()->create([
+        'organizational_unit_id' => $unit->id,
+        'version' => 1,
+        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'center_latitude' => 19.4010000,
+        'center_longitude' => -99.1010000,
+        'radius_meters' => 25,
+    ]);
+
+    $this->withToken($token)->getJson('/api/v1/time/me/marking-security')
+        ->assertOk()
+        ->assertJsonPath('data.policy.id', $unitPolicy->public_id)
+        ->assertJsonPath('data.policy.radius_meters', 25)
+        ->assertJsonMissing(['id' => $centerPolicy->public_id]);
 });
 
 it('does not allow a personal client to override its security context', function (): void {

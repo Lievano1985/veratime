@@ -26,6 +26,7 @@ class MobileMarkingPolicy extends Model
     protected $fillable = [
         'company_id',
         'center_id',
+        'organizational_unit_id',
         'public_id',
         'status',
         'version',
@@ -63,6 +64,11 @@ class MobileMarkingPolicy extends Model
     public function center(): BelongsTo
     {
         return $this->belongsTo(Center::class);
+    }
+
+    public function organizationalUnit(): BelongsTo
+    {
+        return $this->belongsTo(OrganizationalUnit::class);
     }
 
     protected static function booted(): void

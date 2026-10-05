@@ -61,7 +61,7 @@ Respuesta conceptual:
 
 Los valores de radio, precisión y antigüedad son ilustrativos, no límites aprobados. `mode: free` omite centro y radio, pero no elimina los demás requisitos que tenga la política. Mientras BL-0615 no esté implementada, `binding` es `null` y la política sólo informa requisitos, sin bloquear el marcaje actual.
 
-BL-0614 resuelve primero una política activa específica del centro de la relación laboral del trabajador y, si no existe, una política activa general de la empresa. Si no hay política vigente, `policy` y `binding` son `null`. La respuesta crea una referencia de tiempo opaca, separada por empresa, usuario y trabajador, que vence en cinco minutos. Esta referencia prueba que el servidor emitió ese contexto; por sí sola no convierte el reloj local del cliente en hora confiable.
+BL-0614 resuelve primero una política activa específica de la unidad organizacional principal del trabajador (departamento, área o equipo), después una política de su centro y finalmente la política general de la empresa. Esto permite varios radios dentro del mismo centro. Si no hay política vigente, `policy` y `binding` son `null`. La respuesta crea una referencia de tiempo opaca, separada por empresa, usuario y trabajador, que vence en cinco minutos. Esta referencia prueba que el servidor emitió ese contexto; por sí sola no convierte el reloj local del cliente en hora confiable.
 
 ### Vinculación de dispositivo
 

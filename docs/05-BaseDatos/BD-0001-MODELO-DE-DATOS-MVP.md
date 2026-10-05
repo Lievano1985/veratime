@@ -990,14 +990,14 @@ Sesiones de kiosco cuando se necesite trazabilidad adicional.
 
 ## 10.4 Seguridad de marcaje móvil
 
-`mobile_marking_policies` conserva políticas por empresa y, de forma opcional, por centro. Tiene `public_id` opaco, `company_id`, `center_id` nullable, estado, versión, modo `free` o `circle`, coordenadas/radio cuando aplica, requisitos de vínculo y desbloqueo biométrico, límites de ubicación y vigencias. La política específica del centro de la relación laboral prevalece sobre la general de empresa. Una política no sustituye evidencia histórica; futuras ediciones deben crear una nueva versión.
+`mobile_marking_policies` conserva políticas por empresa y, de forma opcional, por centro o unidad organizacional. Tiene `public_id` opaco, `company_id`, `center_id` nullable, `organizational_unit_id` nullable, estado, versión, modo `free` o `circle`, coordenadas/radio cuando aplica, requisitos de vínculo y desbloqueo biométrico, límites de ubicación y vigencias. La política específica de la unidad principal activa del trabajador prevalece sobre la de centro, y ésta sobre la general de empresa. Una política no sustituye evidencia histórica; futuras ediciones deben crear una nueva versión.
 
 `mobile_marking_time_references` conserva una referencia opaca emitida para un usuario y trabajador dentro de una empresa. Guarda la política/version aplicada, emisión UTC, vencimiento UTC y versión de esquema. No guarda token, coordenadas, huellas ni rostros. BL-0614 las emite con vigencia de cinco minutos como base para la futura evidencia firmada.
 
 Índices implementados:
 
 ```text
-mobile_marking_policies: unique(public_id), index(company_id, center_id, status), index(company_id, status, valid_from)
+mobile_marking_policies: unique(public_id), index(company_id, organizational_unit_id, status), index(company_id, center_id, status), index(company_id, status, valid_from)
 mobile_marking_time_references: unique(public_id), index(company_id, worker_id, expires_at)
 ```
 
