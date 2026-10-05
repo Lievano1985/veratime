@@ -4,6 +4,7 @@ use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\TimeRecords\Actions\CreateKioskDevicePairingAction;
+use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
@@ -27,6 +28,7 @@ new class extends Component {
     public ?string $pairingCode = null;
     public ?string $pairingQrCode = null;
     public bool $pairingQrUnavailable = false;
+    public ?int $pairingDeviceId = null;
     public ?string $pairingExpiresAt = null;
     public ?string $pairingDeviceName = null;
 
@@ -92,6 +94,7 @@ new class extends Component {
 
         $this->kioskDeviceForm = ['name' => '', 'center_id' => ''];
         $this->pairingCode = $pairing['pairing_code'];
+        $this->pairingDeviceId = $pairing['device']->id;
         $this->pairingDeviceName = $pairing['device']->name;
         $this->pairingExpiresAt = $pairing['device']->pairing_expires_at?->format('d/m/Y H:i');
         $this->pairingQrCode = null;
@@ -113,6 +116,25 @@ new class extends Component {
 
         $action->handle($device, auth()->user());
         Session::flash('status', 'La terminal fue revocada. Ya no puede registrar marcajes.');
+    }
+
+    public function deleteKioskDevice(int $deviceId, DeleteKioskDeviceAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $device = KioskDevice::query()->where('company_id', $company->id)->findOrFail($deviceId);
+
+        $action->handle($device, auth()->user());
+
+        if ($this->pairingDeviceId === $device->id) {
+            $this->pairingCode = null;
+            $this->pairingQrCode = null;
+            $this->pairingQrUnavailable = false;
+            $this->pairingDeviceId = null;
+            $this->pairingDeviceName = null;
+            $this->pairingExpiresAt = null;
+        }
+
+        Session::flash('status', 'La terminal fue eliminada. Ya no puede registrar marcajes.');
     }
 
     public function updateLegalParameter(string $code, UpdateCompanyLegalParameterAction $action, CurrentCompany $currentCompany): void
@@ -499,9 +521,12 @@ new class extends Component {
                                 <td class="px-3 py-3 text-xs text-surface-muted">{{ $device->last_seen_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') ?? 'Sin conexion' }}</td>
                                 <td class="px-3 py-3">{{ $device->createdBy?->name ?? 'No disponible' }}</td>
                                 <td class="px-3 py-3 text-right">
+                                    <div class="flex justify-end gap-2">
                                     @if (in_array($device->status, ['active', 'pending'], true))
                                         <button type="button" wire:click="revokeKioskDevice({{ $device->id }})" wire:confirm="La terminal dejara de poder registrar marcajes. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
                                     @endif
+                                        <button type="button" wire:click="deleteKioskDevice({{ $device->id }})" wire:confirm="La terminal se eliminara de la lista y dejara de poder registrar marcajes. El historial tecnico se conservara." class="btn-secondary btn-sm">Eliminar</button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

@@ -19,6 +19,11 @@ class KioskDevicePolicy
         return $this->canManage($user, $device->company);
     }
 
+    public function delete(User $user, KioskDevice $device): bool
+    {
+        return $this->canManage($user, $device->company);
+    }
+
     private function canManage(User $user, ?Company $company): bool
     {
         return $company?->status === 'active'

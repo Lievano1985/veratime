@@ -2,6 +2,7 @@
 
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\TimeRecords\Actions\CreateKioskDevicePairingAction;
+use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\PairKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
@@ -87,6 +88,28 @@ it('revocation immediately makes a terminal secret unusable', function (): void 
     expect($authorized['device']->refresh()->status)->toBe('revoked')
         ->and($authorized['device']->device_token_hash)->toBeNull()
         ->and(app(ResolveKioskDeviceAction::class)->handle($authorized['device_token']))->toBeNull();
+});
+
+it('soft deletes a terminal and immediately invalidates its device secret', function (): void {
+    [$company, $manager] = kioskDeviceManager();
+    $pairing = app(CreateKioskDevicePairingAction::class)->handle($company, $manager, 'Recepcion');
+    $authorized = app(PairKioskDeviceAction::class)->handle($pairing['pairing_code']);
+
+    app(DeleteKioskDeviceAction::class)->handle($authorized['device'], $manager);
+
+    $this->assertSoftDeleted('kiosk_devices', ['id' => $authorized['device']->id]);
+    expect(app(ResolveKioskDeviceAction::class)->handle($authorized['device_token']))->toBeNull();
+});
+
+it('does not let a manager delete a terminal from another company', function (): void {
+    [, $manager] = kioskDeviceManager();
+    $otherCompany = Company::factory()->create(['status' => 'active']);
+    $otherDevice = KioskDevice::factory()->active()->create(['company_id' => $otherCompany->id]);
+
+    expect(fn () => app(DeleteKioskDeviceAction::class)->handle($otherDevice, $manager))
+        ->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+
+    $this->assertDatabaseHas('kiosk_devices', ['id' => $otherDevice->id, 'deleted_at' => null]);
 });
 
 it('cannot create a pairing for another company center', function (): void {
