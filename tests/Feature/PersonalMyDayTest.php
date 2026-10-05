@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Worker;
 use App\Support\RoleKey;
 
-it('keeps the worker link scoped to one active user and revocable without deleting history', function (): void {
+it('keeps the worker link scoped to one active user and lets a revoked link transfer to a new account', function (): void {
     $company = Company::factory()->create();
     $firstUser = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN]);
     $secondUser = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN]);
@@ -19,8 +19,11 @@ it('keeps the worker link scoped to one active user and revocable without deleti
 
     expect(app(RevokeUserWorkerLinkAction::class)->handle($company, $firstUser))->toBeTrue();
 
-    $this->assertDatabaseHas('user_worker_links', [
-        'id' => $link->id,
-        'status' => 'revoked',
-    ]);
+    $transferred = app(LinkUserToWorkerAction::class)->handle($company, $secondUser, $worker);
+
+    expect($transferred->id)->toBe($link->id)
+        ->and($transferred->user_id)->toBe($secondUser->id)
+        ->and($transferred->status)->toBe('active');
+
+    $this->assertDatabaseCount('user_worker_links', 1);
 });

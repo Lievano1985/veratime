@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -207,7 +208,12 @@ new class extends Component
         $user = $this->userForCompany($company, (int) $this->linkingUserId);
         Gate::authorize('update', [$user, $company]);
         $this->validate(['linkedWorkerId' => ['required', Rule::exists('workers', 'id')->where('company_id', $company->id)->where('status', 'active')]]);
-        $action->handle($company, $user, Worker::query()->where('company_id', $company->id)->findOrFail($this->linkedWorkerId));
+        try {
+            $action->handle($company, $user, Worker::query()->where('company_id', $company->id)->findOrFail($this->linkedWorkerId));
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['linkedWorkerId' => $exception->getMessage()]);
+        }
+
         $this->showWorkerLinkPanel = false;
         Session::flash('status', 'Cuenta vinculada con la persona trabajadora.');
     }
