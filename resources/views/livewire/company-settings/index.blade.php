@@ -13,6 +13,7 @@ use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
@@ -25,6 +26,7 @@ new class extends Component {
     public array $kioskDeviceForm = ['name' => '', 'center_id' => ''];
     public ?string $pairingCode = null;
     public ?string $pairingQrCode = null;
+    public bool $pairingQrUnavailable = false;
     public ?string $pairingExpiresAt = null;
     public ?string $pairingDeviceName = null;
 
@@ -92,8 +94,16 @@ new class extends Component {
         $this->pairingCode = $pairing['pairing_code'];
         $this->pairingDeviceName = $pairing['device']->name;
         $this->pairingExpiresAt = $pairing['device']->pairing_expires_at?->format('d/m/Y H:i');
-        $pairingUrl = route('kiosk.authorize', ['code' => $this->pairingCode]);
-        $this->pairingQrCode = (new SvgWriter())->write(new QrCode(data: $pairingUrl, size: 320, margin: 10))->getDataUri();
+        $this->pairingQrCode = null;
+        $this->pairingQrUnavailable = false;
+
+        try {
+            $pairingUrl = route('kiosk.authorize', ['code' => $this->pairingCode]);
+            $this->pairingQrCode = (new SvgWriter())->write(new QrCode(data: $pairingUrl, size: 320, margin: 10))->getDataUri();
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->pairingQrUnavailable = true;
+        }
     }
 
     public function revokeKioskDevice(int $deviceId, RevokeKioskDeviceAction $action, CurrentCompany $currentCompany): void
@@ -441,12 +451,21 @@ new class extends Component {
 
             @if ($pairingCode)
                 <div class="grid gap-5 rounded-lg border border-brand-blue/30 bg-blue-50 p-5 dark:bg-blue-950/20 md:grid-cols-[180px_1fr]">
-                    <img src="{{ $pairingQrCode }}" alt="Codigo QR para autorizar {{ $pairingDeviceName }}" class="h-44 w-44 rounded bg-white p-2">
+                    @if ($pairingQrCode)
+                        <img src="{{ $pairingQrCode }}" alt="Codigo QR para autorizar {{ $pairingDeviceName }}" class="h-44 w-44 rounded bg-white p-2">
+                    @else
+                        <div class="flex h-44 w-44 items-center justify-center rounded border border-blue-200 bg-white p-4 text-center text-xs text-surface-muted">
+                            QR no disponible. Usa el cÃ³digo manual.
+                        </div>
+                    @endif
                     <div>
                         <p class="font-semibold text-brand-navy">Autoriza: {{ $pairingDeviceName }}</p>
                         <p class="mt-1 text-sm text-surface-muted">Escanea el QR desde la terminal o abre <span class="font-mono">/time/kiosk/authorize</span> y pega este codigo.</p>
                         <p class="mt-3 break-all rounded border border-blue-200 bg-white px-3 py-2 font-mono text-sm text-surface-text">{{ $pairingCode }}</p>
                         <p class="mt-3 text-xs font-medium text-status-pending-text">Vence el {{ $pairingExpiresAt }}. Al completar el emparejamiento, este codigo deja de servir.</p>
+                        @if ($pairingQrUnavailable)
+                            <p class="mt-2 text-xs text-surface-muted">El cÃ³digo manual sigue siendo vÃ¡lido. Revisa la instalaciÃ³n de la dependencia QR en el servidor para volver a mostrar la imagen.</p>
+                        @endif
                     </div>
                 </div>
             @endif

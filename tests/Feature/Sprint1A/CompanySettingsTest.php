@@ -151,4 +151,32 @@ class CompanySettingsTest extends TestCase
             ->call('updateSettings')
             ->assertHasErrors(['settingsForm.kiosk_key']);
     }
+
+    public function test_admin_receives_the_manual_pairing_code_when_authorizing_a_kiosk_terminal(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'kiosk')
+            ->set('kioskDeviceForm.name', 'Recepcion')
+            ->call('createKioskDevicePairing')
+            ->assertSee('Autoriza: Recepcion')
+            ->assertSee('VTK-');
+
+        $this->assertDatabaseHas('kiosk_devices', [
+            'company_id' => $company->id,
+            'name' => 'Recepcion',
+            'status' => 'pending',
+        ]);
+    }
 }
