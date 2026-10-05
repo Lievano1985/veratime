@@ -392,12 +392,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     </div>
                 @elseif (! $confirmationMessage && ! $credentialToken)
                     <form wire:submit="identify" autocomplete="off" data-form-type="other" class="space-y-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <h1 class="font-display text-[24px] font-bold text-brand-navy">Identificación</h1>
-                                <p class="mt-1 text-[13.5px] text-surface-muted">Captura tu código y NIP para continuar.</p>
-                            </div>
-                            <span class="rounded-full border border-status-rest-line bg-status-rest-bg px-3 py-1.5 text-xs font-semibold text-status-rest-text">Terminal autorizada</span>
+                        <div>
+                            <h1 class="font-display text-[24px] font-bold text-brand-navy">Identificación</h1>
+                            <p class="mt-1 text-[13.5px] text-surface-muted">Captura tu código y NIP para continuar.</p>
                         </div>
 
                         @if ($errors->any())
