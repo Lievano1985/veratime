@@ -14,8 +14,6 @@ class RevokeKioskDeviceAction
 
         $device->forceFill([
             'status' => 'revoked',
-            'pairing_code_hash' => null,
-            'pairing_expires_at' => null,
             'device_token_hash' => null,
             'revoked_at' => now(),
             'revoked_by_user_id' => $actor->id,

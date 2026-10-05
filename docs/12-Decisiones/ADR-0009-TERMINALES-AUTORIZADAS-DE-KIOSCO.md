@@ -23,21 +23,23 @@ La direccion IP, MAC, navegador o numero de serie no son una identidad confiable
 
 ## Decision
 
-Se agrega `kiosk_devices`, siempre separado por `company_id`, para registrar terminales de kiosco.
+Se agregan `kiosk_devices` y `kiosk_terminal_access_requests`, ambos separados por `company_id`. Las solicitudes representan un equipo que espera aprobacion; los dispositivos representan exclusivamente terminales que ya reclamaron su credencial.
 
-1. Un administrador de empresa o RH admin crea una autorizacion desde **Configuracion de empresa > Terminales de kiosco**.
-2. Vera genera un codigo aleatorio de un solo uso valido por una hora. Se puede escanear como QR o pegar manualmente en `/time/kiosk/authorize`; por ello funciona tambien en una PC sin camara.
-3. El servidor guarda exclusivamente hashes SHA-256 del codigo de emparejamiento y de la credencial de terminal. El secreto de terminal se entrega una vez en una cookie `HttpOnly`, `Secure` en produccion y `SameSite=Strict`, limitada a `/time/kiosk`.
-4. Una terminal activa conserva empresa y, opcionalmente, centro. Si tiene centro, solo acepta credenciales con relacion laboral activa en ese centro.
-5. Revocar o eliminar una terminal bloquea su uso desde la siguiente solicitud. Eliminar la oculta de la operacion sin borrar su identidad tecnica, para conservar la referencia de eventos historicos.
-6. Toda terminal debe estar autorizada. El mecanismo anterior de clave compartida se elimina de la interfaz, del flujo de kiosco y de la configuracion de empresa; abrir `/time/kiosk` sin una credencial de terminal valida redirige a `/time/kiosk/authorize`.
-7. Cada solicitud de una terminal actualiza `last_seen_at`, IP y agente de navegador para soporte. “Conectada” significa vista en los ultimos tres minutos; no significa presencia fisica garantizada.
+1. Un administrador configura desde **Configuracion de empresa > Terminales de kiosco** una clave de solicitud. Vera genera tambien un codigo publico de empresa. La clave se guarda con hash y nunca se muestra despues de guardarla.
+2. Un equipo nuevo abre `/time/kiosk`, captura su nombre, el codigo de empresa y la clave de solicitud. Esto crea una solicitud temporal pendiente; conocer la clave no permite registrar asistencias ni recibir una credencial de terminal.
+3. El administrador ve la bandeja de solicitudes de su propia empresa, revisa nombre, IP y navegador, y puede elegir un centro opcional antes de aceptar o rechazar.
+4. Aceptar una solicitud no crea todavia una terminal activa. El mismo navegador solicitante reclama la aprobacion usando un secreto aleatorio propio, de un solo uso y valido por quince minutos. Solo al reclamarlo se crea `kiosk_devices` y se emite el secreto de terminal.
+5. El servidor conserva hashes SHA-256 del secreto de solicitud y de la credencial de terminal. La credencial se entrega una vez en una cookie `HttpOnly`, `Secure` en produccion y `SameSite=Strict`, limitada a `/time/kiosk`.
+6. Una terminal activa conserva empresa y, opcionalmente, centro. Si tiene centro, solo acepta credenciales con relacion laboral activa en ese centro. No tiene una sesion administrativa ni cierre por inactividad: el navegador vuelve directamente al kiosco mientras conserve la cookie de terminal; borrarla, cambiar de navegador o revocar el equipo exige una nueva solicitud.
+7. Revocar o eliminar una terminal bloquea su uso desde la siguiente solicitud. Eliminar la oculta de la operacion sin borrar su identidad tecnica, para conservar la referencia de eventos historicos.
+8. Rotar la clave invalida solicitudes pendientes, pero no revoca terminales ya autorizadas. Las solicitudes tienen limite por IP, codigo de empresa y cantidad pendiente para evitar abuso.
+9. Cada solicitud de una terminal y cada terminal activa actualiza los datos tecnicos minimos requeridos para soporte. "Conectada" significa vista en los ultimos tres minutos; no significa presencia fisica garantizada.
 
 ## Consecuencias
 
-- Conocer codigo y NIP no basta: se requiere la cookie secreta emitida al equipo autorizado.
-- Borrar cookies, cambiar de navegador o revocar la terminal exige emparejar de nuevo.
-- El QR no usa proveedores externos; se genera localmente dentro de Vera.
+- Conocer el codigo de empresa, la clave, el codigo y NIP de una persona trabajadora no basta: se requiere aprobacion humana y la cookie secreta emitida al equipo autorizado.
+- Borrar cookies, cambiar de navegador o revocar la terminal exige una nueva solicitud de terminal.
+- El flujo no depende de QR, camara, MAC, numero de serie ni proveedor externo.
 - La cookie reduce el riesgo, pero no sustituye controles fisicos de la empresa. Para instalaciones de mayor riesgo, el siguiente incremento debera agregar red corporativa/VPN permitida o codigo visual rotativo en pantalla.
 
 ## Fuera de alcance
