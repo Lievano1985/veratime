@@ -21,6 +21,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     $this->seed(ProductSeeder::class);
@@ -29,6 +30,10 @@ beforeEach(function (): void {
 it('authenticates a linked worker and returns a personal mobile token with its context', function (): void {
     $account = CustomerAccount::factory()->create();
     $company = Company::factory()->create(['customer_account_id' => $account->id, 'timezone' => 'America/Hermosillo']);
+    $brandingImagePath = "companies/{$company->id}/branding/empresa.png";
+    Storage::fake('public');
+    Storage::disk('public')->put($brandingImagePath, 'test image');
+    $company->setting()->create(array_replace(Company::defaultSettings(), ['branding_image_path' => $brandingImagePath]));
     $user = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN]);
     $worker = Worker::factory()->create(['company_id' => $company->id]);
     UserWorkerLink::create(['company_id' => $company->id, 'user_id' => $user->id, 'worker_id' => $worker->id, 'status' => 'active']);
@@ -56,6 +61,7 @@ it('authenticates a linked worker and returns a personal mobile token with its c
         ->assertJsonPath('data.abilities.1', 'self:write')
         ->assertJsonPath('data.context.company.id', (string) $company->id)
         ->assertJsonPath('data.context.company.timezone', 'America/Hermosillo')
+        ->assertJsonPath('data.context.company.branding_image_url', Storage::disk('public')->url($brandingImagePath))
         ->assertJsonPath('data.context.worker.id', (string) $worker->id)
         ->assertJsonPath('data.context.permissions.can_register_time_events', true)
         ->assertJsonPath('data.context.current_time_record.state', 'trabajando')
@@ -67,6 +73,7 @@ it('authenticates a linked worker and returns a personal mobile token with its c
         ->getJson('/api/v1/time/me')
         ->assertOk()
         ->assertJsonPath('data.company.id', (string) $company->id)
+        ->assertJsonPath('data.company.branding_image_url', Storage::disk('public')->url($brandingImagePath))
         ->assertJsonPath('data.worker.id', (string) $worker->id);
 
     $this->assertDatabaseHas('personal_access_tokens', [

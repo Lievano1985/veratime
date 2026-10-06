@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\WorkDay;
 use App\Models\Worker;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Storage;
 
 class BuildPersonalMobileContextAction
 {
@@ -19,6 +20,7 @@ class BuildPersonalMobileContextAction
      */
     public function handle(Company $company, Worker $worker): array
     {
+        $company->loadMissing('setting');
         $today = CarbonImmutable::now($company->timezone)->toDateString();
         $relationship = $worker->activeEmploymentRelationship()->with('center')->first();
         $timeRecord = $this->resolveCurrentState->handle($company, $worker, null, $relationship?->center);
@@ -34,6 +36,9 @@ class BuildPersonalMobileContextAction
                 'id' => (string) $company->id,
                 'name' => $company->name,
                 'timezone' => $company->timezone,
+                'branding_image_url' => filled($company->setting?->branding_image_path)
+                    ? Storage::disk('public')->url($company->setting->branding_image_path)
+                    : null,
             ],
             'worker' => [
                 'id' => (string) $worker->id,

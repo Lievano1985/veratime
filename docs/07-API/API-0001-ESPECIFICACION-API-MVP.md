@@ -317,7 +317,7 @@ Devuelve el contexto móvil personal resuelto exclusivamente desde el Bearer tok
 
 La respuesta contiene:
 
-- `company`: `id`, `name` y `timezone` de la empresa del token;
+- `company`: `id`, `name`, `timezone` y `branding_image_url` de la empresa del token. `branding_image_url` es `null` cuando la empresa aún no configura una imagen institucional; cuando existe, el cliente móvil puede usarla como activo visual de la empresa;
 - `worker`: `id`, `employee_code` y `full_name` del trabajador vinculado;
 - `permissions.can_register_time_events`, que indica la capacidad expuesta actualmente por el contexto;
 - `current_time_record`: estado actual de marcaje, acciones permitidas para ese estado, fecha y zona horaria local, y el último evento válido cuando existe. Reutiliza la misma resolución de estados que el reloj web (`sin_entrada`, `trabajando`, `en_pausa` o `jornada_cerrada`), para que la PWA pueda mostrar sólo las acciones aplicables;
