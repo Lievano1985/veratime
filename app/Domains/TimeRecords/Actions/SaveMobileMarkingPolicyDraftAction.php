@@ -88,6 +88,12 @@ class SaveMobileMarkingPolicyDraftAction
             ]);
         }
 
+        if (filled($attributes['offline_authorization_duration_minutes'] ?? null) && ! $requiresBinding) {
+            throw ValidationException::withMessages([
+                'policyForm.offline_authorization_duration_minutes' => 'El marcaje sin conexión requiere un dispositivo autorizado.',
+            ]);
+        }
+
         return [
             'center_id' => $centerId,
             'organizational_unit_id' => $unitId,
@@ -99,6 +105,7 @@ class SaveMobileMarkingPolicyDraftAction
             'radius_meters' => $mode === MobileMarkingPolicy::MODE_CIRCLE ? (int) $attributes['radius_meters'] : null,
             'max_accuracy_meters' => filled($attributes['max_accuracy_meters'] ?? null) ? (int) $attributes['max_accuracy_meters'] : null,
             'max_location_age_seconds' => filled($attributes['max_location_age_seconds'] ?? null) ? (int) $attributes['max_location_age_seconds'] : null,
+            'offline_authorization_duration_minutes' => filled($attributes['offline_authorization_duration_minutes'] ?? null) ? (int) $attributes['offline_authorization_duration_minutes'] : null,
             'valid_from' => null,
             'valid_until' => null,
             'offline_valid_until' => null,

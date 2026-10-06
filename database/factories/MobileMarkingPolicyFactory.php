@@ -27,6 +27,7 @@ class MobileMarkingPolicyFactory extends Factory
             'radius_meters' => null,
             'max_accuracy_meters' => null,
             'max_location_age_seconds' => null,
+            'offline_authorization_duration_minutes' => null,
             'valid_from' => null,
             'valid_until' => null,
             'offline_valid_until' => null,

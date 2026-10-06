@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domains\Alerts\Actions\ListAlertsAction;
 use App\Domains\Integrations\Actions\RevokePersonalApiTokenAction;
 use App\Domains\Scheduling\Actions\ListPersonalScheduleAction;
+use App\Domains\TimeRecords\Actions\IssueOfflineMarkingAuthorizationAction;
+use App\Domains\TimeRecords\Actions\ReconcileOfflinePersonalTimeEventAction;
 use App\Domains\TimeRecords\Actions\RegisterPersonalTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolvePersonalMarkingSecurityAction;
 use App\Domains\TimeRecords\Actions\SyncPersonalTimeEventsAction;
@@ -17,6 +19,7 @@ use App\Domains\Workers\Actions\ResolvePersonalWorkerAction;
 use App\Domains\Workers\Actions\StartMobileDeviceBindingChallengeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CompleteMobileDeviceBindingRequest;
+use App\Http\Requests\Api\V1\IssueOfflineMarkingAuthorizationRequest;
 use App\Http\Requests\Api\V1\ListPersonalAlertsRequest;
 use App\Http\Requests\Api\V1\ListPersonalScheduleRequest;
 use App\Http\Requests\Api\V1\ListPersonalTimeEventsRequest;
@@ -109,6 +112,30 @@ class PersonalTimeController extends Controller
         ]);
     }
 
+    public function issueOfflineAuthorization(IssueOfflineMarkingAuthorizationRequest $request, ResolvePersonalWorkerAction $resolve, IssueOfflineMarkingAuthorizationAction $action): JsonResponse
+    {
+        /** @var Company $company */ $company = $request->attributes->get('api.company');
+        $worker = $resolve->handle($request->user(), $company);
+
+        try {
+            $authorization = $action->handle($company, $request->user(), $worker, $request->validated('binding_id'), (int) $request->validated('issued_monotonic_milliseconds'));
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['offline_authorization' => $exception->getMessage()]);
+        }
+
+        return response()->json(['data' => [
+            'id' => $authorization->public_id,
+            'status' => $authorization->status,
+            'issued_at' => $authorization->issued_at->toIso8601String(),
+            'expires_at' => $authorization->expires_at->toIso8601String(),
+            'issued_monotonic_milliseconds' => $authorization->issued_monotonic_milliseconds,
+            'max_clock_drift_seconds' => $authorization->max_clock_drift_seconds,
+            'policy' => ['id' => $authorization->policy_snapshot['public_id'], 'version' => $authorization->policy_version],
+            'binding_id' => $authorization->binding->public_id,
+            'signature_version' => 'VERA-MOBILE-OFFLINE-EVENT-V1',
+        ], 'meta' => ['trace_id' => $request->attributes->get('api.trace_id')]], 201);
+    }
+
     public function events(ListPersonalTimeEventsRequest $request, ResolvePersonalWorkerAction $resolve): JsonResponse
     {
         /** @var Company $company */ $company = $request->attributes->get('api.company');
@@ -179,17 +206,30 @@ class PersonalTimeController extends Controller
         return response()->json(['data' => (new TimeEventResource($event))->resolve(), 'meta' => ['trace_id' => $request->attributes->get('api.trace_id')]]);
     }
 
-    public function storeEvent(StorePersonalTimeEventRequest $request, ResolvePersonalWorkerAction $resolve, RegisterPersonalTimeEventAction $action): JsonResponse
+    public function storeEvent(StorePersonalTimeEventRequest $request, ResolvePersonalWorkerAction $resolve, RegisterPersonalTimeEventAction $action, ReconcileOfflinePersonalTimeEventAction $offlineAction): JsonResponse
     {
         /** @var Company $company */ $company = $request->attributes->get('api.company');
         $worker = $resolve->handle($request->user(), $company);
 
         try {
-            $result = $action->handle($company, $request->user(), $worker, [
+            $data = [
                 ...$request->validated(),
                 'idempotency_key' => trim((string) $request->header('Idempotency-Key')),
                 'trace_id' => $request->attributes->get('api.trace_id'),
-            ]);
+            ];
+            if (filled($data['security']['offline_authorization_id'] ?? null)) {
+                $result = $offlineAction->handle($company, $request->user(), $worker, $data);
+                if (! $result['event']) {
+                    return response()->json(['data' => [
+                        'status' => 'pending_review',
+                        'client_event_id' => $data['idempotency_key'],
+                        'review_reason' => $result['capture']->review_reason,
+                        'retain_local' => true,
+                    ], 'meta' => ['trace_id' => $request->attributes->get('api.trace_id')]], 202);
+                }
+            } else {
+                $result = $action->handle($company, $request->user(), $worker, $data);
+            }
         } catch (PersonalTimeEventConflictException $exception) {
             return $this->personalMarkingError($exception->getMessage(), 'idempotency_conflict', false, true);
         } catch (PersonalTimeEventSecurityException $exception) {
@@ -228,6 +268,7 @@ class PersonalTimeController extends Controller
                 'already_registered' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'already_registered')),
                 'rejected' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'rejected')),
                 'conflict' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'conflict')),
+                'pending_review' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'pending_review')),
                 'trace_id' => $request->attributes->get('api.trace_id'),
             ],
         ]);

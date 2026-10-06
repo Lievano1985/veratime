@@ -47,6 +47,7 @@ class ResolvePersonalMarkingSecurityAction
                 'valid_from' => $policy->valid_from?->toIso8601String(),
                 'valid_until' => $policy->valid_until?->toIso8601String(),
                 'offline_valid_until' => $policy->offline_valid_until?->toIso8601String(),
+                'offline_authorization_duration_minutes' => $policy->offline_authorization_duration_minutes,
                 'max_accuracy_meters' => $policy->max_accuracy_meters,
                 'max_location_age_seconds' => $policy->max_location_age_seconds,
             ],

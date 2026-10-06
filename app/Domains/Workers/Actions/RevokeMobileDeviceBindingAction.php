@@ -3,6 +3,7 @@
 namespace App\Domains\Workers\Actions;
 
 use App\Models\MobileDeviceBinding;
+use App\Models\MobileOfflineMarkingAuthorization;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +27,11 @@ class RevokeMobileDeviceBindingAction
                 'revoked_at' => now(),
                 'revoked_by_user_id' => $actor->id,
             ])->save();
+
+            MobileOfflineMarkingAuthorization::query()
+                ->where('mobile_device_binding_id', $binding->id)
+                ->where('status', MobileOfflineMarkingAuthorization::STATUS_ACTIVE)
+                ->update(['status' => MobileOfflineMarkingAuthorization::STATUS_REVOKED, 'revoked_at' => $binding->revoked_at]);
 
             return $binding->refresh();
         });

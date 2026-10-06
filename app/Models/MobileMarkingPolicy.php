@@ -38,6 +38,7 @@ class MobileMarkingPolicy extends Model
         'radius_meters',
         'max_accuracy_meters',
         'max_location_age_seconds',
+        'offline_authorization_duration_minutes',
         'valid_from',
         'valid_until',
         'offline_valid_until',

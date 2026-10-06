@@ -19,6 +19,7 @@ use App\Models\Company;
 use App\Models\KioskDevice;
 use App\Models\KioskTerminalAccessRequest;
 use App\Models\MobileMarkingPolicy;
+use App\Models\MobileOfflineMarkingCapture;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -227,6 +228,7 @@ new class extends Component {
             'radius_meters' => $policy->radius_meters,
             'max_accuracy_meters' => $policy->max_accuracy_meters,
             'max_location_age_seconds' => $policy->max_location_age_seconds,
+            'offline_authorization_duration_minutes' => $policy->offline_authorization_duration_minutes,
         ];
     }
 
@@ -254,6 +256,7 @@ new class extends Component {
             'mobilePolicyForm.radius_meters' => [Rule::requiredIf($this->mobilePolicyForm['mode'] === MobileMarkingPolicy::MODE_CIRCLE), 'nullable', 'integer', 'between:1,100000'],
             'mobilePolicyForm.max_accuracy_meters' => ['nullable', 'integer', 'between:1,100000'],
             'mobilePolicyForm.max_location_age_seconds' => ['nullable', 'integer', 'between:1,86400'],
+            'mobilePolicyForm.offline_authorization_duration_minutes' => ['nullable', 'integer', 'between:1,4320'],
         ])['mobilePolicyForm'];
 
         if ($validated['scope'] === 'company') {
@@ -340,6 +343,13 @@ new class extends Component {
                 ->where('company_id', $company->id)
                 ->latest('id')
                 ->get(),
+            'pendingOfflineMarkingCaptures' => MobileOfflineMarkingCapture::query()
+                ->with('worker')
+                ->where('company_id', $company->id)
+                ->where('status', MobileOfflineMarkingCapture::STATUS_PENDING_REVIEW)
+                ->latest('created_at')
+                ->limit(50)
+                ->get(),
         ];
     }
 
@@ -406,6 +416,7 @@ new class extends Component {
             'radius_meters' => '',
             'max_accuracy_meters' => '',
             'max_location_age_seconds' => '',
+            'offline_authorization_duration_minutes' => '',
         ];
     }
 
@@ -760,9 +771,16 @@ new class extends Component {
                     @endforeach
                 </div>
 
+                <div class="rounded-lg border border-surface-line p-4">
+                    <p class="mb-1 text-sm font-semibold text-surface-text">Marcaje sin conexión</p>
+                    <p class="mb-3 text-xs text-surface-muted">Opcional. Define por cuántos minutos la app puede conservar marcajes con una autorización de jornada. Requiere dispositivo autorizado y se valida con el reloj monotónico del equipo.</p>
+                    <flux:input wire:model="mobilePolicyForm.offline_authorization_duration_minutes" label="Vigencia de autorización offline (minutos)" type="number" min="1" max="4320" placeholder="Desactivado" />
+                    @error('mobilePolicyForm.offline_authorization_duration_minutes')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+
                 <div class="flex flex-wrap items-center gap-3">
                     <button type="submit" class="btn-primary">{{ $editingMobilePolicyId ? 'Guardar cambios del borrador' : 'Guardar borrador' }}</button>
-                    <p class="text-xs text-surface-muted">El marcaje sin conexión sigue pendiente de implementación; esta pantalla no lo habilita.</p>
+                    <p class="text-xs text-surface-muted">La vigencia offline se aplica al activar este borrador y siempre requiere un dispositivo autorizado.</p>
                 </div>
             </form>
 
@@ -824,6 +842,43 @@ new class extends Component {
                                 </tr>
                             @empty
                                 <tr><td colspan="5" class="px-3 py-8 text-center text-surface-muted">Aún no hay políticas de marcaje móvil. La app usa el flujo personal actual.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <flux:heading size="lg">Marcajes offline pendientes de revision</flux:heading>
+                        <flux:subheading>Estas capturas conservan su evidencia original, pero no crearon asistencia automaticamente. Revisa el motivo y, si procede, registra una captura manual justificada desde Eventos.</flux:subheading>
+                    </div>
+                    <a href="{{ route('time-events.manual') }}" wire:navigate class="btn-secondary btn-sm">Ir a Eventos</a>
+                </div>
+
+                <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            <tr>
+                                <th class="px-3 py-2">Persona</th>
+                                <th class="px-3 py-2">Marcaje</th>
+                                <th class="px-3 py-2">Hora declarada</th>
+                                <th class="px-3 py-2">Motivo de revision</th>
+                                <th class="px-3 py-2">Recibido</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                            @forelse ($pendingOfflineMarkingCaptures as $capture)
+                                <tr wire:key="offline-marking-capture-{{ $capture->id }}">
+                                    <td class="px-3 py-3 font-medium">{{ $capture->worker?->full_name ?? 'Trabajador no disponible' }}</td>
+                                    <td class="px-3 py-3">{{ ['clock_in' => 'Entrada', 'clock_out' => 'Salida', 'break_start' => 'Inicio de pausa', 'break_end' => 'Fin de pausa'][$capture->event_type] ?? $capture->event_type }}</td>
+                                    <td class="px-3 py-3 font-mono text-xs">{{ $capture->occurred_at_raw }}</td>
+                                    <td class="px-3 py-3"><x-ui.badge variant="warning">{{ $capture->review_reason }}</x-ui.badge></td>
+                                    <td class="px-3 py-3 text-xs text-surface-muted">{{ $capture->created_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-3 py-8 text-center text-surface-muted">No hay marcajes offline pendientes de revision.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
