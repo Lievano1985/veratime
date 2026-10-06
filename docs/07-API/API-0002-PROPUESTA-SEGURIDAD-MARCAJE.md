@@ -4,7 +4,7 @@
 
 **Fecha de decisión:** 2026-10-05.
 
-Este documento complementa [API-0001](API-0001-ESPECIFICACION-API-MVP.md). Define el incremento de seguridad aplicable al marcaje personal desde PWA o cliente Android. `GET /api/v1/time/me/marking-security` está disponible con BL-0614; las rutas de vinculación y la evidencia firmada siguen siendo contrato objetivo hasta su implementación con pruebas.
+Este documento complementa [API-0001](API-0001-ESPECIFICACION-API-MVP.md). Define el incremento de seguridad aplicable al marcaje personal desde PWA o cliente Android. La política efectiva, la vinculación supervisada y la evidencia firmada para marcaje en línea ya están disponibles; la conciliación offline segura continúa como contrato objetivo.
 
 ## Decisión de alcance
 
@@ -62,6 +62,12 @@ Respuesta conceptual:
 Los valores de radio, precisión y antigüedad son ilustrativos, no límites aprobados. `mode: free` omite centro y radio, pero no elimina los demás requisitos que tenga la política. Mientras BL-0615 no esté implementada, `binding` es `null` y la política sólo informa requisitos, sin bloquear el marcaje actual.
 
 BL-0614 resuelve primero una política activa específica de la unidad organizacional principal del trabajador (departamento, área o equipo), después una política de su centro y finalmente la política general de la empresa. Esto permite varios radios dentro del mismo centro. Si no hay política vigente, `policy` y `binding` son `null`. La respuesta crea una referencia de tiempo opaca, separada por empresa, usuario y trabajador, que vence en cinco minutos. Esta referencia prueba que el servidor emitió ese contexto; por sí sola no convierte el reloj local del cliente en hora confiable.
+
+### Administración web de políticas
+
+RH o el administrador de empresa configura estas políticas desde **Configuración de empresa > Marcaje móvil**. Puede crear borradores para toda la empresa, un centro o una unidad organizacional. La unidad siempre se valida dentro de la empresa y conserva el centro al que pertenece; el cliente móvil no recibe ni puede elegir ese alcance.
+
+Una política se edita sólo mientras sea borrador. Al activarla se publica como una nueva versión y la política activa anterior del mismo alcance pasa a `inactive`; no se borra. Desactivarla tampoco borra filas ni evidencias. El alcance más específico continúa resolviéndose primero: unidad, centro y empresa. Esta pantalla no habilita marcaje offline ni establece por sí sola una fecha de retención de ubicación.
 
 ### Vinculación de dispositivo
 

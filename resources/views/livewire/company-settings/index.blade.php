@@ -7,14 +7,18 @@ use App\Domains\Companies\Actions\UpdateCompanyBrandingImageAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\TimeRecords\Actions\ApproveKioskTerminalAccessRequestAction;
+use App\Domains\TimeRecords\Actions\ActivateMobileMarkingPolicyAction;
+use App\Domains\TimeRecords\Actions\DeactivateMobileMarkingPolicyAction;
 use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\RejectKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
+use App\Domains\TimeRecords\Actions\SaveMobileMarkingPolicyDraftAction;
 use App\Domains\TimeRecords\Actions\SetKioskEnrollmentKeyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use App\Models\KioskDevice;
 use App\Models\KioskTerminalAccessRequest;
+use App\Models\MobileMarkingPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -33,6 +37,8 @@ new class extends Component {
     public array $legalParameterForm = [];
     public array $kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
     public array $pendingRequestCenters = [];
+    public array $mobilePolicyForm = [];
+    public ?int $editingMobilePolicyId = null;
     public mixed $companyBrandImage = null;
 
     public function mount(CurrentCompany $currentCompany): void
@@ -45,6 +51,7 @@ new class extends Component {
 
         $this->loadSettingsForm($company);
         $this->loadLegalParameterForm($company);
+        $this->resetMobilePolicyForm();
     }
 
     public function updateSettings(UpdateCompanySettingsAction $action, CurrentCompany $currentCompany): void
@@ -196,6 +203,109 @@ new class extends Component {
         Session::flash('status', 'Parametro legal actualizado.');
     }
 
+    public function editMobileMarkingPolicy(int $policyId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $policy = MobileMarkingPolicy::query()
+            ->where('company_id', $company->id)
+            ->where('status', MobileMarkingPolicy::STATUS_DRAFT)
+            ->findOrFail($policyId);
+
+        $this->editingMobilePolicyId = $policy->id;
+        $this->mobilePolicyForm = [
+            'scope' => $policy->organizational_unit_id ? 'organizational_unit' : ($policy->center_id ? 'center' : 'company'),
+            'center_id' => $policy->center_id ? (string) $policy->center_id : '',
+            'organizational_unit_id' => $policy->organizational_unit_id ? (string) $policy->organizational_unit_id : '',
+            'mode' => $policy->mode,
+            'requires_device_binding' => $policy->requires_device_binding,
+            'requires_biometric_unlock' => $policy->requires_biometric_unlock,
+            'center_latitude' => $policy->center_latitude,
+            'center_longitude' => $policy->center_longitude,
+            'radius_meters' => $policy->radius_meters,
+            'max_accuracy_meters' => $policy->max_accuracy_meters,
+            'max_location_age_seconds' => $policy->max_location_age_seconds,
+        ];
+    }
+
+    public function cancelMobileMarkingPolicyEdit(): void
+    {
+        $this->resetValidation('mobilePolicyForm');
+        $this->resetMobilePolicyForm();
+    }
+
+    public function saveMobileMarkingPolicyDraft(SaveMobileMarkingPolicyDraftAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $validated = $this->validate([
+            'mobilePolicyForm.scope' => ['required', Rule::in(['company', 'center', 'organizational_unit'])],
+            'mobilePolicyForm.center_id' => ['nullable', 'integer'],
+            'mobilePolicyForm.organizational_unit_id' => ['nullable', 'integer'],
+            'mobilePolicyForm.mode' => ['required', Rule::in([MobileMarkingPolicy::MODE_FREE, MobileMarkingPolicy::MODE_CIRCLE])],
+            'mobilePolicyForm.requires_device_binding' => ['boolean'],
+            'mobilePolicyForm.requires_biometric_unlock' => ['boolean'],
+            'mobilePolicyForm.center_latitude' => [Rule::requiredIf($this->mobilePolicyForm['mode'] === MobileMarkingPolicy::MODE_CIRCLE), 'nullable', 'numeric', 'between:-90,90'],
+            'mobilePolicyForm.center_longitude' => [Rule::requiredIf($this->mobilePolicyForm['mode'] === MobileMarkingPolicy::MODE_CIRCLE), 'nullable', 'numeric', 'between:-180,180'],
+            'mobilePolicyForm.radius_meters' => [Rule::requiredIf($this->mobilePolicyForm['mode'] === MobileMarkingPolicy::MODE_CIRCLE), 'nullable', 'integer', 'between:1,100000'],
+            'mobilePolicyForm.max_accuracy_meters' => ['nullable', 'integer', 'between:1,100000'],
+            'mobilePolicyForm.max_location_age_seconds' => ['nullable', 'integer', 'between:1,86400'],
+        ])['mobilePolicyForm'];
+
+        if ($validated['scope'] === 'company') {
+            $validated['center_id'] = null;
+            $validated['organizational_unit_id'] = null;
+        } elseif ($validated['scope'] === 'center') {
+            $validated['organizational_unit_id'] = null;
+            if (! filled($validated['center_id'])) {
+                throw ValidationException::withMessages(['mobilePolicyForm.center_id' => 'Selecciona el centro al que aplica la política.']);
+            }
+        } else {
+            $validated['center_id'] = null;
+            if (! filled($validated['organizational_unit_id'])) {
+                throw ValidationException::withMessages(['mobilePolicyForm.organizational_unit_id' => 'Selecciona el departamento, área o equipo al que aplica la política.']);
+            }
+        }
+
+        $policy = $this->editingMobilePolicyId
+            ? MobileMarkingPolicy::query()->where('company_id', $company->id)->findOrFail($this->editingMobilePolicyId)
+            : null;
+
+        $action->handle($company, $validated, $policy);
+
+        $this->resetMobilePolicyForm();
+        Session::flash('status', 'Borrador de política de marcaje móvil guardado. Actívalo cuando estés listo para aplicarlo.');
+    }
+
+    public function activateMobileMarkingPolicy(int $policyId, ActivateMobileMarkingPolicyAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $policy = MobileMarkingPolicy::query()->where('company_id', $company->id)->findOrFail($policyId);
+        $action->handle($company, $policy);
+
+        $this->resetMobilePolicyForm();
+        Session::flash('status', 'La política quedó activa. Si existía una política activa para el mismo alcance, quedó inactiva y su historial se conservó.');
+    }
+
+    public function deactivateMobileMarkingPolicy(int $policyId, DeactivateMobileMarkingPolicyAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $policy = MobileMarkingPolicy::query()->where('company_id', $company->id)->findOrFail($policyId);
+        $action->handle($company, $policy);
+
+        Session::flash('status', 'La política quedó inactiva. Los marcajes y evidencias ya generados no se modificaron.');
+    }
+
     public function with(CurrentCompany $currentCompany, ResolveCompanyBrandingImageUrlAction $brandingImageUrl): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -220,6 +330,16 @@ new class extends Component {
             'kioskEnrollmentIdentifier' => $company->setting?->kiosk_enrollment_identifier,
             'companyBrandImageUrl' => $brandingImageUrl->handle($company),
             'activeCenters' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
+            'activeOrganizationalUnits' => $company->organizationalUnits()
+                ->with('center')
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get(),
+            'mobileMarkingPolicies' => MobileMarkingPolicy::query()
+                ->with(['center', 'organizationalUnit.center'])
+                ->where('company_id', $company->id)
+                ->latest('id')
+                ->get(),
         ];
     }
 
@@ -234,7 +354,7 @@ new class extends Component {
 
     private function ensureValidTab(): void
     {
-        if (! in_array($this->activeTab, ['operation', 'identity', 'legal', 'users', 'kiosk'], true)) {
+        if (! in_array($this->activeTab, ['operation', 'identity', 'legal', 'users', 'kiosk', 'mobile-marking'], true)) {
             $this->activeTab = 'operation';
         }
     }
@@ -269,6 +389,24 @@ new class extends Component {
                 'reason' => $parameter['reason'] ?: 'Configuracion interna de empresa',
             ]])
             ->all();
+    }
+
+    private function resetMobilePolicyForm(): void
+    {
+        $this->editingMobilePolicyId = null;
+        $this->mobilePolicyForm = [
+            'scope' => 'company',
+            'center_id' => '',
+            'organizational_unit_id' => '',
+            'mode' => MobileMarkingPolicy::MODE_FREE,
+            'requires_device_binding' => false,
+            'requires_biometric_unlock' => false,
+            'center_latitude' => '',
+            'center_longitude' => '',
+            'radius_meters' => '',
+            'max_accuracy_meters' => '',
+            'max_location_age_seconds' => '',
+        ];
     }
 
     private function minutesLabel(?int $minutes): string
@@ -323,6 +461,9 @@ new class extends Component {
         </button>
         <button type="button" wire:click="$set('activeTab', 'users')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'users' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'users' ? 'true' : 'false' }}">
             Usuarios
+        </button>
+        <button type="button" wire:click="$set('activeTab', 'mobile-marking')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'mobile-marking' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'mobile-marking' ? 'true' : 'false' }}">
+            Marcaje móvil
         </button>
         <button type="button" wire:click="$set('activeTab', 'kiosk')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'kiosk' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'kiosk' ? 'true' : 'false' }}">
             Terminales de kiosco
@@ -511,6 +652,182 @@ new class extends Component {
             <div class="mt-5 rounded-lg border border-surface-line bg-surface-bg p-4">
                 <p class="text-sm text-surface-text">La administración de usuarios se realiza en su pantalla especializada para mantener los permisos y el historial de acceso en un solo lugar.</p>
                 <a href="{{ route('users.index') }}" wire:navigate class="btn-primary mt-4 inline-flex">Administrar usuarios</a>
+            </div>
+        </section>
+    @endif
+
+    @if ($activeTab === 'mobile-marking')
+        <section class="space-y-5 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <div>
+                <flux:heading>Seguridad de marcaje móvil</flux:heading>
+                <flux:subheading>Define cuándo la app debe pedir ubicación, dispositivo autorizado o desbloqueo local. Una política se aplica por empresa, centro o departamento; el alcance más específico tiene prioridad.</flux:subheading>
+            </div>
+
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+                <p class="font-semibold">Activación gradual</p>
+                <p class="mt-1 text-sm">Sin una política activa, la app conserva el marcaje personal actual. Al activar una política se crea una nueva versión operativa; la anterior queda inactiva y los marcajes previos no cambian.</p>
+            </div>
+
+            <form wire:submit="saveMobileMarkingPolicyDraft" class="space-y-5 rounded-lg border border-surface-line bg-surface-bg p-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <flux:heading size="lg">{{ $editingMobilePolicyId ? 'Editar borrador' : 'Nuevo borrador' }}</flux:heading>
+                        <flux:subheading>Revisa la configuración y actívala sólo cuando el piloto esté listo.</flux:subheading>
+                    </div>
+                    @if ($editingMobilePolicyId)
+                        <button type="button" wire:click="cancelMobileMarkingPolicyEdit" class="btn-secondary btn-sm">Cancelar edición</button>
+                    @endif
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Aplica a</label>
+                        <x-ui.select wire:model.live="mobilePolicyForm.scope">
+                            <option value="company">Toda la empresa</option>
+                            <option value="center">Un centro</option>
+                            <option value="organizational_unit">Un departamento, área o equipo</option>
+                        </x-ui.select>
+                        @error('mobilePolicyForm.scope')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+
+                    @if ($mobilePolicyForm['scope'] === 'center')
+                        <div class="md:col-span-2">
+                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
+                            <x-ui.select wire:model="mobilePolicyForm.center_id">
+                                <option value="">Selecciona un centro</option>
+                                @foreach ($activeCenters as $center)
+                                    <option value="{{ $center->id }}">{{ $center->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('mobilePolicyForm.center_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
+                    @elseif ($mobilePolicyForm['scope'] === 'organizational_unit')
+                        <div class="md:col-span-2">
+                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Departamento, área o equipo</label>
+                            <x-ui.select wire:model="mobilePolicyForm.organizational_unit_id">
+                                <option value="">Selecciona una unidad</option>
+                                @foreach ($activeOrganizationalUnits as $unit)
+                                    <option value="{{ $unit->id }}">{{ $unit->name }} · {{ $unit->center?->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('mobilePolicyForm.organizational_unit_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
+                    @else
+                        <div class="md:col-span-2 rounded-lg border border-dashed border-surface-line px-3 py-2 text-sm text-surface-muted">La política será la regla base para trabajadores sin una regla más específica.</div>
+                    @endif
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Tipo de ubicación</label>
+                        <x-ui.select wire:model.live="mobilePolicyForm.mode">
+                            <option value="free">Sin perímetro</option>
+                            <option value="circle">Dentro de un radio</option>
+                        </x-ui.select>
+                        @error('mobilePolicyForm.mode')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="space-y-2 rounded-lg border border-surface-line p-3">
+                        <flux:checkbox wire:model="mobilePolicyForm.requires_device_binding" label="Requerir dispositivo autorizado" />
+                        <flux:checkbox wire:model="mobilePolicyForm.requires_biometric_unlock" label="Requerir desbloqueo local con biometría" />
+                        <p class="text-xs text-surface-muted">La biometría sólo desbloquea una clave local: Vera no recibe ni guarda huellas o rostros.</p>
+                        @error('mobilePolicyForm.requires_biometric_unlock')<p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                @if ($mobilePolicyForm['mode'] === 'circle')
+                    <div class="rounded-lg border border-surface-line p-4">
+                        <p class="mb-3 text-sm font-semibold text-surface-text">Perímetro autorizado</p>
+                        <div class="grid gap-3 md:grid-cols-3">
+                            <flux:input wire:model="mobilePolicyForm.center_latitude" label="Latitud" type="number" step="0.0000001" />
+                            <flux:input wire:model="mobilePolicyForm.center_longitude" label="Longitud" type="number" step="0.0000001" />
+                            <flux:input wire:model="mobilePolicyForm.radius_meters" label="Radio (metros)" type="number" min="1" max="100000" />
+                        </div>
+                        @foreach (['center_latitude', 'center_longitude', 'radius_meters'] as $field)
+                            @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="rounded-lg border border-surface-line p-4">
+                    <p class="mb-1 text-sm font-semibold text-surface-text">Calidad de ubicación</p>
+                    <p class="mb-3 text-xs text-surface-muted">Opcional. Si se configura cualquiera de estos límites, la app debe enviar ubicación verificable en cada marcaje.</p>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <flux:input wire:model="mobilePolicyForm.max_accuracy_meters" label="Precisión máxima (metros)" type="number" min="1" max="100000" />
+                        <flux:input wire:model="mobilePolicyForm.max_location_age_seconds" label="Antigüedad máxima de ubicación (segundos)" type="number" min="1" max="86400" />
+                    </div>
+                    @foreach (['max_accuracy_meters', 'max_location_age_seconds'] as $field)
+                        @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    @endforeach
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="submit" class="btn-primary">{{ $editingMobilePolicyId ? 'Guardar cambios del borrador' : 'Guardar borrador' }}</button>
+                    <p class="text-xs text-surface-muted">El marcaje sin conexión sigue pendiente de implementación; esta pantalla no lo habilita.</p>
+                </div>
+            </form>
+
+            <div class="space-y-3">
+                <div>
+                    <flux:heading size="lg">Versiones de políticas</flux:heading>
+                    <flux:subheading>Las versiones inactivas se conservan para consultar la configuración que originó evidencias anteriores.</flux:subheading>
+                </div>
+
+                <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead class="bg-zinc-50 text-left text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            <tr>
+                                <th class="px-3 py-2">Alcance</th>
+                                <th class="px-3 py-2">Reglas</th>
+                                <th class="px-3 py-2">Versión</th>
+                                <th class="px-3 py-2">Estado</th>
+                                <th class="px-3 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                            @forelse ($mobileMarkingPolicies as $policy)
+                                <tr wire:key="mobile-marking-policy-{{ $policy->id }}">
+                                    <td class="px-3 py-3">
+                                        @if ($policy->organizationalUnit)
+                                            <span class="block font-medium">{{ $policy->organizationalUnit->name }}</span>
+                                            <span class="text-xs text-surface-muted">{{ $policy->organizationalUnit->center?->name }} · Unidad organizacional</span>
+                                        @elseif ($policy->center)
+                                            <span class="block font-medium">{{ $policy->center->name }}</span>
+                                            <span class="text-xs text-surface-muted">Centro</span>
+                                        @else
+                                            <span class="font-medium">Toda la empresa</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-3 text-xs text-surface-muted">
+                                        <div>{{ $policy->mode === 'circle' ? "Radio de {$policy->radius_meters} m" : 'Sin perímetro' }}</div>
+                                        <div class="mt-1">{{ $policy->requires_device_binding ? 'Dispositivo autorizado' : 'Sin dispositivo obligatorio' }}{{ $policy->requires_biometric_unlock ? ' · Desbloqueo local' : '' }}</div>
+                                    </td>
+                                    <td class="px-3 py-3">v{{ $policy->version }}</td>
+                                    <td class="px-3 py-3">
+                                        @if ($policy->status === 'active')
+                                            <x-ui.badge variant="success">Activa</x-ui.badge>
+                                        @elseif ($policy->status === 'draft')
+                                            <x-ui.badge variant="warning">Borrador</x-ui.badge>
+                                        @else
+                                            <x-ui.badge variant="neutral">Inactiva</x-ui.badge>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-3 text-right">
+                                        <div class="flex justify-end gap-2">
+                                            @if ($policy->status === 'draft')
+                                                <button type="button" wire:click="editMobileMarkingPolicy({{ $policy->id }})" class="btn-secondary btn-sm">Editar</button>
+                                                <button type="button" wire:click="activateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Activar esta política? La política activa anterior del mismo alcance quedará inactiva." class="btn-primary btn-sm">Activar</button>
+                                            @elseif ($policy->status === 'active')
+                                                <button type="button" wire:click="deactivateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Desactivar esta política? La app volverá a la política menos específica o al flujo actual." class="btn-secondary btn-sm">Desactivar</button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-3 py-8 text-center text-surface-muted">Aún no hay políticas de marcaje móvil. La app usa el flujo personal actual.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
     @endif
