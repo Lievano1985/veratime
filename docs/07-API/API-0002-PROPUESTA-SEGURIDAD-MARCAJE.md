@@ -72,6 +72,8 @@ POST /api/v1/time/me/device-binding/complete
 
 El primer endpoint consume la autorización de RH de un solo uso y devuelve un desafío aleatorio, un identificador y vencimiento. El segundo recibe la clave pública, algoritmo, desafío y prueba de posesión. El backend valida la autorización, vigencia, firma y unicidad antes de activar el vínculo.
 
+RH o un administrador genera la autorización únicamente para una cuenta que ya esté vinculada a su trabajador dentro de la empresa. El código se muestra una sola vez, dura quince minutos y al crear uno nuevo se revoca cualquier autorización pendiente anterior de esa misma identidad.
+
 La elección final de algoritmo, curvas, codificación, attestation disponible y representación canónica de la firma deberá quedar documentada antes de generar claves reales. No se aceptará una firma sobre JSON no canónico.
 
 ### Evidencia en `POST /me/time-events` y `POST /me/time-events/sync`

@@ -1,11 +1,13 @@
 <?php
 
 use App\Domains\Integrations\Actions\IssueCompanyApiTokenAction;
+use App\Domains\Workers\Actions\CreateMobileDeviceBindingAuthorizationAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
+use App\Models\MobileDeviceBindingAuthorization;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
 use App\Models\OrganizationalUnit;
@@ -187,6 +189,19 @@ it('does not allow a personal client to override its security context', function
 
 it('requires a personal bearer token', function (): void {
     $this->getJson('/api/v1/time/me/marking-security')->assertUnauthorized();
+});
+
+it('issues one supervised mobile binding authorization at a time for a linked worker', function (): void {
+    [$company, $user, $worker] = personalSecurityContext();
+
+    $first = app(CreateMobileDeviceBindingAuthorizationAction::class)->handle($company, $user, $user, $worker);
+    $second = app(CreateMobileDeviceBindingAuthorizationAction::class)->handle($company, $user, $user, $worker);
+
+    expect($first['authorization_code'])->toHaveLength(24)
+        ->and($first['authorization']->authorization_secret_hash)->toBe(hash('sha256', $first['authorization_code']))
+        ->and($first['authorization']->refresh()->status)->toBe(MobileDeviceBindingAuthorization::STATUS_REVOKED)
+        ->and($second['authorization']->status)->toBe(MobileDeviceBindingAuthorization::STATUS_PENDING)
+        ->and($second['authorization']->expires_at->greaterThan(now()))->toBeTrue();
 });
 
 it('requires an active linked worker and the personal read ability', function (): void {

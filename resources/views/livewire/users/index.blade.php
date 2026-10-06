@@ -5,6 +5,7 @@ use App\Domains\Users\Actions\CreateCompanyUserAction;
 use App\Domains\Users\Actions\ResetCompanyUserPasswordAction;
 use App\Domains\Users\Actions\UpdateCompanyUserAction;
 use App\Domains\Workers\Actions\LinkUserToWorkerAction;
+use App\Domains\Workers\Actions\CreateMobileDeviceBindingAuthorizationAction;
 use App\Domains\Workers\Actions\RevokeUserWorkerLinkAction;
 use App\Models\Company;
 use App\Models\Role;
@@ -49,6 +50,8 @@ new class extends Component
     public ?int $linkingUserId = null;
 
     public string $linkedWorkerId = '';
+
+    public ?string $mobileDeviceBindingAuthorizationCode = null;
 
     public function mount(): void
     {
@@ -226,6 +229,27 @@ new class extends Component
         $action->handle($company, $user);
         $this->linkedWorkerId = '';
         Session::flash('status', 'Vínculo revocado; el historial laboral se conserva.');
+    }
+
+    public function authorizeMobileDevice(CurrentCompany $currentCompany, CreateMobileDeviceBindingAuthorizationAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        Gate::authorize('update', [$user, $company]);
+
+        $worker = Worker::query()->where('company_id', $company->id)->where('status', 'active')->find($this->linkedWorkerId);
+        if (! $worker) {
+            throw ValidationException::withMessages(['linkedWorkerId' => 'Primero selecciona y guarda un trabajador vinculado activo.']);
+        }
+
+        try {
+            $issued = $action->handle($company, auth()->user(), $user, $worker);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['linkedWorkerId' => $exception->getMessage()]);
+        }
+
+        $this->mobileDeviceBindingAuthorizationCode = $issued['authorization_code'];
+        Session::flash('status', 'Código de vinculación móvil generado. Se muestra una sola vez y vence en 15 minutos.');
     }
 
     public function closeEditPanel(): void
@@ -564,6 +588,21 @@ new class extends Component
                     <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
                 @endforeach
             </flux:select>
+
+            @if ($linkedWorkerId)
+                <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
+                    <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
+                    <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
+                    <button type="button" wire:click="authorizeMobileDevice" class="btn-secondary mt-3">Generar código de vinculación</button>
+
+                    @if ($mobileDeviceBindingAuthorizationCode)
+                        <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
+                            <p class="text-xs font-semibold text-status-warn-text">Comparte este código de forma segura. No volverá a mostrarse al cerrar este panel.</p>
+                            <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
         <div class="flex justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
     </form>
