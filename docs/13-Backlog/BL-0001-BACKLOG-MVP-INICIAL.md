@@ -898,6 +898,8 @@ La aplicacion nativa iOS/Android continua como proyecto independiente. El contra
 
 ### Bloque P0 adicional - Seguridad de marcaje movil
 
-BL-0614 a BL-0618 se incorporan al MVP por decision expresa de producto. El contrato aprobado esta en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md` y la decision arquitectonica en `ADR-0010-SEGURIDAD-DE-MARCAJE-MOVIL.md`. Aun no existen las rutas, persistencia, administracion ni pruebas de este bloque.
+BL-0614 a BL-0618 se incorporan al MVP por decision expresa de producto. El contrato aprobado esta en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md` y la decision arquitectonica en `ADR-0010-SEGURIDAD-DE-MARCAJE-MOVIL.md`.
+
+Estado actualizado: BL-0614 esta implementada en `feature/mobile-marking-security`: `GET /api/v1/time/me/marking-security` resuelve politica activa por unidad organizacional, centro o empresa desde el token, rechaza sustitucion de contexto, genera referencia de tiempo persistente y conserva el marcaje actual sin restricciones hasta BL-0615/BL-0616. BL-0615 a BL-0618 continuan pendientes.
 
 La biometria se limita al desbloqueo local de una clave criptografica y no implica capturar, transmitir o almacenar datos biometricos. Esta decision sustituye, solo para este bloque de seguridad movil, la nota previa que excluia geolocalizacion y biometria del canal personal. El reconocimiento facial y el almacenamiento de biometria continúan fuera del MVP.

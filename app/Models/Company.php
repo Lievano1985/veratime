@@ -94,6 +94,11 @@ class Company extends Model
         return $this->hasMany(KioskTerminalAccessRequest::class);
     }
 
+    public function mobileMarkingPolicies(): HasMany
+    {
+        return $this->hasMany(MobileMarkingPolicy::class);
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
