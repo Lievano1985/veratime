@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollXlsxController;
+use App\Http\Controllers\CompanyBrandingImageController;
 use App\Http\Controllers\Marketing\DemoRequestController;
 use App\Http\Controllers\PersonalAccessTokenController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
@@ -16,6 +17,8 @@ Route::get('/', function () {
 Route::post('demo-requests', [DemoRequestController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('demo-requests.store');
+Route::get('company-branding/{company}', CompanyBrandingImageController::class)
+    ->name('company-branding.show');
 Route::prefix('time')->group(function (): void {
     Volt::route('kiosk', 'kiosk.index')->name('kiosk.index');
     Volt::route('kiosk/authorize', 'kiosk.authorize')->name('kiosk.authorize');

@@ -121,7 +121,12 @@ it('shows the company image beneath its name in an authorized kiosk', function (
     $this->withCookie('vera_kiosk_device', $deviceToken)
         ->get(route('kiosk.index'))
         ->assertOk()
-        ->assertSee($path);
+        ->assertSee(route('company-branding.show', $company));
+
+    $this->get(route('company-branding.show', $company))
+        ->assertOk()
+        ->assertHeader('Cache-Control')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
 });
 
 it('reissues a legacy terminal cookie at the application root for kiosco polling', function (): void {

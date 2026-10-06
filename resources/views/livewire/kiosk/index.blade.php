@@ -3,13 +3,13 @@
 use App\Domains\TimeRecords\Actions\RegisterKioskTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
 use App\Domains\TimeRecords\Actions\ResolveKioskCredentialAction;
+use App\Domains\Companies\Actions\ResolveCompanyBrandingImageUrlAction;
 use App\Models\Company;
 use App\Models\KioskDevice;
 use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -171,10 +171,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $this->kioskCompanyId = $device->company_id;
         $this->kioskCompanyName = $device->company->name;
-        $brandingImagePath = $device->company->setting?->branding_image_path;
-        $this->kioskCompanyBrandImageUrl = filled($brandingImagePath)
-            ? Storage::disk('public')->url($brandingImagePath)
-            : null;
+        $this->kioskCompanyBrandImageUrl = app(ResolveCompanyBrandingImageUrlAction::class)->handle($device->company);
         $this->kioskDeviceId = $device->id;
         $this->kioskDeviceName = $device->name;
 

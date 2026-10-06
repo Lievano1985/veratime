@@ -2,17 +2,18 @@
 
 namespace App\Domains\Workers\Actions;
 
+use App\Domains\Companies\Actions\ResolveCompanyBrandingImageUrlAction;
 use App\Domains\TimeRecords\Actions\ResolveCurrentTimeRecordStateAction;
 use App\Models\Company;
 use App\Models\WorkDay;
 use App\Models\Worker;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Storage;
 
 class BuildPersonalMobileContextAction
 {
     public function __construct(
         private readonly ResolveCurrentTimeRecordStateAction $resolveCurrentState,
+        private readonly ResolveCompanyBrandingImageUrlAction $brandingImageUrl,
     ) {}
 
     /**
@@ -36,9 +37,7 @@ class BuildPersonalMobileContextAction
                 'id' => (string) $company->id,
                 'name' => $company->name,
                 'timezone' => $company->timezone,
-                'branding_image_url' => filled($company->setting?->branding_image_path)
-                    ? Storage::disk('public')->url($company->setting->branding_image_path)
-                    : null,
+                'branding_image_url' => $this->brandingImageUrl->handle($company),
             ],
             'worker' => [
                 'id' => (string) $worker->id,

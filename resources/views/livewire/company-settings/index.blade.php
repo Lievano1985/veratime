@@ -2,6 +2,7 @@
 
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
 use App\Domains\Companies\Actions\RemoveCompanyBrandingImageAction;
+use App\Domains\Companies\Actions\ResolveCompanyBrandingImageUrlAction;
 use App\Domains\Companies\Actions\UpdateCompanyBrandingImageAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
@@ -16,7 +17,6 @@ use App\Models\KioskDevice;
 use App\Models\KioskTerminalAccessRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
@@ -196,7 +196,7 @@ new class extends Component {
         Session::flash('status', 'Parametro legal actualizado.');
     }
 
-    public function with(CurrentCompany $currentCompany): array
+    public function with(CurrentCompany $currentCompany, ResolveCompanyBrandingImageUrlAction $brandingImageUrl): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
@@ -218,9 +218,7 @@ new class extends Component {
                 ->latest()
                 ->get(),
             'kioskEnrollmentIdentifier' => $company->setting?->kiosk_enrollment_identifier,
-            'companyBrandImageUrl' => filled($company->setting?->branding_image_path)
-                ? Storage::disk('public')->url($company->setting->branding_image_path)
-                : null,
+            'companyBrandImageUrl' => $brandingImageUrl->handle($company),
             'activeCenters' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
         ];
     }

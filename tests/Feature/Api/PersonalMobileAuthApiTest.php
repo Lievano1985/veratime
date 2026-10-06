@@ -61,7 +61,7 @@ it('authenticates a linked worker and returns a personal mobile token with its c
         ->assertJsonPath('data.abilities.1', 'self:write')
         ->assertJsonPath('data.context.company.id', (string) $company->id)
         ->assertJsonPath('data.context.company.timezone', 'America/Hermosillo')
-        ->assertJsonPath('data.context.company.branding_image_url', Storage::disk('public')->url($brandingImagePath))
+        ->assertJsonPath('data.context.company.branding_image_url', route('company-branding.show', $company))
         ->assertJsonPath('data.context.worker.id', (string) $worker->id)
         ->assertJsonPath('data.context.permissions.can_register_time_events', true)
         ->assertJsonPath('data.context.current_time_record.state', 'trabajando')
@@ -73,7 +73,7 @@ it('authenticates a linked worker and returns a personal mobile token with its c
         ->getJson('/api/v1/time/me')
         ->assertOk()
         ->assertJsonPath('data.company.id', (string) $company->id)
-        ->assertJsonPath('data.company.branding_image_url', Storage::disk('public')->url($brandingImagePath))
+        ->assertJsonPath('data.company.branding_image_url', route('company-branding.show', $company))
         ->assertJsonPath('data.worker.id', (string) $worker->id);
 
     $this->assertDatabaseHas('personal_access_tokens', [
