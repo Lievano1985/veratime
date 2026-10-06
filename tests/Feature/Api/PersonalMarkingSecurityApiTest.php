@@ -10,6 +10,7 @@ use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
 use App\Models\MobileDeviceBinding;
 use App\Models\MobileDeviceBindingAuthorization;
+use App\Models\MobileMarkingEventEvidence;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
 use App\Models\OrganizationalUnit;
@@ -296,6 +297,122 @@ it('lists only the linked workers devices and preserves a revoked binding as evi
         'status' => MobileDeviceBinding::STATUS_REVOKED,
         'revoked_by_user_id' => $user->id,
     ]);
+});
+
+it('requires signed in-area evidence when an active policy protects a personal marking', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    $policy = MobileMarkingPolicy::factory()->for($company)->active()->create([
+        'version' => 9,
+        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'requires_device_binding' => true,
+        'center_latitude' => '19.4326080',
+        'center_longitude' => '-99.1332090',
+        'radius_meters' => 150,
+        'max_accuracy_meters' => 25,
+        'max_location_age_seconds' => 60,
+    ]);
+    $privateKey = <<<'PEM'
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgkNzeTcOuga3rNnYm
+Yhyv6Ju3Qxfy4xjCQC9ylDyVhfehRANCAATvry0fKoOa22Bxs4JE6Rwbf9NlGrvt
+g3WABzqxvdEk7/00UWWKGvkjel1DtLX38W4uzLMtuWKfg9Mt91bHeZk1
+-----END PRIVATE KEY-----
+PEM;
+    $publicKeySpki = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE768tHyqDmttgcbOCROkcG3/TZRq77YN1gAc6sb3RJO/9NFFlihr5I3pdQ7S19/FuLsyzLblin4PTLfdWx3mZNQ';
+    $binding = MobileDeviceBinding::factory()->for($company)->for($user)->for($worker)->create([
+        'public_key_spki' => $publicKeySpki,
+        'key_fingerprint' => hash('sha256', base64_decode(strtr($publicKeySpki, '-_', '+/').str_repeat('=', (4 - strlen($publicKeySpki) % 4) % 4))),
+    ]);
+    $reference = $this->withToken($token)->getJson('/api/v1/time/me/marking-security')->assertOk()->json('data.time_reference');
+    $occurredAt = now('UTC')->format('Y-m-d\\TH:i:s\\Z');
+    $location = ['latitude' => '19.4326080', 'longitude' => '-99.1332090', 'accuracy_meters' => '8.50', 'captured_at' => $occurredAt, 'is_mocked' => false];
+    $idempotencyKey = 'mobile-secure-clock-in-001';
+    $payload = implode("\n", ['VERA-MOBILE-EVENT-V1', $idempotencyKey, 'clock_in', $occurredAt, '', $binding->public_id, $policy->public_id, '9', $reference['id'], '19.4326080', '-99.1332090', '8.50', $occurredAt, '0']);
+    openssl_sign($payload, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+    $encode = fn (string $value): string => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+
+    $response = $this->withToken($token)->withHeader('Idempotency-Key', $idempotencyKey)->postJson('/api/v1/time/me/time-events', [
+        'event_type' => 'clock_in',
+        'occurred_at' => $occurredAt,
+        'security' => [
+            'binding_id' => $binding->public_id,
+            'time_reference_id' => $reference['id'],
+            'signature' => $encode($signature),
+            'location' => $location,
+        ],
+    ])->assertCreated();
+
+    $this->assertDatabaseHas('mobile_marking_event_evidences', [
+        'time_event_id' => $response->json('data.id'),
+        'company_id' => $company->id,
+        'mobile_device_binding_id' => $binding->id,
+        'mobile_marking_policy_id' => $policy->id,
+        'policy_version' => 9,
+    ]);
+    expect(MobileMarkingEventEvidence::query()->sole()->signature)->not->toBeNull();
+});
+
+it('rejects an ineligible location before it creates a personal marking', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    MobileMarkingPolicy::factory()->for($company)->active()->create([
+        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'center_latitude' => '19.4326080',
+        'center_longitude' => '-99.1332090',
+        'radius_meters' => 50,
+    ]);
+    $reference = $this->withToken($token)->getJson('/api/v1/time/me/marking-security')->assertOk()->json('data.time_reference');
+    $occurredAt = now('UTC')->format('Y-m-d\\TH:i:s\\Z');
+
+    $this->withToken($token)->withHeader('Idempotency-Key', 'outside-circle-001')->postJson('/api/v1/time/me/time-events', [
+        'event_type' => 'clock_in',
+        'occurred_at' => $occurredAt,
+        'security' => [
+            'time_reference_id' => $reference['id'],
+            'location' => [
+                'latitude' => '20.0000000',
+                'longitude' => '-99.1332090',
+                'accuracy_meters' => '5.00',
+                'captured_at' => $occurredAt,
+                'is_mocked' => false,
+            ],
+        ],
+    ])->assertUnprocessable()->assertJsonValidationErrors('event');
+
+    $this->assertDatabaseCount('time_events', 0);
+});
+
+it('applies the same location policy to a synchronization batch', function (): void {
+    [$company, , , $token] = personalSecurityContext();
+    MobileMarkingPolicy::factory()->for($company)->active()->create([
+        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'center_latitude' => '19.4326080',
+        'center_longitude' => '-99.1332090',
+        'radius_meters' => 150,
+    ]);
+    $reference = $this->withToken($token)->getJson('/api/v1/time/me/marking-security')->assertOk()->json('data.time_reference');
+    $occurredAt = now('UTC')->format('Y-m-d\\TH:i:s\\Z');
+
+    $this->withToken($token)->postJson('/api/v1/time/me/time-events/sync', [
+        'events' => [[
+            'client_event_id' => 'secure-sync-clock-in-001',
+            'event_type' => 'clock_in',
+            'occurred_at' => $occurredAt,
+            'security' => [
+                'time_reference_id' => $reference['id'],
+                'location' => [
+                    'latitude' => '19.4326080',
+                    'longitude' => '-99.1332090',
+                    'accuracy_meters' => '5.00',
+                    'captured_at' => $occurredAt,
+                    'is_mocked' => false,
+                ],
+            ],
+        ]],
+    ])->assertOk()
+        ->assertJsonPath('data.0.status', 'accepted')
+        ->assertJsonPath('meta.accepted', 1);
+
+    $this->assertDatabaseCount('mobile_marking_event_evidences', 1);
 });
 
 it('requires an active linked worker and the personal read ability', function (): void {

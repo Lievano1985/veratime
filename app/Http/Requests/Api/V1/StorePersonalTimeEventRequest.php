@@ -33,6 +33,20 @@ class StorePersonalTimeEventRequest extends FormRequest
             'device' => ['nullable', 'array'],
             'device.code' => ['nullable', 'string', 'max:100'],
             'device.name' => ['nullable', 'string', 'max:255'],
+            'security' => ['nullable', 'array'],
+            'security.company_id' => ['prohibited'],
+            'security.worker_id' => ['prohibited'],
+            'security.user_id' => ['prohibited'],
+            'security.policy_id' => ['prohibited'],
+            'security.binding_id' => ['nullable', 'uuid'],
+            'security.time_reference_id' => ['nullable', 'uuid'],
+            'security.signature' => ['nullable', 'string', 'max:1024'],
+            'security.location' => ['nullable', 'array'],
+            'security.location.latitude' => ['nullable', 'string', 'regex:/^-?(?:[0-8]?\\d(?:\\.\\d{1,7})?|90(?:\\.0{1,7})?)$/'],
+            'security.location.longitude' => ['nullable', 'string', 'regex:/^-?(?:1[0-7]\\d|[0-9]?\\d)(?:\\.\\d{1,7})?$|^-?180(?:\\.0{1,7})?$/'],
+            'security.location.accuracy_meters' => ['nullable', 'string', 'regex:/^\\d{1,5}(?:\\.\\d{1,2})?$/'],
+            'security.location.captured_at' => ['nullable', 'date'],
+            'security.location.is_mocked' => ['nullable', 'boolean'],
         ];
     }
 

@@ -13,6 +13,10 @@ use InvalidArgumentException;
 
 class CompleteMobileDeviceBindingAction
 {
+    public function __construct(
+        private readonly VerifyP256SignatureAction $verifySignature,
+    ) {}
+
     public function handle(Company $company, User $user, Worker $worker, string $authorizationId, string $publicKeySpki, string $signature): MobileDeviceBinding
     {
         return DB::transaction(function () use ($company, $user, $worker, $authorizationId, $publicKeySpki, $signature): MobileDeviceBinding {
@@ -21,26 +25,15 @@ class CompleteMobileDeviceBindingAction
                 throw new InvalidArgumentException('El desafío de vinculación no es válido o venció.');
             }
 
-            $spki = $this->base64UrlDecode($publicKeySpki);
-            $signatureBytes = $this->base64UrlDecode($signature);
-            $pem = "-----BEGIN PUBLIC KEY-----\n".chunk_split(base64_encode($spki), 64, "\n")."-----END PUBLIC KEY-----\n";
-            $key = openssl_pkey_get_public($pem);
-            $details = $key ? openssl_pkey_get_details($key) : false;
-            if (! $details || ($details['type'] ?? null) !== OPENSSL_KEYTYPE_EC || ($details['ec']['curve_name'] ?? null) !== 'prime256v1') {
-                throw new InvalidArgumentException('La clave pública debe usar P-256.');
-            }
-
             $challenge = Crypt::decryptString((string) $authorization->challenge_encrypted);
             if (! hash_equals((string) $authorization->challenge_hash, hash('sha256', $challenge))) {
                 throw new InvalidArgumentException('El desafío de vinculación no es válido.');
             }
 
             $payload = implode("\n", ['VERA-MOBILE-BINDING-V1', $authorization->public_id, $challenge, (string) $company->id, (string) $user->id, (string) $worker->id]);
-            if (openssl_verify($payload, $signatureBytes, $key, OPENSSL_ALGO_SHA256) !== 1) {
-                throw new InvalidArgumentException('La firma del desafío no es válida.');
-            }
+            $verified = $this->verifySignature->handle($publicKeySpki, $payload, $signature);
 
-            $fingerprint = hash('sha256', $spki);
+            $fingerprint = $verified['fingerprint'];
             if (MobileDeviceBinding::query()->where('company_id', $company->id)->where('key_fingerprint', $fingerprint)->exists()) {
                 throw new InvalidArgumentException('Esta clave pública ya fue vinculada.');
             }
@@ -54,15 +47,5 @@ class CompleteMobileDeviceBindingAction
 
             return $binding;
         });
-    }
-
-    private function base64UrlDecode(string $value): string
-    {
-        $decoded = base64_decode(strtr($value.str_repeat('=', (4 - strlen($value) % 4) % 4), '-_', '+/'), true);
-        if ($decoded === false || $decoded === '') {
-            throw new InvalidArgumentException('La evidencia criptográfica no es válida.');
-        }
-
-        return $decoded;
     }
 }

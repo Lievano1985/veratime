@@ -22,7 +22,7 @@ class ResolvePersonalMarkingSecurityAction
     public function handle(Company $company, User $user, Worker $worker): array
     {
         $now = CarbonImmutable::now('UTC');
-        $policy = $this->effectivePolicy($company, $worker, $now);
+        $policy = $this->resolveEffectivePolicy($company, $worker, $now);
         $reference = $this->issueTimeReference($company, $user, $worker, $policy, $now);
 
         if (! $policy) {
@@ -79,7 +79,7 @@ class ResolvePersonalMarkingSecurityAction
         ];
     }
 
-    private function effectivePolicy(Company $company, Worker $worker, CarbonImmutable $now): ?MobileMarkingPolicy
+    public function resolveEffectivePolicy(Company $company, Worker $worker, CarbonImmutable $now): ?MobileMarkingPolicy
     {
         $relationship = $worker->activeEmploymentRelationship()->with('center')->first();
         $centerId = $relationship?->center_id;

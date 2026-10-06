@@ -1,6 +1,6 @@
 # API-0002 — Seguridad de marcaje móvil
 
-**Estado:** alcance aprobado para el MVP; BL-0614 y BL-0615 están implementadas. La evidencia firmada de marcajes y su validación continúan pendientes.
+**Estado:** alcance aprobado para el MVP; BL-0614 y BL-0615 están implementadas. BL-0616 está implementada para marcaje en línea con referencia vigente; la conciliación offline segura continúa pendiente.
 
 **Fecha de decisión:** 2026-10-05.
 
@@ -21,7 +21,7 @@ No se almacenarán ni transmitirán huellas, rostros, plantillas biométricas, I
 3. **Revocación administrativa.** RH puede revocar un vínculo o autorizar su sustitución. La revocación bloquea nuevos marcajes con ese vínculo; los eventos existentes y sus evidencias se conservan.
 4. **Evidencia de cada marcaje.** Cuando la política esté activa, cada evento individual o sincronizado conserva de forma inmutable el vínculo, versión de política, ubicación declarada, referencia de tiempo, versión de esquema y firma. La captura se encola localmente desde el momento del marcaje; un reintento no puede reconstruirla con la política actual.
 5. **Ubicación con política explícita.** La política puede ser `free` o `circle`. Sólo `circle` expone centro y radio. Se validan precisión, antigüedad de ubicación y vigencia configuradas por la empresa. Los valores numéricos no quedan fijados en este documento: cada política debe estar versionada y ser auditable.
-6. **Conciliación sin pérdida.** Se conserva el comportamiento de sincronización `accepted`, `already_registered` y `rejected`. Un UUID repetido con contenido distinto es conflicto, no una repetición válida. Errores de red, 429, 5xx o respuesta desconocida no eliminan la fila local.
+6. **Conciliación sin pérdida.** Se conserva el comportamiento de sincronización `accepted`, `already_registered` y `rejected`. Un UUID repetido con contenido distinto es conflicto, no una repetición válida. Errores de red, 429, 5xx o respuesta desconocida no eliminan la fila local. En este incremento una referencia vencida se rechaza y permanece pendiente localmente; la conciliación offline segura corresponde a BL-0617.
 
 ## Contrato objetivo
 
@@ -84,12 +84,30 @@ La app debe generar la clave en Android Keystore, conservar sólo el identificad
 
 ### Evidencia en `POST /me/time-events` y `POST /me/time-events/sync`
 
-Se mantienen `Idempotency-Key` y `client_event_id`. Cuando la política efectiva lo exija, el objeto `security` por evento incluirá:
+Se mantienen `Idempotency-Key` y `client_event_id`. Cuando exista una política activa, el objeto `security` por evento incluye una `time_reference_id` vigente. Cuando la política requiere dispositivo, también incluye `binding_id` y `signature`. Cuando la política define círculo, precisión o antigüedad de ubicación, incluye además `location`.
 
-- `binding_id`, `policy_id`, `policy_version` y versión de esquema;
-- ubicación: latitud, longitud, precisión, antigüedad y señal de ubicación simulada reportada por el sistema operativo;
-- `time_reference_id` y la evidencia de tiempo aprobada;
-- firma sobre el UUID, tipo, instante, vínculo, política, ubicación y demás campos relevantes.
+La implementación valida la política vigente, la referencia de tiempo de cinco minutos, el vínculo activo, la firma, la precisión, antigüedad, indicador de ubicación simulada y distancia al círculo. Persiste una evidencia inmutable separada del evento con la versión y snapshot de política, la referencia, el vínculo, firma y ubicación. No se insertan coordenadas ni firmas en metadatos o logs de aplicación.
+
+La firma ECDSA se genera sobre este payload UTF-8, separado con saltos de línea `\n`, sin espacios adicionales:
+
+```text
+VERA-MOBILE-EVENT-V1
+{idempotency_key o client_event_id}
+{event_type}
+{occurred_at enviado}
+{timezone o vacío}
+{binding_id}
+{policy_id}
+{policy_version}
+{time_reference_id}
+{latitude o vacío}
+{longitude o vacío}
+{accuracy_meters o vacío}
+{location.captured_at o vacío}
+{1 si is_mocked; 0 si no}
+```
+
+`latitude`, `longitude` y `accuracy_meters` se envían como cadenas decimales para no alterar su representación antes de validar la firma. `occurred_at` y `location.captured_at` deben ser exactamente los textos firmados. El servidor no acepta que el cliente envíe o sustituya empresa, trabajador, usuario o política.
 
 El cliente no podrá enviar `company_id`, `worker_id`, `center_id`, `user_id` ni identificadores que sustituyan el contexto. La API no imprimirá coordenadas, firmas ni datos de seguridad en logs de aplicación o mensajes de soporte.
 

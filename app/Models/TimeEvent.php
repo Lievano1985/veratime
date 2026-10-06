@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TimeEvent extends Model
 {
@@ -103,6 +104,11 @@ class TimeEvent extends Model
     public function voidedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'voided_by_user_id');
+    }
+
+    public function mobileMarkingEvidence(): HasOne
+    {
+        return $this->hasOne(MobileMarkingEventEvidence::class);
     }
 
     public function isVoided(): bool

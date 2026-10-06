@@ -35,6 +35,20 @@ class SyncPersonalTimeEventsRequest extends FormRequest
             'events.*.device' => ['nullable', 'array'],
             'events.*.device.code' => ['nullable', 'string', 'max:100'],
             'events.*.device.name' => ['nullable', 'string', 'max:255'],
+            'events.*.security' => ['nullable', 'array'],
+            'events.*.security.company_id' => ['prohibited'],
+            'events.*.security.worker_id' => ['prohibited'],
+            'events.*.security.user_id' => ['prohibited'],
+            'events.*.security.policy_id' => ['prohibited'],
+            'events.*.security.binding_id' => ['nullable', 'uuid'],
+            'events.*.security.time_reference_id' => ['nullable', 'uuid'],
+            'events.*.security.signature' => ['nullable', 'string', 'max:1024'],
+            'events.*.security.location' => ['nullable', 'array'],
+            'events.*.security.location.latitude' => ['nullable', 'string', 'regex:/^-?(?:[0-8]?\\d(?:\\.\\d{1,7})?|90(?:\\.0{1,7})?)$/'],
+            'events.*.security.location.longitude' => ['nullable', 'string', 'regex:/^-?(?:1[0-7]\\d|[0-9]?\\d)(?:\\.\\d{1,7})?$|^-?180(?:\\.0{1,7})?$/'],
+            'events.*.security.location.accuracy_meters' => ['nullable', 'string', 'regex:/^\\d{1,5}(?:\\.\\d{1,2})?$/'],
+            'events.*.security.location.captured_at' => ['nullable', 'date'],
+            'events.*.security.location.is_mocked' => ['nullable', 'boolean'],
         ];
     }
 }
