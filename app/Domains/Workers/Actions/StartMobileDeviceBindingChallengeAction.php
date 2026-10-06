@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\MobileDeviceBindingAuthorization;
 use App\Models\User;
 use App\Models\Worker;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -41,6 +42,7 @@ class StartMobileDeviceBindingChallengeAction
                 'status' => MobileDeviceBindingAuthorization::STATUS_CHALLENGED,
                 'requested_device_name' => trim($deviceName),
                 'challenge_hash' => hash('sha256', $challenge),
+                'challenge_encrypted' => Crypt::encryptString($challenge),
                 'challenge_issued_at' => $now,
                 'challenge_expires_at' => $challengeExpiresAt,
             ])->save();

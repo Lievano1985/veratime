@@ -1,6 +1,6 @@
 # API-0002 — Seguridad de marcaje móvil
 
-**Estado:** alcance aprobado para el MVP; BL-0614 implementada. Vinculación, firma y validación de marcajes continúan pendientes.
+**Estado:** alcance aprobado para el MVP; BL-0614 y BL-0615 están implementadas. La evidencia firmada de marcajes y su validación continúan pendientes.
 
 **Fecha de decisión:** 2026-10-05.
 
@@ -70,13 +70,17 @@ POST /api/v1/time/me/device-binding/challenge
 POST /api/v1/time/me/device-binding/complete
 ```
 
-El primer endpoint consume la autorización de RH de un solo uso y devuelve un desafío aleatorio, un identificador y vencimiento. El segundo recibe la clave pública, algoritmo, desafío y prueba de posesión. El backend valida la autorización, vigencia, firma y unicidad antes de activar el vínculo.
+El primer endpoint consume la autorización de RH de un solo uso y devuelve un desafío aleatorio, un identificador y vencimiento. El segundo recibe la clave pública y la prueba de posesión. El backend valida la autorización, vigencia, firma, curva y unicidad antes de activar el vínculo.
 
 RH o un administrador genera la autorización únicamente para una cuenta que ya esté vinculada a su trabajador dentro de la empresa. El código se muestra una sola vez, dura quince minutos y al crear uno nuevo se revoca cualquier autorización pendiente anterior de esa misma identidad.
 
 `POST /device-binding/challenge` recibe el código y el nombre declarado del dispositivo. Responde un desafío de un solo uso con vigencia de cinco minutos, `algorithm: ES256`, `signature_format: der` y el `payload` UTF-8 exacto a firmar. El cliente Android genera una clave P-256 en Android Keystore y firma ese payload mediante `SHA256withECDSA`; la API nunca recibe una clave privada ni un dato biométrico.
 
-La elección final de algoritmo, curvas, codificación, attestation disponible y representación canónica de la firma deberá quedar documentada antes de generar claves reales. No se aceptará una firma sobre JSON no canónico.
+`POST /device-binding/complete` recibe `authorization_id`, `public_key_spki` y `signature`, estos dos últimos codificados en Base64URL sin relleno. El servidor acepta exclusivamente una clave pública SPKI P-256 (`prime256v1`), recompone el mismo `payload` emitido por el desafío y valida una firma ECDSA SHA-256 en formato DER. Una verificación correcta crea un vínculo `active`, consume la autorización y borra el desafío recuperable; la clave pública no puede volver a vincularse dentro de la misma empresa.
+
+La app debe generar la clave en Android Keystore, conservar sólo el identificador local de esa clave y enviar su SPKI pública. No se aceptará una firma sobre JSON no canónico. La attestation de hardware, si el dispositivo la ofrece, queda fuera de este primer incremento y no debe ser simulada como garantía de seguridad.
+
+`GET /me/device-bindings` muestra exclusivamente los vínculos del usuario y trabajador resueltos por el token; no devuelve la clave pública ni su huella. RH o un administrador gestionan la lista completa de esa identidad desde **Usuarios > Vínculo con trabajador** y pueden revocar un dispositivo activo. La revocación conserva la fila, actor y fecha, pero impide que el vínculo satisfaga políticas que exijan dispositivo autorizado.
 
 ### Evidencia en `POST /me/time-events` y `POST /me/time-events/sync`
 

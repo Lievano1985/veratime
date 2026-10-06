@@ -2,11 +2,13 @@
 
 use App\Domains\Integrations\Actions\IssueCompanyApiTokenAction;
 use App\Domains\Workers\Actions\CreateMobileDeviceBindingAuthorizationAction;
+use App\Domains\Workers\Actions\RevokeMobileDeviceBindingAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
+use App\Models\MobileDeviceBinding;
 use App\Models\MobileDeviceBindingAuthorization;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
@@ -228,6 +230,74 @@ it('exchanges a supervised authorization code for one mobile binding challenge',
     ])->assertUnprocessable()->assertJsonValidationErrors('authorization_code');
 });
 
+it('activates a device only after it proves possession of its P-256 key', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    $issued = app(CreateMobileDeviceBindingAuthorizationAction::class)->handle($company, $user, $user, $worker);
+    $challenge = $this->withToken($token)->postJson('/api/v1/time/me/device-binding/challenge', ['authorization_code' => $issued['authorization_code'], 'device_name' => 'Android prueba'])->assertOk()->json('data');
+    $privateKey = <<<'PEM'
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgkNzeTcOuga3rNnYm
+Yhyv6Ju3Qxfy4xjCQC9ylDyVhfehRANCAATvry0fKoOa22Bxs4JE6Rwbf9NlGrvt
+g3WABzqxvdEk7/00UWWKGvkjel1DtLX38W4uzLMtuWKfg9Mt91bHeZk1
+-----END PRIVATE KEY-----
+PEM;
+    $publicPem = <<<'PEM'
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE768tHyqDmttgcbOCROkcG3/TZRq7
+7YN1gAc6sb3RJO/9NFFlihr5I3pdQ7S19/FuLsyzLblin4PTLfdWx3mZNQ==
+-----END PUBLIC KEY-----
+PEM;
+    preg_match('/-----BEGIN PUBLIC KEY-----(.*?)-----END PUBLIC KEY-----/s', $publicPem, $matches);
+    $spki = base64_decode(preg_replace('/\s+/', '', $matches[1]), true);
+    openssl_sign($challenge['payload'], $signature, $privateKey, OPENSSL_ALGO_SHA256);
+
+    $encode = fn (string $value): string => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    $this->withToken($token)->postJson('/api/v1/time/me/device-binding/complete', ['authorization_id' => $challenge['authorization_id'], 'public_key_spki' => $encode($spki), 'signature' => $encode($signature)])
+        ->assertCreated()->assertJsonPath('data.binding.status', 'active');
+    expect(MobileDeviceBinding::query()->sole()->worker_id)->toBe($worker->id)
+        ->and($issued['authorization']->refresh()->status)->toBe(MobileDeviceBindingAuthorization::STATUS_CONSUMED);
+});
+
+it('requires personal write ability to bind a mobile device', function (): void {
+    [$company, $user, $worker] = personalSecurityContext();
+    $issued = app(CreateMobileDeviceBindingAuthorizationAction::class)->handle($company, $user, $user, $worker);
+    $readOnlyToken = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'personal-read-only', ['self:read'])->plainTextToken;
+
+    $this->withToken($readOnlyToken)->postJson('/api/v1/time/me/device-binding/challenge', [
+        'authorization_code' => $issued['authorization_code'],
+        'device_name' => 'Android prueba',
+    ])->assertForbidden();
+});
+
+it('lists only the linked workers devices and preserves a revoked binding as evidence', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    $binding = MobileDeviceBinding::factory()->for($company)->for($user)->for($worker)->create([
+        'device_name' => 'Teléfono de trabajo',
+        'status' => MobileDeviceBinding::STATUS_ACTIVE,
+        'activated_at' => now(),
+    ]);
+    $otherCompany = Company::factory()->create(['customer_account_id' => CustomerAccount::factory()]);
+    MobileDeviceBinding::factory()->for($otherCompany)->for(User::factory())->for(Worker::factory(['company_id' => $otherCompany->id]))->create();
+
+    $this->withToken($token)->getJson('/api/v1/time/me/device-bindings')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $binding->public_id)
+        ->assertJsonPath('data.0.status', MobileDeviceBinding::STATUS_ACTIVE)
+        ->assertJsonMissing(['public_key_spki' => $binding->public_key_spki]);
+
+    app(RevokeMobileDeviceBindingAction::class)->handle($binding, $user);
+
+    $this->withToken($token)->getJson('/api/v1/time/me/device-bindings')
+        ->assertOk()
+        ->assertJsonPath('data.0.status', MobileDeviceBinding::STATUS_REVOKED);
+    $this->assertDatabaseHas('mobile_device_bindings', [
+        'id' => $binding->id,
+        'status' => MobileDeviceBinding::STATUS_REVOKED,
+        'revoked_by_user_id' => $user->id,
+    ]);
+});
+
 it('requires an active linked worker and the personal read ability', function (): void {
     [$company, $user, $worker, $token] = personalSecurityContext();
     $readlessToken = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'personal-without-read', ['self:write'])->plainTextToken;
@@ -254,7 +324,7 @@ function personalSecurityContext(): array
         'worker_id' => $worker->id,
         'status' => 'active',
     ]);
-    $token = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'personal-security', ['self:read'])->plainTextToken;
+    $token = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'personal-security', ['self:read', 'self:write'])->plainTextToken;
 
     return [$company, $user, $worker, $token];
 }

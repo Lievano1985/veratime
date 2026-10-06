@@ -99,6 +99,11 @@ class Company extends Model
         return $this->hasMany(MobileMarkingPolicy::class);
     }
 
+    public function mobileDeviceBindings(): HasMany
+    {
+        return $this->hasMany(MobileDeviceBinding::class);
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);

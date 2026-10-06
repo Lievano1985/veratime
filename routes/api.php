@@ -51,7 +51,9 @@ Route::prefix('v1/time/me')
     ->group(function (): void {
         Route::get('/', [PersonalTimeController::class, 'context']);
         Route::get('marking-security', [PersonalTimeController::class, 'markingSecurity']);
-        Route::post('device-binding/challenge', [PersonalTimeController::class, 'deviceBindingChallenge']);
+        Route::get('device-bindings', [PersonalTimeController::class, 'deviceBindings']);
+        Route::post('device-binding/challenge', [PersonalTimeController::class, 'deviceBindingChallenge'])->middleware('api.ability:self:write');
+        Route::post('device-binding/complete', [PersonalTimeController::class, 'completeDeviceBinding'])->middleware('api.ability:self:write');
         Route::get('alerts', [PersonalTimeController::class, 'alerts']);
         Route::post('time-events', [PersonalTimeController::class, 'storeEvent'])->middleware('api.ability:self:write');
         Route::post('time-events/sync', [PersonalTimeController::class, 'syncEvents'])->middleware('api.ability:self:write');

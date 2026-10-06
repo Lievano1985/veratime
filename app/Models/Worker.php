@@ -80,4 +80,9 @@ class Worker extends Model
     {
         return $this->hasMany(UserWorkerLink::class);
     }
+
+    public function mobileDeviceBindings(): HasMany
+    {
+        return $this->hasMany(MobileDeviceBinding::class);
+    }
 }

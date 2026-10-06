@@ -6,8 +6,10 @@ use App\Domains\Users\Actions\ResetCompanyUserPasswordAction;
 use App\Domains\Users\Actions\UpdateCompanyUserAction;
 use App\Domains\Workers\Actions\LinkUserToWorkerAction;
 use App\Domains\Workers\Actions\CreateMobileDeviceBindingAuthorizationAction;
+use App\Domains\Workers\Actions\RevokeMobileDeviceBindingAction;
 use App\Domains\Workers\Actions\RevokeUserWorkerLinkAction;
 use App\Models\Company;
+use App\Models\MobileDeviceBinding;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserWorkerLink;
@@ -202,6 +204,7 @@ new class extends Component
         Gate::authorize('update', [$user, $company]);
         $this->linkingUserId = $user->id;
         $this->linkedWorkerId = (string) (UserWorkerLink::query()->where('company_id', $company->id)->where('user_id', $user->id)->where('status', 'active')->value('worker_id') ?? '');
+        $this->mobileDeviceBindingAuthorizationCode = null;
         $this->showWorkerLinkPanel = true;
     }
 
@@ -250,6 +253,26 @@ new class extends Component
 
         $this->mobileDeviceBindingAuthorizationCode = $issued['authorization_code'];
         Session::flash('status', 'Código de vinculación móvil generado. Se muestra una sola vez y vence en 15 minutos.');
+    }
+
+    public function revokeMobileDevice(int $bindingId, CurrentCompany $currentCompany, RevokeMobileDeviceBindingAction $action): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        Gate::authorize('update', [$user, $company]);
+        $binding = MobileDeviceBinding::query()
+            ->where('company_id', $company->id)
+            ->where('user_id', $user->id)
+            ->where('worker_id', $this->linkedWorkerId)
+            ->findOrFail($bindingId);
+
+        try {
+            $action->handle($binding, auth()->user());
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['linkedWorkerId' => $exception->getMessage()]);
+        }
+
+        Session::flash('status', 'Dispositivo móvil revocado. Ya no podrá registrar marcajes cuando la política lo requiera.');
     }
 
     public function closeEditPanel(): void
@@ -305,6 +328,15 @@ new class extends Component
             'roles' => Role::query()->whereIn('key', $this->assignableRoleKeys($company))->orderBy('name')->get(),
             'isSuperAdmin' => auth()->user()->isSuperAdmin(),
             'linkWorkers' => $company->workers()->where('status', 'active')->orderBy('full_name')->get(),
+            'mobileDeviceBindings' => $this->linkingUserId && $this->linkedWorkerId
+                ? MobileDeviceBinding::query()
+                    ->where('company_id', $company->id)
+                    ->where('user_id', $this->linkingUserId)
+                    ->where('worker_id', $this->linkedWorkerId)
+                    ->with('revokedBy')
+                    ->latest('activated_at')
+                    ->get()
+                : collect(),
         ];
     }
 
@@ -601,6 +633,31 @@ new class extends Component
                             <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
                         </div>
                     @endif
+
+                    <div class="mt-4 border-t border-surface-line pt-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivos vinculados</p>
+                        <div class="mt-2 space-y-2">
+                            @forelse ($mobileDeviceBindings as $binding)
+                                <div wire:key="mobile-device-binding-{{ $binding->id }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-line bg-white px-3 py-2">
+                                    <div>
+                                        <p class="text-sm font-semibold text-brand-navy">{{ $binding->device_name }}</p>
+                                        <p class="text-xs text-surface-muted">Activado {{ $binding->activated_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</p>
+                                        @if ($binding->status === 'revoked')
+                                            <p class="mt-1 text-xs text-surface-muted">Revocado {{ $binding->revoked_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}{{ $binding->revokedBy ? ' por '.$binding->revokedBy->name : '' }}</p>
+                                        @endif
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <x-ui.badge variant="{{ $binding->status === 'active' ? 'success' : 'danger' }}">{{ $binding->status === 'active' ? 'Autorizado' : 'Revocado' }}</x-ui.badge>
+                                        @if ($binding->status === 'active')
+                                            <button type="button" wire:click="revokeMobileDevice({{ $binding->id }})" wire:confirm="Este teléfono ya no podrá usarse para marcajes que exijan dispositivo autorizado. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-xs text-surface-muted">Aún no hay dispositivos móviles vinculados.</p>
+                            @endforelse
+                        </div>
+                    </div>
                 </div>
             @endif
         </div>

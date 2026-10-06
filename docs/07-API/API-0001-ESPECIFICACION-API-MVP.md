@@ -307,7 +307,7 @@ GET /api/v1/time/me/work-days/{workDayId}
 DELETE /api/v1/time/me/access-token
 ```
 
-Requieren token Bearer personal, empresa/producto Time operativos, usuario y membresía activos y vínculo activo con un trabajador de esa empresa. Las consultas y la revocación requieren `self:read`; el marcaje requiere `self:read` y `self:write`. No requieren ni habilitan los roles administrativos del grupo operativo. `GET /me/marking-security` está disponible para resolver la política efectiva y una referencia de tiempo; la vinculación y las demás rutas de seguridad se norman en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md` y se activarán de forma gradual por política de empresa.
+Requieren token Bearer personal, empresa/producto Time operativos, usuario y membresía activos y vínculo activo con un trabajador de esa empresa. Las consultas, incluida `GET /me/device-bindings`, y la revocación del token actual requieren `self:read`; el marcaje y la vinculación de un dispositivo (`POST /me/device-binding/*`) requieren `self:read` y `self:write`. No requieren ni habilitan los roles administrativos del grupo operativo. `GET /me/marking-security` está disponible para resolver la política efectiva y una referencia de tiempo; la vinculación y las demás rutas de seguridad se norman en `API-0002-PROPUESTA-SEGURIDAD-MARCAJE.md` y se activarán de forma gradual por política de empresa.
 
 #### `GET /me`
 

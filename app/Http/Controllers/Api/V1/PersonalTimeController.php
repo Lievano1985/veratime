@@ -9,9 +9,12 @@ use App\Domains\TimeRecords\Actions\RegisterPersonalTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolvePersonalMarkingSecurityAction;
 use App\Domains\TimeRecords\Actions\SyncPersonalTimeEventsAction;
 use App\Domains\Workers\Actions\BuildPersonalMobileContextAction;
+use App\Domains\Workers\Actions\CompleteMobileDeviceBindingAction;
+use App\Domains\Workers\Actions\ListPersonalMobileDeviceBindingsAction;
 use App\Domains\Workers\Actions\ResolvePersonalWorkerAction;
 use App\Domains\Workers\Actions\StartMobileDeviceBindingChallengeAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\CompleteMobileDeviceBindingRequest;
 use App\Http\Requests\Api\V1\ListPersonalAlertsRequest;
 use App\Http\Requests\Api\V1\ListPersonalScheduleRequest;
 use App\Http\Requests\Api\V1\ListPersonalTimeEventsRequest;
@@ -21,6 +24,7 @@ use App\Http\Requests\Api\V1\StartMobileDeviceBindingChallengeRequest;
 use App\Http\Requests\Api\V1\StorePersonalTimeEventRequest;
 use App\Http\Requests\Api\V1\SyncPersonalTimeEventsRequest;
 use App\Http\Resources\Api\V1\AlertResource;
+use App\Http\Resources\Api\V1\MobileDeviceBindingResource;
 use App\Http\Resources\Api\V1\PersonalScheduleResource;
 use App\Http\Resources\Api\V1\TimeEventResource;
 use App\Http\Resources\Api\V1\WorkDayResource;
@@ -75,6 +79,30 @@ class PersonalTimeController extends Controller
                 'signature_format' => 'der',
                 'payload' => $result['payload'],
             ],
+            'meta' => ['trace_id' => $request->attributes->get('api.trace_id')],
+        ]);
+    }
+
+    public function completeDeviceBinding(CompleteMobileDeviceBindingRequest $request, ResolvePersonalWorkerAction $resolve, CompleteMobileDeviceBindingAction $action): JsonResponse
+    {
+        /** @var Company $company */ $company = $request->attributes->get('api.company');
+        $worker = $resolve->handle($request->user(), $company);
+        try {
+            $binding = $action->handle($company, $request->user(), $worker, $request->validated('authorization_id'), $request->validated('public_key_spki'), $request->validated('signature'));
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['binding' => $exception->getMessage()]);
+        }
+
+        return response()->json(['data' => ['binding' => ['id' => $binding->public_id, 'status' => $binding->status, 'device_name' => $binding->device_name, 'activated_at' => $binding->activated_at?->toIso8601String()]], 'meta' => ['trace_id' => $request->attributes->get('api.trace_id')]], 201);
+    }
+
+    public function deviceBindings(Request $request, ResolvePersonalWorkerAction $resolve, ListPersonalMobileDeviceBindingsAction $action): JsonResponse
+    {
+        /** @var Company $company */ $company = $request->attributes->get('api.company');
+        $worker = $resolve->handle($request->user(), $company);
+
+        return response()->json([
+            'data' => MobileDeviceBindingResource::collection($action->handle($company, $request->user(), $worker))->resolve(),
             'meta' => ['trace_id' => $request->attributes->get('api.trace_id')],
         ]);
     }

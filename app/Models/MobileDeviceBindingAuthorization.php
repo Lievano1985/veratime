@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class MobileDeviceBindingAuthorization extends Model
 {
+    use HasFactory;
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_CHALLENGED = 'challenged';
@@ -20,7 +23,7 @@ class MobileDeviceBindingAuthorization extends Model
 
     protected $fillable = [
         'company_id', 'user_id', 'worker_id', 'created_by_user_id', 'public_id',
-        'authorization_secret_hash', 'status', 'expires_at', 'challenge_hash',
+        'authorization_secret_hash', 'status', 'expires_at', 'challenge_hash', 'challenge_encrypted',
         'requested_device_name', 'challenge_issued_at', 'challenge_expires_at', 'consumed_at',
     ];
 

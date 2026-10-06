@@ -197,6 +197,11 @@ class User extends Authenticatable // implements MustVerifyEmail
         return $this->hasMany(UserWorkerLink::class);
     }
 
+    public function mobileDeviceBindings(): HasMany
+    {
+        return $this->hasMany(MobileDeviceBinding::class);
+    }
+
     public function operationalScopeAssignments(): HasMany
     {
         return $this->hasMany(OperationalScopeAssignment::class);
