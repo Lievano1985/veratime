@@ -204,6 +204,30 @@ it('issues one supervised mobile binding authorization at a time for a linked wo
         ->and($second['authorization']->expires_at->greaterThan(now()))->toBeTrue();
 });
 
+it('exchanges a supervised authorization code for one mobile binding challenge', function (): void {
+    [$company, $user, $worker, $token] = personalSecurityContext();
+    $issued = app(CreateMobileDeviceBindingAuthorizationAction::class)->handle($company, $user, $user, $worker);
+
+    $response = $this->withToken($token)->postJson('/api/v1/time/me/device-binding/challenge', [
+        'authorization_code' => $issued['authorization_code'],
+        'device_name' => 'Teléfono de prueba',
+    ])->assertOk()
+        ->assertJsonPath('data.authorization_id', $issued['authorization']->public_id)
+        ->assertJsonPath('data.algorithm', 'ES256')
+        ->assertJsonPath('data.signature_format', 'der');
+
+    $authorization = $issued['authorization']->refresh();
+    expect($authorization->status)->toBe(MobileDeviceBindingAuthorization::STATUS_CHALLENGED)
+        ->and($authorization->requested_device_name)->toBe('Teléfono de prueba')
+        ->and($authorization->challenge_hash)->toBe(hash('sha256', $response->json('data.challenge')))
+        ->and($response->json('data.payload'))->toContain($response->json('data.challenge'));
+
+    $this->withToken($token)->postJson('/api/v1/time/me/device-binding/challenge', [
+        'authorization_code' => $issued['authorization_code'],
+        'device_name' => 'Teléfono de prueba',
+    ])->assertUnprocessable()->assertJsonValidationErrors('authorization_code');
+});
+
 it('requires an active linked worker and the personal read ability', function (): void {
     [$company, $user, $worker, $token] = personalSecurityContext();
     $readlessToken = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'personal-without-read', ['self:write'])->plainTextToken;

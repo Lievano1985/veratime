@@ -10,12 +10,14 @@ use App\Domains\TimeRecords\Actions\ResolvePersonalMarkingSecurityAction;
 use App\Domains\TimeRecords\Actions\SyncPersonalTimeEventsAction;
 use App\Domains\Workers\Actions\BuildPersonalMobileContextAction;
 use App\Domains\Workers\Actions\ResolvePersonalWorkerAction;
+use App\Domains\Workers\Actions\StartMobileDeviceBindingChallengeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ListPersonalAlertsRequest;
 use App\Http\Requests\Api\V1\ListPersonalScheduleRequest;
 use App\Http\Requests\Api\V1\ListPersonalTimeEventsRequest;
 use App\Http\Requests\Api\V1\ListPersonalWorkDaysRequest;
 use App\Http\Requests\Api\V1\ShowPersonalMarkingSecurityRequest;
+use App\Http\Requests\Api\V1\StartMobileDeviceBindingChallengeRequest;
 use App\Http\Requests\Api\V1\StorePersonalTimeEventRequest;
 use App\Http\Requests\Api\V1\SyncPersonalTimeEventsRequest;
 use App\Http\Resources\Api\V1\AlertResource;
@@ -49,6 +51,30 @@ class PersonalTimeController extends Controller
 
         return response()->json([
             'data' => $action->handle($company, $request->user(), $worker),
+            'meta' => ['trace_id' => $request->attributes->get('api.trace_id')],
+        ]);
+    }
+
+    public function deviceBindingChallenge(StartMobileDeviceBindingChallengeRequest $request, ResolvePersonalWorkerAction $resolve, StartMobileDeviceBindingChallengeAction $action): JsonResponse
+    {
+        /** @var Company $company */ $company = $request->attributes->get('api.company');
+        $worker = $resolve->handle($request->user(), $company);
+
+        try {
+            $result = $action->handle($company, $request->user(), $worker, $request->validated('authorization_code'), $request->validated('device_name'));
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['authorization_code' => $exception->getMessage()]);
+        }
+
+        return response()->json([
+            'data' => [
+                'authorization_id' => $result['authorization']->public_id,
+                'challenge' => $result['challenge'],
+                'expires_at' => $result['authorization']->challenge_expires_at?->toIso8601String(),
+                'algorithm' => 'ES256',
+                'signature_format' => 'der',
+                'payload' => $result['payload'],
+            ],
             'meta' => ['trace_id' => $request->attributes->get('api.trace_id')],
         ]);
     }

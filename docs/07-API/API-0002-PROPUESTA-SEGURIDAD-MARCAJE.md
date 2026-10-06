@@ -74,6 +74,8 @@ El primer endpoint consume la autorización de RH de un solo uso y devuelve un d
 
 RH o un administrador genera la autorización únicamente para una cuenta que ya esté vinculada a su trabajador dentro de la empresa. El código se muestra una sola vez, dura quince minutos y al crear uno nuevo se revoca cualquier autorización pendiente anterior de esa misma identidad.
 
+`POST /device-binding/challenge` recibe el código y el nombre declarado del dispositivo. Responde un desafío de un solo uso con vigencia de cinco minutos, `algorithm: ES256`, `signature_format: der` y el `payload` UTF-8 exacto a firmar. El cliente Android genera una clave P-256 en Android Keystore y firma ese payload mediante `SHA256withECDSA`; la API nunca recibe una clave privada ni un dato biométrico.
+
 La elección final de algoritmo, curvas, codificación, attestation disponible y representación canónica de la firma deberá quedar documentada antes de generar claves reales. No se aceptará una firma sobre JSON no canónico.
 
 ### Evidencia en `POST /me/time-events` y `POST /me/time-events/sync`

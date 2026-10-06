@@ -21,7 +21,7 @@ class MobileDeviceBindingAuthorization extends Model
     protected $fillable = [
         'company_id', 'user_id', 'worker_id', 'created_by_user_id', 'public_id',
         'authorization_secret_hash', 'status', 'expires_at', 'challenge_hash',
-        'challenge_issued_at', 'challenge_expires_at', 'consumed_at',
+        'requested_device_name', 'challenge_issued_at', 'challenge_expires_at', 'consumed_at',
     ];
 
     protected function casts(): array
