@@ -8,6 +8,8 @@ use App\Domains\Scheduling\Actions\ListPersonalScheduleAction;
 use App\Domains\TimeRecords\Actions\RegisterPersonalTimeEventAction;
 use App\Domains\TimeRecords\Actions\ResolvePersonalMarkingSecurityAction;
 use App\Domains\TimeRecords\Actions\SyncPersonalTimeEventsAction;
+use App\Domains\TimeRecords\Exceptions\PersonalTimeEventConflictException;
+use App\Domains\TimeRecords\Exceptions\PersonalTimeEventSecurityException;
 use App\Domains\Workers\Actions\BuildPersonalMobileContextAction;
 use App\Domains\Workers\Actions\CompleteMobileDeviceBindingAction;
 use App\Domains\Workers\Actions\ListPersonalMobileDeviceBindingsAction;
@@ -188,6 +190,10 @@ class PersonalTimeController extends Controller
                 'idempotency_key' => trim((string) $request->header('Idempotency-Key')),
                 'trace_id' => $request->attributes->get('api.trace_id'),
             ]);
+        } catch (PersonalTimeEventConflictException $exception) {
+            return $this->personalMarkingError($exception->getMessage(), 'idempotency_conflict', false, true);
+        } catch (PersonalTimeEventSecurityException $exception) {
+            return $this->personalMarkingError($exception->getMessage(), $exception->reason, $exception->retryable, true);
         } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['event' => $exception->getMessage()]);
         }
@@ -252,6 +258,19 @@ class PersonalTimeController extends Controller
     private function perPage(array $filters): int
     {
         return min(100, max(1, (int) ($filters['per_page'] ?? 25)));
+    }
+
+    private function personalMarkingError(string $message, string $code, bool $retryable, bool $retainLocal): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'errors' => ['event' => [$message]],
+            'error' => [
+                'code' => $code,
+                'retryable' => $retryable,
+                'retain_local' => $retainLocal,
+            ],
+        ], 422);
     }
 
     /** @param class-string<AlertResource|TimeEventResource|WorkDayResource> $resource */

@@ -92,7 +92,7 @@ La app debe generar la clave en Android Keystore, conservar sólo el identificad
 
 Se mantienen `Idempotency-Key` y `client_event_id`. Cuando exista una política activa, el objeto `security` por evento incluye una `time_reference_id` vigente. Cuando la política requiere dispositivo, también incluye `binding_id` y `signature`. Cuando la política define círculo, precisión o antigüedad de ubicación, incluye además `location`.
 
-La implementación valida la política vigente, la referencia de tiempo de cinco minutos, el vínculo activo, la firma, la precisión, antigüedad, indicador de ubicación simulada y distancia al círculo. Persiste una evidencia inmutable separada del evento con la versión y snapshot de política, la referencia, el vínculo, firma y ubicación. No se insertan coordenadas ni firmas en metadatos o logs de aplicación.
+La implementación valida la política vigente, la referencia de tiempo de cinco minutos, el vínculo activo, la firma, la precisión, antigüedad, indicador de ubicación simulada y distancia al círculo. Persiste una evidencia inmutable separada del evento con la versión y snapshot de política, la referencia, el vínculo, firma y ubicación. No se insertan coordenadas ni firmas en metadatos o logs de aplicación; las respuestas de conflicto tampoco devuelven el contenido original.
 
 La firma ECDSA se genera sobre este payload UTF-8, separado con saltos de línea `\n`, sin espacios adicionales:
 
@@ -119,7 +119,7 @@ El cliente no podrá enviar `company_id`, `worker_id`, `center_id`, `user_id` ni
 
 ## Estados y errores
 
-Los motivos de negocio se devolverán en una respuesta estructurada y diferenciada de una sesión inválida: `binding_inactive`, `policy_expired`, `outside_area`, `location_unverifiable`, `biometric_key_invalid`, `time_unverifiable` y `assisted_event_conflict`.
+Los motivos de negocio se devuelven en una respuesta estructurada y diferenciada de una sesión inválida: `binding_inactive`, `outside_area`, `location_unverifiable`, `biometric_key_invalid`, `time_unverifiable` e `idempotency_conflict`. En el lote se reportan por elemento como `error_code`, `retryable` y `retain_local`; el marcaje individual usa el objeto `error` con los mismos campos. `idempotency_conflict` y `time_unverifiable` deben conservarse localmente para conciliación y no deben provocar que la app elimine o reescriba la captura.
 
 No se usarán indiscriminadamente 401 o 403 para estos motivos, porque el cliente puede invalidar su sesión. Un `422` estructural tampoco autoriza borrar la cola. La implementación definirá el estado HTTP y el esquema final de error con pruebas de compatibilidad del cliente.
 

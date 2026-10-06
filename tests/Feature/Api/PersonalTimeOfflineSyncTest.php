@@ -78,6 +78,37 @@ class PersonalTimeOfflineSyncTest extends TestCase
         $this->assertDatabaseCount('personal_time_event_submissions', 1);
     }
 
+    public function test_individual_marking_returns_a_safe_conflict_response_without_exposing_the_original_payload(): void
+    {
+        [, , , $token] = $this->personalContext();
+        $key = 'individual-conflict-001';
+
+        $this->withToken($token)
+            ->withHeader('Idempotency-Key', $key)
+            ->postJson('/api/v1/time/me/time-events', [
+                'event_type' => 'clock_in',
+                'occurred_at' => '2026-10-05T15:00:00Z',
+                'metadata' => ['note' => 'Marcaje original'],
+            ])
+            ->assertCreated();
+
+        $this->withToken($token)
+            ->withHeader('Idempotency-Key', $key)
+            ->postJson('/api/v1/time/me/time-events', [
+                'event_type' => 'clock_out',
+                'occurred_at' => '2026-10-05T18:00:00Z',
+                'metadata' => ['note' => 'Contenido diferente'],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'idempotency_conflict')
+            ->assertJsonPath('error.retryable', false)
+            ->assertJsonPath('error.retain_local', true)
+            ->assertJsonMissing(['Marcaje original'])
+            ->assertJsonMissing(['Contenido diferente']);
+
+        $this->assertDatabaseCount('time_events', 1);
+    }
+
     public function test_sync_marks_expired_security_reference_as_retryable_without_losing_the_pending_event(): void
     {
         [$company, , , $token] = $this->personalContext();

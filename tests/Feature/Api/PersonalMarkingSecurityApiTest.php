@@ -14,6 +14,7 @@ use App\Models\MobileMarkingEventEvidence;
 use App\Models\MobileMarkingPolicy;
 use App\Models\MobileMarkingTimeReference;
 use App\Models\OrganizationalUnit;
+use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\UserWorkerLink;
 use App\Models\Worker;
@@ -350,6 +351,11 @@ PEM;
         'policy_version' => 9,
     ]);
     expect(MobileMarkingEventEvidence::query()->sole()->signature)->not->toBeNull();
+
+    $storedEvent = TimeEvent::query()->findOrFail($response->json('data.id'));
+    expect($storedEvent->metadata)->not->toHaveKey('security')
+        ->and(json_encode($storedEvent->metadata))->not->toContain('19.4326080')
+        ->and(json_encode($storedEvent->metadata))->not->toContain($encode($signature));
 });
 
 it('rejects an ineligible location before it creates a personal marking', function (): void {
