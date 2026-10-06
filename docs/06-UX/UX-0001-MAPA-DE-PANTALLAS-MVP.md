@@ -933,6 +933,8 @@ La empresa configura una clave de solicitud desde **Configuracion de empresa > T
 
 El administrador revisa nombre, IP y navegador, elige un centro opcional y acepta o rechaza. Al aceptar, el mismo navegador solicitante reclama su credencial y entra automaticamente al kiosco; si se asigna centro, solo admite personas de ese centro. La lista administrativa muestra nombre, centro, estado, ultima conexion y quien aprobo la terminal. Revocar bloquea nuevos marcajes inmediatamente. No existe una clave compartida que active directamente el kiosco.
 
+Desde **Configuracion de empresa > Identidad**, un administrador puede cargar una imagen institucional JPG, PNG o WebP. Se muestra debajo del nombre de la empresa en las terminales de kiosco autorizadas y queda disponible como activo visual de la empresa para canales futuros.
+
 ## 12.1 Pantalla de identificación
 
 **Prioridad:** P0

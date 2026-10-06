@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -101,6 +102,26 @@ it('shows a success popup after a terminal has been authorized', function (): vo
         ->assertOk()
         ->assertSee('toast-show', false)
         ->assertSee('Terminal autorizada para '.$company->name.'.');
+});
+
+it('shows the company image beneath its name in an authorized kiosk', function (): void {
+    [$company] = kioskDeviceManager();
+    $deviceToken = 'test-kiosk-device-token';
+    $path = "companies/{$company->id}/branding/empresa.png";
+
+    Storage::fake('public');
+    Storage::disk('public')->put($path, 'test image');
+    $company->setting()->update(['branding_image_path' => $path]);
+
+    KioskDevice::factory()->active()->create([
+        'company_id' => $company->id,
+        'device_token_hash' => hash('sha256', $deviceToken),
+    ]);
+
+    $this->withCookie('vera_kiosk_device', $deviceToken)
+        ->get(route('kiosk.index'))
+        ->assertOk()
+        ->assertSee($path);
 });
 
 it('reissues a legacy terminal cookie at the application root for kiosco polling', function (): void {

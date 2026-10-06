@@ -27,6 +27,7 @@ class CompanySetting extends Model
         'require_pin_for_kiosk',
         'kiosk_enrollment_identifier',
         'kiosk_enrollment_key_hash',
+        'branding_image_path',
         'require_pin_for_confirmation',
         'metadata',
     ];

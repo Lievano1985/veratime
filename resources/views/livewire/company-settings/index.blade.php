@@ -1,6 +1,8 @@
 <?php
 
 use App\Domains\Companies\Actions\UpdateCompanySettingsAction;
+use App\Domains\Companies\Actions\RemoveCompanyBrandingImageAction;
+use App\Domains\Companies\Actions\UpdateCompanyBrandingImageAction;
 use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\TimeRecords\Actions\ApproveKioskTerminalAccessRequestAction;
@@ -14,12 +16,16 @@ use App\Models\KioskDevice;
 use App\Models\KioskTerminalAccessRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component {
+    use WithFileUploads;
+
     #[Url(as: 'tab', except: 'operation')]
     public string $activeTab = 'operation';
 
@@ -27,6 +33,7 @@ new class extends Component {
     public array $legalParameterForm = [];
     public array $kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
     public array $pendingRequestCenters = [];
+    public mixed $companyBrandImage = null;
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -78,6 +85,33 @@ new class extends Component {
 
         $this->kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
         Session::flash('status', 'La clave de solicitud fue guardada. Las solicitudes pendientes anteriores fueron invalidadas.');
+    }
+
+    public function updateCompanyBrandingImage(UpdateCompanyBrandingImageAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $validated = $this->validate([
+            'companyBrandImage' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=1600,max_height=1600'],
+        ]);
+
+        $action->handle($company, $validated['companyBrandImage']);
+        $this->reset('companyBrandImage');
+
+        Session::flash('status', 'Imagen de empresa actualizada.');
+    }
+
+    public function removeCompanyBrandingImage(RemoveCompanyBrandingImageAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $action->handle($company);
+
+        Session::flash('status', 'Imagen de empresa eliminada.');
     }
 
     public function approveKioskTerminalRequest(int $requestId, ApproveKioskTerminalAccessRequestAction $action, CurrentCompany $currentCompany): void
@@ -167,6 +201,7 @@ new class extends Component {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('update', $company);
+        $company->load('setting');
 
         return [
             'currentCompany' => $company,
@@ -183,6 +218,9 @@ new class extends Component {
                 ->latest()
                 ->get(),
             'kioskEnrollmentIdentifier' => $company->setting?->kiosk_enrollment_identifier,
+            'companyBrandImageUrl' => filled($company->setting?->branding_image_path)
+                ? Storage::disk('public')->url($company->setting->branding_image_path)
+                : null,
             'activeCenters' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
         ];
     }
@@ -198,7 +236,7 @@ new class extends Component {
 
     private function ensureValidTab(): void
     {
-        if (! in_array($this->activeTab, ['operation', 'legal', 'users', 'kiosk'], true)) {
+        if (! in_array($this->activeTab, ['operation', 'identity', 'legal', 'users', 'kiosk'], true)) {
             $this->activeTab = 'operation';
         }
     }
@@ -279,6 +317,9 @@ new class extends Component {
         <button type="button" wire:click="$set('activeTab', 'operation')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'operation' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'operation' ? 'true' : 'false' }}">
             Operación
         </button>
+        <button type="button" wire:click="$set('activeTab', 'identity')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'identity' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'identity' ? 'true' : 'false' }}">
+            Identidad
+        </button>
         <button type="button" wire:click="$set('activeTab', 'legal')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'legal' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'legal' ? 'true' : 'false' }}">
             Configuración legal
         </button>
@@ -328,6 +369,47 @@ new class extends Component {
                 </div>
 
                 <button type="submit" class="btn-primary">Guardar configuración</button>
+            </form>
+        </section>
+    @endif
+
+    @if ($activeTab === 'identity')
+        <section class="max-w-2xl rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="mb-5">
+                <flux:heading>Imagen de empresa</flux:heading>
+                <flux:subheading>Se muestra en el kiosco autorizado y queda disponible para los canales de la empresa.</flux:subheading>
+            </div>
+
+            <form wire:submit="updateCompanyBrandingImage" class="space-y-4">
+                @if ($companyBrandImageUrl)
+                    <div class="rounded-lg border border-surface-line bg-surface-bg p-4">
+                        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-surface-muted">Imagen actual</p>
+                        <img src="{{ $companyBrandImageUrl }}" alt="Imagen de {{ $currentCompany->name }}" class="h-28 max-w-full rounded-lg object-contain object-left">
+                    </div>
+                @endif
+
+                <div>
+                    <label for="company-brand-image" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ $companyBrandImageUrl ? 'Reemplazar imagen' : 'Seleccionar imagen' }}</label>
+                    <input id="company-brand-image" wire:model="companyBrandImage" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full cursor-pointer rounded-lg border border-surface-line bg-white text-sm text-surface-muted file:mr-4 file:cursor-pointer file:border-0 file:bg-brand-blue file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-deep dark:bg-zinc-950">
+                    <p class="mt-2 text-xs text-surface-muted">JPG, PNG o WebP. Máximo 2 MB y 1600 × 1600 px.</p>
+                    @error('companyBrandImage')
+                        <p class="mt-2 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                @if ($companyBrandImage)
+                    <div class="rounded-lg border border-surface-line bg-surface-bg p-4">
+                        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-surface-muted">Vista previa</p>
+                        <img src="{{ $companyBrandImage->temporaryUrl() }}" alt="Vista previa de la nueva imagen" class="h-28 max-w-full rounded-lg object-contain object-left">
+                    </div>
+                @endif
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="companyBrandImage,updateCompanyBrandingImage">Guardar imagen</button>
+                    @if ($companyBrandImageUrl)
+                        <button type="button" wire:click="removeCompanyBrandingImage" wire:confirm="¿Eliminar la imagen de empresa?" class="btn-secondary text-status-danger-text">Eliminar imagen</button>
+                    @endif
+                </div>
             </form>
         </section>
     @endif

@@ -14,7 +14,7 @@ class ResolveKioskDeviceAction
         }
 
         $device = KioskDevice::query()
-            ->with(['company', 'center'])
+            ->with(['company.setting', 'center'])
             ->where('device_token_hash', hash('sha256', $deviceToken))
             ->where('status', 'active')
             ->first();

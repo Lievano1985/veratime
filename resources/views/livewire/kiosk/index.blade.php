@@ -9,6 +9,7 @@ use App\Models\WorkerCredential;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -21,6 +22,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public ?int $kioskCompanyId = null;
 
     public ?string $kioskCompanyName = null;
+
+    public ?string $kioskCompanyBrandImageUrl = null;
 
     public ?int $kioskDeviceId = null;
 
@@ -168,6 +171,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $this->kioskCompanyId = $device->company_id;
         $this->kioskCompanyName = $device->company->name;
+        $brandingImagePath = $device->company->setting?->branding_image_path;
+        $this->kioskCompanyBrandImageUrl = filled($brandingImagePath)
+            ? Storage::disk('public')->url($brandingImagePath)
+            : null;
         $this->kioskDeviceId = $device->id;
         $this->kioskDeviceName = $device->name;
 
@@ -181,6 +188,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         if (blank($token)) {
             $this->kioskCompanyId = null;
             $this->kioskCompanyName = null;
+            $this->kioskCompanyBrandImageUrl = null;
             $this->kioskDeviceId = null;
             $this->kioskDeviceName = null;
 
@@ -193,6 +201,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         if (! $device) {
             $this->kioskCompanyId = null;
             $this->kioskCompanyName = null;
+            $this->kioskCompanyBrandImageUrl = null;
             $this->kioskDeviceId = null;
             $this->kioskDeviceName = null;
 
@@ -372,6 +381,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
                 @if ($kioskCompanyName)
                     <p class="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-surface-muted">{{ $kioskCompanyName }}</p>
+                @endif
+
+                @if ($kioskCompanyBrandImageUrl)
+                    <img src="{{ $kioskCompanyBrandImageUrl }}" alt="Imagen de {{ $kioskCompanyName }}" class="mt-3 h-16 max-w-[180px] rounded-lg object-contain">
                 @endif
             </section>
 
