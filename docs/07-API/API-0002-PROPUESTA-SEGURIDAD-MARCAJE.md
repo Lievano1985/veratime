@@ -6,6 +6,8 @@
 
 Este documento complementa [API-0001](API-0001-ESPECIFICACION-API-MVP.md). Define el incremento de seguridad aplicable al marcaje personal desde PWA o cliente Android. La política efectiva, la vinculación supervisada y la evidencia firmada para marcaje en línea ya están disponibles; la conciliación offline segura continúa como contrato objetivo.
 
+Para entregar esta integración al equipo Android/PWA usar [API-0003 — Guía única de integración Android: vinculación y georreferenciación](API-0003-GUIA-INTEGRACION-ANDROID-MARCAJE-SEGURO.md). Este documento conserva la especificación y decisiones de producto; API-0003 contiene el flujo implementable y las pruebas de aceptación.
+
 ## Decisión de alcance
 
 El MVP incluirá marcaje móvil con política de ubicación, vinculación supervisada de dispositivo y prueba criptográfica de posesión. La activación será gradual por empresa y política: una persona no queda bloqueada mientras su empresa no haya configurado y activado este mecanismo.
