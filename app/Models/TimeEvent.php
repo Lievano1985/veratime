@@ -111,6 +111,11 @@ class TimeEvent extends Model
         return $this->hasOne(MobileMarkingEventEvidence::class);
     }
 
+    public function personalSubmission(): HasOne
+    {
+        return $this->hasOne(PersonalTimeEventSubmission::class);
+    }
+
     public function isVoided(): bool
     {
         return $this->status === 'voided' || $this->voided_at !== null;

@@ -104,6 +104,11 @@ class Company extends Model
         return $this->hasMany(MobileDeviceBinding::class);
     }
 
+    public function personalTimeEventSubmissions(): HasMany
+    {
+        return $this->hasMany(PersonalTimeEventSubmission::class);
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);

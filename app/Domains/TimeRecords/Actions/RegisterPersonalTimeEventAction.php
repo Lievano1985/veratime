@@ -2,8 +2,10 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\TimeRecords\Exceptions\PersonalTimeEventConflictException;
 use App\Models\Company;
 use App\Models\MobileMarkingEventEvidence;
+use App\Models\PersonalTimeEventSubmission;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
@@ -15,6 +17,7 @@ class RegisterPersonalTimeEventAction
 {
     public function __construct(
         private readonly CreateTimeEventAction $createTimeEvent,
+        private readonly HashPersonalTimeEventPayloadAction $hashPayload,
         private readonly ValidatePersonalTimeEventSecurityAction $validateSecurity,
     ) {}
 
@@ -24,14 +27,21 @@ class RegisterPersonalTimeEventAction
      */
     public function handle(Company $company, User $user, Worker $worker, array $data): array
     {
+        $payloadHash = $this->hashPayload->handle($data);
         $existing = $this->findExistingEvent($company, $user, $worker, $data['idempotency_key']);
 
         if ($existing) {
-            return ['event' => $existing, 'created' => false];
+            return $this->replayedResult($company, $user, $worker, $existing, $data['idempotency_key'], $payloadHash);
         }
 
         try {
-            $event = DB::transaction(function () use ($company, $user, $worker, $data): TimeEvent {
+            $result = DB::transaction(function () use ($company, $user, $worker, $data, $payloadHash): array {
+                $existing = $this->findExistingEvent($company, $user, $worker, $data['idempotency_key']);
+
+                if ($existing) {
+                    return $this->replayedResult($company, $user, $worker, $existing, $data['idempotency_key'], $payloadHash);
+                }
+
                 $security = $this->validateSecurity->handle($company, $user, $worker, $data);
                 $relationship = $worker->activeEmploymentRelationship()
                     ->where('company_id', $company->id)
@@ -60,6 +70,15 @@ class RegisterPersonalTimeEventAction
                     $user,
                 );
 
+                PersonalTimeEventSubmission::query()->create([
+                    'company_id' => $company->id,
+                    'user_id' => $user->id,
+                    'worker_id' => $worker->id,
+                    'time_event_id' => $event->id,
+                    'client_event_id' => $data['idempotency_key'],
+                    'payload_hash' => $payloadHash,
+                ]);
+
                 if ($security) {
                     MobileMarkingEventEvidence::query()->create([
                         'company_id' => $company->id,
@@ -84,7 +103,7 @@ class RegisterPersonalTimeEventAction
                     ]);
                 }
 
-                return $event;
+                return ['event' => $event, 'created' => true];
             });
         } catch (UniqueConstraintViolationException) {
             $event = $this->findExistingEvent($company, $user, $worker, $data['idempotency_key']);
@@ -93,10 +112,10 @@ class RegisterPersonalTimeEventAction
                 throw new InvalidArgumentException('No fue posible registrar el evento personal de jornada.');
             }
 
-            return ['event' => $event, 'created' => false];
+            return $this->replayedResult($company, $user, $worker, $event, $data['idempotency_key'], $payloadHash);
         }
 
-        return ['event' => $event, 'created' => true];
+        return $result;
     }
 
     private function findExistingEvent(Company $company, User $user, Worker $worker, string $idempotencyKey): ?TimeEvent
@@ -111,5 +130,20 @@ class RegisterPersonalTimeEventAction
         }
 
         return $event;
+    }
+
+    /** @return array{event: TimeEvent, created: false} */
+    private function replayedResult(Company $company, User $user, Worker $worker, TimeEvent $event, string $clientEventId, string $payloadHash): array
+    {
+        $submission = PersonalTimeEventSubmission::query()
+            ->where('company_id', $company->id)
+            ->where('client_event_id', $clientEventId)
+            ->first();
+
+        if ($submission && ($submission->user_id !== $user->id || $submission->worker_id !== $worker->id || ! hash_equals($submission->payload_hash, $payloadHash))) {
+            throw new PersonalTimeEventConflictException;
+        }
+
+        return ['event' => $event, 'created' => false];
     }
 }

@@ -213,11 +213,15 @@ class PersonalTimeController extends Controller
                 'status' => $result['status'],
                 'event' => isset($result['event']) ? (new TimeEventResource($result['event']))->resolve() : null,
                 'error' => $result['error'] ?? null,
+                'error_code' => $result['error_code'] ?? null,
+                'retryable' => $result['retryable'] ?? false,
+                'retain_local' => $result['retain_local'] ?? false,
             ], $results),
             'meta' => [
                 'accepted' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'accepted')),
                 'already_registered' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'already_registered')),
                 'rejected' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'rejected')),
+                'conflict' => count(array_filter($results, fn (array $result): bool => $result['status'] === 'conflict')),
                 'trace_id' => $request->attributes->get('api.trace_id'),
             ],
         ]);

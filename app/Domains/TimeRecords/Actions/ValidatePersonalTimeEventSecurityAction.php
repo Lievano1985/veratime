@@ -2,6 +2,7 @@
 
 namespace App\Domains\TimeRecords\Actions;
 
+use App\Domains\TimeRecords\Exceptions\PersonalTimeEventSecurityException;
 use App\Domains\Workers\Actions\VerifyP256SignatureAction;
 use App\Models\Company;
 use App\Models\MobileDeviceBinding;
@@ -43,11 +44,15 @@ class ValidatePersonalTimeEventSecurityAction
             $binding = $this->resolveBinding($company, $user, $worker, (string) ($security['binding_id'] ?? ''));
             $signature = (string) ($security['signature'] ?? '');
             if ($signature === '') {
-                throw new InvalidArgumentException('Se requiere la firma del dispositivo autorizado.');
+                throw new PersonalTimeEventSecurityException('biometric_key_invalid', 'Se requiere la firma del dispositivo autorizado.');
             }
 
             $payload = $this->signaturePayload($data, $policy, $reference, $binding, $location);
-            $this->verifySignature->handle($binding->public_key_spki, $payload, $signature);
+            try {
+                $this->verifySignature->handle($binding->public_key_spki, $payload, $signature);
+            } catch (InvalidArgumentException $exception) {
+                throw new PersonalTimeEventSecurityException('biometric_key_invalid', $exception->getMessage());
+            }
             $payloadHash = hash('sha256', $payload);
         }
 
@@ -85,7 +90,7 @@ class ValidatePersonalTimeEventSecurityAction
             ->first();
 
         if (! $reference || $reference->expires_at->lessThanOrEqualTo($now)) {
-            throw new InvalidArgumentException('La referencia de tiempo de seguridad no es válida o venció. Actualiza la política antes de marcar.');
+            throw new PersonalTimeEventSecurityException('time_unverifiable', 'La referencia de tiempo de seguridad no es válida o venció. Conserva el marcaje pendiente para conciliación.', false);
         }
 
         return $reference;
@@ -102,7 +107,7 @@ class ValidatePersonalTimeEventSecurityAction
             ->first();
 
         if (! $binding) {
-            throw new InvalidArgumentException('El dispositivo no está autorizado para este marcaje.');
+            throw new PersonalTimeEventSecurityException('binding_inactive', 'El dispositivo no está autorizado para este marcaje.');
         }
 
         return $binding;
@@ -120,7 +125,7 @@ class ValidatePersonalTimeEventSecurityAction
         }
 
         if (! is_array($location) || ! isset($location['latitude'], $location['longitude'], $location['accuracy_meters'], $location['captured_at'])) {
-            throw new InvalidArgumentException('La ubicación verificable es requerida para este marcaje.');
+            throw new PersonalTimeEventSecurityException('location_unverifiable', 'La ubicación verificable es requerida para este marcaje.');
         }
 
         $capturedAt = CarbonImmutable::parse((string) $location['captured_at'])->utc();
@@ -128,23 +133,23 @@ class ValidatePersonalTimeEventSecurityAction
         $isMocked = (bool) ($location['is_mocked'] ?? false);
 
         if ($isMocked) {
-            throw new InvalidArgumentException('La ubicación no puede verificarse desde una fuente simulada.');
+            throw new PersonalTimeEventSecurityException('location_unverifiable', 'La ubicación no puede verificarse desde una fuente simulada.');
         }
 
         $accuracy = (float) $location['accuracy_meters'];
         if ($policy->max_accuracy_meters !== null && $accuracy > $policy->max_accuracy_meters) {
-            throw new InvalidArgumentException('La precisión de ubicación no cumple la política de marcaje.');
+            throw new PersonalTimeEventSecurityException('location_unverifiable', 'La precisión de ubicación no cumple la política de marcaje.');
         }
 
         if ($policy->max_location_age_seconds !== null && abs($capturedAt->diffInSeconds($occurredAtUtc, false)) > $policy->max_location_age_seconds) {
-            throw new InvalidArgumentException('La ubicación ya no es suficientemente reciente para este marcaje.');
+            throw new PersonalTimeEventSecurityException('location_unverifiable', 'La ubicación ya no es suficientemente reciente para este marcaje.');
         }
 
         $distance = null;
         if ($policy->mode === MobileMarkingPolicy::MODE_CIRCLE) {
             $distance = $this->distanceMeters((float) $policy->center_latitude, (float) $policy->center_longitude, (float) $location['latitude'], (float) $location['longitude']);
             if ($distance > $policy->radius_meters) {
-                throw new InvalidArgumentException('La ubicación está fuera del área autorizada para marcar.');
+                throw new PersonalTimeEventSecurityException('outside_area', 'La ubicación está fuera del área autorizada para marcar.');
             }
         }
 
