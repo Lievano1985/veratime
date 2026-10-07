@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignIdFor(User::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(User::class, 'created_by_user_id')->constrained('users')->restrictOnDelete();
-            $table->string('authorization_secret_hash', 64)->unique();
+            $table->string('authorization_secret_hash', 64)->unique('mdba_authorization_secret_hash_unique');
             $table->string('status')->default('pending');
             $table->timestamp('expires_at');
             $table->string('challenge_hash', 64)->nullable();

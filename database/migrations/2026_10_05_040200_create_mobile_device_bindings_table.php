@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignIdFor(Company::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(User::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileDeviceBindingAuthorization::class)->unique()->constrained()->restrictOnDelete();
+            $table->foreignIdFor(MobileDeviceBindingAuthorization::class)->unique('mdb_binding_authorization_unique')->constrained()->restrictOnDelete();
             $table->string('device_name', 120);
             $table->string('algorithm', 20);
             $table->text('public_key_spki');
