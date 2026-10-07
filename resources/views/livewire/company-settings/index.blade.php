@@ -244,6 +244,8 @@ new class extends Component {
 
         Gate::authorize('update', $company);
 
+        $this->resetValidation('mobilePolicyForm');
+
         $validated = $this->validate([
             'mobilePolicyForm.scope' => ['required', Rule::in(['company', 'center', 'organizational_unit'])],
             'mobilePolicyForm.center_id' => ['nullable', 'integer'],
@@ -278,7 +280,21 @@ new class extends Component {
             ? MobileMarkingPolicy::query()->where('company_id', $company->id)->findOrFail($this->editingMobilePolicyId)
             : null;
 
-        $action->handle($company, $validated, $policy);
+        try {
+            $action->handle($company, $validated, $policy);
+        } catch (ValidationException $exception) {
+            $messages = [];
+
+            foreach ($exception->errors() as $field => $fieldMessages) {
+                $formField = str_starts_with($field, 'policyForm')
+                    ? 'mobilePolicyForm'.substr($field, strlen('policyForm'))
+                    : $field;
+
+                $messages[$formField] = $fieldMessages;
+            }
+
+            throw ValidationException::withMessages($messages);
+        }
 
         $this->resetMobilePolicyForm();
         Session::flash('status', 'Borrador de política de marcaje móvil guardado. Actívalo cuando estés listo para aplicarlo.');
@@ -689,6 +705,8 @@ new class extends Component {
                         <button type="button" wire:click="cancelMobileMarkingPolicyEdit" class="btn-secondary btn-sm">Cancelar edición</button>
                     @endif
                 </div>
+
+                @error('mobilePolicyForm')<p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
 
                 <div class="grid gap-3 md:grid-cols-3">
                     <div>

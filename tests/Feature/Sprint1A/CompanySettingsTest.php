@@ -116,6 +116,65 @@ class CompanySettingsTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_company_admin_can_save_a_mobile_marking_policy_draft_from_settings(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'mobile-marking')
+            ->set('mobilePolicyForm.mode', 'circle')
+            ->set('mobilePolicyForm.requires_device_binding', true)
+            ->set('mobilePolicyForm.center_latitude', '17.9971944')
+            ->set('mobilePolicyForm.center_longitude', '-92.9328333')
+            ->set('mobilePolicyForm.radius_meters', 150)
+            ->set('mobilePolicyForm.offline_authorization_duration_minutes', 720)
+            ->call('saveMobileMarkingPolicyDraft')
+            ->assertHasNoErrors()
+            ->assertSee('Borrador de política de marcaje móvil guardado.');
+
+        $this->assertDatabaseHas('mobile_marking_policies', [
+            'company_id' => $company->id,
+            'mode' => 'circle',
+            'center_latitude' => '17.9971944',
+            'center_longitude' => '-92.9328333',
+            'radius_meters' => 150,
+            'offline_authorization_duration_minutes' => 720,
+        ]);
+    }
+
+    public function test_mobile_policy_shows_the_reason_when_offline_marking_has_no_authorized_device(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'mobile-marking')
+            ->set('mobilePolicyForm.offline_authorization_duration_minutes', 720)
+            ->call('saveMobileMarkingPolicyDraft')
+            ->assertHasErrors(['mobilePolicyForm.offline_authorization_duration_minutes']);
+
+        $this->assertDatabaseMissing('mobile_marking_policies', [
+            'company_id' => $company->id,
+        ]);
+    }
+
     public function test_settings_validation_rejects_invalid_closure_day(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
