@@ -17,13 +17,13 @@ return new class extends Migration
     {
         Schema::create('mobile_offline_marking_captures', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Company::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(User::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(TimeEvent::class)->nullable()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileOfflineMarkingAuthorization::class)->nullable()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileMarkingPolicy::class)->nullable()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileDeviceBinding::class)->nullable()->constrained()->restrictOnDelete();
+            $table->foreignIdFor(Company::class);
+            $table->foreignIdFor(User::class);
+            $table->foreignIdFor(Worker::class);
+            $table->foreignIdFor(TimeEvent::class)->nullable();
+            $table->foreignIdFor(MobileOfflineMarkingAuthorization::class)->nullable();
+            $table->foreignIdFor(MobileMarkingPolicy::class)->nullable();
+            $table->foreignIdFor(MobileDeviceBinding::class)->nullable();
             $table->string('client_event_id');
             $table->string('event_type');
             $table->string('timezone')->nullable();
@@ -51,6 +51,13 @@ return new class extends Migration
 
             $table->unique(['company_id', 'client_event_id'], 'momc_company_client_event_unique');
             $table->index(['company_id', 'worker_id', 'status'], 'momc_company_worker_status_index');
+            $table->foreign('company_id', 'momc_company_fk')->references('id')->on('companies')->restrictOnDelete();
+            $table->foreign('user_id', 'momc_user_fk')->references('id')->on('users')->restrictOnDelete();
+            $table->foreign('worker_id', 'momc_worker_fk')->references('id')->on('workers')->restrictOnDelete();
+            $table->foreign('time_event_id', 'momc_time_event_fk')->references('id')->on('time_events')->restrictOnDelete();
+            $table->foreign('mobile_offline_marking_authorization_id', 'momc_authorization_fk')->references('id')->on('mobile_offline_marking_authorizations')->restrictOnDelete();
+            $table->foreign('mobile_marking_policy_id', 'momc_policy_fk')->references('id')->on('mobile_marking_policies')->restrictOnDelete();
+            $table->foreign('mobile_device_binding_id', 'momc_binding_fk')->references('id')->on('mobile_device_bindings')->restrictOnDelete();
         });
     }
 

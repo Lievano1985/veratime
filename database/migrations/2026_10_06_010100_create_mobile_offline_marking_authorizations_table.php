@@ -16,11 +16,11 @@ return new class extends Migration
         Schema::create('mobile_offline_marking_authorizations', function (Blueprint $table) {
             $table->id();
             $table->uuid('public_id')->unique();
-            $table->foreignIdFor(Company::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(User::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileMarkingPolicy::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileDeviceBinding::class)->constrained()->restrictOnDelete();
+            $table->foreignIdFor(Company::class);
+            $table->foreignIdFor(User::class);
+            $table->foreignIdFor(Worker::class);
+            $table->foreignIdFor(MobileMarkingPolicy::class);
+            $table->foreignIdFor(MobileDeviceBinding::class);
             $table->string('status')->default('active');
             $table->unsignedInteger('policy_version');
             $table->unsignedBigInteger('issued_monotonic_milliseconds');
@@ -33,6 +33,11 @@ return new class extends Migration
 
             $table->index(['company_id', 'user_id', 'worker_id', 'expires_at'], 'moma_company_user_worker_expires_index');
             $table->index(['company_id', 'mobile_device_binding_id', 'status'], 'moma_company_binding_status_index');
+            $table->foreign('company_id', 'moma_company_fk')->references('id')->on('companies')->restrictOnDelete();
+            $table->foreign('user_id', 'moma_user_fk')->references('id')->on('users')->restrictOnDelete();
+            $table->foreign('worker_id', 'moma_worker_fk')->references('id')->on('workers')->restrictOnDelete();
+            $table->foreign('mobile_marking_policy_id', 'moma_policy_fk')->references('id')->on('mobile_marking_policies')->restrictOnDelete();
+            $table->foreign('mobile_device_binding_id', 'moma_binding_fk')->references('id')->on('mobile_device_bindings')->restrictOnDelete();
         });
     }
 

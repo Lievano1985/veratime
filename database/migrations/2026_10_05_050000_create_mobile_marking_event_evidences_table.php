@@ -17,13 +17,13 @@ return new class extends Migration
     {
         Schema::create('mobile_marking_event_evidences', function (Blueprint $table): void {
             $table->id();
-            $table->foreignIdFor(Company::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(User::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(TimeEvent::class)->unique()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileMarkingPolicy::class)->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileDeviceBinding::class)->nullable()->constrained()->restrictOnDelete();
-            $table->foreignIdFor(MobileMarkingTimeReference::class)->constrained()->restrictOnDelete();
+            $table->foreignIdFor(Company::class);
+            $table->foreignIdFor(User::class);
+            $table->foreignIdFor(Worker::class);
+            $table->foreignIdFor(TimeEvent::class)->unique('mmee_time_event_unique');
+            $table->foreignIdFor(MobileMarkingPolicy::class);
+            $table->foreignIdFor(MobileDeviceBinding::class)->nullable();
+            $table->foreignIdFor(MobileMarkingTimeReference::class);
             $table->uuid('policy_public_id');
             $table->unsignedInteger('policy_version');
             $table->unsignedSmallInteger('schema_version')->default(1);
@@ -40,6 +40,13 @@ return new class extends Migration
 
             $table->index(['company_id', 'worker_id', 'policy_version'], 'mmee_company_worker_policy_index');
             $table->index(['company_id', 'mobile_device_binding_id'], 'mmee_company_binding_index');
+            $table->foreign('company_id', 'mmee_company_fk')->references('id')->on('companies')->restrictOnDelete();
+            $table->foreign('user_id', 'mmee_user_fk')->references('id')->on('users')->restrictOnDelete();
+            $table->foreign('worker_id', 'mmee_worker_fk')->references('id')->on('workers')->restrictOnDelete();
+            $table->foreign('time_event_id', 'mmee_time_event_fk')->references('id')->on('time_events')->restrictOnDelete();
+            $table->foreign('mobile_marking_policy_id', 'mmee_policy_fk')->references('id')->on('mobile_marking_policies')->restrictOnDelete();
+            $table->foreign('mobile_device_binding_id', 'mmee_binding_fk')->references('id')->on('mobile_device_bindings')->restrictOnDelete();
+            $table->foreign('mobile_marking_time_reference_id', 'mmee_reference_fk')->references('id')->on('mobile_marking_time_references')->restrictOnDelete();
         });
     }
 
