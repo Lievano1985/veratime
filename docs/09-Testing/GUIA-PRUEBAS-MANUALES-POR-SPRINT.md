@@ -2262,3 +2262,16 @@ Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. 
 Resultado esperado: las incidencias aprobadas no deben generar faltas abiertas; las dos alertas de prueba deben explicar los eventos y calculos que las originaron. Ninguna informacion del demo debe aparecer en otra empresa. Si la empresa ya tiene datos operativos o un demo completado, el boton no debe permitir generar el demo.
 
 No probar la eliminacion masiva del escenario: una vez publicados horarios, eventos y jornadas, se conserva como evidencia operativa.
+
+## BL-0205 - pruebas manuales de Dashboard operativo
+
+Estado: implementado / candidato a cierre.
+
+1. Entrar con `admin_empresa` o `rh_admin` en una empresa activa y abrir `/time/dashboard`.
+2. Confirmar que se muestra el nombre de la empresa, la fecha y los cuatro indicadores principales.
+3. Cambiar fecha y centro; confirmar que sólo se muestran métricas del centro consultado.
+4. Registrar entrada, pausa y salida de una persona de prueba y confirmar que los indicadores Trabajando ahora y En pausa reflejan el último evento válido.
+5. Con una programación sin entrada, comprobar que antes de la tolerancia aparece en Personal por ingresar y después en Ausencias por validar.
+6. Confirmar que las alertas de domingo, descanso obligatorio, jornada incompleta o captura manual usan lenguaje preventivo y llevan a Jornadas.
+7. Entrar con una cuenta de otra empresa y confirmar que no aparecen trabajadores, eventos ni alertas de la empresa anterior.
+8. Confirmar que el Dashboard no crea, modifica ni elimina eventos, jornadas o alertas al abrirlo o cambiar filtros.

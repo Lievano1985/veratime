@@ -236,6 +236,8 @@ Acciones rápidas:
 - Iniciar cierre.
 - Generar reporte.
 
+Implementación inicial: la ruta de producto es `/time/dashboard` y muestra un Dashboard operativo preventivo con filtros por fecha y centro, métricas de asistencia del día, alertas abiertas agrupadas y enlaces a Jornadas. La especificación de detalle vigente es `UX-0002-DASHBOARD-OPERATIVO.md`; los indicadores de cierres, reportes y conformidad continúan fuera de esta primera versión.
+
 ---
 
 # 6. Administración global SaaS

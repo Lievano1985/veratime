@@ -3,6 +3,7 @@
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollCsvController;
 use App\Http\Controllers\Attendance\AttendancePeriodPayrollXlsxController;
 use App\Http\Controllers\CompanyBrandingImageController;
+use App\Http\Controllers\Dashboard\OperationalDashboardController;
 use App\Http\Controllers\Marketing\DemoRequestController;
 use App\Http\Controllers\PersonalAccessTokenController;
 use App\Http\Controllers\Scheduling\DailyScheduleCsvErrorReportController;
@@ -32,7 +33,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'current.company'])->group(function () {
     Route::prefix('time')->middleware('product:time')->group(function (): void {
         Route::post('personal-access-token', [PersonalAccessTokenController::class, 'store'])->name('personal-access-token.store');
-        Route::view('dashboard', 'dashboard')
+        Route::get('dashboard', OperationalDashboardController::class)
             ->middleware('verified')
             ->name('dashboard');
         Volt::route('my-day', 'personal.my-day')->name('personal.my-day');

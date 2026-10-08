@@ -506,7 +506,7 @@ Nota:
 ```text
 BL-0205 Dashboard inicial se mantiene como P0, pero se reubica para implementacion en Sprint 5C,
 despues de que existan jornadas calculadas, alertas e incidencias.
-No se marca como completado en Sprint 1.
+La primera version operativa esta implementada en `/time/dashboard`: consulta trabajadores activos, estado de marcaje, ausencias por validar, personal por ingresar, alertas abiertas y capturas manuales por fecha/centro. Es de solo lectura, usa lenguaje preventivo y reutiliza Jornadas para el detalle. El alcance restante de cierres, reportes y conformidad sigue pendiente.
 ```
 
 ## Sprint 6 â€” Cierre y conformidad
