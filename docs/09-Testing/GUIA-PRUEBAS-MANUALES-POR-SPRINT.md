@@ -2199,7 +2199,7 @@ Para cerrar A1, validar manualmente:
 11. Probar error de correo duplicado y confirmar que no quedan registros parciales.
 12. Verificar en base de datos que se creo `customer_accounts` y que la empresa quedo ligada por `companies.customer_account_id`.
 13. Editar una empresa como `super_admin` y cambiar el tipo de cuenta cliente sin agregar al super admin como miembro operativo.
-14. Crear una cuenta de usuario activa sin empresas y usar su correo como administrador de otra empresa nueva. Verificar que se reutiliza el usuario, conserva su contrasena y recibe un aviso de acceso sin enlace para restablecerla.
+14. Crear una cuenta de usuario activa sin empresas y usar su correo como administrador de otra empresa nueva. Verificar que se reutiliza el usuario y recibe un enlace temporal para definir o restablecer su contrasena. Confirmar que la contrasena actual solo cambia al completar ese enlace.
 
 A2 queda cubierto solo en cuenta cliente y tipo monoempresa/multiempresa. Cobro, facturacion, planes y limites siguen fuera de estas pruebas.
 

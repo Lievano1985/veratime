@@ -167,7 +167,8 @@ class CompanyAdminWelcomeEmailTest extends TestCase
 
             return data_get($payload, 'to.0.email') === $existingAdministrator->email
                 && data_get($payload, 'tags.0') === 'company-admin-access-granted'
-                && ! str_contains((string) data_get($payload, 'htmlContent'), '/reset-password/');
+                && str_contains((string) data_get($payload, 'htmlContent'), '/reset-password/')
+                && str_contains((string) data_get($payload, 'htmlContent'), 'Definir o restablecer');
         });
     }
 }

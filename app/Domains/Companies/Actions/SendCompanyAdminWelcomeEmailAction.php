@@ -17,7 +17,7 @@ class SendCompanyAdminWelcomeEmailAction
     /**
      * Sends a secure onboarding or access-granted message.
      *
-     * An existing account keeps its password and only receives an access notice.
+     * The password remains unchanged until the recipient completes the reset flow.
      */
     public function handle(Company $company, User $administrator, bool $isNewAdministrator): bool
     {
@@ -25,20 +25,14 @@ class SendCompanyAdminWelcomeEmailAction
             return false;
         }
 
-        $setupUrl = null;
-        $expiresInMinutes = null;
-
-        if ($isNewAdministrator) {
-            $token = Password::broker()->createToken($administrator);
-            $setupUrl = route('password.reset', [
-                'token' => $token,
-                'email' => $administrator->email,
-            ]);
-            $expiresInMinutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
-        }
+        $token = Password::broker()->createToken($administrator);
+        $setupUrl = route('password.reset', [
+            'token' => $token,
+            'email' => $administrator->email,
+        ]);
+        $expiresInMinutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
 
         $brandImageUrl = $this->brandingImageUrl->handle($company) ?? asset('images/veralogo.png');
-        $loginUrl = route('login');
         $supportEmail = (string) (config('services.brevo.sender.address') ?: config('mail.from.address'));
 
         $subject = $isNewAdministrator
@@ -55,7 +49,9 @@ class SendCompanyAdminWelcomeEmailAction
             : implode("\n\n", [
                 "Hola {$administrator->name},",
                 "Tu cuenta existente ahora tiene acceso como administrador de {$company->name} en ".config('app.name').'.',
-                "Tu contraseña no fue modificada. Puedes ingresar desde {$loginUrl}.",
+                "Para definir o restablecer tu contraseña, usa este enlace:\n{$setupUrl}",
+                "El enlace vence en {$expiresInMinutes} minutos.",
+                'Tu contraseña actual no cambia hasta que completes este proceso.',
             ]);
 
         $this->transactionalEmail->send(
@@ -64,7 +60,7 @@ class SendCompanyAdminWelcomeEmailAction
                 'name' => $administrator->name,
             ]],
             subject: $subject,
-            htmlContent: view('emails.companies.administrator-welcome', compact('administrator', 'company', 'setupUrl', 'expiresInMinutes', 'isNewAdministrator', 'brandImageUrl', 'loginUrl', 'supportEmail'))->render(),
+            htmlContent: view('emails.companies.administrator-welcome', compact('administrator', 'company', 'setupUrl', 'expiresInMinutes', 'isNewAdministrator', 'brandImageUrl', 'supportEmail'))->render(),
             textContent: $textContent,
             tags: [$isNewAdministrator ? 'company-admin-welcome' : 'company-admin-access-granted'],
         );

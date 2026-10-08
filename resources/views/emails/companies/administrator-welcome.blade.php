@@ -19,7 +19,7 @@
                             @if ($isNewAdministrator)
                                 <p style="margin:16px 0 0; color:#4e647b; font-size:16px; line-height:1.6;">Se creó tu acceso como administrador de <strong style="color:#102a43;">{{ $company->name }}</strong>. Completa tu activación para comenzar a configurar y administrar la empresa.</p>
                             @else
-                                <p style="margin:16px 0 0; color:#4e647b; font-size:16px; line-height:1.6;">Tu cuenta existente ahora tiene acceso como administrador de <strong style="color:#102a43;">{{ $company->name }}</strong>. Tu contraseña no fue modificada.</p>
+                                <p style="margin:16px 0 0; color:#4e647b; font-size:16px; line-height:1.6;">Tu cuenta existente ahora tiene acceso como administrador de <strong style="color:#102a43;">{{ $company->name }}</strong>. Define o restablece tu contraseña antes de ingresar.</p>
                             @endif
                         </td>
                     </tr>
@@ -43,7 +43,8 @@
                                 <a href="{{ $setupUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Definir contraseña y acceder</a>
                                 <p style="margin:16px 0 0; color:#6f8297; font-size:13px; line-height:1.5;">Este enlace vence en {{ $expiresInMinutes }} minutos.</p>
                             @else
-                                <a href="{{ $loginUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Ingresar a Vera Time</a>
+                                <a href="{{ $setupUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Definir o restablecer contraseÃ±a</a>
+                                <p style="margin:16px 0 0; color:#6f8297; font-size:13px; line-height:1.5;">Este enlace vence en {{ $expiresInMinutes }} minutos.</p>
                             @endif
                         </td>
                     </tr>
