@@ -59,6 +59,11 @@ class Company extends Model
         return $this->hasOne(CompanySetting::class);
     }
 
+    public function demoScenario(): HasOne
+    {
+        return $this->hasOne(CompanyDemoScenario::class);
+    }
+
     public function centers(): HasMany
     {
         return $this->hasMany(Center::class);

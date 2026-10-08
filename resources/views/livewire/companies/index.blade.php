@@ -3,6 +3,7 @@
 use App\Domains\Companies\Actions\CreateCompanyAction;
 use App\Domains\Companies\Actions\CreateTenantWithAdminAction;
 use App\Domains\Companies\Actions\DeleteCompanyAction;
+use App\Domains\Companies\Actions\RequestCompanyDemoScenarioAction;
 use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
@@ -40,7 +41,7 @@ new class extends Component {
         }
     }
 
-    public function create(CreateCompanyAction $createCompany, CreateTenantWithAdminAction $createTenant): void
+    public function create(CreateCompanyAction $createCompany, CreateTenantWithAdminAction $createTenant, RequestCompanyDemoScenarioAction $requestDemo): void
     {
         Gate::authorize('create', Company::class);
 
@@ -50,6 +51,7 @@ new class extends Component {
             'createForm.tax_id' => ['nullable', 'string', 'max:50', Rule::unique('companies', 'tax_id')],
             'createForm.timezone' => ['required', 'string', 'max:100'],
             'createForm.status' => ['required', Rule::in(auth()->user()->isSuperAdmin() ? ['active', 'inactive', 'suspended', 'cancelled'] : ['active', 'inactive'])],
+            'createForm.create_demo' => ['boolean'],
         ];
 
         if (auth()->user()->isSuperAdmin()) {
@@ -63,6 +65,12 @@ new class extends Component {
         }
 
         $validated = $this->validate($rules)['createForm'];
+
+        if (($validated['create_demo'] ?? false) && $validated['status'] !== 'active') {
+            $this->addError('createForm.create_demo', 'El escenario demo requiere que la empresa se cree activa.');
+
+            return;
+        }
 
         if (auth()->user()->isSuperAdmin()) {
             $company = $createTenant->handle(auth()->user(), [
@@ -92,9 +100,14 @@ new class extends Component {
             $this->dispatch('companies-updated');
             Session::flash('status', 'Empresa y administrador principal creados. Copia la contraseña temporal antes de continuar.');
         } else {
-            $createCompany->handle(auth()->user(), $validated);
+            $company = $createCompany->handle(auth()->user(), $validated);
             $this->dispatch('companies-updated');
             Session::flash('status', 'Empresa creada.');
+        }
+
+        if (($validated['create_demo'] ?? false) && $company->status === 'active') {
+            $requestDemo->handle($company, auth()->user());
+            Session::flash('status', 'Empresa creada. El escenario de demostracion se esta preparando y aparecera en unos momentos.');
         }
 
         $this->createForm = $this->emptyCompanyForm();
@@ -236,12 +249,14 @@ new class extends Component {
     public function with(CurrentCompany $currentCompany): array
     {
         $company = $currentCompany->get();
+        $company?->loadMissing('demoScenario');
         $canManageCurrentCompany = $company ? Gate::allows('update', $company) : false;
 
         return [
             'companies' => $this->companyList(),
             'singleCompanySummary' => $this->singleCompanySummary($company),
             'currentCompany' => $company,
+            'currentDemoScenario' => $company?->demoScenario,
             'canCreateCompany' => Gate::allows('create', Company::class),
             'canManageCurrentCompany' => $canManageCurrentCompany,
             'canManageEditingCompany' => $this->canManageEditingCompany(),
@@ -371,6 +386,7 @@ new class extends Component {
             'admin_email' => '',
             'admin_password' => '',
             'admin_status' => 'active',
+            'create_demo' => false,
         ];
     }
 
@@ -399,6 +415,25 @@ new class extends Component {
         <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
         </div>
+    @endif
+
+    @if ($currentDemoScenario)
+        @php($demoStatus = $currentDemoScenario->status)
+        <section class="rounded-2xl border p-4 {{ $demoStatus === 'completed' ? 'border-status-rest-line bg-status-rest-bg text-status-rest-text' : ($demoStatus === 'failed' ? 'border-status-pending-line bg-status-pending-bg text-status-pending-text' : 'border-brand-primary/20 bg-brand-primary/5 text-brand-navy') }}">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm font-semibold">Escenario de demostracion</p>
+                    @if ($demoStatus === 'completed')
+                        <p class="text-xs">Listo: 10 trabajadores, dos semanas de programacion y periodos de asistencia preparados. El Centro Nocturno puede validarse, cerrarse y exportarse; el Diurno conserva alertas de prueba.</p>
+                    @elseif ($demoStatus === 'failed')
+                        <p class="text-xs">No se pudo terminar de preparar el demo. Revisa el registro tecnico antes de operar la empresa.</p>
+                    @else
+                        <p class="text-xs">Preparando horarios, marcajes, incidencias y jornadas. Actualiza esta pagina en unos momentos.</p>
+                    @endif
+                </div>
+                <span class="text-xs font-semibold uppercase tracking-wide">{{ $demoStatus }}</span>
+            </div>
+        </section>
     @endif
 
     @if ($temporaryPassword)
@@ -600,6 +635,19 @@ new class extends Component {
                             </flux:select>
                             <p class="form-hint">Define si esta cuenta cliente operara una sola empresa o podra agrupar varias empresas bajo la misma cuenta.</p>
                         @endif
+                    </section>
+
+                    <section class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
+                        <label class="flex cursor-pointer items-start gap-3">
+                            <input type="checkbox" wire:model="createForm.create_demo" class="mt-0.5 rounded border-surface-line text-brand-primary focus:ring-brand-primary" />
+                            <span>
+                                <span class="block text-sm font-semibold text-brand-navy">Crear con escenario de demostracion</span>
+                                <span class="mt-1 block text-xs leading-5 text-surface-muted">Crea 10 trabajadores, centros, areas, cuatro horarios, dos semanas de programacion, incidencias reales y jornadas de ejemplo. Incluye alertas laborales pendientes para probar su revision.</span>
+                            </span>
+                        </label>
+                        @error('createForm.create_demo')
+                            <p class="mt-2 form-error">{{ $message }}</p>
+                        @enderror
                     </section>
 
                     @if ($isSuperAdmin)

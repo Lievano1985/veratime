@@ -865,6 +865,33 @@ Pendiente posterior:
 - invitaciones por correo;
 - recuperacion operativa de accesos multiempresa desde soporte.
 
+## Bloque Admin A5 - escenario de demostracion al crear empresa
+
+Estado: implementado / candidato a cierre.
+
+Una empresa operativa nueva puede solicitar el escenario de demostracion desde el flujo **Empresas > Nueva empresa**. La empresa, su cuenta cliente y su administrador se crean primero; el escenario se prepara despues mediante `database queue` y conserva estado `pending`, `processing`, `completed` o `failed` en `company_demo_scenarios`.
+
+El escenario no ejecuta seeders de desarrollo ni inserta datos fuera del dominio. Reutiliza las Actions operativas de centros, unidades, trabajadores, perfiles, programacion publicada, eventos, incidencias, jornadas, alertas y periodos.
+
+Contenido fijo de `company_onboarding_v1`:
+
+- dos centros: Diurno y Nocturno;
+- tres areas: Administracion, Operacion y Operacion nocturna;
+- diez trabajadores: dos administrativos, tres diurnos, tres mixtos y dos nocturnos;
+- cuatro turnos y cuatro perfiles: administrativo, operacion diurna, operacion mixta y turno nocturno asignado directamente a dos relaciones laborales;
+- dos semanas completas anteriores, con cuatro lotes de programacion publicados;
+- incidencias aprobadas coherentes sin marcajes incompatibles: vacaciones, permiso pagado, incapacidad y ausencia no justificada;
+- dos casos deliberadamente pendientes en el Centro Diurno: tiempo extra detectado y jornada mayor a doce horas;
+- dos periodos quincenales: el nocturno queda listo para validar, cerrar y exportar; el diurno conserva los casos pendientes para practicar revision y dictamen.
+
+Reglas:
+
+- los trabajadores demo no obtienen cuentas de usuario ni credenciales automaticamente;
+- toda entidad generada conserva metadata de origen demo y escenario;
+- no se genera dos veces para la misma empresa;
+- una alerta es preventiva y requiere revision; nunca se etiqueta como infraccion o incumplimiento confirmado;
+- no se ofrece eliminacion destructiva del demo una vez creada evidencia operativa.
+
 ## Decision MVP - identidad unica y marcaje por kiosco
 
 Se incorpora al MVP una identidad humana unica: la misma cuenta de usuario podra acceder al portal web y al cliente movil responsive/PWA. Cuando el usuario represente a una persona trabajadora, se creara una vinculacion explicita y acotada por empresa entre `users` y `workers`.

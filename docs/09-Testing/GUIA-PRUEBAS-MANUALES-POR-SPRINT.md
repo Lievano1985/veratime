@@ -2236,3 +2236,27 @@ Validar:
 8. Confirmar que un usuario global inactivo no puede iniciar sesion.
 9. Confirmar que una membresia inactiva bloquea solo esa empresa.
 10. Confirmar que `rh_admin` no puede asignar rol `admin_empresa`.
+
+## Admin A5 - pruebas manuales de escenario demo
+
+Estado: implementado / candidato a cierre.
+
+Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. La cola de base de datos debe estar siendo procesada por el cron o worker del hosting.
+
+1. Entrar como `super_admin` o `admin_empresa` autorizado a crear empresa.
+2. Abrir **Empresas** y seleccionar **Nueva empresa**.
+3. Capturar los datos de una empresa activa y marcar **Crear con escenario de demostracion**.
+4. Crear la empresa y confirmar el mensaje de preparacion.
+5. Actualizar Empresas hasta que el estado del escenario indique `completed`.
+6. Abrir Centros y confirmar Centro Diurno y Centro Nocturno.
+7. Abrir Trabajadores y confirmar diez personas: cinco diurnas y cinco nocturnas.
+8. Abrir Horarios y confirmar cuatro perfiles: administrativo, operacion diurna, mixta y nocturna.
+9. Abrir Programacion diaria y confirmar cuatro lotes publicados, dos por centro, para dos semanas completas anteriores.
+10. Abrir Incidencias y confirmar vacaciones, permiso pagado, incapacidad y ausencia no justificada.
+11. Abrir Jornadas y Alertas. Confirmar que la mayoria esta calculada y que permanecen abiertos tiempo extra detectado y jornada mayor a doce horas en el Centro Diurno.
+12. Abrir Periodos de asistencia. Validar el periodo del Centro Nocturno, cerrarlo y descargar CSV o XLSX.
+13. Revisar y dictaminar las alertas pendientes del Centro Diurno. Volver a validar su periodo y confirmar que puede cerrarse y exportarse.
+
+Resultado esperado: las incidencias aprobadas no deben generar faltas abiertas; las dos alertas de prueba deben explicar los eventos y calculos que las originaron. Ninguna informacion del demo debe aparecer en otra empresa.
+
+No probar la eliminacion masiva del escenario: una vez publicados horarios, eventos y jornadas, se conserva como evidencia operativa.
