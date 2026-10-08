@@ -324,6 +324,7 @@ new class extends Component
             ->paginate(15);
 
         return [
+            'currentCompany' => $company,
             'users' => $users,
             'roles' => Role::query()->whereIn('key', $this->assignableRoleKeys($company))->orderBy('name')->get(),
             'isSuperAdmin' => auth()->user()->isSuperAdmin(),

@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\MobileDeviceBinding;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserWorkerLink;
+use App\Models\Worker;
 use App\Support\RoleKey;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -241,6 +244,36 @@ class UserManagementTest extends TestCase
         $this->assertFalse($user->activeCompanies()->whereKey($firstCompany->id)->exists());
         $this->assertTrue($user->activeCompanies()->whereKey($secondCompany->id)->exists());
         $this->assertSame($secondCompany->id, $user->defaultCompany()?->id);
+    }
+
+    public function test_company_admin_can_open_a_worker_link_panel_with_an_authorized_mobile_device(): void
+    {
+        [$company, $admin] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        [, $target] = $this->companyUser(RoleKey::RH_OPERATIVO, $company);
+        $worker = Worker::factory()->for($company)->create();
+
+        UserWorkerLink::query()->create([
+            'company_id' => $company->id,
+            'user_id' => $target->id,
+            'worker_id' => $worker->id,
+            'status' => 'active',
+        ]);
+
+        MobileDeviceBinding::factory()
+            ->for($company)
+            ->for($target)
+            ->for($worker)
+            ->create([
+                'device_name' => 'Teléfono de prueba',
+                'activated_at' => now(),
+            ]);
+
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('users.index')
+            ->call('openWorkerLinkPanel', $target->id)
+            ->assertSee('Teléfono de prueba')
+            ->assertSee('Autorizado');
     }
 
     /**
