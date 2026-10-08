@@ -201,7 +201,7 @@ new class extends Component {
 
         $action->handle($company, auth()->user());
 
-        Session::flash('status', 'El escenario de demostracion se esta preparando y aparecera en unos momentos.');
+        Session::flash('status', 'La preparacion del escenario demo quedo en cola. Esta pagina actualizara su estado automaticamente.');
     }
 
     public function openDeleteDrawer(int $companyId): void
@@ -605,7 +605,7 @@ new class extends Component {
                         </div>
                     </form>
 
-                    <section class="mt-6 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
+                    <section wire:poll.10s class="mt-6 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <h3 class="text-sm font-semibold text-brand-navy">Escenario de demostracion</h3>
@@ -617,17 +617,51 @@ new class extends Component {
                             </div>
 
                             @if (data_get($editingDemoEligibility, 'allowed'))
-                                <button
-                                    type="button"
-                                    class="btn-secondary shrink-0"
-                                    wire:click="requestDemo({{ $editingCompanyId }})"
-                                    wire:confirm="Se crearan datos ficticios operativos para esta empresa. No podra ejecutarse otra vez cuando exista evidencia. ¿Continuar?"
-                                >
-                                    Generar escenario demo
-                                </button>
+                                <flux:modal.trigger name="confirm-company-demo-generation">
+                                    <button
+                                        type="button"
+                                        class="btn-primary shrink-0"
+                                        x-data=""
+                                        x-on:click.prevent="$dispatch('open-modal', 'confirm-company-demo-generation')"
+                                    >
+                                        Generar escenario demo
+                                    </button>
+                                </flux:modal.trigger>
                             @endif
                         </div>
                     </section>
+
+                    @if (data_get($editingDemoEligibility, 'allowed'))
+                        <flux:modal name="confirm-company-demo-generation" focusable class="max-w-lg">
+                            <div class="space-y-5 p-6">
+                                <div class="space-y-2">
+                                    <flux:heading size="lg">Preparar escenario de demostración</flux:heading>
+                                    <flux:subheading>
+                                        Se crearán datos ficticios de centros, trabajadores, horarios, marcajes, incidencias, jornadas, alertas y periodos. Esta operación sólo puede realizarse una vez por empresa.
+                                    </flux:subheading>
+                                </div>
+
+                                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                    <flux:modal.close>
+                                        <button type="button" class="btn-secondary w-full sm:w-auto">Cancelar</button>
+                                    </flux:modal.close>
+
+                                    <button
+                                        type="button"
+                                        class="btn-primary w-full sm:w-auto"
+                                        wire:click="requestDemo({{ $editingCompanyId }})"
+                                        wire:target="requestDemo"
+                                        wire:loading.attr="disabled"
+                                        x-data=""
+                                        x-on:click="$dispatch('close-modal', 'confirm-company-demo-generation')"
+                                    >
+                                        <span wire:loading.remove wire:target="requestDemo">Sí, generar demo</span>
+                                        <span wire:loading wire:target="requestDemo">Solicitando...</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </flux:modal>
+                    @endif
                 </section>
             @endif
     </div>
