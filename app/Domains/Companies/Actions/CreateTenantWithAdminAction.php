@@ -2,6 +2,7 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Companies\Data\CreateTenantWithAdminResult;
 use App\Domains\Integrations\Exceptions\BrevoDeliveryException;
 use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\Company;
@@ -26,18 +27,25 @@ class CreateTenantWithAdminAction
     /**
      * @param  array{company: array<string, mixed>, admin: array<string, mixed>}  $data
      */
-    public function handle(User $actor, array $data): Company
+    public function handle(User $actor, array $data): CreateTenantWithAdminResult
     {
         if (! $actor->isSuperAdmin()) {
             throw new AuthorizationException('Solo el super administrador puede crear tenants guiados.');
         }
 
-        [$company, $administrator] = DB::transaction(function () use ($data): array {
+        [$company, $administrator, $reusedExistingAdministrator] = DB::transaction(function () use ($data): array {
             $email = Str::lower(trim((string) data_get($data, 'admin.email')));
+            $existingAdministrator = User::query()->where('email', $email)->first();
 
-            if (User::query()->where('email', $email)->exists()) {
+            if ($existingAdministrator?->companies()->exists()) {
                 throw ValidationException::withMessages([
-                    'createForm.admin_email' => 'Este correo ya esta registrado.',
+                    'createForm.admin_email' => 'Este correo ya tiene acceso a una empresa. Usa un correo nuevo para este administrador.',
+                ]);
+            }
+
+            if ($existingAdministrator && ($existingAdministrator->global_role !== null || $existingAdministrator->status !== 'active')) {
+                throw ValidationException::withMessages([
+                    'createForm.admin_email' => 'El usuario existente no esta disponible para asignarse como administrador de empresa.',
                 ]);
             }
 
@@ -78,7 +86,8 @@ class CreateTenantWithAdminAction
 
             $company->setting()->create(Company::defaultSettings());
 
-            $admin = User::query()->create([
+            $reusedExistingAdministrator = $existingAdministrator !== null;
+            $admin = $existingAdministrator ?? User::query()->create([
                 'name' => trim((string) data_get($data, 'admin.name')),
                 'email' => $email,
                 'password' => Hash::make((string) data_get($data, 'admin.password')),
@@ -92,11 +101,11 @@ class CreateTenantWithAdminAction
                 'is_default' => true,
             ]);
 
-            return [$company, $admin];
+            return [$company, $admin, $reusedExistingAdministrator];
         });
 
         try {
-            $this->sendAdministratorWelcomeEmail->handle($company, $administrator);
+            $this->sendAdministratorWelcomeEmail->handle($company, $administrator, ! $reusedExistingAdministrator);
         } catch (BrevoDeliveryException $exception) {
             Log::warning('Company administrator welcome email delivery failed.', [
                 'company_id' => $company->id,
@@ -105,6 +114,6 @@ class CreateTenantWithAdminAction
             ]);
         }
 
-        return $company;
+        return new CreateTenantWithAdminResult($company, $reusedExistingAdministrator);
     }
 }

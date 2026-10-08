@@ -35,7 +35,7 @@ class CompanyAdminWelcomeEmailTest extends TestCase
             'global_role' => RoleKey::SUPER_ADMIN,
         ]);
 
-        $company = app(CreateTenantWithAdminAction::class)->handle($superAdmin, [
+        $result = app(CreateTenantWithAdminAction::class)->handle($superAdmin, [
             'company' => [
                 'name' => 'Empresa con bienvenida',
                 'legal_name' => 'Empresa con Bienvenida SA de CV',
@@ -51,7 +51,7 @@ class CompanyAdminWelcomeEmailTest extends TestCase
             ],
         ]);
 
-        $this->assertDatabaseHas('companies', ['id' => $company->id]);
+        $this->assertDatabaseHas('companies', ['id' => $result->company->id]);
 
         Http::assertSent(function (Request $request): bool {
             $payload = $request->data();
@@ -86,7 +86,7 @@ class CompanyAdminWelcomeEmailTest extends TestCase
             'global_role' => RoleKey::SUPER_ADMIN,
         ]);
 
-        $company = app(CreateTenantWithAdminAction::class)->handle($superAdmin, [
+        $result = app(CreateTenantWithAdminAction::class)->handle($superAdmin, [
             'company' => [
                 'name' => 'Empresa entrega fallida',
                 'legal_name' => 'Empresa Entrega Fallida SA de CV',
@@ -102,8 +102,69 @@ class CompanyAdminWelcomeEmailTest extends TestCase
             ],
         ]);
 
-        $this->assertDatabaseHas('companies', ['id' => $company->id]);
+        $this->assertDatabaseHas('companies', ['id' => $result->company->id]);
         $this->assertDatabaseHas('users', ['email' => 'admin.entrega.fallida@example.test']);
         Http::assertSentCount(1);
+    }
+
+    public function test_tenant_creation_reuses_an_existing_user_without_company_memberships(): void
+    {
+        config()->set('services.brevo', [
+            'enabled' => true,
+            'api_key' => 'brevo-test-key',
+            'endpoint' => 'https://api.brevo.test/v3/smtp/email',
+            'timeout' => 10,
+            'sender' => ['address' => 'soporte@gotvera.test', 'name' => 'VERA Time'],
+            'contact_recipient' => 'soporte@gotvera.test',
+        ]);
+        Http::fake([
+            'https://api.brevo.test/v3/smtp/email' => Http::response(['messageId' => 'access-message-id'], 201),
+        ]);
+
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'global_role' => RoleKey::SUPER_ADMIN,
+        ]);
+        $existingAdministrator = User::factory()->create([
+            'name' => 'Cuenta existente',
+            'email' => 'cuenta.existente@example.test',
+            'status' => 'active',
+            'global_role' => null,
+        ]);
+        $originalPassword = $existingAdministrator->password;
+
+        $result = app(CreateTenantWithAdminAction::class)->handle($superAdmin, [
+            'company' => [
+                'name' => 'Empresa con cuenta existente',
+                'legal_name' => 'Empresa con Cuenta Existente SA de CV',
+                'tax_id' => 'EXI261007AA1',
+                'timezone' => 'America/Mexico_City',
+                'status' => 'active',
+            ],
+            'admin' => [
+                'name' => 'Nombre que no reemplaza la cuenta',
+                'email' => $existingAdministrator->email,
+                'password' => 'OtraClave1!',
+                'status' => 'active',
+            ],
+        ]);
+
+        $this->assertTrue($result->reusedExistingAdministrator);
+        $this->assertSame($originalPassword, $existingAdministrator->fresh()->password);
+        $this->assertDatabaseHas('company_user', [
+            'company_id' => $result->company->id,
+            'user_id' => $existingAdministrator->id,
+            'role_id' => $adminRole->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+        Http::assertSent(function (Request $request) use ($existingAdministrator): bool {
+            $payload = $request->data();
+
+            return data_get($payload, 'to.0.email') === $existingAdministrator->email
+                && data_get($payload, 'tags.0') === 'company-admin-access-granted'
+                && ! str_contains((string) data_get($payload, 'htmlContent'), '/reset-password/');
+        });
     }
 }

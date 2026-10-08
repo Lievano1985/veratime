@@ -771,7 +771,7 @@ Historias:
 | BL-ADM-A1-004 | Validaciones y seguridad | P0 | Correo unico, empresa valida, rol canonico y transaccion atomica |
 | BL-ADM-A1-005 | Pruebas de plataforma | P0 | Super admin puede crear tenant; usuarios no autorizados no pueden; no hay datos parciales |
 
-Nota de cierre A1/A2 parcial: se implemento alta guiada desde Empresas para crear cuenta cliente, empresa, configuracion inicial y administrador principal `admin_empresa` sin asociar al `super_admin` como miembro operativo. Al crear ese administrador, recibe por Brevo un enlace de vigencia limitada para definir su propia contrasena; la contrasena temporal nunca se envia por correo y un fallo de entrega no revierte el alta. A2 queda parcial: existe cuenta cliente monoempresa/multiempresa, pero no cobro, facturacion ni limites automaticos.
+Nota de cierre A1/A2 parcial: se implemento alta guiada desde Empresas para crear cuenta cliente, empresa, configuracion inicial y administrador principal `admin_empresa` sin asociar al `super_admin` como miembro operativo. Al crear ese administrador, recibe por Brevo un enlace de vigencia limitada para definir su propia contrasena; la contrasena temporal nunca se envia por correo y un fallo de entrega no revierte el alta. Si el correo corresponde a una cuenta activa sin empresas, se reutiliza esa identidad sin modificar su contrasena y recibe un aviso de acceso; un correo ya asociado a otra empresa continua bloqueado en este flujo. A2 queda parcial: existe cuenta cliente monoempresa/multiempresa, pero no cobro, facturacion ni limites automaticos.
 
 Fuera de A1:
 

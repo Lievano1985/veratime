@@ -9,6 +9,7 @@ use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
 use App\Models\Role;
+use App\Models\User;
 use App\Support\RoleKey;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
@@ -55,11 +56,15 @@ new class extends Component {
         ];
 
         if (auth()->user()->isSuperAdmin()) {
+            $existingAdministrator = User::query()
+                ->where('email', Str::lower(trim((string) data_get($this->createForm, 'admin_email'))))
+                ->first();
+
             $rules += [
                 'createForm.account_type' => ['required', Rule::in(['single_company', 'multi_company'])],
                 'createForm.admin_name' => ['required', 'string', 'max:255'],
-                'createForm.admin_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-                'createForm.admin_password' => ['required', 'string', 'min:8', 'max:100', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
+                'createForm.admin_email' => ['required', 'email', 'max:255'],
+                'createForm.admin_password' => [$existingAdministrator ? 'nullable' : 'required', 'string', 'min:8', 'max:100', 'regex:/^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
                 'createForm.admin_status' => ['required', Rule::in(['active', 'inactive'])],
             ];
         }
@@ -67,7 +72,7 @@ new class extends Component {
         $validated = $this->validate($rules)['createForm'];
 
         if (auth()->user()->isSuperAdmin()) {
-            $company = $createTenant->handle(auth()->user(), [
+            $tenantCreation = $createTenant->handle(auth()->user(), [
                 'company' => [
                     'name' => $validated['name'],
                     'legal_name' => $validated['legal_name'] ?? null,
@@ -84,7 +89,8 @@ new class extends Component {
                 ],
             ]);
 
-            $this->temporaryPassword = $validated['admin_password'];
+            $company = $tenantCreation->company;
+            $this->temporaryPassword = $tenantCreation->reusedExistingAdministrator ? null : $validated['admin_password'];
 
             if ($company->status === 'active') {
                 session(['current_company_id' => $company->id]);
@@ -92,7 +98,9 @@ new class extends Component {
             }
 
             $this->dispatch('companies-updated');
-            Session::flash('status', 'Empresa y administrador principal creados. Copia la contraseña temporal antes de continuar.');
+            Session::flash('status', $tenantCreation->reusedExistingAdministrator
+                ? 'Empresa creada y usuario existente asignado como administrador. Su contraseña no fue modificada.'
+                : 'Empresa y administrador principal creados. Copia la contraseña temporal antes de continuar.');
         } else {
             $company = $createCompany->handle(auth()->user(), $validated);
             $this->dispatch('companies-updated');
@@ -669,8 +677,8 @@ new class extends Component {
                             </div>
                             <flux:input wire:model="createForm.admin_name" label="Nombre" required />
                             <flux:input wire:model="createForm.admin_email" type="email" label="Correo" required />
-                            <flux:input wire:model="createForm.admin_password" label="Contraseña temporal" required />
-                            <p class="form-hint">Debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.</p>
+                            <flux:input wire:model="createForm.admin_password" label="Contraseña temporal (sólo para usuario nuevo)" />
+                            <p class="form-hint">Si el correo ya corresponde a una cuenta sin empresas, se reutiliza y esta contraseña no se modifica. Para un usuario nuevo debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.</p>
                             <flux:select wire:model="createForm.admin_status" label="Estado inicial del usuario">
                                 <flux:select.option value="active">Activo</flux:select.option>
                                 <flux:select.option value="inactive">Inactivo</flux:select.option>

@@ -400,10 +400,16 @@ class CompanyManagementTest extends TestCase
         ]);
     }
 
-    public function test_global_super_admin_tenant_creation_blocks_duplicate_admin_email_without_partial_company(): void
+    public function test_global_super_admin_tenant_creation_blocks_an_admin_email_already_assigned_to_another_company(): void
     {
-        Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
-        User::factory()->create(['email' => 'duplicado@example.test']);
+        $adminRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $existingAdministrator = User::factory()->create(['email' => 'duplicado@example.test']);
+        $existingCompany = Company::factory()->create(['status' => 'active']);
+        $existingAdministrator->companies()->attach($existingCompany, [
+            'role_id' => $adminRole->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
         $currentCompany = Company::factory()->create(['status' => 'active']);
         $superAdmin = User::factory()->create([
             'status' => 'active',
