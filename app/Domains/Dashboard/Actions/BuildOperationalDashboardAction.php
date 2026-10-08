@@ -133,6 +133,7 @@ class BuildOperationalDashboardAction
         return [
             'date' => $localDate,
             'timezone' => $timezone,
+            'generated_at' => CarbonImmutable::now($timezone)->toIso8601String(),
             'access' => $access,
             'metrics' => [
                 'active_workers' => $activeWorkerCount,

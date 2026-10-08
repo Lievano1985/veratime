@@ -30,6 +30,10 @@ La primera versión incluye:
 - distribución visual de las alertas por segmento;
 - enlaces de sólo consulta a Jornadas, con los filtros correspondientes.
 
+## Composición visual
+
+La pantalla organiza el contenido en bloques operativos: encabezado con filtros y hora de actualización, panorama de jornada con indicador circular de actividad y cuatro KPI, tarjetas de alertas preventivas y una sección final de distribución con barras de progreso y recordatorio de uso. Las tarjetas utilizan gradientes suaves por estado y la paleta de Vera Time; el color comunica prioridad, no una sanción.
+
 Quedan fuera: sanciones, aprobación formal de incidencias, cálculo legal nuevo, reportes oficiales, nómina, API pública del dashboard y modificar eventos desde esta pantalla.
 
 ## Fuentes de datos
@@ -71,4 +75,3 @@ La pantalla exige sesión, empresa activa, producto Vera Time y la misma autoriz
 - una programación sin entrada cambia de personal por ingresar a ausencia por validar al terminar la tolerancia;
 - domingo, descanso obligatorio y captura manual se agrupan sin lenguaje sancionatorio;
 - el dashboard no persiste datos.
-
