@@ -54,12 +54,28 @@ class GenerateCompanyDemoScenarioAction
     {
         $scenario = CompanyDemoScenario::query()
             ->with('company.users')
-            ->lockForUpdate()
             ->findOrFail($scenario->id);
 
         if ($scenario->status === CompanyDemoScenario::STATUS_COMPLETED) {
             return $scenario;
         }
+
+        $claimed = CompanyDemoScenario::query()
+            ->whereKey($scenario->id)
+            ->whereIn('status', [CompanyDemoScenario::STATUS_PENDING, CompanyDemoScenario::STATUS_FAILED])
+            ->update([
+                'status' => CompanyDemoScenario::STATUS_PROCESSING,
+                'error_message' => null,
+                'started_at' => now(),
+                'completed_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($claimed === 0) {
+            return $scenario->fresh() ?? $scenario;
+        }
+
+        $scenario->refresh()->load('company.users');
 
         $company = $scenario->company;
         if (! $company || $company->status !== 'active') {
@@ -68,13 +84,6 @@ class GenerateCompanyDemoScenarioAction
 
         $actor = $this->scenarioActor($company, $scenario);
         [$periodStart, $periodEnd] = $this->completedBiweeklyRange($company);
-
-        $scenario->forceFill([
-            'status' => CompanyDemoScenario::STATUS_PROCESSING,
-            'error_message' => null,
-            'started_at' => now(),
-            'completed_at' => null,
-        ])->save();
 
         $summary = DB::transaction(function () use ($company, $actor, $periodStart, $periodEnd): array {
             $startedAt = CarbonImmutable::parse($periodStart)->subMonth()->toDateString();

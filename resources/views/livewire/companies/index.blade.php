@@ -199,9 +199,13 @@ new class extends Component {
     {
         $company = $this->authorizedCompany($companyId, 'update');
 
-        $action->handle($company, auth()->user());
+        $scenario = $action->handle($company, auth()->user());
 
-        Session::flash('status', 'La preparacion del escenario demo quedo en cola. Esta pagina actualizara su estado automaticamente.');
+        Session::flash('status', match ($scenario->status) {
+            \App\Models\CompanyDemoScenario::STATUS_COMPLETED => 'El escenario demo se creó correctamente.',
+            \App\Models\CompanyDemoScenario::STATUS_FAILED => 'No se pudo crear el escenario demo. Revisa el detalle mostrado en esta sección e inténtalo nuevamente.',
+            default => 'El escenario demo ya se está preparando.',
+        });
     }
 
     public function openDeleteDrawer(int $companyId): void
@@ -605,7 +609,7 @@ new class extends Component {
                         </div>
                     </form>
 
-                    <section wire:poll.10s class="mt-6 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
+                    <section class="mt-6 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <h3 class="text-sm font-semibold text-brand-navy">Escenario de demostracion</h3>
@@ -613,6 +617,10 @@ new class extends Component {
                                     <p class="mt-1 text-xs leading-5 text-surface-muted">Genera datos ficticios completos para validar centros, horarios, jornadas, alertas, incidencias y exportaciones.</p>
                                 @else
                                     <p class="mt-1 text-xs leading-5 text-surface-muted">{{ data_get($editingDemoEligibility, 'reason') }}</p>
+                                @endif
+
+                                @if (data_get($editingDemoEligibility, 'scenario.status') === \App\Models\CompanyDemoScenario::STATUS_FAILED)
+                                    <p class="mt-2 text-xs leading-5 text-status-danger-text">La preparación anterior no concluyó: {{ data_get($editingDemoEligibility, 'scenario.error_message') ?: 'sin detalle disponible' }}</p>
                                 @endif
                             </div>
 
@@ -656,7 +664,7 @@ new class extends Component {
                                         x-on:click="$dispatch('close-modal', 'confirm-company-demo-generation')"
                                     >
                                         <span wire:loading.remove wire:target="requestDemo">Sí, generar demo</span>
-                                        <span wire:loading wire:target="requestDemo">Solicitando...</span>
+                                        <span wire:loading wire:target="requestDemo">Preparando escenario...</span>
                                     </button>
                                 </div>
                             </div>

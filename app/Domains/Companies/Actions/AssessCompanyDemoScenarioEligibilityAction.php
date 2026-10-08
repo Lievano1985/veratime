@@ -21,10 +21,7 @@ class AssessCompanyDemoScenarioEligibilityAction
             return $this->denied('El escenario demo requiere una empresa activa.', $scenario);
         }
 
-        if ($scenario && in_array($scenario->status, [
-            CompanyDemoScenario::STATUS_PENDING,
-            CompanyDemoScenario::STATUS_PROCESSING,
-        ], true)) {
+        if ($scenario?->status === CompanyDemoScenario::STATUS_PROCESSING) {
             return $this->denied('El escenario demo ya se esta preparando.', $scenario);
         }
 

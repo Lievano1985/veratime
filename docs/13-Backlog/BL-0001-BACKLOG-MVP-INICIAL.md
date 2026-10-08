@@ -869,7 +869,7 @@ Pendiente posterior:
 
 Estado: implementado / candidato a cierre.
 
-Una empresa operativa nueva puede solicitar el escenario de demostracion desde **Empresas > Datos basicos > Escenario de demostracion**. La empresa, su cuenta cliente y su administrador se crean primero; el escenario se prepara despues mediante `database queue` y conserva estado `pending`, `processing`, `completed` o `failed` en `company_demo_scenarios`.
+Una empresa operativa nueva puede solicitar el escenario de demostracion desde **Empresas > Datos basicos > Escenario de demostracion**. La empresa, su cuenta cliente y su administrador se crean primero; al confirmar el boton el escenario se prepara directamente dentro de esa accion manual y conserva estado `pending`, `processing`, `completed` o `failed` en `company_demo_scenarios`. No depende del cron para esta operacion solicitada por un administrador.
 
 El escenario no ejecuta seeders de desarrollo ni inserta datos fuera del dominio. Reutiliza las Actions operativas de centros, unidades, trabajadores, perfiles, programacion publicada, eventos, incidencias, jornadas, alertas y periodos.
 

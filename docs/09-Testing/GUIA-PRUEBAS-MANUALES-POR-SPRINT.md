@@ -2243,13 +2243,13 @@ Validar:
 
 Estado: implementado / candidato a cierre.
 
-Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. La cola de base de datos debe estar siendo procesada por el cron o worker del hosting.
+Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. La generacion se ejecuta al confirmar el boton y no depende de cron o worker.
 
 1. Entrar como `super_admin` o `admin_empresa` autorizado a crear empresa.
 2. Abrir **Empresas** y seleccionar **Nueva empresa**.
 3. Capturar los datos de una empresa activa y crearla normalmente.
 4. Abrir los datos basicos de la empresa creada y usar **Generar escenario demo**.
-5. Confirmar el aviso de datos ficticios y actualizar Empresas hasta que el estado del escenario indique `completed`.
+5. Confirmar el aviso de datos ficticios, esperar el mensaje de finalizacion y confirmar que el estado del escenario indique `completed`.
 6. Abrir Centros y confirmar Centro Diurno y Centro Nocturno.
 7. Abrir Trabajadores y confirmar diez personas: cinco diurnas y cinco nocturnas.
 8. Abrir Horarios y confirmar cuatro perfiles: administrativo, operacion diurna, mixta y nocturna.

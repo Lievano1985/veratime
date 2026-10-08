@@ -2,17 +2,21 @@
 
 namespace App\Domains\Companies\Actions;
 
-use App\Domains\Companies\Jobs\GenerateCompanyDemoScenarioJob;
 use App\Models\Company;
 use App\Models\CompanyDemoScenario;
 use App\Models\User;
 use App\Support\RoleKey;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Throwable;
 
 class RequestCompanyDemoScenarioAction
 {
-    public function __construct(private readonly AssessCompanyDemoScenarioEligibilityAction $eligibility) {}
+    public function __construct(
+        private readonly AssessCompanyDemoScenarioEligibilityAction $eligibility,
+        private readonly GenerateCompanyDemoScenarioAction $generateScenario,
+    ) {}
 
     public function handle(Company $company, User $requestedBy): CompanyDemoScenario
     {
@@ -27,13 +31,13 @@ class RequestCompanyDemoScenarioAction
             throw new InvalidArgumentException((string) $eligibility['reason']);
         }
 
-        [$scenario, $shouldDispatch] = DB::transaction(function () use ($company, $requestedBy): array {
+        [$scenario, $shouldGenerate] = DB::transaction(function () use ($company, $requestedBy): array {
             $scenario = CompanyDemoScenario::query()
                 ->where('company_id', $company->id)
                 ->lockForUpdate()
                 ->first();
 
-            if ($scenario && in_array($scenario->status, [CompanyDemoScenario::STATUS_PENDING, CompanyDemoScenario::STATUS_PROCESSING, CompanyDemoScenario::STATUS_COMPLETED], true)) {
+            if ($scenario && in_array($scenario->status, [CompanyDemoScenario::STATUS_PROCESSING, CompanyDemoScenario::STATUS_COMPLETED], true)) {
                 return [$scenario, false];
             }
 
@@ -54,10 +58,30 @@ class RequestCompanyDemoScenarioAction
             return [$scenario, true];
         });
 
-        if ($shouldDispatch) {
-            GenerateCompanyDemoScenarioJob::dispatch($scenario->id)->afterCommit();
+        if (! $shouldGenerate) {
+            return $scenario;
         }
 
-        return $scenario;
+        try {
+            return $this->generateScenario->handle($scenario);
+        } catch (Throwable $exception) {
+            CompanyDemoScenario::query()
+                ->whereKey($scenario->id)
+                ->where('status', '!=', CompanyDemoScenario::STATUS_COMPLETED)
+                ->update([
+                    'status' => CompanyDemoScenario::STATUS_FAILED,
+                    'error_message' => mb_substr($exception->getMessage(), 0, 5000),
+                    'completed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            Log::error('Company demo scenario generation failed.', [
+                'scenario_id' => $scenario->id,
+                'company_id' => $company->id,
+                'exception' => $exception,
+            ]);
+
+            return $scenario->fresh() ?? $scenario;
+        }
     }
 }

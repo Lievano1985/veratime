@@ -5,7 +5,6 @@ namespace Tests\Feature\Companies;
 use App\Domains\Attendance\Actions\ValidateAttendancePeriodForClosingAction;
 use App\Domains\Companies\Actions\GenerateCompanyDemoScenarioAction;
 use App\Domains\Companies\Actions\RequestCompanyDemoScenarioAction;
-use App\Domains\Companies\Jobs\GenerateCompanyDemoScenarioJob;
 use App\Models\Alert;
 use App\Models\AttendanceIncident;
 use App\Models\AttendancePeriod;
@@ -21,8 +20,8 @@ use App\Support\RoleKey;
 use Database\Seeders\AlertTypeSeeder;
 use Database\Seeders\LegalRuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
 use InvalidArgumentException;
+use Mockery;
 use Tests\TestCase;
 
 class CompanyDemoScenarioTest extends TestCase
@@ -37,14 +36,23 @@ class CompanyDemoScenarioTest extends TestCase
         $this->seed(AlertTypeSeeder::class);
     }
 
-    public function test_requesting_a_demo_scenario_queues_a_single_generation_job(): void
+    public function test_requesting_a_demo_scenario_runs_the_generator_directly(): void
     {
-        Queue::fake();
         [$company, $admin] = $this->companyWithAdmin();
 
+        $generator = Mockery::mock(GenerateCompanyDemoScenarioAction::class);
+        $generator->shouldReceive('handle')
+            ->once()
+            ->withArgs(fn (CompanyDemoScenario $scenario): bool => $scenario->company_id === $company->id)
+            ->andReturnUsing(function (CompanyDemoScenario $scenario): CompanyDemoScenario {
+                $scenario->forceFill(['status' => CompanyDemoScenario::STATUS_COMPLETED])->save();
+
+                return $scenario->fresh();
+            });
+        $this->app->instance(GenerateCompanyDemoScenarioAction::class, $generator);
+
         $scenario = app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
-        $this->assertSame(CompanyDemoScenario::STATUS_PENDING, $scenario->status);
-        Queue::assertPushed(GenerateCompanyDemoScenarioJob::class, 1);
+        $this->assertSame(CompanyDemoScenario::STATUS_COMPLETED, $scenario->status);
 
         $this->expectException(InvalidArgumentException::class);
 
@@ -53,7 +61,6 @@ class CompanyDemoScenarioTest extends TestCase
 
     public function test_demo_scenario_creates_operational_data_and_leaves_only_labor_alert_cases_open(): void
     {
-        Queue::fake();
         [$company, $admin] = $this->companyWithAdmin();
         $scenario = CompanyDemoScenario::query()->create([
             'company_id' => $company->id,
@@ -93,9 +100,24 @@ class CompanyDemoScenarioTest extends TestCase
         $this->assertTrue($validation['ready_to_close']);
     }
 
+    public function test_a_processing_scenario_is_not_generated_twice(): void
+    {
+        [$company, $admin] = $this->companyWithAdmin();
+        $scenario = CompanyDemoScenario::query()->create([
+            'company_id' => $company->id,
+            'requested_by_user_id' => $admin->id,
+            'status' => CompanyDemoScenario::STATUS_PROCESSING,
+            'started_at' => now(),
+        ]);
+
+        $result = app(GenerateCompanyDemoScenarioAction::class)->handle($scenario);
+
+        $this->assertSame(CompanyDemoScenario::STATUS_PROCESSING, $result->status);
+        $this->assertSame(0, Center::query()->where('company_id', $company->id)->count());
+    }
+
     public function test_user_cannot_request_a_demo_for_another_company(): void
     {
-        Queue::fake();
         [, $admin] = $this->companyWithAdmin();
         [$otherCompany] = $this->companyWithAdmin();
 
@@ -106,7 +128,6 @@ class CompanyDemoScenarioTest extends TestCase
 
     public function test_demo_cannot_be_requested_for_a_company_with_operational_data(): void
     {
-        Queue::fake();
         [$company, $admin] = $this->companyWithAdmin();
         Center::factory()->create(['company_id' => $company->id]);
 
