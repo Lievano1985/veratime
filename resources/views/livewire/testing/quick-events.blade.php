@@ -80,7 +80,7 @@ new class extends Component {
 
         $result = $action->deleteTimeEvents($company, auth()->user());
 
-        Session::flash('status', "Eventos eliminados: {$result['time_events']}.");
+        Session::flash('status', "Eventos eliminados: {$result['time_events']}. Evidencias móviles: {$result['mobile_marking_event_evidences']}. Envíos personales: {$result['personal_time_event_submissions']}. Capturas offline: {$result['mobile_offline_marking_captures']}.");
     }
 
     public function deleteWorkDays(CurrentCompany $currentCompany, ResetOperationalTestDataAction $action): void

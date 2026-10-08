@@ -5,6 +5,7 @@ namespace Tests\Feature\Testing;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\PersonalTimeEventSubmission;
 use App\Models\Role;
 use App\Models\ScheduleBatch;
 use App\Models\TimeEvent;
@@ -101,11 +102,19 @@ class QuickTestTimeEventsTest extends TestCase
             'work_date' => '2026-08-01',
             'day_type' => 'rest',
         ]);
-        TimeEvent::factory()->create([
+        $timeEvent = TimeEvent::factory()->create([
             'company_id' => $company->id,
             'worker_id' => $worker->id,
             'employment_relationship_id' => $relationship->id,
             'center_id' => $center->id,
+        ]);
+        PersonalTimeEventSubmission::query()->create([
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'worker_id' => $worker->id,
+            'time_event_id' => $timeEvent->id,
+            'client_event_id' => 'test-submission-'.$timeEvent->id,
+            'payload_hash' => hash('sha256', 'test-submission-'.$timeEvent->id),
         ]);
         WorkDay::factory()->create([
             'company_id' => $company->id,
@@ -136,6 +145,7 @@ class QuickTestTimeEventsTest extends TestCase
         $this->assertDatabaseMissing('schedule_batches', ['id' => $published->id]);
         $this->assertDatabaseHas('schedule_batches', ['id' => $draft->id]);
         $this->assertSame(0, TimeEvent::query()->where('company_id', $company->id)->count());
+        $this->assertSame(0, PersonalTimeEventSubmission::query()->where('company_id', $company->id)->count());
         $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
         $this->assertSame(0, \App\Models\AttendancePeriod::query()->where('company_id', $company->id)->count());
     }

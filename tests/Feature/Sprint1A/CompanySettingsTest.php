@@ -3,6 +3,7 @@
 namespace Tests\Feature\Sprint1A;
 
 use App\Models\Company;
+use App\Models\MobileMarkingPolicy;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
@@ -193,6 +194,35 @@ class CompanySettingsTest extends TestCase
             ->set('mobilePolicyForm.mode', 'circle')
             ->assertSee('Elegir en mapa')
             ->assertSee('Usar mi ubicación actual');
+    }
+
+    public function test_company_admin_can_view_an_active_mobile_policy_and_start_a_new_editable_version(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $policy = MobileMarkingPolicy::factory()->for($company)->active()->create(['version' => 1]);
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'mobile-marking')
+            ->call('viewMobileMarkingPolicy', $policy->id)
+            ->assertSee('Detalle de política v1')
+            ->call('createMobileMarkingPolicyDraftVersion', $policy->id)
+            ->assertSee('Editar borrador')
+            ->assertSee('Se creó el borrador v2');
+
+        $this->assertDatabaseHas('mobile_marking_policies', [
+            'company_id' => $company->id,
+            'version' => 2,
+            'status' => MobileMarkingPolicy::STATUS_DRAFT,
+        ]);
     }
 
     public function test_settings_validation_rejects_invalid_closure_day(): void

@@ -8,6 +8,7 @@ use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\TimeRecords\Actions\ApproveKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\ActivateMobileMarkingPolicyAction;
+use App\Domains\TimeRecords\Actions\CreateMobileMarkingPolicyDraftVersionAction;
 use App\Domains\TimeRecords\Actions\DeactivateMobileMarkingPolicyAction;
 use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\RejectKioskTerminalAccessRequestAction;
@@ -40,6 +41,8 @@ new class extends Component {
     public array $pendingRequestCenters = [];
     public array $mobilePolicyForm = [];
     public ?int $editingMobilePolicyId = null;
+
+    public ?int $viewingMobilePolicyId = null;
     public mixed $companyBrandImage = null;
 
     public function mount(CurrentCompany $currentCompany): void
@@ -215,6 +218,41 @@ new class extends Component {
             ->where('status', MobileMarkingPolicy::STATUS_DRAFT)
             ->findOrFail($policyId);
 
+        $this->loadMobileMarkingPolicyForm($policy);
+    }
+
+    public function viewMobileMarkingPolicy(int $policyId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $this->viewingMobilePolicyId = MobileMarkingPolicy::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($policyId)
+            ->id;
+    }
+
+    public function closeMobileMarkingPolicyDetails(): void
+    {
+        $this->viewingMobilePolicyId = null;
+    }
+
+    public function createMobileMarkingPolicyDraftVersion(int $policyId, CreateMobileMarkingPolicyDraftVersionAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+
+        Gate::authorize('update', $company);
+
+        $source = MobileMarkingPolicy::query()->where('company_id', $company->id)->findOrFail($policyId);
+        $draft = $action->handle($company, $source);
+
+        $this->loadMobileMarkingPolicyForm($draft);
+        Session::flash('status', "Se creó el borrador v{$draft->version} a partir de la política seleccionada. Ajusta los valores y guárdalo antes de activarlo.");
+    }
+
+    private function loadMobileMarkingPolicyForm(MobileMarkingPolicy $policy): void
+    {
         $this->editingMobilePolicyId = $policy->id;
         $this->mobilePolicyForm = [
             'scope' => $policy->organizational_unit_id ? 'organizational_unit' : ($policy->center_id ? 'center' : 'company'),
@@ -359,6 +397,12 @@ new class extends Component {
                 ->where('company_id', $company->id)
                 ->latest('id')
                 ->get(),
+            'viewingMobileMarkingPolicy' => $this->viewingMobilePolicyId
+                ? MobileMarkingPolicy::query()
+                    ->with(['center', 'organizationalUnit.center'])
+                    ->where('company_id', $company->id)
+                    ->find($this->viewingMobilePolicyId)
+                : null,
             'pendingOfflineMarkingCaptures' => MobileOfflineMarkingCapture::query()
                 ->with('worker')
                 ->where('company_id', $company->id)
@@ -886,11 +930,15 @@ new class extends Component {
                                     </td>
                                     <td class="px-3 py-3 text-right">
                                         <div class="flex justify-end gap-2">
+                                            <button type="button" wire:click="viewMobileMarkingPolicy({{ $policy->id }})" class="btn-ghost btn-sm">Ver</button>
                                             @if ($policy->status === 'draft')
                                                 <button type="button" wire:click="editMobileMarkingPolicy({{ $policy->id }})" class="btn-secondary btn-sm">Editar</button>
                                                 <button type="button" wire:click="activateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Activar esta política? La política activa anterior del mismo alcance quedará inactiva." class="btn-primary btn-sm">Activar</button>
-                                            @elseif ($policy->status === 'active')
-                                                <button type="button" wire:click="deactivateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Desactivar esta política? La app volverá a la política menos específica o al flujo actual." class="btn-secondary btn-sm">Desactivar</button>
+                                            @else
+                                                <button type="button" wire:click="createMobileMarkingPolicyDraftVersion({{ $policy->id }})" class="btn-secondary btn-sm">Crear nueva versión</button>
+                                                @if ($policy->status === 'active')
+                                                    <button type="button" wire:click="deactivateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Desactivar esta política? La app volverá a la política menos específica o al flujo actual." class="btn-secondary btn-sm">Desactivar</button>
+                                                @endif
                                             @endif
                                         </div>
                                     </td>
@@ -901,6 +949,38 @@ new class extends Component {
                         </tbody>
                     </table>
                 </div>
+
+                @if ($viewingMobileMarkingPolicy)
+                    <section class="rounded-lg border border-brand-blue/25 bg-brand-blue/5 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-brand-navy">Detalle de política v{{ $viewingMobileMarkingPolicy->version }}</p>
+                                <p class="mt-1 text-xs text-surface-muted">Consulta esta versión sin alterar sus marcajes ni evidencias asociadas.</p>
+                            </div>
+                            <button type="button" wire:click="closeMobileMarkingPolicyDetails" class="btn-ghost btn-sm">Cerrar detalle</button>
+                        </div>
+
+                        <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Alcance</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->organizationalUnit?->name ?? $viewingMobileMarkingPolicy->center?->name ?? 'Toda la empresa' }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Estado</dt><dd class="mt-1 capitalize text-surface-text">{{ $viewingMobileMarkingPolicy->status }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Ubicación</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->mode === 'circle' ? "Radio de {$viewingMobileMarkingPolicy->radius_meters} m" : 'Sin perímetro' }}</dd></div>
+                            @if ($viewingMobileMarkingPolicy->mode === 'circle')
+                                <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Coordenadas</dt><dd class="mt-1 font-mono text-xs text-surface-text">{{ $viewingMobileMarkingPolicy->center_latitude }}, {{ $viewingMobileMarkingPolicy->center_longitude }}</dd></div>
+                            @endif
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivo</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->requires_device_binding ? 'Autorizado requerido' : 'No obligatorio' }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Biometría local</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->requires_biometric_unlock ? 'Requerida' : 'No requerida' }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Precisión máxima</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->max_accuracy_meters ? $viewingMobileMarkingPolicy->max_accuracy_meters.' m' : 'No configurada' }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Antigüedad de ubicación</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->max_location_age_seconds ? $viewingMobileMarkingPolicy->max_location_age_seconds.' segundos' : 'No configurada' }}</dd></div>
+                            <div><dt class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Vigencia offline</dt><dd class="mt-1 text-surface-text">{{ $viewingMobileMarkingPolicy->offline_authorization_duration_minutes ? $viewingMobileMarkingPolicy->offline_authorization_duration_minutes.' minutos' : 'Desactivado' }}</dd></div>
+                        </dl>
+
+                        @if ($viewingMobileMarkingPolicy->status !== 'draft')
+                            <div class="mt-4 border-t border-brand-blue/15 pt-4">
+                                <button type="button" wire:click="createMobileMarkingPolicyDraftVersion({{ $viewingMobileMarkingPolicy->id }})" class="btn-secondary btn-sm">Modificar mediante nueva versión</button>
+                            </div>
+                        @endif
+                    </section>
+                @endif
             </div>
 
             <div class="space-y-3">

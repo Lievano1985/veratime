@@ -6,6 +6,9 @@ use App\Models\Alert;
 use App\Models\AttendancePeriod;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
+use App\Models\MobileMarkingEventEvidence;
+use App\Models\MobileOfflineMarkingCapture;
+use App\Models\PersonalTimeEventSubmission;
 use App\Models\ScheduleBatch;
 use App\Models\TimeEvent;
 use App\Models\User;
@@ -100,10 +103,27 @@ class ResetOperationalTestDataAction
         $this->authorize($company, $actor);
 
         return DB::transaction(function () use ($company): array {
+            $mobileMarkingEvidences = MobileMarkingEventEvidence::query()
+                ->where('company_id', $company->id)
+                ->delete();
+
+            $personalSubmissions = PersonalTimeEventSubmission::query()
+                ->where('company_id', $company->id)
+                ->delete();
+
+            $offlineCaptures = MobileOfflineMarkingCapture::query()
+                ->where('company_id', $company->id)
+                ->delete();
+
             $events = TimeEvent::query()->where('company_id', $company->id)->count();
             TimeEvent::query()->where('company_id', $company->id)->delete();
 
-            return ['time_events' => $events];
+            return [
+                'time_events' => $events,
+                'mobile_marking_event_evidences' => $mobileMarkingEvidences,
+                'personal_time_event_submissions' => $personalSubmissions,
+                'mobile_offline_marking_captures' => $offlineCaptures,
+            ];
         });
     }
 
