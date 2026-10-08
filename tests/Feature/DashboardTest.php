@@ -33,7 +33,11 @@ class DashboardTest extends TestCase
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));
-        $response->assertStatus(200);
+        $response
+            ->assertOk()
+            ->assertSee('Dashboard de Administrador')
+            ->assertSee('Operaci&oacute;n de la jornada', false)
+            ->assertSee('Cobertura de jornada');
     }
 
     public function test_authenticated_users_without_active_company_cannot_visit_the_dashboard(): void
