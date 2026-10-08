@@ -764,8 +764,21 @@ new class extends Component {
                 </div>
 
                 @if ($mobilePolicyForm['mode'] === 'circle')
-                    <div class="rounded-lg border border-surface-line p-4">
+                    <div
+                        x-data="{
+                            ...veraMapPicker(),
+                            latitude: @entangle('mobilePolicyForm.center_latitude'),
+                            longitude: @entangle('mobilePolicyForm.center_longitude'),
+                            radius: @entangle('mobilePolicyForm.radius_meters'),
+                        }"
+                        x-init="init()"
+                        class="rounded-lg border border-surface-line p-4"
+                    >
                         <p class="mb-3 text-sm font-semibold text-surface-text">Perímetro autorizado</p>
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-xs text-surface-muted">Puedes capturar las coordenadas manualmente o elegir el punto en el mapa.</p>
+                            <button type="button" class="btn-secondary btn-sm" @click="open()">Elegir en mapa</button>
+                        </div>
                         <div class="grid gap-3 md:grid-cols-3">
                             <flux:input wire:model="mobilePolicyForm.center_latitude" label="Latitud" type="number" step="0.0000001" />
                             <flux:input wire:model="mobilePolicyForm.center_longitude" label="Longitud" type="number" step="0.0000001" />
@@ -774,6 +787,30 @@ new class extends Component {
                         @foreach (['center_latitude', 'center_longitude', 'radius_meters'] as $field)
                             @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         @endforeach
+
+                        <div x-cloak x-show="isOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Elegir ubicación en mapa" @keydown.escape.window="close()">
+                            <div class="absolute inset-0 bg-brand-navy/60" @click="close()"></div>
+                            <div class="relative flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
+                                <div class="flex items-start justify-between gap-4 border-b border-surface-line px-5 py-4">
+                                    <div>
+                                        <h3 class="text-base font-semibold text-brand-navy dark:text-white">Elegir perímetro autorizado</h3>
+                                        <p class="mt-1 text-xs text-surface-muted">Haz clic en el mapa o arrastra el pin. El círculo muestra el radio configurado.</p>
+                                    </div>
+                                    <button type="button" class="btn-ghost btn-sm" @click="close()">Cerrar</button>
+                                </div>
+                                <div class="space-y-3 p-5">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <p class="text-xs text-surface-muted">Coordenadas: <span class="font-mono text-surface-text" x-text="`${latitude || '—'}, ${longitude || '—'}`"></span></p>
+                                        <button type="button" class="btn-secondary btn-sm" @click="useCurrentLocation()">Usar mi ubicación actual</button>
+                                    </div>
+                                    <p x-cloak x-show="locationError" x-text="locationError" class="text-xs text-red-600 dark:text-red-400"></p>
+                                    <div wire:ignore x-ref="map" class="h-80 overflow-hidden rounded-xl border border-surface-line sm:h-96"></div>
+                                </div>
+                                <div class="flex justify-end border-t border-surface-line px-5 py-4">
+                                    <button type="button" class="btn-primary" @click="close()">Usar esta ubicación</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
 

@@ -175,6 +175,26 @@ class CompanySettingsTest extends TestCase
         ]);
     }
 
+    public function test_mobile_circle_policy_offers_a_map_picker_for_coordinates(): void
+    {
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company, [
+            'role_id' => $role->id,
+            'status' => 'active',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'mobile-marking')
+            ->set('mobilePolicyForm.mode', 'circle')
+            ->assertSee('Elegir en mapa')
+            ->assertSee('Usar mi ubicación actual');
+    }
+
     public function test_settings_validation_rejects_invalid_closure_day(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);

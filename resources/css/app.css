@@ -100,6 +100,26 @@
     @apply  !mb-0 !leading-tight;
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
+.vera-map-marker {
+    background: transparent;
+    border: 0;
+}
+
+.vera-map-marker span {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 4px solid #ffffff;
+    border-radius: 9999px 9999px 9999px 0;
+    background: #0067e4;
+    box-shadow: 0 3px 10px rgb(2 25 57 / 28%);
+    transform: rotate(-45deg);
+}
+
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
