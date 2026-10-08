@@ -44,7 +44,7 @@
         ];
     @endphp
 
-    <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 rounded-xl bg-[#eff5fc] p-2 sm:p-4 dark:bg-zinc-950">
+    <div class="flex w-full flex-1 flex-col gap-6 rounded-xl bg-[#eff5fc] p-2 sm:p-4 dark:bg-zinc-950">
         <p class="px-2 text-sm font-semibold text-zinc-700 dark:text-zinc-200">Dashboard</p>
 
         <section class="relative rounded-xl border border-[#b9cee4] bg-gradient-to-br from-white to-[#eef6ff] p-5 shadow-sm dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-900">
@@ -70,10 +70,10 @@
                 <h2 class="text-xl font-semibold text-zinc-800 dark:text-white">Operaci&oacute;n de la jornada</h2>
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Asistencia, marcajes y situaciones preventivas de la empresa.</p>
             </div>
-            <div class="mt-5 grid gap-6 xl:grid-cols-[0.8fr_1.8fr]">
-                <div class="rounded-xl border border-[#b9cee4] bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+            <div class="mt-5 grid gap-4 xl:grid-cols-3">
+                <div class="flex h-full flex-col rounded-xl border border-[#b9cee4] bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Cobertura de jornada</p>
-                    <div class="mt-4 flex flex-col items-center justify-center">
+                    <div class="flex flex-1 flex-col items-center justify-center py-4">
                         <div class="relative flex size-52 items-center justify-center">
                             <svg class="size-52 -rotate-90" viewBox="0 0 120 120" aria-label="Actividad actual {{ $activityPercent }} por ciento">
                                 <circle cx="60" cy="60" r="42" fill="none" stroke="currentColor" stroke-width="12" class="text-slate-200 dark:text-zinc-700" />
@@ -85,17 +85,16 @@
                     </div>
                 </div>
 
-                <div>
-                    <div class="mb-3 flex items-center justify-between"><h3 class="text-base font-semibold text-zinc-700 dark:text-zinc-100">Indicadores</h3><a href="{{ route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date']]) }}" wire:navigate class="text-sm font-semibold text-primary hover:underline">Ver jornadas</a></div>
-                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        @foreach ($operationalCards as [$label, $value, $tone, $href])
-                            <div class="rounded-xl border p-4 {{ $operationalStyles[$tone] }}">
-                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{{ $label }}</p>
-                                <p class="mt-2 text-2xl font-semibold">{{ $value }}</p>
-                                @if ($href)<a href="{{ $href }}" wire:navigate class="mt-2 inline-block text-xs font-semibold text-primary hover:underline">Ver detalle</a>@endif
+                <div class="grid gap-4 sm:grid-cols-2 xl:col-span-2 xl:auto-rows-fr">
+                    @foreach ($operationalCards as [$label, $value, $tone, $href])
+                        <article class="flex min-h-32 flex-col justify-between rounded-xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $operationalStyles[$tone] }}">
+                            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{{ $label }}</p>
+                            <div class="mt-3 flex items-end justify-between gap-3">
+                                <p class="text-3xl font-semibold leading-none">{{ $value }}</p>
+                                @if ($href)<a href="{{ $href }}" wire:navigate class="text-xs font-semibold text-primary hover:underline">Ver detalle</a>@endif
                             </div>
-                        @endforeach
-                    </div>
+                        </article>
+                    @endforeach
                 </div>
             </div>
         </section>
