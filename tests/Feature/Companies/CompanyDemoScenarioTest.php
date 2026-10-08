@@ -43,11 +43,12 @@ class CompanyDemoScenarioTest extends TestCase
         [$company, $admin] = $this->companyWithAdmin();
 
         $scenario = app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
-        $sameScenario = app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
-
-        $this->assertSame($scenario->id, $sameScenario->id);
         $this->assertSame(CompanyDemoScenario::STATUS_PENDING, $scenario->status);
         Queue::assertPushed(GenerateCompanyDemoScenarioJob::class, 1);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
     }
 
     public function test_demo_scenario_creates_operational_data_and_leaves_only_labor_alert_cases_open(): void
@@ -101,6 +102,17 @@ class CompanyDemoScenarioTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         app(RequestCompanyDemoScenarioAction::class)->handle($otherCompany, $admin);
+    }
+
+    public function test_demo_cannot_be_requested_for_a_company_with_operational_data(): void
+    {
+        Queue::fake();
+        [$company, $admin] = $this->companyWithAdmin();
+        Center::factory()->create(['company_id' => $company->id]);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
     }
 
     /** @return array{0: Company, 1: User} */

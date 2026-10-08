@@ -387,7 +387,7 @@ FILESYSTEM_DISK=local
 
 ## 7.3 Correo transaccional con Brevo API
 
-Cuando el hosting no permita conexiones SMTP salientes, VERA Time puede enviar correos transaccionales por la API HTTPS de Brevo. Esta integración se usa para recuperación de contraseña y para avisar al buzón de soporte sobre solicitudes de demostración. HTTPS usa el puerto 443; no depende de los puertos SMTP 465, 587 o 2525.
+Cuando el hosting no permita conexiones SMTP salientes, VERA Time puede enviar correos transaccionales por la API HTTPS de Brevo. Esta integración se usa para recuperación de contraseña, bienvenida del administrador al crear una empresa y para avisar al buzón de soporte sobre solicitudes de demostración. HTTPS usa el puerto 443; no depende de los puertos SMTP 465, 587 o 2525.
 
 ```env
 BREVO_ENABLED=true

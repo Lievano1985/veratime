@@ -12,16 +12,19 @@ use InvalidArgumentException;
 
 class RequestCompanyDemoScenarioAction
 {
+    public function __construct(private readonly AssessCompanyDemoScenarioEligibilityAction $eligibility) {}
+
     public function handle(Company $company, User $requestedBy): CompanyDemoScenario
     {
-        if ($company->status !== 'active') {
-            throw new InvalidArgumentException('El escenario demo requiere una empresa activa.');
-        }
-
         if (! $requestedBy->isSuperAdmin()
             && (! $requestedBy->belongsToCompany($company)
                 || ! in_array($requestedBy->roleKeyForCompany($company), RoleKey::companyManagers(), true))) {
             throw new InvalidArgumentException('El usuario no puede preparar un escenario demo para esta empresa.');
+        }
+
+        $eligibility = $this->eligibility->handle($company);
+        if (! $eligibility['allowed']) {
+            throw new InvalidArgumentException((string) $eligibility['reason']);
         }
 
         [$scenario, $shouldDispatch] = DB::transaction(function () use ($company, $requestedBy): array {

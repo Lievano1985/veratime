@@ -771,7 +771,7 @@ Historias:
 | BL-ADM-A1-004 | Validaciones y seguridad | P0 | Correo unico, empresa valida, rol canonico y transaccion atomica |
 | BL-ADM-A1-005 | Pruebas de plataforma | P0 | Super admin puede crear tenant; usuarios no autorizados no pueden; no hay datos parciales |
 
-Nota de cierre A1/A2 parcial: se implemento alta guiada desde Empresas para crear cuenta cliente, empresa, configuracion inicial y administrador principal `admin_empresa` sin asociar al `super_admin` como miembro operativo. A2 queda parcial: existe cuenta cliente monoempresa/multiempresa, pero no cobro, facturacion ni limites automaticos.
+Nota de cierre A1/A2 parcial: se implemento alta guiada desde Empresas para crear cuenta cliente, empresa, configuracion inicial y administrador principal `admin_empresa` sin asociar al `super_admin` como miembro operativo. Al crear ese administrador, recibe por Brevo un enlace de vigencia limitada para definir su propia contrasena; la contrasena temporal nunca se envia por correo y un fallo de entrega no revierte el alta. A2 queda parcial: existe cuenta cliente monoempresa/multiempresa, pero no cobro, facturacion ni limites automaticos.
 
 Fuera de A1:
 
@@ -869,7 +869,7 @@ Pendiente posterior:
 
 Estado: implementado / candidato a cierre.
 
-Una empresa operativa nueva puede solicitar el escenario de demostracion desde el flujo **Empresas > Nueva empresa**. La empresa, su cuenta cliente y su administrador se crean primero; el escenario se prepara despues mediante `database queue` y conserva estado `pending`, `processing`, `completed` o `failed` en `company_demo_scenarios`.
+Una empresa operativa nueva puede solicitar el escenario de demostracion desde **Empresas > Datos basicos > Escenario de demostracion**. La empresa, su cuenta cliente y su administrador se crean primero; el escenario se prepara despues mediante `database queue` y conserva estado `pending`, `processing`, `completed` o `failed` en `company_demo_scenarios`.
 
 El escenario no ejecuta seeders de desarrollo ni inserta datos fuera del dominio. Reutiliza las Actions operativas de centros, unidades, trabajadores, perfiles, programacion publicada, eventos, incidencias, jornadas, alertas y periodos.
 
@@ -888,7 +888,7 @@ Reglas:
 
 - los trabajadores demo no obtienen cuentas de usuario ni credenciales automaticamente;
 - toda entidad generada conserva metadata de origen demo y escenario;
-- no se genera dos veces para la misma empresa;
+- el boton solo aparece para una empresa activa sin centros, trabajadores, horarios, eventos, incidencias ni periodos; no se genera dos veces ni se mezcla con datos existentes;
 - una alerta es preventiva y requiere revision; nunca se etiqueta como infraccion o incumplimiento confirmado;
 - no se ofrece eliminacion destructiva del demo una vez creada evidencia operativa.
 

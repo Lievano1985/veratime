@@ -2,6 +2,7 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Integrations\Exceptions\BrevoDeliveryException;
 use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
@@ -11,6 +12,7 @@ use App\Support\RoleKey;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -18,10 +20,11 @@ class CreateTenantWithAdminAction
 {
     public function __construct(
         private readonly EnsureCustomerAccountHasProductAction $ensureCustomerAccountHasProduct,
+        private readonly SendCompanyAdminWelcomeEmailAction $sendAdministratorWelcomeEmail,
     ) {}
 
     /**
-     * @param array{company: array<string, mixed>, admin: array<string, mixed>} $data
+     * @param  array{company: array<string, mixed>, admin: array<string, mixed>}  $data
      */
     public function handle(User $actor, array $data): Company
     {
@@ -29,7 +32,7 @@ class CreateTenantWithAdminAction
             throw new AuthorizationException('Solo el super administrador puede crear tenants guiados.');
         }
 
-        return DB::transaction(function () use ($data): Company {
+        [$company, $administrator] = DB::transaction(function () use ($data): array {
             $email = Str::lower(trim((string) data_get($data, 'admin.email')));
 
             if (User::query()->where('email', $email)->exists()) {
@@ -89,7 +92,19 @@ class CreateTenantWithAdminAction
                 'is_default' => true,
             ]);
 
-            return $company;
+            return [$company, $admin];
         });
+
+        try {
+            $this->sendAdministratorWelcomeEmail->handle($company, $administrator);
+        } catch (BrevoDeliveryException $exception) {
+            Log::warning('Company administrator welcome email delivery failed.', [
+                'company_id' => $company->id,
+                'administrator_id' => $administrator->id,
+                'status_code' => $exception->statusCode,
+            ]);
+        }
+
+        return $company;
     }
 }

@@ -2,15 +2,12 @@
 
 namespace Tests\Feature\Sprint1A;
 
-use App\Domains\Companies\Jobs\GenerateCompanyDemoScenarioJob;
 use App\Models\Company;
-use App\Models\CompanyDemoScenario;
 use App\Models\CustomerAccount;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -97,37 +94,6 @@ class CompanyManagementTest extends TestCase
             'role_id' => $adminRole->id,
             'status' => 'active',
         ]);
-    }
-
-    public function test_company_creation_can_request_a_demo_scenario(): void
-    {
-        Queue::fake();
-        $ownerRole = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
-        $user = User::factory()->create();
-        $currentCompany = Company::factory()->create();
-        $user->companies()->attach($currentCompany, [
-            'role_id' => $ownerRole->id,
-            'status' => 'active',
-            'is_default' => true,
-        ]);
-
-        $this->actingAs($user)->withSession(['current_company_id' => $currentCompany->id]);
-
-        Volt::test('companies.index')
-            ->set('createForm.name', 'Empresa con demo')
-            ->set('createForm.legal_name', 'Empresa con Demo SA de CV')
-            ->set('createForm.tax_id', 'DEM260708AA1')
-            ->set('createForm.timezone', 'America/Mexico_City')
-            ->set('createForm.create_demo', true)
-            ->call('create');
-
-        $company = Company::query()->where('tax_id', 'DEM260708AA1')->firstOrFail();
-        $this->assertDatabaseHas('company_demo_scenarios', [
-            'company_id' => $company->id,
-            'requested_by_user_id' => $user->id,
-            'status' => CompanyDemoScenario::STATUS_PENDING,
-        ]);
-        Queue::assertPushed(GenerateCompanyDemoScenarioJob::class, 1);
     }
 
     public function test_admin_can_update_company_basic_data_and_status(): void

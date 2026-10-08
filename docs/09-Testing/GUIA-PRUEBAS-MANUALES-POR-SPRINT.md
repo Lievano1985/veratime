@@ -2193,11 +2193,12 @@ Para cerrar A1, validar manualmente:
 5. Capturar administrador principal.
 6. Confirmar el alta.
 7. Verificar que la empresa aparece en listado global.
-8. Verificar que el administrador principal puede iniciar sesion y operar como `admin_empresa`.
-9. Verificar que el `super_admin` no quedo como miembro operativo en `company_user`.
-10. Probar error de correo duplicado y confirmar que no quedan registros parciales.
-11. Verificar en base de datos que se creo `customer_accounts` y que la empresa quedo ligada por `companies.customer_account_id`.
-12. Editar una empresa como `super_admin` y cambiar el tipo de cuenta cliente sin agregar al super admin como miembro operativo.
+8. Confirmar que el nuevo administrador recibe el correo de bienvenida con enlace para definir su contrasena. El correo no debe incluir la contrasena temporal.
+9. Usar el enlace y verificar que el administrador principal puede iniciar sesion y operar como `admin_empresa`.
+10. Verificar que el `super_admin` no quedo como miembro operativo en `company_user`.
+11. Probar error de correo duplicado y confirmar que no quedan registros parciales.
+12. Verificar en base de datos que se creo `customer_accounts` y que la empresa quedo ligada por `companies.customer_account_id`.
+13. Editar una empresa como `super_admin` y cambiar el tipo de cuenta cliente sin agregar al super admin como miembro operativo.
 
 A2 queda cubierto solo en cuenta cliente y tipo monoempresa/multiempresa. Cobro, facturacion, planes y limites siguen fuera de estas pruebas.
 
@@ -2245,9 +2246,9 @@ Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. 
 
 1. Entrar como `super_admin` o `admin_empresa` autorizado a crear empresa.
 2. Abrir **Empresas** y seleccionar **Nueva empresa**.
-3. Capturar los datos de una empresa activa y marcar **Crear con escenario de demostracion**.
-4. Crear la empresa y confirmar el mensaje de preparacion.
-5. Actualizar Empresas hasta que el estado del escenario indique `completed`.
+3. Capturar los datos de una empresa activa y crearla normalmente.
+4. Abrir los datos basicos de la empresa creada y usar **Generar escenario demo**.
+5. Confirmar el aviso de datos ficticios y actualizar Empresas hasta que el estado del escenario indique `completed`.
 6. Abrir Centros y confirmar Centro Diurno y Centro Nocturno.
 7. Abrir Trabajadores y confirmar diez personas: cinco diurnas y cinco nocturnas.
 8. Abrir Horarios y confirmar cuatro perfiles: administrativo, operacion diurna, mixta y nocturna.
@@ -2257,6 +2258,6 @@ Preparacion: usar una empresa nueva, activa y sin informacion operativa previa. 
 12. Abrir Periodos de asistencia. Validar el periodo del Centro Nocturno, cerrarlo y descargar CSV o XLSX.
 13. Revisar y dictaminar las alertas pendientes del Centro Diurno. Volver a validar su periodo y confirmar que puede cerrarse y exportarse.
 
-Resultado esperado: las incidencias aprobadas no deben generar faltas abiertas; las dos alertas de prueba deben explicar los eventos y calculos que las originaron. Ninguna informacion del demo debe aparecer en otra empresa.
+Resultado esperado: las incidencias aprobadas no deben generar faltas abiertas; las dos alertas de prueba deben explicar los eventos y calculos que las originaron. Ninguna informacion del demo debe aparecer en otra empresa. Si la empresa ya tiene datos operativos o un demo completado, el boton no debe permitir generar el demo.
 
 No probar la eliminacion masiva del escenario: una vez publicados horarios, eventos y jornadas, se conserva como evidencia operativa.
