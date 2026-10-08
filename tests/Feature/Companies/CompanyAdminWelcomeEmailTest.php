@@ -62,6 +62,9 @@ class CompanyAdminWelcomeEmailTest extends TestCase
                 && data_get($payload, 'tags.0') === 'company-admin-welcome'
                 && str_contains((string) data_get($payload, 'subject'), 'acceso')
                 && str_contains((string) data_get($payload, 'htmlContent'), '/reset-password/')
+                && str_contains((string) data_get($payload, 'htmlContent'), 'Datos de acceso')
+                && str_contains((string) data_get($payload, 'htmlContent'), 'admin.bienvenida@example.test')
+                && str_contains((string) data_get($payload, 'htmlContent'), 'images/veralogo.png')
                 && ! str_contains((string) data_get($payload, 'htmlContent'), 'AdminDemo1!');
         });
     }

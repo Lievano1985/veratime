@@ -2193,7 +2193,7 @@ Para cerrar A1, validar manualmente:
 5. Capturar administrador principal.
 6. Confirmar el alta.
 7. Verificar que la empresa aparece en listado global.
-8. Confirmar que el nuevo administrador recibe el correo de bienvenida con enlace para definir su contrasena. El correo no debe incluir la contrasena temporal.
+8. Confirmar que el nuevo administrador recibe el correo de bienvenida con logo, empresa, correo de acceso, perfil, enlace para definir su contrasena y datos de soporte. El correo no debe incluir la contrasena temporal.
 9. Usar el enlace y verificar que el administrador principal puede iniciar sesion y operar como `admin_empresa`.
 10. Verificar que el `super_admin` no quedo como miembro operativo en `company_user`.
 11. Probar error de correo duplicado y confirmar que no quedan registros parciales.

@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\Password;
 
 class SendCompanyAdminWelcomeEmailAction
 {
-    public function __construct(private readonly BrevoTransactionalEmailService $transactionalEmail) {}
+    public function __construct(
+        private readonly BrevoTransactionalEmailService $transactionalEmail,
+        private readonly ResolveCompanyBrandingImageUrlAction $brandingImageUrl,
+    ) {}
 
     /**
      * Sends a secure onboarding or access-granted message.
@@ -34,6 +37,10 @@ class SendCompanyAdminWelcomeEmailAction
             $expiresInMinutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
         }
 
+        $brandImageUrl = $this->brandingImageUrl->handle($company) ?? asset('images/veralogo.png');
+        $loginUrl = route('login');
+        $supportEmail = (string) (config('services.brevo.sender.address') ?: config('mail.from.address'));
+
         $subject = $isNewAdministrator
             ? 'Tu acceso a '.config('app.name').' está listo'
             : 'Tienes acceso a una nueva empresa en '.config('app.name');
@@ -48,7 +55,7 @@ class SendCompanyAdminWelcomeEmailAction
             : implode("\n\n", [
                 "Hola {$administrator->name},",
                 "Tu cuenta existente ahora tiene acceso como administrador de {$company->name} en ".config('app.name').'.',
-                'Tu contraseña no fue modificada. Puedes ingresar desde '.route('login').'.',
+                "Tu contraseña no fue modificada. Puedes ingresar desde {$loginUrl}.",
             ]);
 
         $this->transactionalEmail->send(
@@ -57,7 +64,7 @@ class SendCompanyAdminWelcomeEmailAction
                 'name' => $administrator->name,
             ]],
             subject: $subject,
-            htmlContent: view('emails.companies.administrator-welcome', compact('administrator', 'company', 'setupUrl', 'expiresInMinutes', 'isNewAdministrator'))->render(),
+            htmlContent: view('emails.companies.administrator-welcome', compact('administrator', 'company', 'setupUrl', 'expiresInMinutes', 'isNewAdministrator', 'brandImageUrl', 'loginUrl', 'supportEmail'))->render(),
             textContent: $textContent,
             tags: [$isNewAdministrator ? 'company-admin-welcome' : 'company-admin-access-granted'],
         );
