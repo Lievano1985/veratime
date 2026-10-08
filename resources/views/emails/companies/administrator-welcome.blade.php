@@ -43,7 +43,7 @@
                                 <a href="{{ $setupUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Definir contraseña y acceder</a>
                                 <p style="margin:16px 0 0; color:#6f8297; font-size:13px; line-height:1.5;">Este enlace vence en {{ $expiresInMinutes }} minutos.</p>
                             @else
-                                <a href="{{ $setupUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Definir o restablecer contraseÃ±a</a>
+                                <a href="{{ $setupUrl }}" style="display:inline-block; padding:14px 24px; border-radius:8px; background:#0874dc; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none;">Definir o restablecer contrase&ntilde;a</a>
                                 <p style="margin:16px 0 0; color:#6f8297; font-size:13px; line-height:1.5;">Este enlace vence en {{ $expiresInMinutes }} minutos.</p>
                             @endif
                         </td>
