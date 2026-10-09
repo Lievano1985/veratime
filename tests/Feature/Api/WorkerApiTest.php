@@ -50,6 +50,7 @@ it('creates a worker through the same action used by the web interface', functio
         ->postJson('/api/v1/time/workers', [
             'employee_code' => 'API-001',
             'full_name' => 'Andrea API',
+            'birth_date' => '2008-09-01',
             'email' => 'andrea@example.test',
             'center_id' => $center->id,
             'position_name' => 'Operadora',
@@ -60,6 +61,7 @@ it('creates a worker through the same action used by the web interface', functio
     $response
         ->assertCreated()
         ->assertJsonPath('data.employee_code', 'API-001')
+        ->assertJsonPath('data.birth_date', '2008-09-01')
         ->assertJsonPath('data.source', 'api')
         ->assertJsonPath('data.center.id', (string) $center->id)
         ->assertJsonStructure(['meta' => ['trace_id']]);
@@ -69,6 +71,8 @@ it('creates a worker through the same action used by the web interface', functio
         'employee_code' => 'API-001',
         'source' => 'api',
     ]);
+    expect(Worker::query()->where('company_id', $company->id)->where('employee_code', 'API-001')->firstOrFail()->birth_date?->toDateString())
+        ->toBe('2008-09-01');
     $this->assertDatabaseHas('employment_relationships', [
         'company_id' => $company->id,
         'center_id' => $center->id,

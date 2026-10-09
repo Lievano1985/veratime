@@ -1186,13 +1186,24 @@ new class extends Component {
                 <flux:select.option value="incapacity">Incapacidad</flux:select.option>
                 <flux:select.option value="permission">Permiso</flux:select.option>
                 <flux:select.option value="overtime_detected">Tiempo extra</flux:select.option>
+                <flux:select.option value="daily_limit_exceeded">Jornada excedida</flux:select.option>
+                <flux:select.option value="daily_overtime_over_three_hours">Extra diario &gt; 3 h</flux:select.option>
+                <flux:select.option value="long_work_day">Jornada larga</flux:select.option>
+                <flux:select.option value="minimum_break_missing">Pausa mínima no identificada</flux:select.option>
                 <flux:select.option value="late_arrival_detected">Retardo</flux:select.option>
                 <flux:select.option value="early_departure_detected">Salida anticipada</flux:select.option>
                 <flux:select.option value="incomplete_work_day">Evento incompleto</flux:select.option>
                 <flux:select.option value="unscheduled_work_day">No programada</flux:select.option>
                 <flux:select.option value="sunday_work">Domingo trabajado</flux:select.option>
                 <flux:select.option value="mandatory_rest_work">Descanso obligatorio</flux:select.option>
+                <flux:select.option value="scheduled_rest_work">Descanso asignado</flux:select.option>
+                <flux:select.option value="minor_daily_hours_exceeded">Persona menor: &gt; 6 h</flux:select.option>
+                <flux:select.option value="minor_restricted_work">Persona menor: extra/nocturno</flux:select.option>
                 <flux:select.option value="weekly_rest_missing">Semana sin descanso</flux:select.option>
+                <flux:select.option value="weekly_hours_exceeded">Horas semanales excedidas</flux:select.option>
+                <flux:select.option value="weekly_overtime_exceeded">Extra semanal &gt; 9 h</flux:select.option>
+                <flux:select.option value="weekly_overtime_days_exceeded">Más de 3 días con extra</flux:select.option>
+                <flux:select.option value="weekly_sunday_work">Domingo trabajado en semana</flux:select.option>
                 <flux:select.option value="rest">Descanso</flux:select.option>
                 <flux:select.option value="without_calculation">Sin cálculo</flux:select.option>
             </flux:select>

@@ -37,7 +37,10 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Dashboard de Administrador')
             ->assertSee('Operaci&oacute;n de la jornada', false)
-            ->assertSee('Cobertura de jornada');
+            ->assertSee('Cobertura de jornada')
+            ->assertSee('Indicadores diarios de jornada')
+            ->assertSee('Indicadores semanales de acumulaci&oacute;n', false)
+            ->assertSee('Salidas anticipadas');
     }
 
     public function test_authenticated_users_without_active_company_cannot_visit_the_dashboard(): void

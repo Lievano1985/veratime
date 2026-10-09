@@ -5,6 +5,8 @@
         $segmentTotal = max(1, array_sum($segments));
         $activeWorkers = max(0, $metrics['active_workers']);
         $activeNow = $metrics['working_now'] + $metrics['on_break'];
+        $weekStart = $summary['week_start'];
+        $weekEnd = $summary['week_end'];
         $activityPercent = $activeWorkers > 0 ? min(100, (int) round(($activeNow / $activeWorkers) * 100)) : 0;
         $circleLength = 2 * pi() * 42;
         $generatedAt = \Carbon\CarbonImmutable::parse($summary['generated_at'])->isoFormat('HH:mm');
@@ -21,16 +23,22 @@
             'rest' => ['Descansos', 'bg-rose-500', 'text-rose-700 dark:text-rose-300'],
             'evidence' => ['Evidencia', 'bg-violet-500', 'text-violet-700 dark:text-violet-300'],
         ];
-        $alertCounts = collect($summary['alerts'])->keyBy('key');
+        $dailyAlerts = collect($summary['daily_alerts']);
+        $weeklyAlerts = collect($summary['weekly_alerts']);
+        $kpiAlerts = collect($summary['kpi_alerts']);
+        $alertCounts = $kpiAlerts
+            ->merge($dailyAlerts)
+            ->merge($weeklyAlerts)
+            ->keyBy('key');
+        $weeklyAverageWorkMinutes = (int) $summary['weekly_average_work_minutes'];
+        $weeklyAverageLabel = sprintf('%dh %02dm', intdiv($weeklyAverageWorkMinutes, 60), $weeklyAverageWorkMinutes % 60);
         $operationalCards = [
             ['Trabajadores activos', $metrics['active_workers'], 'sky', null],
             ['Trabajando ahora', $metrics['working_now'], 'emerald', null],
-            ['Ausencias por validar', $metrics['absence_pending'], 'amber', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'scheduled_absence'])],
             ['Personal por ingresar', $metrics['pending_entry'], 'slate', null],
+            ['Entradas tardías', data_get($alertCounts->get('late_arrival_detected'), 'count', 0), 'orange', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'late_arrival_detected'])],
+            ['Salidas anticipadas', data_get($alertCounts->get('early_departure_detected'), 'count', 0), 'orange', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'early_departure_detected'])],
             ['Jornadas incompletas', data_get($alertCounts->get('incomplete_work_day'), 'count', 0), 'red', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'incomplete_work_day'])],
-            ['Entradas tard&iacute;as', data_get($alertCounts->get('late_arrival_detected'), 'count', 0), 'orange', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'late_arrival_detected'])],
-            ['Descanso obligatorio', data_get($alertCounts->get('mandatory_rest_work'), 'count', 0), 'rose', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => 'mandatory_rest_work'])],
-            ['Capturas manuales', data_get($alertCounts->get('manual'), 'count', 0), 'violet', route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date']])],
         ];
         $operationalStyles = [
             'sky' => 'border-sky-200 bg-gradient-to-br from-sky-50 to-white text-sky-700 dark:border-sky-900/60 dark:from-sky-950/40 dark:to-zinc-800',
@@ -85,7 +93,7 @@
                     </div>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2 xl:col-span-2 xl:auto-rows-fr">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-2 xl:auto-rows-fr">
                     @foreach ($operationalCards as [$label, $value, $tone, $href])
                         <article class="flex min-h-32 flex-col justify-between rounded-xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $operationalStyles[$tone] }}">
                             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{{ $label }}</p>
@@ -101,14 +109,35 @@
 
         <section class="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div><h2 class="text-xl font-semibold text-zinc-800 dark:text-white">Alertas preventivas de jornada</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Situaciones que requieren revisi&oacute;n; no son determinaciones definitivas.</p></div>
+                <div><h2 class="text-xl font-semibold text-zinc-800 dark:text-white">Indicadores diarios de jornada</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Situaciones del día que requieren revisión; no son determinaciones definitivas.</p></div>
                 <a href="{{ route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'atencion' => 'requires_attention']) }}" wire:navigate class="self-start text-sm font-semibold text-primary hover:underline">Abrir bandeja de jornadas</a>
             </div>
             <div class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                @foreach ($summary['alerts'] as $alert)
+                @foreach ($dailyAlerts as $alert)
                     @php($tone = match ($alert['level']) { 'critical' => ['border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-900/60 dark:from-red-950/30 dark:to-zinc-800', 'text-red-700 dark:text-red-300'], 'high' => ['border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:border-amber-900/60 dark:from-amber-950/30 dark:to-zinc-800', 'text-amber-700 dark:text-amber-300'], 'warning' => ['border-orange-200 bg-gradient-to-br from-orange-50 to-white dark:border-orange-900/60 dark:from-orange-950/30 dark:to-zinc-800', 'text-orange-700 dark:text-orange-300'], default => ['border-violet-200 bg-gradient-to-br from-violet-50 to-white dark:border-violet-900/60 dark:from-violet-950/30 dark:to-zinc-800', 'text-violet-700 dark:text-violet-300'] })
                     <a href="{{ route('work-days.index', ['from' => $summary['date'], 'to' => $summary['date'], 'situacion' => $alert['key'] === 'manual' ? '' : $alert['key']]) }}" wire:navigate class="rounded-xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md {{ $tone[0] }}">
                         <div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Revisi&oacute;n preventiva</p><p class="mt-2 font-semibold text-zinc-800 dark:text-white">{{ $alert['title'] }}</p><p class="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-300">{{ $alert['description'] }}</p></div><span class="text-3xl font-semibold {{ $tone[1] }}">{{ $alert['count'] }}</span></div>
+                    </a>
+                @endforeach
+                <article class="rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-4 dark:border-sky-900/60 dark:from-sky-950/30 dark:to-zinc-800">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Promedio semanal</p>
+                    <p class="mt-2 font-semibold text-zinc-800 dark:text-white">Horas por persona trabajadora</p>
+                    <p class="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-300">Promedio entre las personas con horas calculadas durante la semana.</p>
+                    <p class="mt-4 text-3xl font-semibold text-sky-700 dark:text-sky-300">{{ $weeklyAverageLabel }}</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div><h2 class="text-xl font-semibold text-zinc-800 dark:text-white">Indicadores semanales de acumulaci&oacute;n</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Situaciones evaluadas por persona durante la semana natural consultada.</p></div>
+                <a href="{{ route('work-days.index', ['from' => $weekStart, 'to' => $weekEnd, 'atencion' => 'requires_attention']) }}" wire:navigate class="self-start text-sm font-semibold text-primary hover:underline">Ver semana</a>
+            </div>
+            <div class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach ($weeklyAlerts as $alert)
+                    @php($tone = match ($alert['level']) { 'critical' => ['border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-900/60 dark:from-red-950/30 dark:to-zinc-800', 'text-red-700 dark:text-red-300'], 'high' => ['border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:border-amber-900/60 dark:from-amber-950/30 dark:to-zinc-800', 'text-amber-700 dark:text-amber-300'], 'warning' => ['border-orange-200 bg-gradient-to-br from-orange-50 to-white dark:border-orange-900/60 dark:from-orange-950/30 dark:to-zinc-800', 'text-orange-700 dark:text-orange-300'], default => ['border-violet-200 bg-gradient-to-br from-violet-50 to-white dark:border-violet-900/60 dark:from-violet-950/30 dark:to-zinc-800', 'text-violet-700 dark:text-violet-300'] })
+                    <a href="{{ route('work-days.index', ['from' => $weekStart, 'to' => $weekEnd, 'situacion' => $alert['key']]) }}" wire:navigate class="rounded-xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md {{ $tone[0] }}">
+                        <div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Revisi&oacute;n semanal</p><p class="mt-2 font-semibold text-zinc-800 dark:text-white">{{ $alert['title'] }}</p><p class="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-300">{{ $alert['description'] }}</p></div><span class="text-3xl font-semibold {{ $tone[1] }}">{{ $alert['count'] }}</span></div>
                     </a>
                 @endforeach
             </div>

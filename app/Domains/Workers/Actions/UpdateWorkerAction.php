@@ -11,6 +11,7 @@ class UpdateWorkerAction
         $worker->fill([
             'employee_code' => $data['employee_code'],
             'full_name' => $data['full_name'],
+            'birth_date' => $data['birth_date'] ?? null,
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'curp' => $data['curp'] ?? null,

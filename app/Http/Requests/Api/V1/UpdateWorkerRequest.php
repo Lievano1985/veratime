@@ -28,6 +28,7 @@ class UpdateWorkerRequest extends FormRequest
                     ->ignore($this->route('workerId')),
             ],
             'full_name' => ['required', 'string', 'max:255'],
+            'birth_date' => ['nullable', 'date', 'before:today'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'rfc' => ['nullable', 'string', 'max:20'],

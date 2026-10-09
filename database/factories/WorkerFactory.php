@@ -17,6 +17,7 @@ class WorkerFactory extends Factory
             'company_id' => Company::factory(),
             'employee_code' => strtoupper(fake()->unique()->bothify('EMP-####')),
             'full_name' => fake()->name(),
+            'birth_date' => null,
             'email' => fake()->optional()->safeEmail(),
             'phone' => fake()->optional()->phoneNumber(),
             'curp' => null,

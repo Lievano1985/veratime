@@ -4,7 +4,7 @@ title: Dashboard operativo Vera Time
 project: Vera Time
 status: Approved for MVP implementation
 owner: Product
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 
 # UX-0002 - Dashboard operativo
@@ -25,14 +25,15 @@ La primera versión incluye:
 - trabajadores activos;
 - trabajadores trabajando ahora y en pausa;
 - ausencias por validar y personal por ingresar, conforme al horario publicado y tolerancia de entrada de la empresa;
-- tarjetas de alertas abiertas por asistencia, jornada y descansos;
-- capturas manuales recientes como señal de evidencia;
+- KPI operativos de asistencia y puntualidad;
+- indicadores diarios de jornada y descansos;
+- indicadores semanales de acumulación;
 - distribución visual de las alertas por segmento;
 - enlaces de sólo consulta a Jornadas, con los filtros correspondientes.
 
 ## Composición visual
 
-La pantalla organiza el contenido en bloques operativos: encabezado con filtros y hora de actualización, panorama de jornada con indicador circular de actividad y cuatro KPI, tarjetas de alertas preventivas y una sección final de distribución con barras de progreso y recordatorio de uso. Las tarjetas utilizan gradientes suaves por estado y la paleta de Vera Time; el color comunica prioridad, no una sanción.
+La pantalla organiza el contenido en bloques operativos: encabezado con filtros y hora de actualización, panorama de jornada con indicador circular de actividad y KPI de asistencia/puntualidad, indicadores diarios, indicadores semanales y una sección final de distribución con barras de progreso y recordatorio de uso. Las tarjetas utilizan gradientes suaves por estado y la paleta de Vera Time; el color comunica prioridad, no una sanción.
 
 Quedan fuera: sanciones, aprobación formal de incidencias, cálculo legal nuevo, reportes oficiales, nómina, API pública del dashboard y modificar eventos desde esta pantalla.
 
@@ -45,7 +46,15 @@ El resumen se construye fuera de Livewire mediante `BuildOperationalDashboardAct
 - `time_events` válidos;
 - `work_days` y `alerts` abiertas.
 
-La vista no calcula jornadas ni crea alertas. Las alertas existentes son la fuente para retrasos, jornadas incompletas, tiempo extra, domingo, descanso obligatorio y situaciones equivalentes.
+La vista no calcula jornadas ni crea alertas. Las alertas existentes son la fuente para retrasos, jornadas incompletas, tiempo extra, domingo, descansos y situaciones equivalentes. Los indicadores diarios muestran únicamente reglas ya calculadas por el dominio. Los indicadores semanales consultan alertas abiertas de la semana y el promedio de horas se deriva de cálculos activos, sin modificar evidencia.
+
+## Indicadores preventivos de jornada
+
+El dominio evalúa y conserva alertas por jornada para: límite diario aplicable, tiempo extra diario mayor a tres horas, jornada mayor a diez horas, pausa registrada menor a treinta minutos en jornadas de al menos seis horas, domingo, descanso obligatorio, descanso asignado y registro incompleto. Cuando existe fecha de nacimiento registrada, también evalúa revisión de jornada mayor a seis horas para persona menor de dieciséis años y tiempo extra o clasificación nocturna para persona menor de dieciocho años.
+
+Por persona trabajadora y semana natural, el dominio concentra: horas totales contra el límite semanal que quedó en el snapshot legal, tiempo extra superior a nueve horas, más de tres días con tiempo extra, semana sin descanso y domingos trabajados. Cada alerta semanal usa una huella por empresa, relación laboral, persona y semana; un recálculo la actualiza o la cierra automáticamente si deja de aplicar.
+
+Las nuevas reglas leen los límites diario y semanal ya versionados en `result_snapshot.ordinary_overtime`; no crean configuraciones de empresa ni alteran marcajes, horarios publicados o cálculos históricos. La fecha de nacimiento es opcional y no se infiere de CURP: sin ella, las reglas de edad no generan una alerta.
 
 ## Reglas iniciales
 

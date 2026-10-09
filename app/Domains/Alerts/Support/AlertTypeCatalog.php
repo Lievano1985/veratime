@@ -30,6 +30,30 @@ class AlertTypeCatalog
                 'default_severity' => AlertType::SEVERITY_WARNING,
                 'category' => 'daily',
             ],
+            'daily_limit_exceeded' => [
+                'name' => 'Jornada excedida',
+                'description' => 'La duración trabajada supera el límite diario aplicable.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'daily',
+            ],
+            'daily_overtime_over_three_hours' => [
+                'name' => 'Tiempo extra diario superior a tres horas',
+                'description' => 'La jornada acumula más de tres horas extraordinarias.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'daily',
+            ],
+            'long_work_day' => [
+                'name' => 'Jornada larga',
+                'description' => 'La jornada trabajada supera diez horas y requiere revisión.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'daily',
+            ],
+            'minimum_break_missing' => [
+                'name' => 'Pausa mínima no identificada',
+                'description' => 'No se identificó una pausa acumulada de al menos treinta minutos.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'rest',
+            ],
             'late_arrival_detected' => [
                 'name' => 'Retardo',
                 'description' => 'La jornada tiene minutos de retardo calculados.',
@@ -60,10 +84,52 @@ class AlertTypeCatalog
                 'default_severity' => AlertType::SEVERITY_HIGH,
                 'category' => 'rest',
             ],
+            'scheduled_rest_work' => [
+                'name' => 'Trabajo en día de descanso asignado',
+                'description' => 'La jornada registra trabajo en un día publicado como descanso.',
+                'default_severity' => AlertType::SEVERITY_HIGH,
+                'category' => 'rest',
+            ],
+            'minor_daily_hours_exceeded' => [
+                'name' => 'Persona menor con jornada superior a seis horas',
+                'description' => 'La jornada requiere revisión por la edad registrada de la persona trabajadora.',
+                'default_severity' => AlertType::SEVERITY_CRITICAL,
+                'category' => 'daily',
+            ],
+            'minor_restricted_work' => [
+                'name' => 'Persona menor con tiempo extra o jornada nocturna',
+                'description' => 'La jornada requiere revisión por la edad registrada y sus características.',
+                'default_severity' => AlertType::SEVERITY_CRITICAL,
+                'category' => 'daily',
+            ],
             'weekly_rest_missing' => [
                 'name' => 'Semana sin descanso detectado',
                 'description' => 'La semana natural no muestra dia de descanso para revision.',
                 'default_severity' => AlertType::SEVERITY_HIGH,
+                'category' => 'weekly',
+            ],
+            'weekly_hours_exceeded' => [
+                'name' => 'Horas semanales superiores al máximo',
+                'description' => 'La suma semanal trabajada supera el límite aplicable.',
+                'default_severity' => AlertType::SEVERITY_HIGH,
+                'category' => 'weekly',
+            ],
+            'weekly_overtime_exceeded' => [
+                'name' => 'Tiempo extra semanal superior al límite',
+                'description' => 'La suma semanal de tiempo extraordinario requiere revisión.',
+                'default_severity' => AlertType::SEVERITY_HIGH,
+                'category' => 'weekly',
+            ],
+            'weekly_overtime_days_exceeded' => [
+                'name' => 'Más de tres días con tiempo extra',
+                'description' => 'La semana concentra tiempo extraordinario en más de tres días.',
+                'default_severity' => AlertType::SEVERITY_WARNING,
+                'category' => 'weekly',
+            ],
+            'weekly_sunday_work' => [
+                'name' => 'Domingos trabajados en la semana',
+                'description' => 'La semana incluye trabajo en domingo para revisión operativa.',
+                'default_severity' => AlertType::SEVERITY_INFORMATIONAL,
                 'category' => 'weekly',
             ],
         ];

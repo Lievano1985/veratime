@@ -18,6 +18,7 @@ class WorkerResource extends JsonResource
             'id' => (string) $this->id,
             'employee_code' => $this->employee_code,
             'full_name' => $this->full_name,
+            'birth_date' => $this->birth_date?->toDateString(),
             'email' => $this->email,
             'phone' => $this->phone,
             'rfc' => $this->rfc,

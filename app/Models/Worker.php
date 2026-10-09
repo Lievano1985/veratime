@@ -17,6 +17,7 @@ class Worker extends Model
     protected $fillable = [
         'employee_code',
         'full_name',
+        'birth_date',
         'email',
         'phone',
         'curp',
@@ -30,6 +31,7 @@ class Worker extends Model
     protected function casts(): array
     {
         return [
+            'birth_date' => 'immutable_date',
             'metadata' => 'array',
         ];
     }

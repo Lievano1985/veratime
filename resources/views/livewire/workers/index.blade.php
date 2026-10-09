@@ -62,6 +62,7 @@ new class extends Component {
         $this->form = [
             'employee_code' => $worker->employee_code,
             'full_name' => $worker->full_name,
+            'birth_date' => $worker->birth_date?->format('Y-m-d') ?? '',
             'email' => $worker->email ?? '',
             'phone' => $worker->phone ?? '',
             'rfc' => $worker->rfc ?? '',
@@ -108,6 +109,7 @@ new class extends Component {
                     ->ignore($worker?->id),
             ],
             'form.full_name' => ['required', 'string', 'max:255'],
+            'form.birth_date' => ['nullable', 'date', 'before:today'],
             'form.email' => ['nullable', 'email', 'max:255'],
             'form.phone' => ['nullable', 'string', 'max:50'],
             'form.rfc' => ['nullable', 'string', 'max:20'],
@@ -428,6 +430,7 @@ new class extends Component {
         return [
             'employee_code' => '',
             'full_name' => '',
+            'birth_date' => '',
             'email' => '',
             'phone' => '',
             'rfc' => '',
@@ -605,6 +608,7 @@ new class extends Component {
 
                         <flux:input wire:model="form.employee_code" label="Código interno" required />
                         <flux:input wire:model="form.full_name" label="Nombre completo" required />
+                        <flux:input wire:model="form.birth_date" label="Fecha de nacimiento" type="date" />
                         <flux:input wire:model="form.email" label="Email" type="email" />
                         <flux:input wire:model="form.phone" label="Teléfono" />
                         <flux:input wire:model="form.rfc" label="RFC" />

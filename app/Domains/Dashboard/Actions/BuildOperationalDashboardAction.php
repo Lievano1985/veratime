@@ -11,12 +11,22 @@ use App\Models\EmploymentUnitAssignment;
 use App\Models\OrganizationalUnit;
 use App\Models\TimeEvent;
 use App\Models\User;
+use App\Models\WorkDay;
+use App\Models\WorkDayCalculation;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
 class BuildOperationalDashboardAction
 {
+    private const WEEKLY_RULE_CODES = [
+        'weekly_rest_missing',
+        'weekly_hours_exceeded',
+        'weekly_overtime_exceeded',
+        'weekly_overtime_days_exceeded',
+        'weekly_sunday_work',
+    ];
+
     public function __construct(private readonly ScopedOperationalAccess $scopedAccess) {}
 
     /**
@@ -26,6 +36,8 @@ class BuildOperationalDashboardAction
     {
         $timezone = $company->setting?->default_timezone ?: $company->timezone;
         $localDate = CarbonImmutable::parse($date, $timezone)->toDateString();
+        $weekStart = CarbonImmutable::parse($localDate, $timezone)->startOfWeek()->toDateString();
+        $weekEnd = CarbonImmutable::parse($localDate, $timezone)->endOfWeek()->toDateString();
         $access = $this->visibleAccess($company, $user, $localDate);
 
         if ($centerId && $access['filter_center_ids'] !== null && ! in_array($centerId, $access['filter_center_ids'], true)) {
@@ -97,7 +109,15 @@ class BuildOperationalDashboardAction
             ->with('alertType:id,category')
             ->where('company_id', $company->id)
             ->whereIn('status', Alert::OPEN_STATUSES)
-            ->whereDate('detected_at', $localDate)
+            ->where(function (Builder $query) use ($localDate, $weekStart, $weekEnd): void {
+                $query->whereDate('detected_at', $localDate)
+                    ->orWhere(function (Builder $weekly) use ($weekStart, $weekEnd): void {
+                        $weekly->whereIn('rule_code', self::WEEKLY_RULE_CODES)
+                            ->whereHas('workDay', fn (Builder $workDays) => $workDays
+                                ->whereDate('work_date', '>=', $weekStart)
+                                ->whereDate('work_date', '<=', $weekEnd));
+                    });
+            })
             ->when($centerId, fn (Builder $query) => $query->whereHas('workDay', fn (Builder $workDays) => $workDays->where('center_id', $centerId)))
             ->when($access['center_ids'] !== null, function (Builder $query) use ($access): void {
                 $query->whereHas('workDay', function (Builder $workDays) use ($access): void {
@@ -116,6 +136,30 @@ class BuildOperationalDashboardAction
             ->get(['id', 'alert_type_id', 'rule_code', 'severity']);
 
         $countsByRule = $alerts->countBy('rule_code');
+        $weeklyWorkDays = WorkDay::query()
+            ->with('activeCalculation:id,work_day_id,status,classification,total_work_minutes,result_snapshot')
+            ->where('company_id', $company->id)
+            ->whereIn('employment_relationship_id', $relationshipIds)
+            ->whereDate('work_date', '>=', $weekStart)
+            ->whereDate('work_date', '<=', $weekEnd)
+            ->when($centerId, fn (Builder $query) => $query->where('center_id', $centerId))
+            ->whereNotNull('active_calculation_id')
+            ->get(['id', 'worker_id', 'employment_relationship_id', 'center_id', 'work_date', 'active_calculation_id']);
+        $weeklyMinutesByWorker = $weeklyWorkDays
+            ->map(fn (WorkDay $workDay): array => [
+                'worker_id' => $workDay->worker_id,
+                'minutes' => $workDay->activeCalculation instanceof WorkDayCalculation
+                    && $workDay->activeCalculation->status === WorkDayCalculation::STATUS_ACTIVE
+                    && (($workDay->activeCalculation->result_snapshot['issues'] ?? []) === [])
+                    ? $workDay->activeCalculation->total_work_minutes
+                    : 0,
+            ])
+            ->groupBy('worker_id')
+            ->map(fn ($days): int => (int) $days->sum('minutes'))
+            ->filter(fn (int $minutes): bool => $minutes > 0);
+        $weeklyAverageWorkMinutes = $weeklyMinutesByWorker->isEmpty()
+            ? 0
+            : (int) round($weeklyMinutesByWorker->avg());
         $manualEntries = TimeEvent::query()
             ->where('company_id', $company->id)
             ->whereIn('employment_relationship_id', $relationshipIds)
@@ -132,6 +176,8 @@ class BuildOperationalDashboardAction
 
         return [
             'date' => $localDate,
+            'week_start' => $weekStart,
+            'week_end' => $weekEnd,
             'timezone' => $timezone,
             'generated_at' => CarbonImmutable::now($timezone)->toIso8601String(),
             'access' => $access,
@@ -142,14 +188,32 @@ class BuildOperationalDashboardAction
                 'absence_pending' => $absencePending,
                 'pending_entry' => $pendingEntry,
             ],
-            'alerts' => [
-                ['key' => 'incomplete_work_day', 'title' => 'Jornadas abiertas o incompletas', 'description' => 'Secuencias que requieren revisión operativa.', 'level' => 'critical', 'count' => (int) ($countsByRule['incomplete_work_day'] ?? 0)],
-                ['key' => 'late_arrival_detected', 'title' => 'Entradas tardías', 'description' => 'Registros con retardo calculado.', 'level' => 'warning', 'count' => (int) ($countsByRule['late_arrival_detected'] ?? 0)],
-                ['key' => 'scheduled_absence', 'title' => 'Ausencias por validar', 'description' => 'Sin entrada después de la tolerancia.', 'level' => 'high', 'count' => $absencePending],
-                ['key' => 'manual', 'title' => 'Capturas manuales recientes', 'description' => 'Registros que conservan evidencia de su captura.', 'level' => 'informational', 'count' => $manualEntries],
-                ['key' => 'sunday_work', 'title' => 'Registros en domingo', 'description' => 'Situaciones para revisión, no determinaciones definitivas.', 'level' => 'warning', 'count' => (int) ($countsByRule['sunday_work'] ?? 0)],
-                ['key' => 'mandatory_rest_work', 'title' => 'Registros en descanso obligatorio', 'description' => 'Situaciones que requieren validación.', 'level' => 'high', 'count' => (int) ($countsByRule['mandatory_rest_work'] ?? 0)],
+            'daily_alerts' => [
+                ['key' => 'daily_limit_exceeded', 'title' => 'Jornada excedida', 'description' => 'El tiempo trabajado supera el límite diario aplicable.', 'level' => 'high', 'count' => (int) ($countsByRule['daily_limit_exceeded'] ?? 0)],
+                ['key' => 'daily_overtime_over_three_hours', 'title' => 'Tiempo extra diario superior a tres horas', 'description' => 'La jornada acumula más de tres horas extraordinarias.', 'level' => 'high', 'count' => (int) ($countsByRule['daily_overtime_over_three_hours'] ?? 0)],
+                ['key' => 'overtime_detected', 'title' => 'Tiempo extra detectado', 'description' => 'La jornada tiene minutos extraordinarios calculados.', 'level' => 'warning', 'count' => (int) ($countsByRule['overtime_detected'] ?? 0)],
+                ['key' => 'long_work_day', 'title' => 'Jornada larga', 'description' => 'La jornada trabajada supera diez horas.', 'level' => 'warning', 'count' => (int) ($countsByRule['long_work_day'] ?? 0)],
+                ['key' => 'minimum_break_missing', 'title' => 'Pausa mínima no identificada', 'description' => 'No se identificó una pausa acumulada de al menos treinta minutos.', 'level' => 'warning', 'count' => (int) ($countsByRule['minimum_break_missing'] ?? 0)],
+                ['key' => 'twelve_hours_exceeded', 'title' => 'Jornada mayor a 12 horas', 'description' => 'El total trabajado supera doce horas en una jornada.', 'level' => 'critical', 'count' => (int) ($countsByRule['twelve_hours_exceeded'] ?? 0)],
+                ['key' => 'sunday_work', 'title' => 'Trabajo en domingo', 'description' => 'La jornada incluye tiempo trabajado en domingo.', 'level' => 'warning', 'count' => (int) ($countsByRule['sunday_work'] ?? 0)],
+                ['key' => 'mandatory_rest_work', 'title' => 'Trabajo en descanso obligatorio', 'description' => 'La jornada incluye tiempo trabajado en un descanso obligatorio.', 'level' => 'high', 'count' => (int) ($countsByRule['mandatory_rest_work'] ?? 0)],
+                ['key' => 'scheduled_rest_work', 'title' => 'Trabajo en día de descanso asignado', 'description' => 'La jornada registra trabajo en un día publicado como descanso.', 'level' => 'high', 'count' => (int) ($countsByRule['scheduled_rest_work'] ?? 0)],
+                ['key' => 'minor_daily_hours_exceeded', 'title' => 'Persona menor con jornada superior a seis horas', 'description' => 'Revisión preventiva según la edad registrada.', 'level' => 'critical', 'count' => (int) ($countsByRule['minor_daily_hours_exceeded'] ?? 0)],
+                ['key' => 'minor_restricted_work', 'title' => 'Persona menor con tiempo extra o jornada nocturna', 'description' => 'Revisión preventiva según la edad registrada.', 'level' => 'critical', 'count' => (int) ($countsByRule['minor_restricted_work'] ?? 0)],
             ],
+            'weekly_alerts' => [
+                ['key' => 'weekly_hours_exceeded', 'title' => 'Horas semanales superiores al máximo', 'description' => 'La suma semanal trabajada supera el límite aplicable.', 'level' => 'high', 'count' => (int) ($countsByRule['weekly_hours_exceeded'] ?? 0)],
+                ['key' => 'weekly_overtime_exceeded', 'title' => 'Tiempo extra semanal superior a nueve horas', 'description' => 'La suma semanal de tiempo extraordinario supera nueve horas.', 'level' => 'high', 'count' => (int) ($countsByRule['weekly_overtime_exceeded'] ?? 0)],
+                ['key' => 'weekly_overtime_days_exceeded', 'title' => 'Más de tres días con tiempo extra', 'description' => 'La semana concentra tiempo extraordinario en más de tres días.', 'level' => 'warning', 'count' => (int) ($countsByRule['weekly_overtime_days_exceeded'] ?? 0)],
+                ['key' => 'weekly_rest_missing', 'title' => 'Semana sin descanso detectado', 'description' => 'La semana natural no muestra un día de descanso y requiere revisión.', 'level' => 'high', 'count' => (int) ($countsByRule['weekly_rest_missing'] ?? 0)],
+                ['key' => 'weekly_sunday_work', 'title' => 'Domingos trabajados en la semana', 'description' => 'La semana incluye trabajo en domingo.', 'level' => 'warning', 'count' => (int) ($countsByRule['weekly_sunday_work'] ?? 0)],
+            ],
+            'kpi_alerts' => [
+                ['key' => 'late_arrival_detected', 'count' => (int) ($countsByRule['late_arrival_detected'] ?? 0)],
+                ['key' => 'early_departure_detected', 'count' => (int) ($countsByRule['early_departure_detected'] ?? 0)],
+                ['key' => 'incomplete_work_day', 'count' => (int) ($countsByRule['incomplete_work_day'] ?? 0)],
+            ],
+            'weekly_average_work_minutes' => $weeklyAverageWorkMinutes,
             'segments' => $segments,
         ];
     }
