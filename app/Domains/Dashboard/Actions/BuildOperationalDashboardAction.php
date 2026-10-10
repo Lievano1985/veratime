@@ -15,7 +15,9 @@ use App\Models\WorkDay;
 use App\Models\WorkDayCalculation;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class BuildOperationalDashboardAction
 {
@@ -38,6 +40,16 @@ class BuildOperationalDashboardAction
         $localDate = CarbonImmutable::parse($date, $timezone)->toDateString();
         $weekStart = CarbonImmutable::parse($localDate, $timezone)->startOfWeek()->toDateString();
         $weekEnd = CarbonImmutable::parse($localDate, $timezone)->endOfWeek()->toDateString();
+        $selectedWeekStart = CarbonImmutable::parse($weekStart, $timezone);
+        $currentWeekStart = CarbonImmutable::now($timezone)->startOfWeek();
+        $currentWeekEnd = $currentWeekStart->endOfWeek();
+        $currentYearStart = $currentWeekStart->startOfYear();
+        $complianceWeekStarts = $this->weekStarts($selectedWeekStart->subWeeks(7), $selectedWeekStart);
+        $trendWeekStarts = $this->weekStarts($currentYearStart->startOfWeek(CarbonInterface::MONDAY), $currentWeekStart);
+        $analysisStart = $currentYearStart->lessThan($complianceWeekStarts[0]) ? $currentYearStart : $complianceWeekStarts[0];
+        $analysisEnd = $currentWeekEnd->greaterThan(CarbonImmutable::parse($weekEnd, $timezone))
+            ? $currentWeekEnd->toDateString()
+            : $weekEnd;
         $access = $this->visibleAccess($company, $user, $localDate);
 
         if ($centerId && $access['filter_center_ids'] !== null && ! in_array($centerId, $access['filter_center_ids'], true)) {
@@ -118,22 +130,18 @@ class BuildOperationalDashboardAction
                                 ->whereDate('work_date', '<=', $weekEnd));
                     });
             })
-            ->when($centerId, fn (Builder $query) => $query->whereHas('workDay', fn (Builder $workDays) => $workDays->where('center_id', $centerId)))
-            ->when($access['center_ids'] !== null, function (Builder $query) use ($access): void {
-                $query->whereHas('workDay', function (Builder $workDays) use ($access): void {
-                    $workDays->where(function (Builder $visible): void {
-                        $visible->whereRaw('1 = 0');
-                    });
-
-                    if ($access['center_ids'] !== []) {
-                        $workDays->orWhereIn('center_id', $access['center_ids']);
-                    }
-                    if ($access['relationship_ids'] !== []) {
-                        $workDays->orWhereIn('employment_relationship_id', $access['relationship_ids']);
-                    }
-                });
-            })
+            ->tap(fn (Builder $query) => $this->applyAlertScope($query, $centerId, $access))
             ->get(['id', 'alert_type_id', 'rule_code', 'severity']);
+
+        $historicalAlerts = Alert::query()
+            ->with('alertType:id,name')
+            ->where('company_id', $company->id)
+            ->whereDate('detected_at', '>=', $analysisStart->toDateString())
+            ->whereDate('detected_at', '<=', $analysisEnd)
+            ->tap(fn (Builder $query) => $this->applyAlertScope($query, $centerId, $access))
+            ->get(['id', 'alert_type_id', 'rule_code', 'status', 'title', 'detected_at']);
+        $weeklyIncidentCompliance = $this->weeklyIncidentCompliance($historicalAlerts, $complianceWeekStarts, $timezone);
+        $incidenceTrends = $this->incidenceTrends($historicalAlerts, $trendWeekStarts, $currentYearStart, $timezone);
 
         $countsByRule = $alerts->countBy('rule_code');
         $weeklyWorkDays = WorkDay::query()
@@ -214,8 +222,136 @@ class BuildOperationalDashboardAction
                 ['key' => 'incomplete_work_day', 'count' => (int) ($countsByRule['incomplete_work_day'] ?? 0)],
             ],
             'weekly_average_work_minutes' => $weeklyAverageWorkMinutes,
+            'weekly_incident_compliance' => $weeklyIncidentCompliance,
+            'incidence_trends' => $incidenceTrends,
             'segments' => $segments,
         ];
+    }
+
+    /**
+     * @param  array{center_ids: list<int>|null, relationship_ids: list<int>|null}  $access
+     */
+    private function applyAlertScope(Builder $query, ?int $centerId, array $access): void
+    {
+        if ($centerId) {
+            $query->whereHas('workDay', fn (Builder $workDays) => $workDays->where('center_id', $centerId));
+        }
+
+        if ($access['center_ids'] === null) {
+            return;
+        }
+
+        $query->whereHas('workDay', function (Builder $workDays) use ($access): void {
+            $workDays->where(function (Builder $visible): void {
+                $visible->whereRaw('1 = 0');
+            });
+
+            if ($access['center_ids'] !== []) {
+                $workDays->orWhereIn('center_id', $access['center_ids']);
+            }
+            if ($access['relationship_ids'] !== []) {
+                $workDays->orWhereIn('employment_relationship_id', $access['relationship_ids']);
+            }
+        });
+    }
+
+    /**
+     * @return list<CarbonImmutable>
+     */
+    private function weekStarts(CarbonImmutable $start, CarbonImmutable $end): array
+    {
+        $weeks = [];
+
+        for ($week = $start; $week->lessThanOrEqualTo($end); $week = $week->addWeek()) {
+            $weeks[] = $week;
+        }
+
+        return $weeks;
+    }
+
+    /**
+     * @param  Collection<int, Alert>  $alerts
+     * @param  list<CarbonImmutable>  $weekStarts
+     * @return array{weeks: list<array{key: string, label: string, total: int, closed: int, percentage: int}>, total: int, closed: int, percentage: int}
+     */
+    private function weeklyIncidentCompliance($alerts, array $weekStarts, string $timezone): array
+    {
+        $alertsByWeek = $alerts->groupBy(fn (Alert $alert): string => $this->alertWeekKey($alert, $timezone));
+        $weeks = collect($weekStarts)->map(function (CarbonImmutable $weekStart) use ($alertsByWeek): array {
+            $incidents = $alertsByWeek->get($weekStart->toDateString(), collect());
+            $total = $incidents->count();
+            $closed = $incidents->where('status', Alert::STATUS_CLOSED)->count();
+
+            return [
+                'key' => $weekStart->toDateString(),
+                'label' => 'Sem. '.$weekStart->isoWeek(),
+                'total' => $total,
+                'closed' => $closed,
+                'percentage' => $total > 0 ? (int) round(($closed / $total) * 100) : 0,
+            ];
+        })->all();
+        $total = array_sum(array_column($weeks, 'total'));
+        $closed = array_sum(array_column($weeks, 'closed'));
+
+        return [
+            'weeks' => $weeks,
+            'total' => $total,
+            'closed' => $closed,
+            'percentage' => $total > 0 ? (int) round(($closed / $total) * 100) : 0,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Alert>  $alerts
+     * @param  list<CarbonImmutable>  $weekStarts
+     * @return array{year: int, weeks: list<array{key: string, label: string}>, series: list<array{key: string, label: string, color: string, total: int, values: list<int>}>, maximum: int}
+     */
+    private function incidenceTrends($alerts, array $weekStarts, CarbonImmutable $yearStart, string $timezone): array
+    {
+        $trendAlerts = $alerts->filter(fn (Alert $alert): bool => CarbonImmutable::parse($alert->detected_at)
+            ->setTimezone($timezone)
+            ->greaterThanOrEqualTo($yearStart));
+        $alertsByRule = $trendAlerts->groupBy(fn (Alert $alert): string => $alert->rule_code ?: 'alert_type:'.$alert->alert_type_id);
+        $colors = ['#0067E4', '#29B6F6', '#0D47A1', '#93650B'];
+        $series = $alertsByRule
+            ->sortByDesc(fn ($ruleAlerts) => $ruleAlerts->count())
+            ->take(4)
+            ->values()
+            ->map(function ($ruleAlerts, int $index) use ($weekStarts, $timezone, $colors): array {
+                $byWeek = $ruleAlerts->groupBy(fn (Alert $alert): string => $this->alertWeekKey($alert, $timezone));
+                $first = $ruleAlerts->first();
+
+                return [
+                    'key' => $first->rule_code ?: 'alert_type:'.$first->alert_type_id,
+                    'label' => $first->alertType?->name ?: $first->title,
+                    'color' => $colors[$index],
+                    'total' => $ruleAlerts->count(),
+                    'values' => collect($weekStarts)
+                        ->map(fn (CarbonImmutable $weekStart): int => $byWeek->get($weekStart->toDateString(), collect())->count())
+                        ->all(),
+                ];
+            })
+            ->all();
+        $values = collect($series)->flatMap(fn (array $line) => $line['values'])->all();
+        $maximum = $values === [] ? 1 : max($values);
+
+        return [
+            'year' => $yearStart->year,
+            'weeks' => collect($weekStarts)->map(fn (CarbonImmutable $weekStart): array => [
+                'key' => $weekStart->toDateString(),
+                'label' => 'S'.$weekStart->isoWeek(),
+            ])->all(),
+            'series' => $series,
+            'maximum' => $maximum,
+        ];
+    }
+
+    private function alertWeekKey(Alert $alert, string $timezone): string
+    {
+        return CarbonImmutable::parse($alert->detected_at)
+            ->setTimezone($timezone)
+            ->startOfWeek(CarbonInterface::MONDAY)
+            ->toDateString();
     }
 
     /** @return array{center_ids: list<int>|null, relationship_ids: list<int>|null, filter_center_ids: list<int>|null} */

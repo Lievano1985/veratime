@@ -40,6 +40,8 @@ class DashboardTest extends TestCase
             ->assertSee('Cobertura de jornada')
             ->assertSee('Indicadores diarios de jornada')
             ->assertSee('Indicadores semanales de acumulaci&oacute;n', false)
+            ->assertSee('Cumplimiento por semana')
+            ->assertSee('Incidencias más repetitivas')
             ->assertSee('Salidas anticipadas');
     }
 

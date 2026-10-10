@@ -4,7 +4,7 @@ title: Dashboard operativo Vera Time
 project: Vera Time
 status: Approved for MVP implementation
 owner: Product
-updated: 2026-10-09
+updated: 2026-10-10
 ---
 
 # UX-0002 - Dashboard operativo
@@ -28,12 +28,13 @@ La primera versión incluye:
 - KPI operativos de asistencia y puntualidad;
 - indicadores diarios de jornada y descansos;
 - indicadores semanales de acumulación;
+- cumplimiento semanal de incidencias y tendencia anual por tipo;
 - distribución visual de las alertas por segmento;
 - enlaces de sólo consulta a Jornadas, con los filtros correspondientes.
 
 ## Composición visual
 
-La pantalla organiza el contenido en bloques operativos: encabezado con filtros y hora de actualización, panorama de jornada con indicador circular de actividad y KPI de asistencia/puntualidad, indicadores diarios, indicadores semanales y una sección final de distribución con barras de progreso y recordatorio de uso. Las tarjetas utilizan gradientes suaves por estado y la paleta de Vera Time; el color comunica prioridad, no una sanción.
+La pantalla organiza el contenido en bloques operativos: encabezado con filtros y hora de actualización, panorama de jornada con indicador circular de actividad y KPI de asistencia/puntualidad, indicadores diarios, indicadores semanales, gráficas de incidencias y una sección final de distribución con barras de progreso y recordatorio de uso. Las tarjetas utilizan gradientes suaves por estado y la paleta de Vera Time; el color comunica prioridad, no una sanción.
 
 Quedan fuera: sanciones, aprobación formal de incidencias, cálculo legal nuevo, reportes oficiales, nómina, API pública del dashboard y modificar eventos desde esta pantalla.
 
@@ -47,6 +48,12 @@ El resumen se construye fuera de Livewire mediante `BuildOperationalDashboardAct
 - `work_days` y `alerts` abiertas.
 
 La vista no calcula jornadas ni crea alertas. Las alertas existentes son la fuente para retrasos, jornadas incompletas, tiempo extra, domingo, descansos y situaciones equivalentes. Los indicadores diarios muestran únicamente reglas ya calculadas por el dominio. Los indicadores semanales consultan alertas abiertas de la semana y el promedio de horas se deriva de cálculos activos, sin modificar evidencia.
+
+## Gráficas de incidencias
+
+La gráfica de cumplimiento muestra las últimas ocho semanas hasta la fecha consultada. Para cada semana natural calcula `alertas con estado closed / alertas detectadas en esa semana`; por ejemplo, 20 alertas cerradas de 40 detectadas se muestran como 50%. Las alertas justificadas o corregidas conservan su estado y no se cuentan como cerradas en este indicador.
+
+La gráfica de líneas muestra, desde enero hasta la semana actual, el número semanal de los cuatro tipos de incidencia más repetidos del año calendario en curso. No se ancla a una fecha histórica elegida para los indicadores operativos. Ambas gráficas se renderizan con Chart.js, sólo consultan alertas históricas ya persistidas y aplican la misma empresa, centro y alcance operativo del tablero. La presentación usa tarjetas claras de borde suave, barras azules redondeadas, línea principal con área sutil y tooltips compactos para conservar legibilidad sin recargar el tablero.
 
 ## Indicadores preventivos de jornada
 

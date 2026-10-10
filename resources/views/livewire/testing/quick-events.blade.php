@@ -5,7 +5,6 @@ use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\Testing\Actions\ResetOperationalTestDataAction;
 use App\Domains\TimeRecords\Actions\CreateQuickTestTimeEventsAction;
 use App\Models\Worker;
-use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
@@ -176,8 +175,7 @@ new class extends Component {
 
     private function authorizeQuickTool($company): void
     {
-        $role = auth()->user()?->roleKeyForCompany($company);
-        abort_unless(in_array($role, [...RoleKey::companyManagers(), RoleKey::SUPER_ADMIN], true), 403);
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
     }
 
     private function defaultRow(): array

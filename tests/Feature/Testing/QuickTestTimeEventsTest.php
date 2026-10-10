@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Testing;
 
+use App\Models\AttendancePeriod;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\PersonalTimeEventSubmission;
 use App\Models\Role;
@@ -21,9 +23,9 @@ class QuickTestTimeEventsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_company_manager_can_create_quick_test_events_and_refresh_work_day(): void
+    public function test_super_admin_can_create_quick_test_events_and_refresh_work_day(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
+        [$company, $user] = $this->companyUser(RoleKey::SUPER_ADMIN);
         $center = Center::factory()->for($company)->create(['timezone' => 'America/Mexico_City']);
         $worker = Worker::factory()->for($company)->create(['status' => 'active']);
         EmploymentRelationship::factory()->create([
@@ -58,18 +60,29 @@ class QuickTestTimeEventsTest extends TestCase
         $this->assertContains($workDay->status, [WorkDay::STATUS_CALCULATED, WorkDay::STATUS_WITH_ALERTS]);
     }
 
-    public function test_supervisor_cannot_access_quick_test_events_tool(): void
+    public function test_company_manager_cannot_access_quick_test_events_tool_or_sidebar_entry(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::SUPERVISOR);
+        [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         $this->get(route('testing.quick-events'))->assertForbidden();
+        $this->get(route('dashboard'))->assertOk()->assertDontSee('Eventos rapidos');
     }
 
-    public function test_company_manager_can_delete_provisional_operational_test_data(): void
+    public function test_super_admin_can_open_quick_test_events_tool_and_see_sidebar_entry(): void
     {
-        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        [$company, $user] = $this->companyUser(RoleKey::SUPER_ADMIN);
+
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        $this->get(route('testing.quick-events'))->assertOk();
+        $this->get(route('dashboard'))->assertOk()->assertSee('Eventos rapidos');
+    }
+
+    public function test_super_admin_can_delete_provisional_operational_test_data(): void
+    {
+        [$company, $user] = $this->companyUser(RoleKey::SUPER_ADMIN);
         $center = Center::factory()->for($company)->create();
         $worker = Worker::factory()->for($company)->create(['status' => 'active']);
         $relationship = EmploymentRelationship::factory()->create([
@@ -95,7 +108,7 @@ class QuickTestTimeEventsTest extends TestCase
             'status' => 'draft',
             'version' => null,
         ]);
-        \App\Models\DailyScheduleAssignment::factory()->create([
+        DailyScheduleAssignment::factory()->create([
             'company_id' => $company->id,
             'schedule_batch_id' => $published->id,
             'employment_relationship_id' => $relationship->id,
@@ -123,7 +136,7 @@ class QuickTestTimeEventsTest extends TestCase
             'center_id' => $center->id,
             'work_date' => '2026-08-01',
         ]);
-        \App\Models\AttendancePeriod::factory()->create([
+        AttendancePeriod::factory()->create([
             'company_id' => $company->id,
             'center_id' => $center->id,
             'period_start' => '2026-08-01',
@@ -147,7 +160,7 @@ class QuickTestTimeEventsTest extends TestCase
         $this->assertSame(0, TimeEvent::query()->where('company_id', $company->id)->count());
         $this->assertSame(0, PersonalTimeEventSubmission::query()->where('company_id', $company->id)->count());
         $this->assertSame(0, WorkDay::query()->where('company_id', $company->id)->count());
-        $this->assertSame(0, \App\Models\AttendancePeriod::query()->where('company_id', $company->id)->count());
+        $this->assertSame(0, AttendancePeriod::query()->where('company_id', $company->id)->count());
     }
 
     /**
@@ -160,7 +173,10 @@ class QuickTestTimeEventsTest extends TestCase
             ['name' => ucfirst($roleKey), 'description' => null, 'is_system' => true],
         );
         $company = Company::factory()->create(['status' => 'active', 'timezone' => 'America/Mexico_City']);
-        $user = User::factory()->create(['status' => 'active']);
+        $user = User::factory()->create([
+            'status' => 'active',
+            'global_role' => $roleKey === RoleKey::SUPER_ADMIN ? RoleKey::SUPER_ADMIN : null,
+        ]);
 
         $user->companies()->attach($company, [
             'role_id' => $role->id,

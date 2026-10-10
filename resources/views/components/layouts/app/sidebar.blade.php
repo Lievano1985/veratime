@@ -146,7 +146,7 @@
                         @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany]))
                             <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Periodos de asistencia</flux:navlist.item>
                         @endif
-                        @if (in_array(auth()->user()->roleKeyForCompany($activeCompany), [...\App\Support\RoleKey::companyManagers(), \App\Support\RoleKey::SUPER_ADMIN], true))
+                        @if (auth()->user()->isSuperAdmin())
                             <flux:navlist.item icon="beaker" :href="route('testing.quick-events')" :current="request()->routeIs('testing.quick-events')" wire:navigate>Eventos rapidos</flux:navlist.item>
                         @endif
                     </flux:navlist.group>
