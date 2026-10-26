@@ -28,8 +28,8 @@ return new class extends Migration
             $table->text('public_key_spki');
             $table->string('key_fingerprint', 64);
             $table->string('status')->default('active');
-            $table->timestamp('activated_at');
-            $table->timestamp('revoked_at')->nullable();
+            $table->dateTime('activated_at');
+            $table->dateTime('revoked_at')->nullable();
             $table->foreignIdFor(User::class, 'revoked_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->unique(['company_id', 'key_fingerprint'], 'mdb_company_key_fingerprint_unique');

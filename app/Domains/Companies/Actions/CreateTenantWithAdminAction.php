@@ -34,6 +34,7 @@ class CreateTenantWithAdminAction
         }
 
         [$company, $administrator, $reusedExistingAdministrator] = DB::transaction(function () use ($data): array {
+            $isTrial = (bool) data_get($data, 'company.is_trial', false);
             $email = Str::lower(trim((string) data_get($data, 'admin.email')));
             $existingAdministrator = User::query()->where('email', $email)->first();
 
@@ -80,7 +81,9 @@ class CreateTenantWithAdminAction
                 'legal_name' => blank(data_get($data, 'company.legal_name')) ? null : trim((string) data_get($data, 'company.legal_name')),
                 'tax_id' => blank(data_get($data, 'company.tax_id')) ? null : trim((string) data_get($data, 'company.tax_id')),
                 'timezone' => (string) data_get($data, 'company.timezone', 'America/Mexico_City'),
-                'status' => (string) data_get($data, 'company.status', 'active'),
+                'status' => $isTrial ? 'active' : (string) data_get($data, 'company.status', 'active'),
+                'is_trial' => $isTrial,
+                'trial_ends_at' => $isTrial ? now()->addDays(15) : null,
                 'settings' => [],
             ]);
 

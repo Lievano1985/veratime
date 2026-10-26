@@ -13,14 +13,18 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportAttendancePeriodPayrollXlsxAction
 {
-    public function __construct(private readonly ExportAttendancePeriodPayrollCsvAction $exportData) {}
+    public function __construct(
+        private readonly ExportAttendancePeriodPayrollCsvAction $exportData,
+        private readonly ResolveAttendancePeriodPayrollRowsAction $historicalRows,
+    ) {}
 
     public function handle(AttendancePeriod $period, ?PayrollExportTemplate $template = null): StreamedResponse
     {
         $columns = $this->exportData->columnsFor($template);
         $filename = $this->exportData->filename($period, 'xlsx');
+        $rows = $this->historicalRows->handle($period);
 
-        return response()->streamDownload(function () use ($period, $columns): void {
+        return response()->streamDownload(function () use ($rows, $columns): void {
             $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Asistencia');
@@ -39,7 +43,7 @@ class ExportAttendancePeriodPayrollXlsxAction
             $sheet->freezePane('A2');
 
             $rowNumber = 2;
-            $this->exportData->writeRows($period, $columns, function (array $row) use ($sheet, &$rowNumber): void {
+            $this->exportData->writeCapturedRows($rows, $columns, function (array $row) use ($sheet, &$rowNumber): void {
                 foreach (array_values($row) as $index => $value) {
                     $sheet->setCellValueExplicit(
                         Coordinate::stringFromColumnIndex($index + 1).$rowNumber,

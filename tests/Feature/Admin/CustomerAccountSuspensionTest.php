@@ -70,7 +70,7 @@ class CustomerAccountSuspensionTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
-            ->get('/dashboard')
+            ->get(route('dashboard'))
             ->assertForbidden();
 
         $this->assertFalse(session()->has('current_company_id'));
@@ -89,7 +89,7 @@ class CustomerAccountSuspensionTest extends TestCase
         $this->actingAs($superAdmin)
             ->withSession(['current_company_id' => $company->id]);
 
-        $this->get('/dashboard')->assertOk();
+        $this->get(route('dashboard'))->assertRedirect(route('companies.index'));
 
         $this->assertFalse(session()->has('current_company_id'));
         $this->assertFalse($superAdmin->activeCompanies()->whereKey($company->id)->exists());

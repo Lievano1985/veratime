@@ -12,6 +12,7 @@ use App\Models\AttendanceIncident;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\LegalParameter;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkDay;
@@ -19,6 +20,8 @@ use App\Models\WorkDayCalculation;
 use App\Models\Worker;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Database\Seeders\AlertTypeSeeder;
+use Database\Seeders\LegalRuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -26,6 +29,13 @@ use Tests\TestCase;
 class WorkDayAlertsFoundationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(LegalRuleSeeder::class);
+    }
 
     public function test_evaluator_creates_alerts_from_active_work_day_calculation(): void
     {
@@ -43,10 +53,10 @@ class WorkDayAlertsFoundationTest extends TestCase
 
         $summary = app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
 
-        $this->assertSame(['created_or_updated' => 4, 'closed' => 0, 'open' => 4], $summary);
+        $this->assertSame(['created_or_updated' => 3, 'closed' => 0, 'open' => 3], $summary);
         $this->assertSame(WorkDay::STATUS_WITH_ALERTS, $workDay->refresh()->status);
         $this->assertEqualsCanonicalizing(
-            ['overtime_detected', 'sunday_work', 'weekly_rest_missing', 'weekly_sunday_work'],
+            ['overtime_detected', 'sunday_work', 'weekly_rest_missing'],
             AlertType::query()
                 ->whereIn('id', Alert::query()->where('company_id', $company->id)->pluck('alert_type_id'))
                 ->pluck('code')
@@ -181,6 +191,59 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame('2026-08-09', $alerts->first()->metadata['week_end']);
     }
 
+    public function test_extended_day_has_three_tasks_and_retires_duplicate_alerts_without_changing_calculation(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'total_work_minutes' => 845, 'overtime_minutes' => 395, 'break_minutes' => 0,
+            'result_snapshot' => ['issues' => [], 'ordinary_overtime' => ['daily_limit_minutes' => 450]],
+        ]);
+        $this->seed(AlertTypeSeeder::class);
+        $old = [];
+        foreach (['twelve_hours_exceeded', 'long_work_day', 'daily_overtime_over_three_hours'] as $rule) {
+            $type = AlertType::where('code', $rule)->firstOrFail();
+            $old[] = Alert::create([
+                'company_id' => $company->id, 'worker_id' => $day->worker_id,
+                'work_day_id' => $day->id, 'work_day_calculation_id' => $calculation->id,
+                'alert_type_id' => $type->id, 'rule_code' => $rule,
+                'fingerprint' => 'old-'.$rule.'-'.$day->id, 'severity' => 'warning',
+                'status' => Alert::STATUS_NEW, 'title' => $rule, 'description' => 'Aviso anterior', 'detected_at' => now(),
+            ]);
+        }
+        $before = $calculation->fresh()->getAttributes();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $day);
+        $this->assertEqualsCanonicalizing(['overtime_detected', 'daily_limit_exceeded', 'minimum_break_missing'],
+            $day->alerts()->whereIn('status', Alert::OPEN_STATUSES)->pluck('rule_code')->all());
+        foreach ($old as $alert) {
+            $this->assertTrue($alert->fresh()->isClosedByRecalculation());
+        }
+        $this->assertSame($before, $calculation->fresh()->getAttributes());
+    }
+
+    public function test_sunday_is_reviewed_daily_and_legacy_weekly_duplicate_is_retired(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'sunday_minutes' => 480,
+            'result_snapshot' => ['issues' => [], 'special_legal_cases' => ['scheduled_rest' => ['worked' => true]]],
+        ]);
+        $this->seed(AlertTypeSeeder::class);
+        $type = AlertType::where('code', 'weekly_sunday_work')->firstOrFail();
+        $legacy = Alert::create([
+            'company_id' => $company->id, 'worker_id' => $day->worker_id,
+            'work_day_id' => $day->id, 'work_day_calculation_id' => $calculation->id,
+            'alert_type_id' => $type->id, 'rule_code' => 'weekly_sunday_work',
+            'fingerprint' => 'legacy-sunday-'.$day->id, 'severity' => 'informational',
+            'status' => Alert::STATUS_NEW, 'title' => 'Domingos trabajados en la semana',
+            'description' => 'Resumen anterior', 'detected_at' => now(),
+            'metadata' => ['week_start' => '2026-08-03', 'week_end' => '2026-08-09'],
+        ]);
+        $before = $calculation->fresh()->getAttributes();
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $day);
+        $this->assertTrue($legacy->fresh()->isClosedByRecalculation());
+        $this->assertEqualsCanonicalizing(['sunday_work', 'scheduled_rest_work'],
+            $day->alerts()->whereIn('status', Alert::OPEN_STATUSES)->pluck('rule_code')->all());
+        $this->assertSame($before, $calculation->fresh()->getAttributes());
+    }
+
     public function test_evaluator_creates_new_daily_alerts_from_legal_snapshots_and_worker_age(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay([
@@ -202,8 +265,6 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertEqualsCanonicalizing([
             'overtime_detected',
             'daily_limit_exceeded',
-            'daily_overtime_over_three_hours',
-            'long_work_day',
             'minimum_break_missing',
             'scheduled_rest_work',
             'minor_daily_hours_exceeded',
@@ -214,7 +275,8 @@ class WorkDayAlertsFoundationTest extends TestCase
     public function test_evaluator_creates_weekly_accumulation_alerts_once_per_worker_week(): void
     {
         [$company, $workDay] = $this->calculatedWorkDay([
-            'total_work_minutes' => 600,
+            'total_work_minutes' => 601,
+            'ordinary_minutes' => 481,
             'overtime_minutes' => 120,
             'break_minutes' => 30,
             'result_snapshot' => [
@@ -266,14 +328,19 @@ class WorkDayAlertsFoundationTest extends TestCase
             ])
             ->get();
 
-        $this->assertCount(4, $weekly);
-        $this->assertSame(4, $weekly->unique('fingerprint')->count());
+        $this->assertCount(3, $weekly);
+        $this->assertSame(3, $weekly->unique('fingerprint')->count());
         $this->assertSame('2026-08-03', $weekly->first()->metadata['week_start']);
+        $ordinary = $weekly->firstWhere('rule_code', 'weekly_hours_exceeded');
+        $this->assertSame(2881, $ordinary->metadata['ordinary_minutes']);
+        $this->assertSame(1, $ordinary->metadata['excess_minutes']);
+        $this->assertStringContainsString('48 h 01 min de jornada en días laborables', $ordinary->description);
 
         WorkDayCalculation::query()
             ->where('company_id', $company->id)
             ->update([
                 'total_work_minutes' => 480,
+                'ordinary_minutes' => 480,
                 'overtime_minutes' => 0,
                 'sunday_minutes' => 0,
             ]);
@@ -313,6 +380,40 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->assertSame('scheduled_absence', $alert->rule_code);
         $this->assertSame('Falta', $alert->title);
         $this->assertSame(WorkDay::STATUS_WITH_ALERTS, $workDay->refresh()->status);
+    }
+
+    public function test_weekly_totals_do_not_treat_extra_hours_as_excess_ordinary_hours(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'total_work_minutes' => 4536, 'ordinary_minutes' => 2881, 'overtime_minutes' => 1655,
+            'result_snapshot' => ['ordinary_overtime' => ['daily_limit_minutes' => 480, 'weekly_limit_minutes' => 2880]],
+        ]);
+        $evaluate = app(EvaluateWorkDayAlertsAction::class);
+        $evaluate->handle($company, $day);
+        $ordinary = $day->alerts()->where('rule_code', 'weekly_hours_exceeded')->firstOrFail();
+        $extra = $day->alerts()->where('rule_code', 'weekly_overtime_exceeded')->firstOrFail();
+        $calculation->update(['total_work_minutes' => 4535, 'ordinary_minutes' => 2880]);
+        $before = $calculation->fresh()->getAttributes();
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_CLOSED, $ordinary->fresh()->status);
+        $extra->refresh();
+        $this->assertSame(Alert::STATUS_NEW, $extra->status);
+        $this->assertSame(2880, $extra->metadata['ordinary_minutes']);
+        $this->assertSame(1115, $extra->metadata['excess_minutes']);
+        $this->assertStringContainsString('27 h 35 min extra', $extra->description);
+        $this->assertStringContainsString('9 h 00 min', $extra->description);
+        $this->assertStringContainsString('18 h 35 min', $extra->description);
+        $actor = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+        app(ResolveAlertAction::class)->handle($company, $extra, $actor, ['status' => Alert::STATUS_CLOSED, 'resolution' => 'Seguimiento semanal registrado.']);
+        // Simulate the prior metadata and wording without discarding an unchanged review.
+        $extra->refresh();
+        $metadata = $extra->metadata;
+        unset($metadata['ordinary_minutes'], $metadata['excess_minutes']);
+        $extra->update(['metadata' => $metadata, 'description' => 'La suma semanal de tiempo extraordinario supera el límite aplicable y requiere revisión.']);
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_CLOSED, $extra->fresh()->status);
+        $this->assertSame($actor->id, $extra->fresh()->resolved_by);
+        $this->assertSame($before, $calculation->fresh()->getAttributes());
     }
 
     public function test_alerts_list_is_visible_to_managers_and_scoped_by_company(): void
@@ -482,12 +583,13 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
+            ->set('workspaceTab', 'incidencias')
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->call('openAlertsPanel', $workDay->id)
-            ->assertSee('Confirmar tiempo extra')
-            ->assertSee('No autorizar')
-            ->assertSee('No procede')
+            ->assertSee('Autorización administrativa confirmada')
+            ->assertSee('Sin autorización administrativa')
+            ->assertSee('Registrar revisión y seguimiento')
             ->assertDontSee('No aprobar');
     }
 
@@ -522,10 +624,10 @@ class WorkDayAlertsFoundationTest extends TestCase
         [$company, $workDay] = $this->calculatedWorkDay();
         $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
         $alerts = collect([
-            'twelve_hours_exceeded' => ['Confirmar jornada mayor a 12 horas', 'Justificar jornada mayor a 12 horas'],
-            'sunday_work' => ['Aprobar domingo trabajado', 'No aprobar domingo trabajado'],
-            'mandatory_rest_work' => ['Aprobar descanso trabajado', 'No aprobar descanso trabajado'],
-            'weekly_rest_missing' => ['Confirmar incidencia', 'Justificar descanso'],
+            'twelve_hours_exceeded' => ['Registrar revisión y seguimiento'],
+            'sunday_work' => ['Registrar revisión y seguimiento'],
+            'mandatory_rest_work' => ['Registrar revisión y seguimiento'],
+            'weekly_rest_missing' => ['Confirmar revisión semanal'],
         ])->mapWithKeys(function (array $labels, string $ruleCode) use ($company, $workDay): array {
             $type = AlertType::query()->create([
                 'code' => $ruleCode,
@@ -557,6 +659,7 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         $component = Volt::test('work-days.index')
+            ->set('workspaceTab', 'incidencias')
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->call('openAlertsPanel', $workDay->id);
@@ -568,7 +671,7 @@ class WorkDayAlertsFoundationTest extends TestCase
                 $component->assertSee($label);
             }
 
-            $component->assertSee('No procede');
+            $component->assertDontSee('Justificar jornada mayor a 12 horas');
         }
     }
 
@@ -581,10 +684,11 @@ class WorkDayAlertsFoundationTest extends TestCase
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('work-days.index')
+            ->set('workspaceTab', 'incidencias')
             ->set('dateFrom', '2026-08-03')
             ->set('dateTo', '2026-08-03')
             ->assertSee('Tiempo extra detectado')
-            ->assertSee('Dictaminar')
+            ->assertSee('Atender caso')
             ->call('openAlertsPanel', $workDay->id)
             ->assertSet('showAlertsPanel', true)
             ->assertSee('Tiempo extra detectado')
@@ -592,7 +696,7 @@ class WorkDayAlertsFoundationTest extends TestCase
             ->set('alertResolutionForm.resolution', 'Tiempo extra autorizado por operacion.')
             ->call('resolveSelectedAlert')
             ->assertHasNoErrors()
-            ->assertSet('showAlertsPanel', false);
+            ->assertSet('showAlertsPanel', true);
 
         $alert = Alert::query()->where('company_id', $company->id)->firstOrFail();
         $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->status);
@@ -636,6 +740,100 @@ class WorkDayAlertsFoundationTest extends TestCase
 
         Volt::test('alerts.index')
             ->assertForbidden();
+    }
+
+    public function test_overtime_review_margin_is_scoped_effective_and_preserves_all_worked_minutes(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'total_work_minutes' => 485, 'overtime_minutes' => 5,
+            'result_snapshot' => ['ordinary_overtime' => ['daily_limit_minutes' => 480]],
+        ]);
+        $evaluate = app(EvaluateWorkDayAlertsAction::class);
+        $evaluate->handle($company, $day);
+        $extra = $day->alerts()->where('rule_code', 'overtime_detected')->firstOrFail();
+        $limit = $day->alerts()->where('rule_code', 'daily_limit_exceeded')->firstOrFail();
+        $foreign = Company::factory()->create();
+        LegalParameter::query()->create([
+            'company_id' => $foreign->id, 'code' => 'overtime_review_margin_minutes',
+            'value' => ['minutes' => 10], 'effective_from' => '2026-08-01', 'status' => 'active',
+        ]);
+        $parameter = LegalParameter::query()->create([
+            'company_id' => $company->id, 'code' => 'overtime_review_margin_minutes',
+            'value' => ['minutes' => 5], 'effective_from' => '2026-08-04', 'status' => 'active',
+        ]);
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_NEW, $extra->fresh()->status);
+        $parameter->update(['effective_from' => '2026-08-03']);
+        $before = $calculation->fresh()->getAttributes();
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_CLOSED, $extra->fresh()->status);
+        $this->assertSame(Alert::STATUS_CLOSED, $limit->fresh()->status);
+        $this->assertNull($extra->fresh()->resolved_by);
+        $this->assertSame($before, $calculation->fresh()->getAttributes());
+        $calculation->update(['total_work_minutes' => 486, 'overtime_minutes' => 6]);
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_NEW, $extra->fresh()->status);
+        $this->assertSame(Alert::STATUS_NEW, $limit->fresh()->status);
+        $parameter->update(['value' => ['minutes' => 0]]);
+        $calculation->update(['total_work_minutes' => 485, 'overtime_minutes' => 5]);
+        $evaluate->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_NEW, $extra->fresh()->status);
+    }
+
+    public function test_margin_does_not_hide_incomplete_days_or_weekly_overtime_inside_daily_limit(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'total_work_minutes' => 485, 'overtime_minutes' => 5,
+            'result_snapshot' => ['ordinary_overtime' => ['daily_limit_minutes' => 480], 'issues' => ['missing_clock_out']],
+        ]);
+        LegalParameter::query()->create([
+            'company_id' => $company->id, 'code' => 'overtime_review_margin_minutes',
+            'value' => ['minutes' => 10], 'effective_from' => '2026-08-01', 'status' => 'active',
+        ]);
+        $evaluate = app(EvaluateWorkDayAlertsAction::class);
+        $evaluate->handle($company, $day);
+        $this->assertTrue($day->alerts()->where('rule_code', 'incomplete_work_day')->where('status', 'new')->exists());
+        $this->assertTrue($day->alerts()->where('rule_code', 'overtime_detected')->where('status', 'new')->exists());
+        $calculation->update(['total_work_minutes' => 480, 'ordinary_minutes' => 475, 'result_snapshot' => [
+            'issues' => [], 'ordinary_overtime' => ['daily_limit_minutes' => 480],
+        ]]);
+        $evaluate->handle($company, $day->fresh());
+        $this->assertTrue($day->alerts()->where('rule_code', 'overtime_detected')->where('status', 'new')->exists());
+    }
+
+    public function test_overtime_authorization_keeps_duration_review_independent(): void
+    {
+        [$company, $day, $calculation] = $this->calculatedWorkDay([
+            'total_work_minutes' => 870, 'overtime_minutes' => 390,
+            'result_snapshot' => ['ordinary_overtime' => ['daily_limit_minutes' => 480]],
+        ]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $day);
+        $actor = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
+        $extra = $day->alerts()->where('rule_code', 'overtime_detected')->firstOrFail();
+        $limit = $day->alerts()->where('rule_code', 'daily_limit_exceeded')->firstOrFail();
+        [$otherCompany, $otherDay] = $this->calculatedWorkDay([
+            'total_work_minutes' => 485, 'overtime_minutes' => 5,
+            'result_snapshot' => ['ordinary_overtime' => ['daily_limit_minutes' => 480]],
+        ]);
+        app(EvaluateWorkDayAlertsAction::class)->handle($otherCompany, $otherDay);
+        $otherLimit = $otherDay->alerts()->where('rule_code', 'daily_limit_exceeded')->firstOrFail();
+        $before = $calculation->fresh()->getAttributes();
+        app(ResolveAlertAction::class)->handle($company, $extra, $actor, [
+            'status' => Alert::STATUS_CORRECTED, 'resolution' => 'Sin autorización registrada.',
+        ]);
+        $this->assertSame(Alert::STATUS_NEW, $limit->fresh()->status);
+        app(ResolveAlertAction::class)->handle($company, $extra->fresh(), $actor, [
+            'status' => Alert::STATUS_JUSTIFIED, 'resolution' => 'Tiempo extra autorizado por supervisión.',
+        ]);
+        $limit->refresh();
+        $this->assertSame(Alert::STATUS_NEW, $limit->status);
+        $this->assertNull($limit->resolved_by);
+        $this->assertSame(Alert::STATUS_NEW, $otherLimit->fresh()->status);
+        $this->assertCount(3, $limit->metadata['exceeded_limits']);
+        $this->assertFalse($day->alerts()->whereIn('rule_code', ['twelve_hours_exceeded', 'daily_overtime_over_three_hours', 'long_work_day'])->exists());
+        $this->assertSame($before, $calculation->fresh()->getAttributes());
+        app(EvaluateWorkDayAlertsAction::class)->handle($company, $day->fresh());
+        $this->assertSame(Alert::STATUS_NEW, $limit->fresh()->status);
     }
 
     /**

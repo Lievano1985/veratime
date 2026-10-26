@@ -117,7 +117,7 @@ class AttendancePeriodClosingTest extends TestCase
         $this->assertSame(AttendancePeriod::STATUS_CLOSED, $closed->status);
         $this->assertSame($user->id, $closed->closed_by);
         $this->assertNotNull($closed->closed_at);
-        $this->assertSame('attendance_period.v1', $closed->snapshot_schema_version);
+        $this->assertSame('attendance_period.v2', $closed->snapshot_schema_version);
         $this->assertNotEmpty($closed->snapshot_canonical_json);
         $this->assertSame(hash('sha256', $closed->snapshot_canonical_json), $closed->snapshot_sha256);
         $this->assertSame(1, data_get($closed->report_summary, 'summary.workers_included'));
@@ -186,7 +186,7 @@ class AttendancePeriodClosingTest extends TestCase
         $this->closedAlert($company, $workDay, $worker, Alert::STATUS_JUSTIFIED);
         $this->punctualityAlert($company, $workDay, $worker, 'late_arrival_detected', Alert::STATUS_JUSTIFIED);
         $this->punctualityAlert($company, $workDay, $worker, 'early_departure_detected', Alert::STATUS_CORRECTED);
-        $period->forceFill(['status' => AttendancePeriod::STATUS_CLOSED])->save();
+        $period = app(CloseAttendancePeriodAction::class)->handle($company, $period, $user);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 

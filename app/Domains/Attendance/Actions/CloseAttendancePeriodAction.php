@@ -13,8 +13,8 @@ class CloseAttendancePeriodAction
     public function __construct(
         private readonly ValidateAttendancePeriodForClosingAction $validator,
         private readonly BuildAttendancePeriodReportAction $reportBuilder,
-    ) {
-    }
+        private readonly BuildAttendancePeriodPayrollRowsAction $payrollRows,
+    ) {}
 
     public function handle(Company $company, AttendancePeriod $period, User $actor): AttendancePeriod
     {
@@ -37,11 +37,20 @@ class CloseAttendancePeriodAction
             $period->refresh();
             $report = $this->reportBuilder->handle($period);
             $snapshot = [
-                'schema_version' => 1,
+                'schema_version' => 2,
+                'company_id' => $company->id,
+                'period_id' => $period->id,
                 'closed_at' => now()->toISOString(),
                 'closed_by' => $actor->id,
                 'validation' => $validation,
                 'report' => $report,
+                'payroll_export' => [
+                    'schema_version' => 'payroll_rows.v1',
+                    'company_id' => $company->id,
+                    'period_id' => $period->id,
+                    'columns' => array_column(ExportAttendancePeriodPayrollCsvAction::defaultColumns(), 'key'),
+                    'rows' => $this->payrollRows->handle($period),
+                ],
             ];
 
             $canonicalJson = $this->canonicalJson($snapshot);
@@ -52,7 +61,7 @@ class CloseAttendancePeriodAction
                 'closed_at' => now(),
                 'validation_summary' => $validation,
                 'report_summary' => $report,
-                'snapshot_schema_version' => 'attendance_period.v1',
+                'snapshot_schema_version' => 'attendance_period.v2',
                 'snapshot_canonical_json' => $canonicalJson,
                 'snapshot_sha256' => hash('sha256', $canonicalJson),
             ])->save();
@@ -62,7 +71,7 @@ class CloseAttendancePeriodAction
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     private function canonicalJson(array $payload): string
     {
@@ -72,7 +81,7 @@ class CloseAttendancePeriodAction
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      */
     private function sortKeys(&$value): void
     {

@@ -1,14 +1,36 @@
 <?php
 
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
+use App\Domains\Companies\Actions\GenerateCompanyDemoScenarioAction;
+use App\Domains\Companies\Actions\SuspendExpiredTrialCompaniesAction;
 use App\Domains\Products\Support\ProductAccess;
 use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Domains\WorkDays\Actions\RunDueWorkDaysAutoRefreshAction;
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\CompanyDemoScenario;
 use App\Models\WorkDayCalculation;
 use App\Support\ProductKey;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('demo:refresh-today {company}', function (GenerateCompanyDemoScenarioAction $action): int {
+    if (! app()->environment('local')) {
+        $this->error('Este comando solo esta disponible en el entorno local.');
+
+        return 1;
+    }
+    $scenario = CompanyDemoScenario::query()->where('company_id', $this->argument('company'))
+        ->where('status', CompanyDemoScenario::STATUS_COMPLETED)->first();
+    if (! $scenario) {
+        $this->error('La empresa no tiene un escenario demo completado.');
+
+        return 1;
+    }
+    $result = $action->refreshCurrentDay($scenario);
+    $this->info(json_encode($result->summary['current_day'], JSON_UNESCAPED_UNICODE));
+
+    return 0;
+})->purpose('Actualizar los marcajes demo del dia actual sin crear eventos futuros.');
 
 Artisan::command('work-days:refresh {--company=} {--from=} {--to=} {--center=} {--reason=}', function (ProcessCompanyWorkDaysAction $action, ProductAccess $productAccess): int {
     $companyId = $this->option('company');
@@ -84,7 +106,16 @@ Artisan::command('work-days:auto-refresh', function (RunDueWorkDaysAutoRefreshAc
     return 0;
 })->purpose('Refresh due work_days based on company configured local time.');
 
+Artisan::command('companies:suspend-expired-trials', function (SuspendExpiredTrialCompaniesAction $action): int {
+    $suspendedCompanies = $action->handle();
+
+    $this->info("Empresas de prueba suspendidas: {$suspendedCompanies}.");
+
+    return 0;
+})->purpose('Suspend expired company trials without deleting operational data.');
+
 Schedule::command('work-days:auto-refresh')->everyMinute()->withoutOverlapping();
+Schedule::command('companies:suspend-expired-trials')->everyMinute()->withoutOverlapping();
 Schedule::command('queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping();

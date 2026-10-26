@@ -21,7 +21,7 @@ class ApplySpecialLegalCasesForDateRangeAction
     /**
      * @return array{total: int, calculated: int, pending: int, sunday: int, mandatory_rest: int, weekly_rest_review: int}
      */
-    public function handle(Company $company, string $startDate, string $endDate, ?Center $center = null): array
+    public function handle(Company $company, string $startDate, string $endDate, ?Center $center = null, ?int $relationshipId = null): array
     {
         $start = CarbonImmutable::parse($startDate)->startOfWeek(CarbonInterface::MONDAY);
         $end = CarbonImmutable::parse($endDate)->endOfWeek(CarbonInterface::SUNDAY);
@@ -39,6 +39,7 @@ class ApplySpecialLegalCasesForDateRangeAction
         WorkDay::query()
             ->with(['activeCalculation', 'center'])
             ->where('company_id', $company->id)
+            ->when($relationshipId !== null, fn ($query) => $query->where('employment_relationship_id', $relationshipId))
             ->whereDate('work_date', '>=', $start->toDateString())
             ->whereDate('work_date', '<=', $end->toDateString())
             ->when($center, fn ($query) => $query->where('center_id', $center->id))
@@ -143,8 +144,8 @@ class ApplySpecialLegalCasesForDateRangeAction
     }
 
     /**
-     * @param Collection<int, MandatoryRestDay> $mandatoryRestDays
-     * @param array<string, mixed> $weeklyRestSnapshot
+     * @param  Collection<int, MandatoryRestDay>  $mandatoryRestDays
+     * @param  array<string, mixed>  $weeklyRestSnapshot
      */
     private function applyResult(
         WorkDayCalculation $calculation,
@@ -213,7 +214,7 @@ class ApplySpecialLegalCasesForDateRangeAction
     }
 
     /**
-     * @param array<string, mixed> $weeklyRestSnapshot
+     * @param  array<string, mixed>  $weeklyRestSnapshot
      */
     private function explanation(int $sundayMinutes, int $mandatoryRestMinutes, array $weeklyRestSnapshot, bool $scheduledRestWorked, bool $sundayRestWorked): string
     {

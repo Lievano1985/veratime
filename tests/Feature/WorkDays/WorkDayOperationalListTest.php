@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\WorkDays;
 
-use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Domains\Alerts\Actions\ResolveAlertAction;
-use App\Models\Center;
+use App\Domains\Organization\Actions\AssignOperationalScopeAction;
 use App\Models\Alert;
 use App\Models\AlertType;
+use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
@@ -18,6 +18,7 @@ use App\Models\WorkDayCalculation;
 use App\Models\Worker;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -77,6 +78,20 @@ class WorkDayOperationalListTest extends TestCase
         $this->assertSame(1, WorkDay::query()->where('company_id', $otherCompany->id)->count());
     }
 
+    public function test_accumulated_alerts_view_keeps_date_filters_empty(): void
+    {
+        [$company, $user] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA);
+        $today = CarbonImmutable::now('America/Mexico_City');
+
+        $this->actingAs($user)
+            ->withSession(['current_company_id' => $company->id])
+            ->get(route('work-days.index', ['acumulado' => 1, 'atencion' => 'requires_attention']))
+            ->assertOk()
+            ->assertSee('value=""', false)
+            ->assertDontSee('value="'.$today->startOfWeek(CarbonInterface::MONDAY)->toDateString().'"', false)
+            ->assertDontSee('value="'.$today->toDateString().'"', false);
+    }
+
     public function test_work_days_list_can_show_only_rows_with_incidents(): void
     {
         [$company, $user, $workDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
@@ -111,7 +126,7 @@ class WorkDayOperationalListTest extends TestCase
             ->assertOk()
             ->assertSee('Todas')
             ->assertSee('Situación')
-            ->assertSee('Atención')
+            ->assertSee('Estado de jornada')
             ->assertSee('Falta')
             ->assertSee('2026-08-03')
             ->assertDontSee('Bruno Normal');
@@ -297,8 +312,8 @@ class WorkDayOperationalListTest extends TestCase
             ]))
             ->assertOk()
             ->assertSee('Situación')
-            ->assertSee('Atención')
-            ->assertSee('Requiere dictamen')
+            ->assertSee('Estado de jornada')
+            ->assertSee('Por completar')
             ->assertSee('Falta')
             ->assertSee('Ana Demo Lopez')
             ->assertDontSee('Bruno Normal');
@@ -307,6 +322,12 @@ class WorkDayOperationalListTest extends TestCase
     public function test_requires_attention_filter_excludes_already_resolved_absence_candidates(): void
     {
         [$company, $user, $resolvedWorkDay] = $this->companyUserAndWorkDay(RoleKey::ADMIN_EMPRESA, 'ANA', 'Ana Demo Lopez');
+        $absenceCalculation = WorkDayCalculation::factory()->create([
+            'company_id' => $company->id, 'work_day_id' => $resolvedWorkDay->id,
+            'total_work_minutes' => 0, 'ordinary_minutes' => 0, 'overtime_minutes' => 0,
+            'result_snapshot' => ['issues' => [], 'attendance_incident' => ['incident_type' => 'unjustified_absence']],
+        ]);
+        $resolvedWorkDay->update(['active_calculation_id' => $absenceCalculation->id]);
 
         $rawWorker = Worker::factory()->create([
             'company_id' => $company->id,
@@ -585,10 +606,10 @@ class WorkDayOperationalListTest extends TestCase
             ->withSession(['current_company_id' => $company->id])
             ->get(route('work-days.index', ['from' => '2026-08-03', 'to' => '2026-08-03']))
             ->assertOk()
-            ->assertSee('Tiempo extra detectado')
+            ->assertDontSee('Tiempo extra detectado')
             ->assertSee('Jornada incompleta')
             ->assertDontSee('La jornada estaba programada y no tenia eventos validos de asistencia.')
-            ->assertSee('Pendiente');
+            ->assertSee('Por completar');
     }
 
     public function test_work_days_list_does_not_duplicate_absence_badge_when_alert_and_candidate_match(): void
@@ -705,7 +726,6 @@ class WorkDayOperationalListTest extends TestCase
         $this->assertSame(Alert::STATUS_JUSTIFIED, $alert->status);
         $this->assertSame($user->id, $alert->resolved_by);
     }
-
 
     public function test_supervisor_with_unit_scope_can_consult_only_scoped_work_days_without_resolving_alerts(): void
     {
@@ -851,6 +871,7 @@ class WorkDayOperationalListTest extends TestCase
 
         return $user;
     }
+
     private function companyUserAndWorkDay(string $roleKey, string $code = 'VT-001', string $name = 'Ana Demo Lopez'): array
     {
         $role = Role::query()->firstOrCreate(

@@ -842,10 +842,17 @@ Estado: implementado / candidato a cierre.
 | BL-ADM-A3-003 | Suspender usuario global | P1 | Usuario inactivo no puede ingresar ni operar en ninguna empresa |
 | BL-ADM-A3-004 | Suspender membresia | P1 | Membresia inactiva bloquea acceso solo a una empresa |
 | BL-ADM-A3-005 | Pruebas de acceso | P1 | Se validan bloqueo por cuenta, empresa, usuario y membresia |
+| BL-ADM-A3-006 | Periodo de prueba de empresa | P1 | Al crear una empresa se puede marcar como prueba; queda activa 15 días y una tarea programada la suspende al vencer, sin borrar datos |
 
 Regla de acceso A3:
 
 Un usuario puede operar una empresa solo si la cuenta cliente, la empresa, el usuario, la membresia y el rol/alcance aplicable estan activos.
+
+Regla de prueba A3:
+
+- La creación de empresa permite marcarla como **empresa de prueba**.
+- La empresa prueba inicia activa, conserva su fecha de vencimiento (`trial_ends_at`) y dura 15 días naturales desde el alta.
+- El comando `companies:suspend-expired-trials`, programado cada minuto por el scheduler de Laravel, suspende únicamente pruebas activas cuyo vencimiento ya ocurrió. No elimina ni altera evidencia operativa.
 
 ## Bloque Admin A4 - usuarios y membresias
 
@@ -879,9 +886,9 @@ Contenido fijo de `company_onboarding_v1`:
 - tres areas: Administracion, Operacion y Operacion nocturna;
 - diez trabajadores: dos administrativos, tres diurnos, tres mixtos y dos nocturnos;
 - cuatro turnos y cuatro perfiles: administrativo, operacion diurna, operacion mixta y turno nocturno asignado directamente a dos relaciones laborales;
-- dos semanas completas anteriores, con cuatro lotes de programacion publicados;
-- incidencias aprobadas coherentes sin marcajes incompatibles: vacaciones, permiso pagado, incapacidad y ausencia no justificada;
-- dos casos deliberadamente pendientes en el Centro Diurno: tiempo extra detectado y jornada mayor a doce horas;
+- dos semanas completas anteriores y la semana en curso, con seis lotes de programacion publicados; los marcajes de la semana en curso llegan solo hasta el ultimo dia cerrado;
+- incidencias aprobadas coherentes sin marcajes incompatibles: vacaciones, permisos pagados, incapacidad y ausencia no justificada, incluidas dos incidencias de la semana en curso;
+- catorce casos principales de revision en jornadas, distribuidos entre los dos ultimos dias cerrados y la semana anterior; combinan retardos, salidas anticipadas, registros incompletos y jornadas extendidas. El demo agrega marcajes de descanso semanal para activar indicadores acumulados; todas las alertas preventivas se pueden revisar desde la bandeja de jornadas;
 - dos periodos quincenales: el nocturno queda listo para validar, cerrar y exportar; el diurno conserva los casos pendientes para practicar revision y dictamen.
 
 Reglas:

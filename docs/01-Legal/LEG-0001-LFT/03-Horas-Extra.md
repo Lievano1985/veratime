@@ -54,6 +54,14 @@ No incluye:
 
 ## 3. Fundamento legal relevante
 
+### Separación operativa del cálculo de jornadas
+
+El motor distingue prolongación diaria, tiempo extraordinario por límite semanal en días laborables y trabajo en descanso. Cumplir el máximo diario no excluye el excedente de una jornada ordinaria semanal aplicable. En días laborables, la parte diaria sin prolongación que rebasa el saldo ordinario semanal se clasifica como extra con origen semanal. La jornada base en descanso asignado u obligatorio no se convierte automáticamente en extra ni consume ese saldo; mantiene su concepto propio según `04-Descansos.md`. Una prolongación real del día conserva su origen diario. La asignación de bandas es evidencia de clasificación; no suma mecánicamente recargos de descanso y extra ni determina por sí sola el pago definitivo.
+
+En el cálculo `ordinary_overtime` versión 3, `ordinary_minutes` conserva por compatibilidad el nombre técnico y representa jornada sin extra; puede incluir jornada base en descanso y no implica pago ordinario. `overtime_minutes` suma `daily_overtime_minutes` y `weekly_overtime_minutes`, sin solaparse. Jornada sin extra + extra = tiempo trabajado. `weekly_base_minutes` conserva la parte de días laborables anterior a la clasificación semanal, excluyendo descanso y prolongación diaria; sirve para comparar con la referencia semanal sin ocultar el excedente por haberlo clasificado. `rest_work_minutes` es una dimensión del mismo tiempo trabajado, no horas adicionales. El antiguo `weekly_ordinary_excess_minutes` conserva el aporte de origen semanal por compatibilidad. Los indicadores y bandas consumen esta separación.
+
+Referencias de revisión: [LFT, artículos 59, 61, 66–73](https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf), [transitorios de la reforma de 2026](https://sidof.segob.gob.mx/notas/docFuente/5786537) y [distinción judicial entre horas extra y descanso trabajado](https://sjf2.scjn.gob.mx/detalle/ejecutoria/25137). Ejemplos de aceptación: 2026, 48 h laborables + 9 h de prolongación + 8 h en descanso conserva 9 h extra, no 17; 2027, 48 h laborables sin prolongación contiene 2 h de origen semanal frente a 46 h; 46 h laborables + 9 h de prolongación + 8 h en descanso conserva 9 h extra, sin convertir todo el descanso a banda triple.
+
 | Fundamento | Regla o criterio jurídico | Implicación para Vera Time |
 | --- | --- | --- |
 | LFT, artículo 65 | Permite prolongar la jornada por el tiempo estrictamente indispensable ante siniestro o riesgo inminente. | Clasificar emergencias por separado y exigir causa documentada. |
@@ -112,6 +120,8 @@ Además, el artículo 66 permite distribuir ese tiempo:
 - En un máximo de cuatro días dentro de la semana.
 
 Estos parámetros deben almacenarse con vigencia. No deberán escribirse directamente como constantes dispersas en el código.
+
+Implementación del motor: la banda semanal de tiempo extraordinario con pago doble se resuelve desde el mismo catálogo legal versionado y queda registrada en el snapshot del cálculo. La alerta semanal utiliza ese límite resuelto, no un valor fijo de nueve horas.
 
 ### 4.4 El excedente sobre el artículo 66 se paga al triple y tiene un límite adicional
 

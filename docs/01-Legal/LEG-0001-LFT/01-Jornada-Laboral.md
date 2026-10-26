@@ -1,4 +1,4 @@
-﻿---
+---
 id: LEG-0001-01
 title: Jornada laboral
 project: Vera Time
@@ -93,6 +93,8 @@ El texto vigente establece cuarenta horas semanales, pero el decreto ordena alca
 | 2030 en adelante | 40 horas | Regla semanal ordinaria objetivo. |
 
 Estos valores no deben quedar escritos directamente en el código. Deben almacenarse como parámetros legales con fecha de inicio y fin de vigencia.
+
+Implementación del motor: el catálogo legal registra las cinco versiones desde su publicación. Al calcular una jornada, se resuelve la versión aplicable a la fecha trabajada y el snapshot conserva la regla utilizada. Un límite interno de empresa puede ser más favorable, pero no puede superar el máximo legal vigente.
 
 ### 3.5 El sistema debe registrar la realidad, aun cuando exista una desviación
 
@@ -300,3 +302,7 @@ Este documento se considerará aprobado cuando:
   https://www.dof.gob.mx/nota_to_pdf.php?edicion=VES&fecha=01%2F05%2F2026
 
 
+
+### Conservación del catálogo al instalar o actualizar
+
+La instalación progresiva comparte `EnsureLegalRuleCatalogAction` entre seeder y migración. No reescribe identificadores, valores, fuentes, vigencias ni estados de aprobación existentes. Una versión base conocida con vigencia abierta se conserva: el resolver prioriza las nuevas versiones por inicio de vigencia. Una versión revisada o una regla inactiva no se activa automáticamente. Si un contenido o una vigencia personalizada entra en conflicto con el catálogo progresivo, se revierte esa actualización del catálogo y se solicita una revisión explícita del conflicto, sin alterar evidencia histórica.

@@ -3,6 +3,9 @@
 namespace App\Domains\Alerts\Actions;
 
 use App\Domains\Alerts\Support\AlertTypeCatalog;
+use App\Domains\LegalRules\Actions\ResolveLegalRuleVersionForDateAction;
+use App\Domains\WorkDays\Actions\ResolveOvertimeReviewMarginAction;
+use App\Domains\WorkDays\Support\WorkDayTimeBreakdown;
 use App\Models\Alert;
 use App\Models\AlertType;
 use App\Models\Company;
@@ -34,31 +37,37 @@ class EvaluateWorkDayAlertsAction
 
     private const BREAK_REVIEW_TRIGGER_MINUTES = 360;
 
-    private const WEEKLY_OVERTIME_REVIEW_MINUTES = 540;
-
     private const WEEKLY_OVERTIME_DAYS_REVIEW_LIMIT = 3;
+
+    public function __construct(
+        private readonly ResolveLegalRuleVersionForDateAction $rules,
+        private readonly ResolveOvertimeReviewMarginAction $overtimeMargin,
+    ) {}
 
     /**
      * @return array{created_or_updated: int, closed: int, open: int}
      */
-    public function handle(Company $company, WorkDay $workDay): array
+    public function handle(Company $company, WorkDay $workDay, bool $includeCompanyCleanup = true): array
     {
         if ($workDay->company_id !== $company->id) {
             throw new \InvalidArgumentException('La jornada debe pertenecer a la empresa activa.');
         }
 
-        return DB::transaction(function () use ($company, $workDay): array {
+        return DB::transaction(function () use ($company, $workDay, $includeCompanyCleanup): array {
             $workDay = WorkDay::query()
                 ->with(['activeCalculation'])
                 ->where('company_id', $company->id)
                 ->lockForUpdate()
                 ->findOrFail($workDay->id);
             $calculation = $workDay->activeCalculation;
-            $triggered = $this->triggeredAlerts($workDay, $calculation);
+            $withinMargin = $this->overtimeMargin->handle($company, $workDay)['within_margin'];
+            $triggered = $this->triggeredAlerts($workDay, $calculation, $withinMargin);
             $triggeredCodes = array_keys($triggered);
             $closed = $this->closeStaleAlerts($company, $workDay, $triggeredCodes);
             $closed += $this->closeStaleWeeklyAlerts($company, $workDay, $triggeredCodes);
-            $closed += $this->closeLegacyWeeklyRestAlerts($company);
+            if ($includeCompanyCleanup) {
+                $closed += $this->closeLegacyWeeklyRestAlerts($company);
+            }
             $createdOrUpdated = 0;
 
             foreach ($triggered as $code => $payload) {
@@ -66,6 +75,44 @@ class EvaluateWorkDayAlertsAction
                 $representativeWorkDay = $this->representativeWorkDay($company, $workDay, $code, $payload);
                 $representativeCalculationId = $representativeWorkDay->active_calculation_id ?: $calculation?->id;
 
+                $existing = Alert::query()->where('company_id', $company->id)
+                    ->where('fingerprint', $this->fingerprint($workDay, $code))->lockForUpdate()->first();
+                $previousMetadata = $existing?->metadata ?? [];
+                $previousEvaluationMetadata = $previousMetadata;
+                unset($previousEvaluationMetadata['resolution'], $previousEvaluationMetadata['resolution_history'], $previousEvaluationMetadata['evaluation_signature']);
+                $sameResult = $existing && $existing->description === $payload['description']
+                    && $previousEvaluationMetadata == $payload['metadata'];
+                if ($existing && $code === 'overtime_detected' && ($payload['metadata']['weekly_overtime_minutes'] ?? 0) === 0) {
+                    $comparable = $payload['metadata'];
+                    foreach (['daily_overtime_minutes', 'weekly_overtime_minutes'] as $derived) {
+                        if (! array_key_exists($derived, $previousEvaluationMetadata)) {
+                            unset($comparable[$derived]);
+                        }
+                    }
+                    $sameResult = $previousEvaluationMetadata == $comparable;
+                }
+                if ($existing && in_array($code, self::WEEKLY_RULES, true) && $code !== 'weekly_hours_exceeded') {
+                    // New explanatory fields do not invalidate a review of unchanged weekly totals.
+                    $comparable = $payload['metadata'];
+                    foreach (['ordinary_minutes', 'excess_minutes', 'daily_overtime_minutes', 'weekly_overtime_minutes', 'rest_work_minutes'] as $derived) {
+                        if (! array_key_exists($derived, $previousEvaluationMetadata)) {
+                            unset($comparable[$derived]);
+                        }
+                    }
+                    $sameResult = $previousEvaluationMetadata == $comparable;
+                }
+                $keepResolution = $sameResult && $existing->resolved_by && ! in_array($existing->status, Alert::OPEN_STATUSES, true);
+                $history = $previousMetadata['resolution_history'] ?? [];
+                if ($existing?->resolved_by && ! $keepResolution) {
+                    $history[] = ['previous_status' => $existing->status, 'previous_resolution' => $existing->resolution,
+                        'previous_resolved_by' => $existing->resolved_by, 'previous_resolved_at' => $existing->resolved_at?->toIso8601String(),
+                        'reason' => 'Resultado modificado por recalculo', 'changed_at' => CarbonImmutable::now('UTC')->toIso8601String()];
+                }
+                $metadata = $payload['metadata'];
+                $metadata['resolution_history'] = $history;
+                if ($keepResolution && isset($previousMetadata['resolution'])) {
+                    $metadata['resolution'] = $previousMetadata['resolution'];
+                }
                 $alert = Alert::query()->updateOrCreate(
                     [
                         'company_id' => $company->id,
@@ -77,15 +124,15 @@ class EvaluateWorkDayAlertsAction
                         'work_day_id' => $representativeWorkDay->id,
                         'work_day_calculation_id' => $representativeCalculationId,
                         'severity' => $payload['severity'] ?? $type->default_severity,
-                        'status' => Alert::STATUS_NEW,
+                        'status' => $keepResolution ? $existing->status : Alert::STATUS_NEW,
                         'title' => $payload['title'],
                         'description' => $payload['description'],
                         'rule_code' => $code,
-                        'detected_at' => CarbonImmutable::now('UTC'),
-                        'resolution' => null,
-                        'resolved_by' => null,
-                        'resolved_at' => null,
-                        'metadata' => $payload['metadata'],
+                        'detected_at' => $sameResult ? $existing->detected_at : CarbonImmutable::now('UTC'),
+                        'resolution' => $keepResolution ? $existing->resolution : null,
+                        'resolved_by' => $keepResolution ? $existing->resolved_by : null,
+                        'resolved_at' => $keepResolution ? $existing->resolved_at : null,
+                        'metadata' => $metadata,
                     ],
                 );
 
@@ -118,7 +165,7 @@ class EvaluateWorkDayAlertsAction
     /**
      * @return array<string, array{title: string, description: string, severity?: string, metadata: array<string, mixed>}>
      */
-    private function triggeredAlerts(WorkDay $workDay, ?WorkDayCalculation $calculation): array
+    private function triggeredAlerts(WorkDay $workDay, ?WorkDayCalculation $calculation, bool $withinMargin = false): array
     {
         $alerts = [];
 
@@ -147,11 +194,13 @@ class EvaluateWorkDayAlertsAction
             ];
         }
 
-        if ($calculation->overtime_minutes > 0) {
+        if ($calculation->overtime_minutes > 0 && ! $withinMargin) {
             $alerts['overtime_detected'] = [
                 'title' => 'Tiempo extra detectado',
-                'description' => "Se calcularon {$calculation->overtime_minutes} minutos extraordinarios.",
-                'metadata' => ['overtime_minutes' => $calculation->overtime_minutes],
+                'description' => "Se calcularon {$calculation->overtime_minutes} minutos extra: ".WorkDayTimeBreakdown::dailyExtra($calculation).' por prolongación diaria y '.WorkDayTimeBreakdown::weeklyExtra($calculation).' por límite semanal en días laborables. El descanso trabajado se identifica por separado.',
+                'metadata' => ['overtime_minutes' => $calculation->overtime_minutes,
+                    'daily_overtime_minutes' => WorkDayTimeBreakdown::dailyExtra($calculation),
+                    'weekly_overtime_minutes' => WorkDayTimeBreakdown::weeklyExtra($calculation)],
             ];
         }
 
@@ -168,14 +217,6 @@ class EvaluateWorkDayAlertsAction
                 'title' => 'Salida anticipada',
                 'description' => "Se calcularon {$calculation->early_departure_minutes} minutos de salida anticipada.",
                 'metadata' => ['early_departure_minutes' => $calculation->early_departure_minutes],
-            ];
-        }
-
-        if ($calculation->total_work_minutes > 720) {
-            $alerts['twelve_hours_exceeded'] = [
-                'title' => 'Jornada mayor a 12 horas',
-                'description' => "La jornada acumula {$calculation->total_work_minutes} minutos trabajados.",
-                'metadata' => ['total_work_minutes' => $calculation->total_work_minutes],
             ];
         }
 
@@ -197,36 +238,30 @@ class EvaluateWorkDayAlertsAction
 
         $dailyLimit = (int) data_get($calculation->result_snapshot, 'ordinary_overtime.daily_limit_minutes', 0);
 
-        if ($dailyLimit > 0 && $calculation->total_work_minutes > $dailyLimit) {
+        $durationReasons = [];
+        if ($dailyLimit > 0 && $calculation->total_work_minutes > $dailyLimit && ! $withinMargin) {
+            $durationReasons[] = 'Supera la jornada diaria de referencia ('.$dailyLimit.' minutos).';
+        }
+        if (WorkDayTimeBreakdown::dailyExtra($calculation) > self::DAILY_OVERTIME_REVIEW_MINUTES) {
+            $durationReasons[] = 'Supera tres horas extra por prolongación diaria.';
+        }
+        if ($calculation->total_work_minutes > 720) {
+            $durationReasons[] = 'Supera doce horas trabajadas.';
+        } elseif ($calculation->total_work_minutes > self::LONG_WORK_DAY_REVIEW_MINUTES) {
+            $durationReasons[] = 'Supera diez horas trabajadas.';
+        }
+        if ($durationReasons !== []) {
             $alerts['daily_limit_exceeded'] = [
-                'title' => 'Jornada excedida',
-                'description' => 'El tiempo trabajado supera el límite diario aplicable y requiere revisión.',
+                'title' => 'Duración de jornada por revisar',
+                'description' => implode(' ', $durationReasons).' Revisar la duración es independiente de autorizar las horas extra.',
                 'metadata' => [
+                    'duration_review_version' => 1,
                     'total_work_minutes' => $calculation->total_work_minutes,
                     'daily_limit_minutes' => $dailyLimit,
+                    'daily_overtime_minutes' => WorkDayTimeBreakdown::dailyExtra($calculation),
+                    'exceeded_limits' => $durationReasons,
                 ],
-            ];
-        }
-
-        if ($calculation->overtime_minutes > self::DAILY_OVERTIME_REVIEW_MINUTES) {
-            $alerts['daily_overtime_over_three_hours'] = [
-                'title' => 'Tiempo extra diario superior a tres horas',
-                'description' => 'La jornada acumula más de tres horas extraordinarias y requiere revisión.',
-                'metadata' => [
-                    'overtime_minutes' => $calculation->overtime_minutes,
-                    'threshold_minutes' => self::DAILY_OVERTIME_REVIEW_MINUTES,
-                ],
-            ];
-        }
-
-        if ($calculation->total_work_minutes > self::LONG_WORK_DAY_REVIEW_MINUTES) {
-            $alerts['long_work_day'] = [
-                'title' => 'Jornada larga',
-                'description' => 'La jornada supera diez horas trabajadas y requiere revisión preventiva.',
-                'metadata' => [
-                    'total_work_minutes' => $calculation->total_work_minutes,
-                    'threshold_minutes' => self::LONG_WORK_DAY_REVIEW_MINUTES,
-                ],
+                'severity' => $calculation->total_work_minutes > 720 ? AlertType::SEVERITY_CRITICAL : AlertType::SEVERITY_WARNING,
             ];
         }
 
@@ -479,34 +514,41 @@ class EvaluateWorkDayAlertsAction
         }
 
         $totalWorkMinutes = (int) $calculations->sum('total_work_minutes');
+        $ordinaryMinutes = (int) $calculations->sum(fn (WorkDayCalculation $calculation): int => WorkDayTimeBreakdown::weeklyBase($calculation));
         $overtimeMinutes = (int) $calculations->sum('overtime_minutes');
         $overtimeDays = $calculations->filter(fn (WorkDayCalculation $calculation): bool => $calculation->overtime_minutes > 0)->count();
         $sundaysWorked = $calculations->filter(fn (WorkDayCalculation $calculation): bool => $calculation->sunday_minutes > 0)->count();
         $weeklyLimit = (int) data_get($calculations->first()?->result_snapshot, 'ordinary_overtime.weekly_limit_minutes', 0);
+        $weeklyOvertimeLimit = $this->weeklyOvertimeLimit($workDay, $calculations->first());
         $metadata = [
             'week_start' => $weekStart,
             'week_end' => $weekEnd,
             'total_work_minutes' => $totalWorkMinutes,
+            'ordinary_minutes' => $ordinaryMinutes,
+            'daily_overtime_minutes' => (int) $calculations->sum(fn (WorkDayCalculation $calculation): int => WorkDayTimeBreakdown::dailyExtra($calculation)),
+            'weekly_overtime_minutes' => (int) $calculations->sum(fn (WorkDayCalculation $calculation): int => WorkDayTimeBreakdown::weeklyExtra($calculation)),
+            'rest_work_minutes' => (int) $calculations->sum(fn (WorkDayCalculation $calculation): int => (int) data_get($calculation->result_snapshot, 'ordinary_overtime.rest_work_minutes', 0)),
             'overtime_minutes' => $overtimeMinutes,
             'overtime_days' => $overtimeDays,
             'sundays_worked' => $sundaysWorked,
             'weekly_limit_minutes' => $weeklyLimit,
+            'weekly_overtime_limit_minutes' => $weeklyOvertimeLimit,
         ];
         $alerts = [];
 
-        if ($weeklyLimit > 0 && $totalWorkMinutes > $weeklyLimit) {
+        if ($weeklyLimit > 0 && $ordinaryMinutes > $weeklyLimit) {
             $alerts['weekly_hours_exceeded'] = [
-                'title' => 'Horas semanales superiores al máximo',
-                'description' => 'La suma semanal trabajada supera el límite aplicable y requiere revisión.',
-                'metadata' => $metadata,
+                'title' => 'Exceso del acumulado semanal de jornada',
+                'description' => 'Se acumularon '.$this->durationLabel($ordinaryMinutes).' de jornada en días laborables, sin prolongación diaria; referencia semanal: '.$this->durationLabel($weeklyLimit).'; exceso: '.$this->durationLabel($ordinaryMinutes - $weeklyLimit).'. La parte extraordinaria por límite semanal se identifica con ese origen. El descanso trabajado se revisa por separado.',
+                'metadata' => $metadata + ['excess_minutes' => $ordinaryMinutes - $weeklyLimit],
             ];
         }
 
-        if ($overtimeMinutes > self::WEEKLY_OVERTIME_REVIEW_MINUTES) {
+        if ($weeklyOvertimeLimit > 0 && $overtimeMinutes > $weeklyOvertimeLimit) {
             $alerts['weekly_overtime_exceeded'] = [
-                'title' => 'Tiempo extra semanal superior a nueve horas',
-                'description' => 'La suma semanal de tiempo extraordinario supera nueve horas y requiere revisión.',
-                'metadata' => $metadata + ['threshold_minutes' => self::WEEKLY_OVERTIME_REVIEW_MINUTES],
+                'title' => 'Horas extra semanales superiores al límite',
+                'description' => 'Se acumularon '.$this->durationLabel($overtimeMinutes).' extra (prolongación diaria + límite semanal en días laborables); umbral de revisión: '.$this->durationLabel($weeklyOvertimeLimit).'; exceso: '.$this->durationLabel($overtimeMinutes - $weeklyOvertimeLimit).'. La jornada base en descanso no se convierte automáticamente en extra.',
+                'metadata' => $metadata + ['threshold_minutes' => $weeklyOvertimeLimit, 'excess_minutes' => $overtimeMinutes - $weeklyOvertimeLimit],
             ];
         }
 
@@ -518,15 +560,28 @@ class EvaluateWorkDayAlertsAction
             ];
         }
 
-        if ($sundaysWorked > 0) {
-            $alerts['weekly_sunday_work'] = [
-                'title' => 'Domingos trabajados en la semana',
-                'description' => 'La semana registra trabajo en domingo para revisión operativa.',
-                'metadata' => $metadata,
-            ];
-        }
+        // Sunday work is reviewed on its daily case. Its weekly count remains
+        // available in summary metadata without creating a second review task.
 
         return $alerts;
+    }
+
+    private function durationLabel(int $minutes): string
+    {
+        return intdiv($minutes, 60).' h '.str_pad((string) ($minutes % 60), 2, '0', STR_PAD_LEFT).' min';
+    }
+
+    private function weeklyOvertimeLimit(WorkDay $workDay, ?WorkDayCalculation $calculation): int
+    {
+        $snapshotLimit = (int) data_get($calculation?->result_snapshot, 'ordinary_overtime.weekly_double_overtime_limit_minutes', 0);
+
+        if ($snapshotLimit > 0) {
+            return $snapshotLimit;
+        }
+
+        $version = $this->rules->handle('weekly_overtime_double_limit', $workDay->work_date);
+
+        return (int) ($version?->value['minutes'] ?? 0);
     }
 
     /**

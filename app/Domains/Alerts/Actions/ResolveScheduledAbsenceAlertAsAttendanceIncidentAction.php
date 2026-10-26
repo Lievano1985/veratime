@@ -6,8 +6,8 @@ use App\Domains\WorkDays\Actions\ProcessSingleWorkDayAction;
 use App\Models\Alert;
 use App\Models\AttendanceIncident;
 use App\Models\Company;
-use App\Models\WorkDayCalculation;
 use App\Models\User;
+use App\Models\WorkDayCalculation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +21,7 @@ class ResolveScheduledAbsenceAlertAsAttendanceIncidentAction
     ) {}
 
     /**
-     * @param array{status?: string, incident_type?: string, payment_status?: string, resolution: string} $data
+     * @param  array{status?: string, incident_type?: string, payment_status?: string, resolution: string}  $data
      */
     public function handle(Company $company, Alert $alert, User $actor, array $data): ?AttendanceIncident
     {
@@ -64,7 +64,7 @@ class ResolveScheduledAbsenceAlertAsAttendanceIncidentAction
 
             $linkedIncident = $this->linkedIncident($company, $lockedAlert);
 
-            if ($status !== Alert::STATUS_JUSTIFIED) {
+            if (! in_array($status, [Alert::STATUS_JUSTIFIED, Alert::STATUS_CORRECTED], true)) {
                 if ($linkedIncident && $linkedIncident->status === AttendanceIncident::STATUS_APPROVED) {
                     $metadata = $linkedIncident->metadata ?: [];
                     $metadata['cancel_reason'] = $resolution;
@@ -83,6 +83,10 @@ class ResolveScheduledAbsenceAlertAsAttendanceIncidentAction
 
             $type = (string) ($data['incident_type'] ?? '');
             $paymentStatus = (string) ($data['payment_status'] ?? '');
+            if ($status === Alert::STATUS_CORRECTED) {
+                $type = AttendanceIncident::TYPE_UNJUSTIFIED_ABSENCE;
+                $paymentStatus = AttendanceIncident::PAYMENT_UNPAID;
+            }
 
             if (! in_array($type, $this->allowedAbsenceTypes(), true)) {
                 throw new InvalidArgumentException('Selecciona un tipo de ausencia valido.');
@@ -172,6 +176,7 @@ class ResolveScheduledAbsenceAlertAsAttendanceIncidentAction
     private function allowedAbsenceTypes(): array
     {
         return [
+            AttendanceIncident::TYPE_UNJUSTIFIED_ABSENCE,
             AttendanceIncident::TYPE_VACATION,
             AttendanceIncident::TYPE_INCAPACITY,
             AttendanceIncident::TYPE_PAID_PERMISSION,

@@ -20,6 +20,8 @@ class CompanyFactory extends Factory
             'tax_id' => strtoupper(fake()->unique()->bothify('???######???')),
             'timezone' => 'America/Mexico_City',
             'status' => 'active',
+            'is_trial' => false,
+            'trial_ends_at' => null,
             'settings' => [],
         ];
     }

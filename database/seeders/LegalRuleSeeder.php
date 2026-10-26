@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domains\LegalRules\Actions\EnsureLegalRuleCatalogAction;
 use App\Models\LegalRule;
 use App\Models\LegalRuleVersion;
 use Illuminate\Database\Seeder;
@@ -50,21 +51,16 @@ class LegalRuleSeeder extends Seeder
             unit: 'minutes',
         );
 
-        $this->seedRule(
-            code: 'maximum_weekly_hours',
-            name: 'Limite semanal ordinario',
-            category: 'weekly_limit',
-            value: ['minutes' => 2880],
-            unit: 'minutes',
-        );
+        app(EnsureLegalRuleCatalogAction::class)->ensureProgressiveWeeklyLimits();
     }
 
     /**
-     * @param array<string, mixed> $value
+     * @param  array<string, mixed>  $value
+     * @param  list<array{version: int, value: array<string, mixed>, effective_from: string, effective_to: string|null}>|null  $versions
      */
-    private function seedRule(string $code, string $name, string $category, array $value, string $unit): void
+    private function seedRule(string $code, string $name, string $category, array $value, string $unit, ?array $versions = null): void
     {
-        $rule = LegalRule::query()->updateOrCreate(
+        $rule = LegalRule::query()->firstOrCreate(
             ['code' => $code],
             [
                 'name' => $name,
@@ -74,18 +70,25 @@ class LegalRuleSeeder extends Seeder
             ],
         );
 
-        LegalRuleVersion::query()->updateOrCreate(
-            ['legal_rule_id' => $rule->id, 'version' => 1],
-            [
-                'value' => $value,
-                'unit' => $unit,
-                'source_reference' => 'docs/06-Legal/LEG-0001-LFT-MEXICO.md',
-                'effective_from' => '2026-01-01',
-                'effective_to' => null,
-                'status' => LegalRuleVersion::STATUS_ACTIVE,
-                'notes' => 'Version base para MVP; las reglas futuras deben versionarse sin sobrescribir historicos.',
-                'created_by' => null,
-            ],
-        );
+        foreach ($versions ?? [[
+            'version' => 1,
+            'value' => $value,
+            'effective_from' => '2026-01-01',
+            'effective_to' => null,
+        ]] as $version) {
+            LegalRuleVersion::query()->firstOrCreate(
+                ['legal_rule_id' => $rule->id, 'version' => $version['version']],
+                [
+                    'value' => $version['value'],
+                    'unit' => $unit,
+                    'source_reference' => 'https://www.dof.gob.mx/abrirPDF.php?anio=2026&archivo=01052026-VES.pdf',
+                    'effective_from' => $version['effective_from'],
+                    'effective_to' => $version['effective_to'],
+                    'status' => LegalRuleVersion::STATUS_ACTIVE,
+                    'notes' => 'Regla legal versionada por vigencia; no sobrescribe calculos historicos.',
+                    'created_by' => null,
+                ],
+            );
+        }
     }
 }

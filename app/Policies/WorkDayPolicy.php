@@ -15,6 +15,12 @@ class WorkDayPolicy
         return $this->canViewWorkDays($user, $company);
     }
 
+    public function recalculate(User $user, WorkDay $workDay): bool
+    {
+        return $this->view($user, $workDay)
+            && in_array($user->roleKeyForCompany($workDay->company), RoleKey::companyManagers(), true);
+    }
+
     public function view(User $user, WorkDay $workDay): bool
     {
         if (! $workDay->company || ! $this->canViewWorkDays($user, $workDay->company)) {

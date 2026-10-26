@@ -1,4 +1,4 @@
-﻿---
+---
 id: DEP-0001
 title: Estrategia de despliegue del MVP
 project: Vera Time
@@ -1359,3 +1359,9 @@ docs/13-Backlog/BL-0001-BACKLOG-MVP-INICIAL.md
 ```
 
 Ese documento convertirá todo lo definido en épicas, módulos, historias y prioridades para iniciar desarrollo con Codex.
+
+## Corrección de fechas de marcaje y actualización legal (19-10-2026)
+
+Las instalaciones nuevas definen las fechas funcionales de kiosco y marcaje móvil como `datetime`. Las existentes ejecutan `2026_10_19_000000_widen_marking_dates_to_datetime`, que conserva datos y nulabilidad al ampliar los tipos. Esta migración no vuelve a reducir los tipos en `down()`, pues podrían existir fechas fuera del rango de `timestamp`. No requiere recrear tablas de operación.
+
+La actualización progresiva de límites legales preserva versiones y estados existentes. Ante un conflicto de valor o vigencia, la actualización del catálogo se revierte y el despliegue debe revisar el conflicto en una copia de la base antes de continuar. No resolverlo borrando versiones ni ejecutando `migrate:fresh` en una base con datos.

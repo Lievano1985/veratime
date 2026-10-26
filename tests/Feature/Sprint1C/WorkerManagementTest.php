@@ -1,5 +1,7 @@
 <?php
 
+use App\Domains\Workers\Actions\CreateWorkerAction;
+use App\Domains\Workers\Actions\UpdateWorkerAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
@@ -815,3 +817,15 @@ function workerUserWithCompany(Company $company, string $roleKey = RoleKey::ADMI
 
     return $user;
 }
+
+it('worker actions normalize an empty birth date and preserve valid dates', function (): void {
+    $company = Company::factory()->create();
+    $data = ['employee_code' => 'EMPTY-DATE', 'full_name' => 'Fecha opcional', 'birth_date' => '', 'status' => 'active'];
+    $worker = app(CreateWorkerAction::class)->handle($company, $data);
+    expect($worker->fresh()->getRawOriginal('birth_date'))->toBeNull();
+    $worker->update(['birth_date' => '1990-01-01']);
+    $updated = app(UpdateWorkerAction::class)->handle($worker, $data);
+    expect($updated->getRawOriginal('birth_date'))->toBeNull();
+    $data['birth_date'] = '1991-02-03';
+    expect(app(UpdateWorkerAction::class)->handle($worker, $data)->birth_date->format('Y-m-d'))->toBe('1991-02-03');
+});

@@ -335,6 +335,9 @@ new class extends Component {
         </button>
     </div>
 
+    @error('payroll_export')
+        <p role="alert" class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{{ $message }}</p>
+    @enderror
     @if (session('status'))
         <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {{ session('status') }}
@@ -420,14 +423,20 @@ new class extends Component {
                                     </flux:button>
                                 @endcan
                                 @can('exportPayrollCsv', $period)
+                                    @if ($period->hasFrozenPayrollExport())
                                     <a href="{{ route('attendance-periods.payroll-csv', $period) }}" class="inline-flex items-center rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50">
                                         Descargar CSV
                                     </a>
+                                    @else
+                                        <span class="text-xs text-amber-700">Cierre anterior: solo resumen histórico.</span>
+                                    @endif
                                 @endcan
                                 @can('exportPayrollXlsx', $period)
+                                    @if ($period->hasFrozenPayrollExport())
                                     <a href="{{ route('attendance-periods.payroll-xlsx', $period) }}" class="inline-flex items-center rounded-md border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-800">
                                         Descargar Excel
                                     </a>
+                                    @endif
                                 @endcan
                             </div>
                         </td>
@@ -498,6 +507,11 @@ new class extends Component {
             @endif
 
             @if ($selectedPeriod->status === 'closed' && $selectedPeriod->report_summary)
+                @if ($selectedPeriod->hasFrozenPayrollExport())
+                    <p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">El resumen y las descargas conservan los datos del cierre, aunque después se corrijan jornadas o datos del trabajador.</p>
+                @else
+                    <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Este cierre conserva su resumen original, pero no el detalle histórico para generar CSV o Excel. No se sustituirá por datos actuales.</p>
+                @endif
                 @php($summary = $selectedPeriod->report_summary['summary'] ?? [])
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                     <div class="rounded-md bg-zinc-50 p-3 text-sm"><div class="text-xs text-zinc-500">Trabajadores</div><div class="font-semibold">{{ $summary['workers_included'] ?? 0 }}</div></div>

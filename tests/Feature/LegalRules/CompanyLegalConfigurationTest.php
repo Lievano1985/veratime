@@ -78,6 +78,22 @@ class CompanyLegalConfigurationTest extends TestCase
         );
     }
 
+    public function test_weekly_parameter_cannot_exceed_the_legal_limit_for_its_effective_date(): void
+    {
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+
+        $this->expectException(ValidationException::class);
+
+        app(UpdateCompanyLegalParameterAction::class)->handle(
+            $company,
+            'company_weekly_limit_minutes',
+            2761,
+            '2027-01-01',
+            'Intento de conservar el limite anterior',
+            $user,
+        );
+    }
+
     public function test_new_effective_parameter_closes_previous_company_parameter_without_deleting_it(): void
     {
         [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
@@ -125,6 +141,23 @@ class CompanyLegalConfigurationTest extends TestCase
 
         $this->get(route('company-settings.index'))
             ->assertForbidden();
+    }
+
+    public function test_manager_configures_overtime_review_margin_with_effective_date_and_reason(): void
+    {
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+        Volt::test('company-settings.index')->set('activeTab', 'legal')
+            ->assertSee('Margen de revisión del tiempo adicional')
+            ->set('legalParameterForm.overtime_review_margin_minutes.value', 10)
+            ->set('legalParameterForm.overtime_review_margin_minutes.effective_from', '2026-08-01')
+            ->set('legalParameterForm.overtime_review_margin_minutes.reason', 'Margen operativo de revisión')
+            ->call('updateLegalParameter', 'overtime_review_margin_minutes')->assertHasNoErrors();
+        $parameter = app(ResolveLegalParameterForDateAction::class)->handle($company, 'overtime_review_margin_minutes', '2026-08-03');
+        $this->assertSame(10, $parameter?->value['minutes']);
+        $this->assertSame($user->id, $parameter?->created_by);
+        $this->expectException(ValidationException::class);
+        app(UpdateCompanyLegalParameterAction::class)->handle($company, 'overtime_review_margin_minutes', 31, '2026-08-01', 'Fuera de rango', $user);
     }
 
     /**

@@ -121,31 +121,31 @@
                         <flux:navlist.item icon="queue-list" :href="route('scheduling.profile-assignments')" :current="request()->routeIs('scheduling.profile-assignments')" wire:navigate>Aplicacion de modelos</flux:navlist.item>
                     @endif
 
-                    @if ($canViewScheduleBatches)
-                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.daily')" :current="request()->routeIs('scheduling.daily')" wire:navigate>Programacion semanal</flux:navlist.item>
-                    @endif
-
                     @if (! $isSupervisor && $canViewMandatoryRestDays)
                         <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
+                    @endif
+
+                    @if ($canViewScheduleBatches)
+                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.daily')" :current="request()->routeIs('scheduling.daily')" wire:navigate>Programacion semanal</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
                 @endif
 
                 @if ($activeCompany && ($isSupervisor || auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompany]) || auth()->user()->can('viewAny', [\App\Models\WorkDay::class, $activeCompany])))
                     <flux:navlist.group heading="Registro de jornada" class="grid">
-                        <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
-                        @unless ($isSupervisor)
-                            <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*') || request()->routeIs('time-clock.*')" wire:navigate>Eventos</flux:navlist.item>
-                        @endunless
                         @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendanceIncident::class, $activeCompany]))
                             <flux:navlist.item icon="clipboard-document-check" :href="route('attendance-incidents.index')" :current="request()->routeIs('attendance-incidents.*')" wire:navigate>Incidencias y ausencias</flux:navlist.item>
                         @endif
+                        @unless ($isSupervisor)
+                            <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*') || request()->routeIs('time-clock.*')" wire:navigate>Eventos</flux:navlist.item>
+                        @endunless
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan
                         @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany]))
                             <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Periodos de asistencia</flux:navlist.item>
                         @endif
+                        <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
                         @if (auth()->user()->isSuperAdmin())
                             <flux:navlist.item icon="beaker" :href="route('testing.quick-events')" :current="request()->routeIs('testing.quick-events')" wire:navigate>Eventos rapidos</flux:navlist.item>
                         @endif

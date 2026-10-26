@@ -68,7 +68,13 @@ class ProcessSingleWorkDayActionTest extends TestCase
         $this->assertSame(1, $summary['unscheduled']);
         $this->assertSame(1, $summary['calculated']);
         $this->assertSame(WorkDay::SCHEDULE_STATUS_UNSCHEDULED, $workDay->schedule_status);
-        $this->assertSame(WorkDay::STATUS_CALCULATED, $workDay->status);
+        $this->assertSame(WorkDay::STATUS_WITH_ALERTS, $workDay->status);
+        $this->assertDatabaseHas('alerts', [
+            'company_id' => $company->id,
+            'work_day_id' => $workDay->id,
+            'rule_code' => 'minimum_break_missing',
+            'status' => Alert::STATUS_NEW,
+        ]);
         $this->assertSame(480, $workDay->activeCalculation->total_work_minutes);
     }
 

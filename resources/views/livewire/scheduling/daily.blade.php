@@ -1707,12 +1707,14 @@ new class extends Component {
 
     private function mainShiftRange(DailyScheduleAssignment $assignment): string
     {
-        $segment = $assignment->segments->firstWhere('segment_type', 'work');
-        if (! $segment) {
+        $work = $assignment->segments->where('segment_type', 'work')->sortBy('segment_order');
+        $first = $work->first();
+        $last = $work->last();
+        if (! $first || ! $last) {
             return '';
         }
 
-        return substr((string) $segment->start_local_time, 0, 5).'-'.substr((string) $segment->end_local_time, 0, 5).((int) $segment->end_day_offset === 1 ? ' +1 dia' : '');
+        return substr((string) $first->start_local_time, 0, 5).'-'.substr((string) $last->end_local_time, 0, 5).((int) $last->end_day_offset > 0 ? ' +'.$last->end_day_offset.' dia' : '');
     }
 
     private function windowText(DailyScheduleAssignment $assignment): string
@@ -2232,7 +2234,9 @@ new class extends Component {
                                             @if ($cell['assignment']?->day_type === 'shift')
                                                 <div class="shift-time">{{ $this->mainShiftRange($cell['assignment']) }}</div>
                                             @endif
-                                            <div class="shift-detail">{{ $this->assignmentSummary($cell['assignment']) }}</div>
+                                            @if ($cell['assignment']?->day_type !== 'shift')
+                                                <div class="shift-detail">{{ $this->assignmentSummary($cell['assignment']) }}</div>
+                                            @endif
                                             <span class="shift-link">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
                                         </button>
                                     @endif
@@ -2263,7 +2267,11 @@ new class extends Component {
                                         <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" {{ ! $canEditSelectedBatch ? 'disabled' : '' }} class="{{ $this->calendarCellThemeClass($cell['assignment']) }} text-left transition disabled:cursor-default">
                                             <span class="block font-mono text-[10.5px] text-surface-muted">{{ $cell['date'] }}</span>
                                             <span class="shift-label mt-1">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
-                                            <span class="shift-detail block">{{ $this->assignmentSummary($cell['assignment']) }}</span>
+                                            <span class="shift-detail block">
+                                                @if ($cell['assignment']?->day_type === 'shift')
+                                                    <span class="shift-time block">{{ $this->mainShiftRange($cell['assignment']) }}</span>
+                                                @else{{ $this->assignmentSummary($cell['assignment']) }}@endif
+                                            </span>
                                         </button>
                                     @endif
                                 @endforeach

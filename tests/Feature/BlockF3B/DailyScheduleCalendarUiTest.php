@@ -7,12 +7,14 @@ use App\Domains\Scheduling\Actions\CreateScheduleBatchAction;
 use App\Domains\Scheduling\Actions\ReplaceDraftDailyScheduleAssignmentAction;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
+use App\Models\DailyScheduleSegment;
 use App\Models\EmploymentRelationship;
 use App\Models\Role;
 use App\Models\ScheduleBatch;
 use App\Models\User;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Seeders\VeraTimeDailyScheduleScenarioSeeder;
 use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
 use Database\Seeders\VeraTimeScheduleProfileScenarioSeeder;
@@ -25,6 +27,24 @@ use Tests\TestCase;
 class DailyScheduleCalendarUiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_calendar_shows_first_entry_and_final_exit_of_a_split_shift(): void
+    {
+        $this->seedDailyScenarios();
+        [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
+        $batch = $this->firstBatch($company);
+        $assignment = $batch->dailyAssignments()->where('day_type', 'shift')->firstOrFail();
+        $assignment->segments()->delete();
+        foreach ([['work', '07:00', '11:00'], ['break', '11:00', '12:00'], ['work', '12:00', '16:00']] as $order => [$type, $start, $end]) {
+            DailyScheduleSegment::factory()->create([
+                'company_id' => $company->id, 'daily_schedule_assignment_id' => $assignment->id,
+                'segment_order' => $order + 1, 'segment_type' => $type, 'timing_mode' => 'fixed',
+                'start_local_time' => $start, 'end_local_time' => $end, 'start_day_offset' => 0, 'end_day_offset' => 0,
+            ]);
+        }
+        $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
+        Volt::test('scheduling.daily')->call('selectBatch', $batch->id)->assertSee('07:00-16:00');
+    }
 
     public function test_managers_can_open_daily_scheduling_and_sidebar_entry_is_visible(): void
     {
@@ -185,9 +205,9 @@ class DailyScheduleCalendarUiTest extends TestCase
             ->call('prepareFutureWeeks')
             ->assertHasNoErrors()
             ->assertSee('Semana siguiente preparada')
-            ->assertSet('weekStart', CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString());
+            ->assertSet('weekStart', CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(CarbonInterface::MONDAY)->toDateString());
 
-        $expectedStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $expectedStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(CarbonInterface::MONDAY)->toDateString();
         $expectedEnd = CarbonImmutable::parse($expectedStart)->addDays(6)->toDateString();
 
         $next = ScheduleBatch::query()
@@ -207,7 +227,7 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
         $current = $this->firstBatch($company);
-        $firstStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $firstStart = CarbonImmutable::parse($current->period_end)->addDay()->startOfWeek(CarbonInterface::MONDAY)->toDateString();
         $secondStart = CarbonImmutable::parse($firstStart)->addWeek()->toDateString();
 
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
@@ -258,7 +278,7 @@ class DailyScheduleCalendarUiTest extends TestCase
         $this->seedDailyScenarios();
         [$company, $rh] = $this->companyAndUser('VTSP-OFFICE', 'rh.office.demo@veratime.local');
         $batch = $this->firstBatch($company);
-        $nextStart = CarbonImmutable::parse($batch->period_end)->addDay()->startOfWeek(\Carbon\CarbonInterface::MONDAY)->toDateString();
+        $nextStart = CarbonImmutable::parse($batch->period_end)->addDay()->startOfWeek(CarbonInterface::MONDAY)->toDateString();
         $nextEnd = CarbonImmutable::parse($nextStart)->addDays(6)->toDateString();
         $nextBatch = app(CreateScheduleBatchAction::class)->handle($company, $batch->center, [
             'period_start' => $nextStart,

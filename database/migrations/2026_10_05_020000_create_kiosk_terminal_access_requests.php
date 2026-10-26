@@ -26,12 +26,12 @@ return new class extends Migration
             $table->string('requested_name', 120);
             $table->string('status')->default('pending');
             $table->foreignIdFor(Center::class)->nullable()->constrained()->nullOnDelete();
-            $table->timestamp('expires_at');
+            $table->dateTime('expires_at');
             $table->string('requested_ip', 45)->nullable();
             $table->string('requested_user_agent', 1000)->nullable();
             $table->foreignIdFor(User::class, 'reviewed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('reviewed_at')->nullable();
-            $table->timestamp('claimed_at')->nullable();
+            $table->dateTime('reviewed_at')->nullable();
+            $table->dateTime('claimed_at')->nullable();
             $table->foreignIdFor(KioskDevice::class)->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
 

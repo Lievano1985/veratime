@@ -22,12 +22,16 @@ class Company extends Model
         'tax_id',
         'timezone',
         'status',
+        'is_trial',
+        'trial_ends_at',
         'settings',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_trial' => 'boolean',
+            'trial_ends_at' => 'datetime',
             'settings' => 'array',
         ];
     }

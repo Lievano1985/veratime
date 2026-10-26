@@ -20,8 +20,8 @@ return new class extends Migration
             $table->foreignIdFor(Worker::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(MobileMarkingPolicy::class)->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('policy_version')->nullable();
-            $table->timestamp('issued_at');
-            $table->timestamp('expires_at');
+            $table->dateTime('issued_at');
+            $table->dateTime('expires_at');
             $table->unsignedSmallInteger('schema_version')->default(1);
             $table->timestamps();
 

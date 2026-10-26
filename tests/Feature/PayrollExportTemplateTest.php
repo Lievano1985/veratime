@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Attendance\Actions\CloseAttendancePeriodAction;
 use App\Domains\Attendance\Actions\ExportAttendancePeriodPayrollCsvAction;
 use App\Domains\Attendance\Actions\SavePayrollExportTemplateAction;
 use App\Models\AttendancePeriod;
@@ -34,8 +35,9 @@ it('exports a closed period with a company custom column order and headers', fun
     $period = AttendancePeriod::factory()->create([
         'company_id' => $company->id,
         'center_id' => $center->id,
-        'status' => AttendancePeriod::STATUS_CLOSED,
+        'status' => AttendancePeriod::STATUS_OPEN,
     ]);
+    $period = app(CloseAttendancePeriodAction::class)->handle($company, $period, $user);
     $template = app(SavePayrollExportTemplateAction::class)->handle($company, [
         'name' => 'Proveedor de prueba',
         'status' => PayrollExportTemplate::STATUS_ACTIVE,
@@ -62,8 +64,9 @@ it('exports a closed period as Excel using the selected company template', funct
     $period = AttendancePeriod::factory()->create([
         'company_id' => $company->id,
         'center_id' => $center->id,
-        'status' => AttendancePeriod::STATUS_CLOSED,
+        'status' => AttendancePeriod::STATUS_OPEN,
     ]);
+    $period = app(CloseAttendancePeriodAction::class)->handle($company, $period, $user);
     $template = app(SavePayrollExportTemplateAction::class)->handle($company, [
         'name' => 'Excel proveedor',
         'status' => PayrollExportTemplate::STATUS_ACTIVE,

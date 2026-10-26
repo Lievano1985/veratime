@@ -67,6 +67,9 @@ it('sidebar shows time clock only to authorized roles', function (): void {
 
     $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
+        ->assertForbidden();
+
+    $this->get(route('settings.profile'))
         ->assertOk()
         ->assertSee('Kiosco')
         ->assertDontSee('Eventos');
@@ -95,7 +98,7 @@ it('manual capture screen supports assisted registration panel', function (): vo
 });
 
 it('web registration action does not accept explicit occurrence time in sprint 2e', function (): void {
-    $method = new \ReflectionMethod(RegisterWebTimeEventAction::class, 'handle');
+    $method = new ReflectionMethod(RegisterWebTimeEventAction::class, 'handle');
 
     expect($method->getNumberOfParameters())->toBe(4);
 });

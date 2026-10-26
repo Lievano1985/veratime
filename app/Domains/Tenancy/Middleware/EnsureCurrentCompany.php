@@ -5,8 +5,8 @@ namespace App\Domains\Tenancy\Middleware;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class EnsureCurrentCompany
 {
@@ -45,7 +45,7 @@ class EnsureCurrentCompany
         $this->currentCompany->clear();
 
         if ($user->isSuperAdmin()) {
-            if ($request->routeIs('dashboard') || $request->routeIs('settings.*')) {
+            if ($request->routeIs('settings.*')) {
                 return $next($request);
             }
 

@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Alert extends Model
 {
     public const STATUS_NEW = 'new';
+
     public const STATUS_IN_REVIEW = 'in_review';
+
     public const STATUS_PENDING_INFORMATION = 'pending_information';
+
     public const STATUS_JUSTIFIED = 'justified';
+
     public const STATUS_CORRECTED = 'corrected';
+
     public const STATUS_CLOSED = 'closed';
 
     public const OPEN_STATUSES = [
@@ -19,6 +24,16 @@ class Alert extends Model
         self::STATUS_IN_REVIEW,
         self::STATUS_PENDING_INFORMATION,
     ];
+
+    public function isClosedByRecalculation(): bool
+    {
+        return $this->status === self::STATUS_CLOSED
+            && $this->resolved_by === null
+            && in_array($this->resolution, [
+                'Cerrada automaticamente por recalculo.',
+                'Cerrada automáticamente por recálculo semanal.',
+            ], true);
+    }
 
     protected $fillable = [
         'company_id',

@@ -15,7 +15,7 @@ use InvalidArgumentException;
 class ResolveAlertAction
 {
     /**
-     * @param array{status: string, resolution: string} $data
+     * @param  array{status: string, resolution: string}  $data
      */
     public function handle(Company $company, Alert $alert, User $actor, array $data): Alert
     {
@@ -23,6 +23,10 @@ class ResolveAlertAction
 
         if ($company->status !== 'active' || $alert->company_id !== $company->id) {
             throw new InvalidArgumentException('La alerta no pertenece a la empresa activa.');
+        }
+
+        if ($alert->rule_code === 'incomplete_work_day' && ($alert->workDay?->activeCalculation?->result_snapshot['issues'] ?? []) !== []) {
+            throw new InvalidArgumentException('Corrige los marcajes y recalcula la jornada antes de cerrar el registro incompleto.');
         }
 
         $status = (string) ($data['status'] ?? '');
@@ -70,6 +74,28 @@ class ResolveAlertAction
                 'metadata' => $metadata,
             ])->save();
 
+            if ($locked->rule_code === 'overtime_detected' && $status === Alert::STATUS_JUSTIFIED && $locked->work_day_id) {
+                $day = WorkDay::query()->where('company_id', $company->id)->find($locked->work_day_id);
+                if ($day && $day->active_calculation_id === $locked->work_day_calculation_id
+                    && $day->activeCalculation?->status === WorkDayCalculation::STATUS_ACTIVE
+                    && $day->activeCalculation->overtime_minutes > 0) {
+                    $related = Alert::query()->where('company_id', $company->id)
+                        ->where('work_day_id', $day->id)->where('work_day_calculation_id', $day->active_calculation_id)
+                        ->where('rule_code', 'daily_limit_exceeded')->whereNull('metadata->duration_review_version')
+                        ->whereIn('status', Alert::OPEN_STATUSES)
+                        ->lockForUpdate()->get();
+                    foreach ($related as $excess) {
+                        $resolved = $this->handle($company, $excess, $actor, [
+                            'status' => Alert::STATUS_CLOSED,
+                            'resolution' => 'Seguimiento incluido en la autorización de tiempo extra. '.$resolution,
+                        ]);
+                        $linkedMetadata = $resolved->metadata ?? [];
+                        $linkedMetadata['resolution']['overtime_authorization_alert_id'] = $locked->id;
+                        $resolved->forceFill(['metadata' => $linkedMetadata])->save();
+                    }
+                }
+            }
+
             $this->syncWorkDayStatus($company, $locked);
 
             return $locked->refresh()->load(['alertType', 'worker', 'workDay.activeCalculation', 'resolver']);
@@ -99,12 +125,16 @@ class ResolveAlertAction
 
         if ($openAlerts > 0) {
             $workDay->forceFill(['status' => WorkDay::STATUS_WITH_ALERTS])->save();
+
             return;
         }
 
         $nextStatus = $workDay->active_calculation_id
             ? WorkDay::STATUS_CALCULATED
             : WorkDay::STATUS_PENDING;
+        if (($workDay->activeCalculation?->result_snapshot['issues'] ?? []) !== []) {
+            $nextStatus = WorkDay::STATUS_UNDER_REVIEW;
+        }
 
         if ($workDay->active_calculation_id) {
             $calculationStatus = WorkDayCalculation::query()

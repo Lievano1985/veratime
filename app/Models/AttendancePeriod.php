@@ -10,15 +10,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AttendancePeriod extends Model
 {
+    public function hasFrozenPayrollExport(): bool
+    {
+        return $this->status === self::STATUS_CLOSED
+            && $this->snapshot_schema_version === 'attendance_period.v2'
+            && is_string($this->snapshot_canonical_json) && $this->snapshot_canonical_json !== ''
+            && is_string($this->snapshot_sha256) && $this->snapshot_sha256 !== '';
+    }
+
     /** @use HasFactory<AttendancePeriodFactory> */
     use HasFactory;
 
     public const SCOPE_CENTER = 'center';
+
     public const SCOPE_ORGANIZATIONAL_UNITS = 'organizational_units';
 
     public const STATUS_OPEN = 'open';
+
     public const STATUS_READY = 'ready';
+
     public const STATUS_CLOSED = 'closed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const SCOPES = [

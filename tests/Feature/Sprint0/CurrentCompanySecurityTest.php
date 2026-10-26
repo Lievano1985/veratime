@@ -53,7 +53,7 @@ class CurrentCompanySecurityTest extends TestCase
             'is_default' => true,
         ]);
 
-        $response = $this->actingAs($user)->get('/dashboard');
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertForbidden();
     }
@@ -88,13 +88,13 @@ class CurrentCompanySecurityTest extends TestCase
 
         $response = $this->actingAs($user)
             ->withSession(['current_company_id' => $company->id])
-            ->get('/dashboard');
+            ->get(route('dashboard'));
 
         $response->assertForbidden();
         $this->assertFalse(session()->has('current_company_id'));
     }
 
-    public function test_super_admin_without_active_companies_can_access_dashboard(): void
+    public function test_super_admin_without_active_companies_is_redirected_to_company_selection(): void
     {
         $superAdmin = User::factory()->create([
             'status' => 'active',
@@ -102,12 +102,10 @@ class CurrentCompanySecurityTest extends TestCase
         ]);
 
         $this->actingAs($superAdmin)
-            ->get('/dashboard')
-            ->assertOk()
-            ->assertSee('Sin empresas activas')
-            ->assertSee('Empresas')
-            ->assertDontSee('Centros')
-            ->assertDontSee('Descansos obligatorios');
+            ->get(route('dashboard'))
+            ->assertRedirect(route('companies.index'));
+
+        $this->get(route('companies.index'))->assertOk()->assertSee('Empresas');
     }
 
     public function test_super_admin_without_active_companies_is_redirected_from_operational_routes_to_companies(): void
@@ -118,7 +116,7 @@ class CurrentCompanySecurityTest extends TestCase
         ]);
 
         $this->actingAs($superAdmin)
-            ->get('/centers')
+            ->get(route('centers.index'))
             ->assertRedirect(route('companies.index'));
     }
 }

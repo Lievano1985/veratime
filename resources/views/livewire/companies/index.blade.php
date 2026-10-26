@@ -53,6 +53,7 @@ new class extends Component {
             'createForm.tax_id' => ['nullable', 'string', 'max:50', Rule::unique('companies', 'tax_id')],
             'createForm.timezone' => ['required', 'string', 'max:100'],
             'createForm.status' => ['required', Rule::in(auth()->user()->isSuperAdmin() ? ['active', 'inactive', 'suspended', 'cancelled'] : ['active', 'inactive'])],
+            'createForm.is_trial' => ['boolean'],
         ];
 
         if (auth()->user()->isSuperAdmin()) {
@@ -79,6 +80,7 @@ new class extends Component {
                     'tax_id' => $validated['tax_id'] ?? null,
                     'timezone' => $validated['timezone'],
                     'status' => $validated['status'],
+                    'is_trial' => $validated['is_trial'],
                     'account_type' => $validated['account_type'],
                 ],
                 'admin' => [
@@ -394,6 +396,7 @@ new class extends Component {
             'tax_id' => '',
             'timezone' => 'America/Mexico_City',
             'status' => 'active',
+            'is_trial' => false,
             'account_type' => 'single_company',
             'admin_name' => '',
             'admin_email' => '',
@@ -436,7 +439,7 @@ new class extends Component {
                 <div>
                     <p class="text-sm font-semibold">Escenario de demostracion</p>
                     @if ($demoStatus === 'completed')
-                        <p class="text-xs">Listo: 10 trabajadores, dos semanas de programacion y periodos de asistencia preparados. El Centro Nocturno puede validarse, cerrarse y exportarse; el Diurno conserva alertas de prueba.</p>
+                        <p class="text-xs">Listo: 10 trabajadores, dos semanas completas y la semana en curso de programacion preparadas. El Centro Nocturno puede validarse, cerrarse y exportarse; el Diurno conserva alertas de prueba.</p>
                     @elseif ($demoStatus === 'failed')
                         <p class="text-xs">No se pudo terminar de preparar el demo. Revisa el registro tecnico antes de operar la empresa.</p>
                     @else
@@ -701,6 +704,11 @@ new class extends Component {
                                 <flux:select.option value="cancelled">Cancelada</flux:select.option>
                             @endif
                         </flux:select>
+
+                        <div class="rounded-xl border border-brand-primary/20 bg-brand-primary/5 p-3">
+                            <flux:checkbox wire:model="createForm.is_trial" label="Empresa de prueba (15 días)" />
+                            <p class="mt-1 text-xs text-surface-muted">Se mantendrá activa durante 15 días y se suspenderá automáticamente al vencer el periodo.</p>
+                        </div>
 
                         @if ($isSuperAdmin)
                             <flux:select wire:model="createForm.account_type" label="Tipo de cuenta cliente">

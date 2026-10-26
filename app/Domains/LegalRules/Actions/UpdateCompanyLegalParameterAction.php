@@ -5,6 +5,7 @@ namespace App\Domains\LegalRules\Actions;
 use App\Domains\LegalRules\Support\CompanyLegalParameterCatalog;
 use App\Models\Company;
 use App\Models\LegalParameter;
+use App\Models\LegalRuleVersion;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,7 @@ class UpdateCompanyLegalParameterAction
 {
     public function __construct(
         private readonly CompanyLegalParameterCatalog $catalog,
+        private readonly ResolveLegalRuleVersionForDateAction $rules,
     ) {}
 
     public function handle(Company $company, string $code, int $value, string $effectiveFrom, string $reason, User $actor): LegalParameter
@@ -25,8 +27,8 @@ class UpdateCompanyLegalParameterAction
         }
 
         $definition = $this->catalog->get($code);
-        $this->validateValue($definition, $value);
         $date = CarbonImmutable::parse($effectiveFrom)->startOfDay();
+        $this->validateValue($definition, $value, $date);
 
         return DB::transaction(function () use ($company, $code, $value, $reason, $actor, $definition, $date): LegalParameter {
             $existing = LegalParameter::query()
@@ -85,9 +87,9 @@ class UpdateCompanyLegalParameterAction
     }
 
     /**
-     * @param array<string, mixed> $definition
+     * @param  array<string, mixed>  $definition
      */
-    private function validateValue(array $definition, int $value): void
+    private function validateValue(array $definition, int $value, CarbonImmutable $effectiveFrom): void
     {
         if ($value < (int) $definition['min']) {
             throw ValidationException::withMessages([
@@ -95,14 +97,37 @@ class UpdateCompanyLegalParameterAction
             ]);
         }
 
-        if ($value > (int) $definition['max']) {
+        $maximum = $this->maximumFor($definition, $effectiveFrom);
+
+        if ($value > $maximum) {
             $message = (bool) $definition['protected_max']
-                ? "Este parametro no puede superar {$definition['max']} minutos porque debilitara el limite base protegido."
-                : "El valor maximo permitido es {$definition['max']} minutos.";
+                ? "Este parametro no puede superar {$maximum} minutos porque debilitara el limite legal vigente."
+                : "El valor maximo permitido es {$maximum} minutos.";
 
             throw ValidationException::withMessages([
                 'legalParameterForm' => $message,
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     */
+    private function maximumFor(array $definition, CarbonImmutable $effectiveFrom): int
+    {
+        $maximum = (int) $definition['max'];
+        $ruleCode = $definition['legal_rule_code'] ?? null;
+
+        if (! is_string($ruleCode) || $ruleCode === '') {
+            return $maximum;
+        }
+
+        $version = $this->rules->handle($ruleCode, $effectiveFrom);
+
+        if (! $version instanceof LegalRuleVersion) {
+            return $maximum;
+        }
+
+        return min($maximum, (int) ($version->value[(string) $definition['value_key']] ?? $maximum));
     }
 }

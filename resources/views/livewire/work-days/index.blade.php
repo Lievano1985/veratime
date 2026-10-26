@@ -5,6 +5,9 @@ use App\Domains\Alerts\Actions\ResolveScheduledAbsenceAlertAsAttendanceIncidentA
 use App\Domains\Organization\Support\ScopedOperationalAccess;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\WorkDays\Actions\ListWorkDaysAction;
+use App\Domains\WorkDays\Actions\BuildWorkDayWorkspaceAction;
+use App\Domains\WorkDays\Actions\RecalculateSelectedWorkDayAction;
+use App\Domains\WorkDays\Support\WorkDayWorkflow;
 use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Models\Alert;
 use App\Models\AttendanceIncident;
@@ -22,6 +25,49 @@ use Livewire\WithPagination;
 
 new class extends Component {
     use WithPagination;
+
+    #[Url(as: 'tab')]
+    public string $workspaceTab = 'jornadas';
+
+    #[Url(as: 'jornada')]
+    public string $workflowState = '';
+
+    #[Url(as: 'revision')]
+    public string $reviewState = 'open';
+
+    public function selectWorkspaceTab(string $tab): void
+    {
+        abort_unless(in_array($tab, ['jornadas', 'incidencias', 'prevencion'], true), 404);
+        $this->workspaceTab = $tab;
+        $this->calculatedConflict = '';
+        $this->situationFilter = '';
+        $this->attentionFilter = '';
+        $this->workflowState = '';
+        $this->statusFilter = '';
+        $this->scheduleStatusFilter = '';
+        $this->incidentTypeFilter = '';
+        $this->incidentStatusFilter = '';
+        $this->closeAlertsPanel();
+        $this->resetPage();
+        $this->resetPage('incidentPage');
+    }
+
+    public function updatedWorkflowState(): void { $this->resetPage(); }
+    public function updatedReviewState(): void { $this->resetPage('incidentPage'); }
+
+    public function updatedCalculatedConflict(): void
+    {
+        $this->resetPage();
+        $this->resetPage('incidentPage');
+    }
+
+    public function updating($property): void
+    {
+        if (in_array($property, ['dateFrom', 'dateTo', 'centerId', 'search', 'reviewState'], true)) {
+            $this->resetPage('incidentPage');
+            $this->closeAlertsPanel();
+        }
+    }
 
     #[Url(as: 'from')]
     public string $dateFrom = '';
@@ -50,8 +96,17 @@ new class extends Component {
     #[Url(as: 'atencion')]
     public string $attentionFilter = '';
 
+    #[Url(as: 'acumulado')]
+    public string $accumulatedAlerts = '';
+
     #[Url]
     public string $search = '';
+
+    #[Url(as: 'worker')]
+    public string $workerIdFilter = '';
+
+    #[Url(as: 'conflicto')]
+    public string $calculatedConflict = '';
 
     public array $processForm = [];
 
@@ -62,6 +117,35 @@ new class extends Component {
     public ?int $selectedWorkDayId = null;
 
     public ?int $selectedAlertId = null;
+
+
+    public string $recalculationMessage = '';
+
+    public function recalculateSelectedWorkDay(RecalculateSelectedWorkDayAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $day = WorkDay::where('company_id', $company->id)->findOrFail($this->selectedWorkDayId);
+        Gate::authorize('recalculate', $day);
+        $this->recalculationMessage = '';
+        try {
+            $day = $action->handle($company, $day, auth()->user());
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['recalculation' => $exception->getMessage()]);
+        }
+        $this->resetValidation();
+        $alerts = $day->alerts->filter(fn (Alert $alert) => $this->workspaceTab === 'jornadas'
+            ? in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            : ! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true));
+        $next = $alerts->firstWhere('id', $this->selectedAlertId)
+            ?? $alerts->first(fn (Alert $alert) => in_array($alert->status, Alert::OPEN_STATUSES, true))
+            ?? $alerts->first();
+        $this->selectedAlertId = $next?->id;
+        $this->syncAlertResolutionForm($next);
+        $this->recalculationMessage = 'Jornada actualizada: '.$day->worker?->full_name.' · '.$day->work_date->format('d/m/Y').'. '
+            .(WorkDayWorkflow::isCompleted($day) ? 'Asistencia completa; los avisos reflejan el nuevo cálculo.' : 'Hay asistencia o marcajes pendientes de aclarar en Jornadas.');
+        $this->resetPage('incidentPage');
+        $this->resetPage();
+    }
 
     public array $alertResolutionForm = [
         'status' => Alert::STATUS_JUSTIFIED,
@@ -113,12 +197,22 @@ new class extends Component {
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
-        $today = $this->todayForCompany($company);
-        $weekStart = $today->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+        if (! in_array($this->workspaceTab, ['jornadas', 'incidencias', 'prevencion'], true)) {
+            $this->workspaceTab = 'jornadas';
+        }
+        if ($this->workspaceTab === 'jornadas' && $this->situationFilter !== ''
+            && ! in_array($this->situationFilter, WorkDayWorkflow::ATTENDANCE_RULES, true)) {
+            $this->workspaceTab = 'incidencias';
+        }
 
-        $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $weekStart->toDateString();
-        $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->toDateString();
-        $this->capDateFiltersToToday($company);
+        if (! $this->isAccumulatedAlertsView()) {
+            $today = $this->todayForCompany($company);
+            $weekStart = $today->startOfWeek(\Carbon\CarbonInterface::MONDAY);
+
+            $this->dateFrom = $this->dateFrom !== '' ? $this->dateFrom : $weekStart->toDateString();
+            $this->dateTo = $this->dateTo !== '' ? $this->dateTo : $today->toDateString();
+            $this->capDateFiltersToToday($company);
+        }
         $this->loadProcessForm($company);
     }
 
@@ -139,6 +233,7 @@ new class extends Component {
 
     public function openAlertsPanel(int $workDayId, CurrentCompany $currentCompany): void
     {
+        $this->recalculationMessage = '';
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
@@ -150,6 +245,9 @@ new class extends Component {
 
         Gate::authorize('view', $workDay);
 
+        $workDay->setRelation('alerts', $workDay->alerts->filter(fn (Alert $alert) => $this->workspaceTab === 'jornadas'
+            ? in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            : ! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)));
         $firstAlert = $workDay->alerts
             ->first(fn (Alert $alert): bool => in_array($alert->status, Alert::OPEN_STATUSES, true))
             ?? $workDay->alerts->first();
@@ -162,10 +260,23 @@ new class extends Component {
 
     public function closeAlertsPanel(): void
     {
+        $this->recalculationMessage = '';
         $this->showAlertsPanel = false;
         $this->selectedWorkDayId = null;
         $this->selectedAlertId = null;
         $this->alertResolutionForm = $this->defaultAlertResolutionForm();
+    }
+
+    public function openIncident(int $alertId, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $alert = Alert::query()->where('company_id', $company->id)->whereNotIn('rule_code', WorkDayWorkflow::ATTENDANCE_RULES)->findOrFail($alertId);
+        abort_unless($alert->workDay && Gate::allows('view', $alert->workDay), 403);
+        abort_unless(in_array($alert->rule_code, WorkDayWorkflow::WEEKLY_RULES, true) || WorkDayWorkflow::isCompleted($alert->workDay), 422);
+        $this->workspaceTab = 'incidencias';
+        $this->openAlertsPanel($alert->work_day_id, $currentCompany);
+        $this->selectedAlertId = $alert->id;
+        $this->syncAlertResolutionForm($alert);
     }
 
     public function resolveSelectedAlert(ResolveAlertAction $action, ResolveScheduledAbsenceAlertAsAttendanceIncidentAction $absenceAction, CurrentCompany $currentCompany): void
@@ -199,6 +310,19 @@ new class extends Component {
 
         Gate::authorize('resolve', $alert);
 
+        if (! array_key_exists($validated['alertResolutionForm']['status'], $this->alertResolutionOptions($alert))) {
+            throw ValidationException::withMessages(['alertResolutionForm.status' => 'Selecciona una opción válida para esta incidencia.']);
+        }
+
+        if ($alert->rule_code === 'incomplete_work_day') {
+            throw ValidationException::withMessages(['alertResolutionForm.resolution' => 'Corrige los marcajes con evidencia y recalcula la jornada. Un comentario no completa los registros.']);
+        }
+        if (! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            && ! in_array($alert->rule_code, WorkDayWorkflow::WEEKLY_RULES, true)
+            && ! WorkDayWorkflow::isCompleted($alert->workDay)) {
+            throw ValidationException::withMessages(['alertResolutionForm.resolution' => 'Primero completa la jornada antes de revisar sus incidencias calculadas.']);
+        }
+
         try {
             if ($alert->rule_code === 'scheduled_absence') {
                 $absenceAction->handle($company, $alert, auth()->user(), [
@@ -216,10 +340,21 @@ new class extends Component {
             ]);
         }
 
+        if ($this->workspaceTab === 'incidencias') {
+            $this->alertResolutionForm = $this->defaultAlertResolutionForm();
+            $this->alertResolutionForm['status'] = array_key_first($this->alertResolutionOptions($alert));
+            $this->resetValidation();
+            Session::flash('status', 'Revisión guardada. El formulario está listo para otra revisión; la decisión se conserva en el historial del aviso.');
+            $this->resetPage('incidentPage');
+            return;
+        }
+
         $nextAlertId = Alert::query()
             ->where('company_id', $company->id)
             ->where('work_day_id', $this->selectedWorkDayId)
             ->whereIn('status', Alert::OPEN_STATUSES)
+            ->when($this->workspaceTab === 'jornadas', fn ($query) => $query->whereIn('rule_code', WorkDayWorkflow::ATTENDANCE_RULES))
+            ->when($this->workspaceTab === 'incidencias', fn ($query) => $query->whereNotIn('rule_code', WorkDayWorkflow::ATTENDANCE_RULES))
             ->orderBy('detected_at')
             ->value('id');
 
@@ -231,14 +366,32 @@ new class extends Component {
         }
 
         $this->selectedAlertId = (int) $nextAlertId;
-        $this->alertResolutionForm['resolution'] = '';
+        $this->syncAlertResolutionForm(Alert::query()->where('company_id', $company->id)->findOrFail($nextAlertId));
+        $this->resetValidation();
         Session::flash('status', 'Incidencia dictaminada. Aun quedan incidencias pendientes para la jornada.');
         $this->resetPage();
     }
 
-    public function updatedSelectedAlertId(): void
+    public function confirmWeeklyRestReview(CurrentCompany $currentCompany): void
     {
-        $this->syncAlertResolutionForm(Alert::query()->find((int) $this->selectedAlertId));
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $alert = Alert::where('company_id', $company->id)->where('work_day_id', $this->selectedWorkDayId)->findOrFail($this->selectedAlertId);
+        try {
+            app(\App\Domains\Alerts\Actions\ConfirmWeeklyRestReviewAction::class)->handle($company, $alert, auth()->user());
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['weeklyRestReview' => $exception->getMessage()]);
+        }
+        $this->resetValidation();
+        $this->resetPage('incidentPage');
+        Session::flash('status', 'Revisado: semana sin descanso. Se conservaron las revisiones diarias como respaldo.');
+    }
+
+    public function updatedSelectedAlertId(CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        $alert = Alert::query()->where('company_id', $company->id)->where('work_day_id', $this->selectedWorkDayId)->findOrFail((int) $this->selectedAlertId);
+        Gate::authorize('view', $alert->workDay);
+        $this->syncAlertResolutionForm($alert);
     }
 
     public function linkedAttendanceIncidentForAlert(?Alert $alert): ?AttendanceIncident
@@ -294,11 +447,13 @@ new class extends Component {
 
     public function updatedDateFrom(): void
     {
+        $this->accumulatedAlerts = '';
         $this->resetPage();
     }
 
     public function updatedDateTo(): void
     {
+        $this->accumulatedAlerts = '';
         $this->resetPage();
     }
 
@@ -339,6 +494,7 @@ new class extends Component {
 
     public function updatedSearch(): void
     {
+        $this->workerIdFilter = '';
         $this->resetPage();
     }
 
@@ -357,21 +513,32 @@ new class extends Component {
         $this->incidentStatusFilter = '';
         $this->situationFilter = '';
         $this->attentionFilter = '';
+        $this->accumulatedAlerts = '';
         $this->search = '';
+        $this->workerIdFilter = '';
+        $this->calculatedConflict = '';
+        $this->workflowState = '';
+        $this->reviewState = 'open';
+        $this->closeAlertsPanel();
+        $this->resetPage('incidentPage');
         $this->resetPage();
     }
 
-    public function with(CurrentCompany $currentCompany, ListWorkDaysAction $listWorkDays): array
+    public function with(CurrentCompany $currentCompany, ListWorkDaysAction $listWorkDays, BuildWorkDayWorkspaceAction $workspace): array
     {
         $company = $this->currentCompanyOrFail($currentCompany);
 
         Gate::authorize('viewAny', [WorkDay::class, $company]);
 
-        $this->capDateFiltersToToday($company);
+        if (! $this->isAccumulatedAlertsView()) {
+            $this->capDateFiltersToToday($company);
+        }
 
         $visibleWorkDayAccess = $this->visibleWorkDayAccess($company);
 
         $workDays = $listWorkDays->handle($company, [
+            'viewer' => auth()->user(),
+            'workflow_view' => true,
             'date_from' => $this->dateFrom,
             'date_to' => $this->dateTo,
             'center_ids' => $visibleWorkDayAccess['center_ids'],
@@ -384,7 +551,22 @@ new class extends Component {
             'situation' => $this->situationFilter === '' ? null : $this->situationFilter,
             'attention' => $this->attentionFilter === '' ? null : $this->attentionFilter,
             'search' => $this->search,
+            'worker_id' => $this->workerIdFilter === '' ? null : (int) $this->workerIdFilter,
+            'calculated_conflict' => $this->calculatedConflict,
+            'workflow_state' => $this->workspaceTab === 'jornadas' ? $this->workflowState : null,
         ]);
+        $workspaceFilters = [
+            'worker_id' => $this->workerIdFilter === '' ? null : (int) $this->workerIdFilter,
+            'calculated_conflict' => $this->calculatedConflict,
+            'date_from' => $this->dateFrom, 'date_to' => $this->dateTo,
+            'center_ids' => $visibleWorkDayAccess['center_ids'], 'relationship_ids' => $visibleWorkDayAccess['relationship_ids'],
+            'center_id' => $this->centerId === '' ? null : (int) $this->centerId, 'search' => $this->search,
+        ];
+        $workspaceFilters['incident_rule'] = $this->workspaceTab === 'incidencias' ? $this->situationFilter : null;
+        $workspaceSummary = $workspace->handle($company, auth()->user(), $workspaceFilters, $this->reviewState, $this->workspaceTab === 'prevencion');
+        foreach ($workDays as $day) {
+            $day->setAttribute('attendance_completed', WorkDayWorkflow::isCompleted($day));
+        }
 
         $selectedWorkDay = $this->selectedWorkDayId
             ? WorkDay::query()
@@ -392,6 +574,7 @@ new class extends Component {
                     'worker',
                     'center',
                     'employmentRelationship',
+                    'dailyScheduleAssignment.segments',
                     'activeCalculation',
                     'alerts' => fn ($query) => $query->with(['alertType', 'resolver'])->orderByRaw("case status when 'new' then 1 when 'in_review' then 2 when 'pending_information' then 3 else 4 end")->orderBy('detected_at'),
                 ])
@@ -402,6 +585,24 @@ new class extends Component {
         if ($selectedWorkDay && ! Gate::allows('view', $selectedWorkDay)) {
             $selectedWorkDay = null;
             $this->selectedWorkDayId = null;
+        }
+        if ($selectedWorkDay) {
+            $selectedWorkDay->setRelation('reviewEvents', $selectedWorkDay->employmentRelationship
+                ? app(\App\Domains\TimeRecords\Actions\ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $selectedWorkDay->employmentRelationship, $selectedWorkDay->work_date)
+                : collect());
+            $selectedIsWeekly = in_array($selectedWorkDay->alerts->firstWhere('id', $this->selectedAlertId)?->rule_code, WorkDayWorkflow::WEEKLY_RULES, true);
+            $selectedWorkDay->setRelation('alerts', $selectedWorkDay->alerts->filter(fn (Alert $alert) => $this->workspaceTab === 'jornadas'
+                ? in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+                : ($selectedIsWeekly ? $alert->id === $this->selectedAlertId : ! in_array($alert->rule_code, [...WorkDayWorkflow::ATTENDANCE_RULES, ...WorkDayWorkflow::WEEKLY_RULES], true))));
+            $historical = $this->workspaceTab === 'incidencias'
+                ? $selectedWorkDay->alerts->filter(fn (Alert $alert) => $alert->isClosedByRecalculation()) : collect();
+            $selectedWorkDay->setRelation('historicalAlerts', $historical);
+            $selectedWorkDay->setRelation('alerts', $selectedWorkDay->alerts->reject(fn (Alert $alert) => $historical->contains('id', $alert->id)));
+            if (! $selectedIsWeekly && ! $selectedWorkDay->alerts->contains('id', $this->selectedAlertId)) {
+                $next = $selectedWorkDay->alerts->first();
+                $this->selectedAlertId = $next?->id;
+                $this->syncAlertResolutionForm($next);
+            }
         }
 
         $visibleCenterIds = $visibleWorkDayAccess['filter_center_ids'];
@@ -414,7 +615,11 @@ new class extends Component {
                 ->orderBy('name')
                 ->get(),
             'workDays' => $workDays,
+            'workspaceSummary' => $workspaceSummary,
             'selectedWorkDay' => $selectedWorkDay,
+            'overtimeReviewMargin' => $selectedWorkDay
+                ? app(\App\Domains\WorkDays\Actions\ResolveOvertimeReviewMarginAction::class)->handle($company, $selectedWorkDay)
+                : null,
             'todayDate' => $this->todayForCompany($company)->toDateString(),
             'canProcessWorkDays' => $this->canProcessCompanyWorkDays($company),
             'canResolveAlerts' => $this->canResolveAlerts($company),
@@ -446,6 +651,11 @@ new class extends Component {
         if ($this->dateFrom !== '' && CarbonImmutable::parse($this->dateFrom)->toDateString() > $this->dateTo) {
             $this->dateFrom = $this->dateTo;
         }
+    }
+
+    private function isAccumulatedAlertsView(): bool
+    {
+        return $this->accumulatedAlerts === '1';
     }
 
     private function visibleWorkDayAccess($company): array
@@ -592,6 +802,10 @@ new class extends Component {
 
     private function alertResolutionOptions(?Alert $alert): array
     {
+        if ($alert && ! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            && ! in_array($alert->rule_code, WorkDayWorkflow::ADMINISTRATIVE_AUTHORIZATION_RULES, true)) {
+            return [Alert::STATUS_CLOSED => 'Registrar revisión y seguimiento'];
+        }
         return match ($alert?->rule_code) {
             'scheduled_absence' => [
                 Alert::STATUS_CORRECTED => 'Confirmar falta',
@@ -599,9 +813,14 @@ new class extends Component {
                 Alert::STATUS_CLOSED => 'No procede',
             ],
             'overtime_detected' => [
-                Alert::STATUS_JUSTIFIED => 'Confirmar tiempo extra',
-                Alert::STATUS_CORRECTED => 'No autorizar',
-                Alert::STATUS_CLOSED => 'No procede',
+                Alert::STATUS_JUSTIFIED => 'Autorización administrativa confirmada',
+                Alert::STATUS_CORRECTED => 'Sin autorización administrativa',
+                Alert::STATUS_CLOSED => 'Registrar revisión y seguimiento',
+            ],
+            'scheduled_rest_work' => [
+                Alert::STATUS_JUSTIFIED => 'Confirmar trabajo en descanso autorizado',
+                Alert::STATUS_CORRECTED => 'Confirmar trabajo en descanso sin autorización',
+                Alert::STATUS_CLOSED => 'Registrar revisión y seguimiento',
             ],
             'incomplete_work_day' => [
                 Alert::STATUS_CORRECTED => 'Confirmar jornada incompleta',
@@ -652,6 +871,18 @@ new class extends Component {
     }
     private function contextualAlertStatusLabel(Alert $alert): string
     {
+        if ($alert->rule_code === 'scheduled_rest_work') {
+            return match ($alert->status) {
+                Alert::STATUS_JUSTIFIED => 'Trabajo en descanso autorizado',
+                Alert::STATUS_CORRECTED => 'Trabajo en descanso sin autorización',
+                Alert::STATUS_CLOSED => 'Seguimiento registrado',
+                default => $this->alertStatusLabel($alert->status),
+            };
+        }
+        if (! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            && $alert->rule_code !== 'overtime_detected' && ! in_array($alert->status, Alert::OPEN_STATUSES, true)) {
+            return 'Revisada; resultado conservado';
+        }
         if (! in_array($alert->status, [Alert::STATUS_JUSTIFIED, Alert::STATUS_CORRECTED, Alert::STATUS_CLOSED], true)) {
             return $this->alertStatusLabel($alert->status);
         }
@@ -906,7 +1137,7 @@ new class extends Component {
         $alert = $this->primaryIncidentAlert($workDay);
 
         if ($alert) {
-            return $alert->title;
+            return $this->operationalAlertLabel($alert);
         }
 
         if ($this->isScheduledAbsenceCandidate($workDay)) {
@@ -933,6 +1164,9 @@ new class extends Component {
         $alert = $this->primaryIncidentAlert($workDay);
 
         if ($alert) {
+            if (in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)) {
+                return $this->alertIncidentVariant($alert);
+            }
             return match ($alert->rule_code) {
                 'scheduled_absence' => 'rose',
                 'incomplete_work_day' => 'orange',
@@ -976,13 +1210,16 @@ new class extends Component {
         }
 
         foreach ($workDay->alerts as $alert) {
+            if ($this->workspaceTab === 'jornadas' && ! in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)) {
+                continue;
+            }
             if (! $this->isVisibleOperationalAlert($workDay, $alert)) {
                 continue;
             }
 
             $badges[] = [
                 'key' => 'alert:'.$alert->rule_code,
-                'label' => $alert->title,
+                'label' => $this->operationalAlertLabel($alert),
                 'variant' => $this->alertIncidentVariant($alert),
             ];
         }
@@ -1019,6 +1256,14 @@ new class extends Component {
 
     private function alertIncidentVariant(Alert $alert): string
     {
+        if (in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)) {
+            if ($alert->status === Alert::STATUS_CORRECTED) {
+                return 'warning';
+            }
+            if ($alert->status === Alert::STATUS_JUSTIFIED) {
+                return 'info';
+            }
+        }
         return match ($alert->rule_code) {
             'scheduled_absence' => 'rose',
             'incomplete_work_day' => 'orange',
@@ -1029,6 +1274,13 @@ new class extends Component {
             'weekly_rest_missing' => 'lime',
             default => $this->alertStatusVariant($alert->status),
         };
+    }
+
+    private function operationalAlertLabel(Alert $alert): string
+    {
+        return in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true)
+            && in_array($alert->status, [Alert::STATUS_CORRECTED, Alert::STATUS_JUSTIFIED], true)
+                ? $this->contextualAlertStatusLabel($alert) : $alert->title;
     }
 
     private function incidentStatusLabel(WorkDay $workDay): string
@@ -1145,7 +1397,7 @@ new class extends Component {
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <flux:heading size="xl">Jornadas</flux:heading>
-            <flux:subheading>Revisa jornadas e identifica solo las incidencias que requieren dictamen operativo.</flux:subheading>
+            <flux:subheading>Completa la asistencia, revisa las incidencias calculadas y anticipa riesgos semanales.</flux:subheading>
         </div>
 
         @if ($canProcessWorkDays)
@@ -1163,8 +1415,31 @@ new class extends Component {
         </div>
     @endif
 
+    <nav aria-label="Flujo de jornadas" class="flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-700">
+        @foreach (['jornadas' => 'Jornadas', 'incidencias' => 'Incidencias', 'prevencion' => 'Prevención'] as $key => $label)
+            <button type="button" wire:click="selectWorkspaceTab('{{ $key }}')" aria-current="{{ $workspaceTab === $key ? 'page' : 'false' }}"
+                @class(['rounded-lg px-4 py-2 text-sm font-semibold transition', 'bg-blue-600 text-white' => $workspaceTab === $key, 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200' => $workspaceTab !== $key])>{{ $label }}</button>
+        @endforeach
+    </nav>
+    <div class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700"><p class="text-sm text-zinc-500">Jornadas por completar</p><p class="text-2xl font-bold">{{ $workspaceSummary['pending'] }}</p></div>
+        <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700"><p class="text-sm text-zinc-500">Jornadas finalizadas</p><p class="text-2xl font-bold">{{ $workspaceSummary['completed'] }}</p></div>
+        <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700"><p class="text-sm text-zinc-500">Incidencias por revisar</p><p class="text-2xl font-bold">{{ $workspaceSummary['open_incidents'] }}</p></div>
+    </div>
+    <p class="text-sm text-zinc-500">Finalizada significa asistencia aclarada y registros completos; no confirma cumplimiento ni cierra las incidencias calculadas.</p>
+    @if ($calculatedConflict === 'twelve_hours_exceeded')
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <span>Filtro del dashboard: jornadas mayores a 12 horas en el período seleccionado.</span>
+            <button type="button" wire:click="$set('calculatedConflict', '')" class="font-semibold underline">Quitar filtro de conflicto</button>
+        </div>
+    @elseif ($calculatedConflict === 'pending_evaluation')
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <span>Filtro del dashboard: jornadas que impiden evaluar el cumplimiento de la semana seleccionada.</span>
+            <button type="button" wire:click="$set('calculatedConflict', '')" class="font-semibold underline">Quitar filtro de evaluación</button>
+        </div>
+    @endif
     <section class="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-[0.75fr_0.75fr_1fr_1.1fr_1fr_1fr_auto] xl:items-end">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:items-end">
             <flux:input label="Desde" type="date" max="{{ $todayDate }}" wire:model.live="dateFrom" />
             <flux:input label="Hasta" type="date" max="{{ $todayDate }}" wire:model.live="dateTo" />
 
@@ -1177,51 +1452,33 @@ new class extends Component {
 
             <flux:input label="Trabajador" placeholder="Clave o nombre" wire:model.live.debounce.400ms="search" />
 
-            <flux:select label="Situación" wire:model.live="situationFilter">
-                <flux:select.option value="">Todas</flux:select.option>
-                <flux:select.option value="normal">Normal</flux:select.option>
-                <flux:select.option value="scheduled_absence">Falta</flux:select.option>
-                <flux:select.option value="justified_absence">Falta justificada</flux:select.option>
-                <flux:select.option value="vacation">Vacaciones</flux:select.option>
-                <flux:select.option value="incapacity">Incapacidad</flux:select.option>
-                <flux:select.option value="permission">Permiso</flux:select.option>
-                <flux:select.option value="overtime_detected">Tiempo extra</flux:select.option>
-                <flux:select.option value="daily_limit_exceeded">Jornada excedida</flux:select.option>
-                <flux:select.option value="daily_overtime_over_three_hours">Extra diario &gt; 3 h</flux:select.option>
-                <flux:select.option value="long_work_day">Jornada larga</flux:select.option>
-                <flux:select.option value="minimum_break_missing">Pausa mínima no identificada</flux:select.option>
-                <flux:select.option value="late_arrival_detected">Retardo</flux:select.option>
-                <flux:select.option value="early_departure_detected">Salida anticipada</flux:select.option>
-                <flux:select.option value="incomplete_work_day">Evento incompleto</flux:select.option>
-                <flux:select.option value="unscheduled_work_day">No programada</flux:select.option>
-                <flux:select.option value="sunday_work">Domingo trabajado</flux:select.option>
-                <flux:select.option value="mandatory_rest_work">Descanso obligatorio</flux:select.option>
-                <flux:select.option value="scheduled_rest_work">Descanso asignado</flux:select.option>
-                <flux:select.option value="minor_daily_hours_exceeded">Persona menor: &gt; 6 h</flux:select.option>
-                <flux:select.option value="minor_restricted_work">Persona menor: extra/nocturno</flux:select.option>
-                <flux:select.option value="weekly_rest_missing">Semana sin descanso</flux:select.option>
-                <flux:select.option value="weekly_hours_exceeded">Horas semanales excedidas</flux:select.option>
-                <flux:select.option value="weekly_overtime_exceeded">Extra semanal &gt; 9 h</flux:select.option>
-                <flux:select.option value="weekly_overtime_days_exceeded">Más de 3 días con extra</flux:select.option>
-                <flux:select.option value="weekly_sunday_work">Domingo trabajado en semana</flux:select.option>
-                <flux:select.option value="rest">Descanso</flux:select.option>
-                <flux:select.option value="without_calculation">Sin cálculo</flux:select.option>
-            </flux:select>
-
-            <flux:select label="Atención" wire:model.live="attentionFilter">
-                <flux:select.option value="">Todos</flux:select.option>
-                <flux:select.option value="requires_attention">Requiere dictamen</flux:select.option>
-                <flux:select.option value="resolved">Ya dictaminada</flux:select.option>
-                <flux:select.option value="closed_not_applicable">Cerrada / no procede</flux:select.option>
-                <flux:select.option value="none">Sin incidencia</flux:select.option>
-            </flux:select>
-
+            @if ($workspaceTab === 'jornadas')
+                <flux:select label="Situación de asistencia" wire:model.live="situationFilter">
+                    <flux:select.option value="">Todas</flux:select.option>
+                    <flux:select.option value="scheduled_absence">Falta</flux:select.option>
+                    <flux:select.option value="late_arrival_detected">Retardo</flux:select.option>
+                    <flux:select.option value="early_departure_detected">Salida anticipada</flux:select.option>
+                    <flux:select.option value="incomplete_work_day">Marcajes incompletos</flux:select.option>
+                </flux:select>
+                <flux:select label="Estado de jornada" wire:model.live="workflowState">
+                    <flux:select.option value="">Todas</flux:select.option>
+                    <flux:select.option value="pending">Por completar</flux:select.option>
+                    <flux:select.option value="completed">Finalizadas</flux:select.option>
+                </flux:select>
+            @elseif ($workspaceTab === 'incidencias')
+                <flux:select label="Revisión" wire:model.live="reviewState">
+                    <flux:select.option value="open">Pendientes</flux:select.option>
+                    <flux:select.option value="reviewed">Revisadas</flux:select.option>
+                    <flux:select.option value="all">Todas</flux:select.option>
+                </flux:select>
+            @endif
             <div class="md:col-start-4 xl:col-start-auto xl:self-end">
                 <flux:button type="button" variant="ghost" wire:click="clearFilters" class="w-full xl:w-auto">Limpiar</flux:button>
             </div>
         </div>
     </section>
 
+    @if ($workspaceTab === 'jornadas')
     <section class="space-y-3">
         <div class="flex items-center justify-between">
             <flux:heading>Listado operativo</flux:heading>
@@ -1239,7 +1496,7 @@ new class extends Component {
                             <th class="px-4 py-3">Esperado</th>
                             <th class="px-4 py-3">Trabajado</th>
                             <th class="px-4 py-3">Incidencia</th>
-                            <th class="px-4 py-3">Dictamen</th>
+                            <th class="px-4 py-3">Estado de jornada</th>
                             <th class="px-4 py-3 text-right">Accion</th>
                         </tr>
                     </thead>
@@ -1262,7 +1519,7 @@ new class extends Component {
                                     @php($incidentBadges = $this->incidentBadges($workDay))
 
                                     @if ($incidentBadges === [])
-                                        <x-ui.badge variant="neutral">Sin incidencia</x-ui.badge>
+                                        <x-ui.badge variant="neutral">{{ $workDay->attendance_completed ? 'Sin pendientes' : 'Completar registros' }}</x-ui.badge>
                                     @else
                                         <div class="flex max-w-[220px] flex-col items-start gap-1">
                                             @foreach ($incidentBadges as $badge)
@@ -1274,17 +1531,18 @@ new class extends Component {
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="text-sm text-zinc-700 dark:text-zinc-200">{{ $this->incidentStatusLabel($workDay) }}</span>
+                                    @php($hasReviewedAttendance = $workDay->alerts->contains(fn ($alert) => in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true) && in_array($alert->status, [Alert::STATUS_CORRECTED, Alert::STATUS_JUSTIFIED], true)))
+                                    <span class="text-sm text-zinc-700 dark:text-zinc-200">{{ $workDay->attendance_completed ? ($hasReviewedAttendance ? 'Finalizada con aclaración' : 'Finalizada') : 'Por completar' }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    @php($hasPendingIncidents = ($workDay->open_alerts_count ?? 0) > 0)
+                                    @php($hasPendingIncidents = $workDay->alerts->contains(fn ($alert) => in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true) && in_array($alert->status, Alert::OPEN_STATUSES, true)))
                                     <button
                                         type="button"
                                         wire:click="openAlertsPanel({{ $workDay->id }})"
-                                        class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition focus:outline-none focus:ring-2 {{ $hasPendingIncidents ? 'border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-300 hover:bg-blue-100 focus:ring-blue-200 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60' : 'border-emerald-300 bg-emerald-100 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-200 focus:ring-emerald-200 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900/70' }}"
+                                        class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition focus:outline-none focus:ring-2 {{ $hasPendingIncidents ? 'border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-300 hover:bg-blue-100 focus:ring-blue-200 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60' : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800' }}"
                                         title="Abrir detalle de jornada"
                                     >
-                                        {{ $hasPendingIncidents && $canResolveAlerts ? 'Dictaminar' : 'Ver' }}
+                                        {{ $hasPendingIncidents && $canResolveAlerts ? 'Completar / aclarar' : 'Ver jornada' }}
                                     </button>
                                 </td>
                             </tr>
@@ -1301,10 +1559,14 @@ new class extends Component {
         {{ $workDays->links() }}
     </section>
 
+    @else
+        @include('livewire.work-days.workspace-results')
+    @endif
+
     <x-side-panel
         wire:model="showAlertsPanel"
         title="Incidencias de jornada"
-        subheading="Revisa solo lo fuera de comun y consulta el seguimiento operativo."
+        subheading="Revisa los registros, corrige si hace falta y atiende cada pendiente."
         labelledby="work-day-alerts-title"
         maxWidth="max-w-3xl"
         closeMethod="closeAlertsPanel"
@@ -1312,6 +1574,238 @@ new class extends Component {
         <div class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-5 p-6">
                 @if ($selectedWorkDay)
+                    @php($panelAlert = $selectedWorkDay->alerts->firstWhere('id', $selectedAlertId))
+                    @php($isWeeklyPanel = $panelAlert && in_array($panelAlert->rule_code, WorkDayWorkflow::WEEKLY_RULES, true))
+                    @if (! $isWeeklyPanel)
+                    <section class="space-y-4 rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-3 dark:border-zinc-800">
+                            <div><h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">1. Revisar la jornada</h3><p class="mt-1 font-semibold">{{ $selectedWorkDay->worker?->full_name }}</p></div>
+                            <span class="rounded-md bg-zinc-100 px-2 py-1 font-medium dark:bg-zinc-800">{{ $selectedWorkDay->work_date->format('d/m/Y') }}</span>
+                        </div>
+                        <dl class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <div class="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800"><dt class="text-xs text-zinc-500">Horas programadas</dt><dd class="mt-1 text-lg font-semibold">{{ $this->minutesLabel($selectedWorkDay->expected_work_minutes) }}</dd></div>
+                            <div class="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800"><dt class="text-xs text-zinc-500">Horas trabajadas calculadas</dt><dd class="mt-1 text-lg font-semibold">{{ $this->workedMinutesLabel($selectedWorkDay) }}</dd></div>
+                            <div class="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800"><dt class="text-xs text-zinc-500">Pausa registrada en el cálculo</dt><dd class="mt-1 text-lg font-semibold">{{ $this->minutesLabel($selectedWorkDay->activeCalculation?->break_minutes) }}</dd></div>
+                            <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-950"><dt class="text-xs text-blue-700 dark:text-blue-300">Horas extra calculadas</dt><dd class="mt-1 text-lg font-semibold text-blue-800 dark:text-blue-200">{{ $this->workDayCalculationSplitLabel($selectedWorkDay, 'overtime_minutes') }}</dd></div>
+                        </dl>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                                <h4 class="mb-2 font-semibold">Horario asignado</h4>
+                                <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    @forelse ($selectedWorkDay->dailyScheduleAssignment?->segments ?? collect() as $segment)
+                                        <li class="flex flex-wrap items-center justify-between gap-2 py-2"><span class="text-zinc-500">{{ $segment->segment_type === 'break' ? 'Pausa' : 'Trabajo' }}</span><span class="font-medium tabular-nums">@if ($segment->start_local_time && $segment->end_local_time){{ substr($segment->start_local_time, 0, 5) }} – {{ substr($segment->end_local_time, 0, 5) }}@if ($segment->end_day_offset) (+{{ $segment->end_day_offset }} día)@endif @else{{ $this->minutesLabel($segment->duration_minutes) }}@endif</span></li>
+                                    @empty<li class="py-2 text-zinc-500">Sin tramos de horario asignados.</li>@endforelse
+                                </ul>
+                            </div>
+                            <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                                <h4 class="mb-2 font-semibold">Marcajes válidos actuales</h4>
+                                <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    @forelse ($selectedWorkDay->reviewEvents as $event)
+                                        <li class="flex flex-wrap items-center justify-between gap-2 py-2"><span class="text-zinc-500">{{ match ($event->event_type) { 'clock_in' => 'Entrada', 'clock_out' => 'Salida', 'break_start' => 'Inicio de pausa', 'break_end' => 'Fin de pausa', default => 'Registro manual' } }}</span><span class="font-medium tabular-nums">{{ $event->occurred_at_utc->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('d/m H:i') }}</span></li>
+                                    @empty<li class="py-2 text-zinc-500">Sin marcajes válidos.</li>@endforelse
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-xs text-zinc-500">Si modificaste marcajes, recalcula para actualizar las horas mostradas.</p>
+                    </section>
+                    <section class="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:bg-blue-950 dark:text-blue-100">
+                        <h3 class="font-semibold">2. Corregir y actualizar si es necesario</h3>
+                        <p>Si falta o está mal un registro, corrígelo con evidencia. Después recalcula esta jornada; también se actualizarán los acumulados semanales de esta persona.</p>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <a class="font-semibold underline" href="{{ route('time-events.manual', ['from' => $selectedWorkDay->work_date->toDateString(), 'to' => $selectedWorkDay->work_date->toDateString(), 'worker' => $selectedWorkDay->worker_id, 'search' => $selectedWorkDay->worker?->employee_code ?? '']) }}">Corregir marcajes</a>
+                            @if (Gate::allows('recalculate', $selectedWorkDay))
+                                <button type="button" class="btn-primary" wire:click="recalculateSelectedWorkDay" wire:loading.attr="disabled" wire:target="recalculateSelectedWorkDay"><span wire:loading.remove wire:target="recalculateSelectedWorkDay">Recalcular esta jornada</span><span wire:loading wire:target="recalculateSelectedWorkDay">Recalculando…</span></button>
+                            @endif
+                        </div>
+                        @error('recalculation')<p role="alert" class="text-red-600">{{ $message }}</p>@enderror
+                        @if ($recalculationMessage !== '')<p role="status">{{ $recalculationMessage }}</p>@endif
+                    </section>
+                    @endif
+                    @if ($isWeeklyPanel)
+                        @php($caseWeek = CarbonImmutable::parse($panelAlert->metadata['week_start'] ?? $selectedWorkDay->work_date)->startOfWeek())
+                        <section class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                            <p class="mb-2 font-semibold">{{ $selectedWorkDay->worker?->full_name }}</p>
+                            <h3 class="font-semibold">Caso semanal: {{ $caseWeek->format('d/m/Y') }} al {{ $caseWeek->endOfWeek()->format('d/m/Y') }}</h3>
+                            <p class="mt-2">{{ $panelAlert->description }}</p>
+                            @if ($panelAlert->rule_code === 'weekly_rest_missing')
+                                @php($weeklyRestSummary = app(\App\Domains\Alerts\Actions\ConfirmWeeklyRestReviewAction::class)->evidence($company, $panelAlert))
+                                <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                                    <div><dt>Días trabajados</dt><dd class="font-semibold">{{ $weeklyRestSummary['worked_days'] }}</dd></div>
+                                    <div><dt>Días sin trabajo registrado</dt><dd class="font-semibold">{{ $weeklyRestSummary['days_without_work'] }}</dd></div>
+                                    <div><dt>Revisiones diarias de respaldo</dt><dd class="font-semibold">{{ $weeklyRestSummary['reviews']->count() }}</dd></div>
+                                    <div><dt>Estado de revisión semanal</dt><dd class="font-semibold">{{ in_array($panelAlert->status, Alert::OPEN_STATUSES, true) ? 'Pendiente de confirmación' : 'Revisado: semana sin descanso' }}</dd></div>
+                                </dl>
+                                @if ($weeklyRestSummary['pending_days'] > 0)<p class="mt-2">{{ $weeklyRestSummary['pending_days'] }} días sin cálculo concluyente. No se consideran descanso confirmado.</p>@endif
+                            @else
+                            <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                                @foreach (['total_work_minutes' => 'Total trabajado (sin duplicar conceptos)', 'ordinary_minutes' => 'Acumulado en días laborables', 'weekly_limit_minutes' => 'Referencia semanal de jornada', 'overtime_minutes' => 'Horas extra totales', 'daily_overtime_minutes' => 'Extra por prolongación diaria', 'weekly_overtime_minutes' => 'Extra por límite semanal', 'rest_work_minutes' => 'Trabajo en descanso (concepto separado)', 'weekly_overtime_limit_minutes' => 'Umbral de revisión de horas extra', 'excess_minutes' => 'Exceso del aviso seleccionado'] as $key => $label)
+                                    @if (isset($panelAlert->metadata[$key]))<div><dt>{{ $label }}</dt><dd class="font-semibold">{{ $this->minutesLabel((int) $panelAlert->metadata[$key]) }}</dd></div>@endif
+                                @endforeach
+                            </dl>
+                            <p class="mt-3 text-xs">Las horas extra distinguen prolongación diaria y límite semanal en días laborables. Trabajar una jornada en descanso no la convierte automáticamente en extra. No sumes nuevamente los conceptos al total trabajado.</p>
+                            @endif
+                            <a class="mt-3 inline-block font-semibold underline" href="{{ route('work-days.index', ['tab' => 'jornadas', 'from' => $caseWeek->toDateString(), 'to' => $caseWeek->endOfWeek()->toDateString(), 'search' => $selectedWorkDay->worker?->employee_code, 'center' => $centerId ?: null]) }}" wire:navigate>Consultar jornadas de esta semana</a>
+                            <p class="mt-2 text-xs">Este caso abarca toda la semana. Consulta las jornadas para revisar un día concreto.</p>
+                        </section>
+                    @endif
+
+                    <section class="space-y-3">
+                        <flux:heading>{{ $isWeeklyPanel ? 'Revisión del caso semanal' : '3. Atender cada pendiente' }}</flux:heading>
+                        <p class="text-sm text-zinc-500">{{ $isWeeklyPanel ? 'Revisa el resultado de toda la semana y sus antecedentes.' : 'Si los marcajes y el cálculo están correctos, selecciona un asunto y registra su decisión. Cada revisión se guarda por separado.' }}</p>
+
+                        @forelse ($selectedWorkDay->alerts as $alert)
+                            <label class="block rounded-md border border-zinc-200 p-4 dark:border-zinc-700 {{ $selectedAlertId === $alert->id ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-zinc-900' }}">
+                                <div class="flex items-start gap-3">
+                                    @if ($canResolveAlerts)
+                                        <input type="radio" class="mt-1" wire:model.live="selectedAlertId" value="{{ $alert->id }}">
+                                    @else
+                                        <span class="mt-1 h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700"></span>
+                                    @endif
+
+                                    <div class="min-w-0 flex-1 space-y-2">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="font-medium">{{ $alert->title }}</p>
+                                            <x-ui.badge variant="{{ $this->alertSeverityVariant($alert->severity) }}">
+                                                {{ $this->alertSeverityLabel($alert->severity) }}
+                                            </x-ui.badge>
+                                            <x-ui.badge variant="{{ in_array($alert->rule_code, WorkDayWorkflow::ATTENDANCE_RULES, true) ? $this->alertIncidentVariant($alert) : $this->alertStatusVariant($alert->status) }}">
+                                                {{ $this->contextualAlertStatusLabel($alert) }}
+                                            </x-ui.badge>
+                                        </div>
+
+                                        <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ $alert->description }}</p>
+                                        <p class="text-xs text-zinc-500">{{ $alert->alertType?->code }} - Detectada {{ $alert->detected_at?->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('Y-m-d H:i') }}</p>
+
+                                        @if ($alert->resolution)
+                                            <div class="rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-800">
+                                                <p class="font-medium">Dictamen</p>
+                                                <p class="mt-1 text-zinc-600 dark:text-zinc-300">{{ $alert->resolution }}</p>
+                                                <p class="mt-1 text-xs text-zinc-500">
+                                                    {{ $alert->resolver?->name ?? 'Usuario no disponible' }}
+                                                    @if ($alert->resolved_at)
+                                                        - {{ $alert->resolved_at->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('Y-m-d H:i') }}
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </label>
+                        @empty
+                            <div class="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                                Esta jornada no tiene avisos vigentes.
+                            </div>
+                        @endforelse
+                    </section>
+
+                    @if ($selectedWorkDay->alerts->firstWhere('id', $selectedAlertId)?->rule_code === 'incomplete_work_day')
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Corrige los marcajes con evidencia en <a class="font-semibold underline" href="{{ route('time-events.manual', ['from' => $selectedWorkDay->work_date->toDateString(), 'to' => $selectedWorkDay->work_date->toDateString(), 'worker' => $selectedWorkDay->worker_id, 'search' => $selectedWorkDay->worker?->employee_code ?? '']) }}">Eventos</a> y recalcula la jornada. Un comentario no sustituye el marcaje faltante.</div>
+                    @elseif ($canResolveAlerts && $panelAlert?->rule_code === 'weekly_rest_missing')
+                        @php($restEvidence = app(\App\Domains\Alerts\Actions\ConfirmWeeklyRestReviewAction::class)->evidence($company, $panelAlert))
+                        <section class="space-y-3 rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                            <h3 class="font-semibold">Confirmar revisión semanal</h3>
+                            <p>La semana no tuvo descanso. Usa las revisiones diarias como respaldo, sin repetir comentarios. Confirmar no acredita descanso disfrutado ni modifica las horas.</p>
+                            @foreach ($restEvidence['reviews'] as $review)
+                                <div class="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800"><p class="font-medium">{{ $review->workDay->work_date->format('d/m/Y') }} · {{ $review->title }}</p><p>{{ $this->contextualAlertStatusLabel($review) }}</p><p class="text-zinc-500">{{ $review->resolution }}</p></div>
+                            @endforeach
+                            @if (in_array($panelAlert->status, Alert::OPEN_STATUSES, true))
+                                @if ($restEvidence['can_confirm'])
+                                    <button type="button" class="btn-primary" wire:click="confirmWeeklyRestReview" wire:loading.attr="disabled" wire:target="confirmWeeklyRestReview">Confirmar revisión semanal</button>
+                                @else<p class="text-amber-700">Completa la semana y revisa los avisos diarios de descanso trabajado y domingo antes de confirmar.</p>@endif
+                            @else<p role="status" class="font-semibold text-emerald-700">Revisado: semana sin descanso</p>@endif
+                            @error('weeklyRestReview')<p role="alert" class="text-red-600">{{ $message }}</p>@enderror
+                        </section>
+                    @elseif ($canResolveAlerts && $selectedWorkDay->alerts->isNotEmpty())
+                        @php($selectedAlertForResolution = $selectedWorkDay->alerts->firstWhere('id', $selectedAlertId))
+                        @php($linkedAbsenceIncident = $this->linkedAttendanceIncidentForAlert($selectedAlertForResolution))
+                        <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
+                            <flux:select label="{{ $workspaceTab === 'jornadas' ? 'Dictamen' : ($selectedAlertForResolution?->rule_code === 'scheduled_rest_work' ? 'Evaluación del trabajo en descanso' : 'Acción para el aviso seleccionado') }}" wire:model.live="alertResolutionForm.status">
+                                @foreach ($this->alertResolutionOptions($selectedAlertForResolution) as $status => $label)
+                                    <flux:select.option value="{{ $status }}">{{ $label }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+
+                            @if ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $alertResolutionForm['status'] === Alert::STATUS_JUSTIFIED)
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <flux:select label="Tipo de ausencia" wire:model="alertResolutionForm.incident_type">
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE }}">Falta justificada pagada</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE }}">Falta justificada no pagada</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_VACATION }}">Vacaciones</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_INCAPACITY }}">Incapacidad</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_PAID_PERMISSION }}">Permiso con goce</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_UNPAID_PERMISSION }}">Permiso sin goce</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_MATERNITY_PATERNITY }}">Maternidad / paternidad</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::TYPE_OTHER }}">Otra ausencia autorizada</flux:select.option>
+                                    </flux:select>
+
+                                    <flux:select label="Tratamiento operativo" wire:model="alertResolutionForm.payment_status">
+                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_PAID }}">Pagada</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_UNPAID }}">No pagada</flux:select.option>
+                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_NOT_APPLICABLE }}">No aplica</flux:select.option>
+                                    </flux:select>
+                                </div>
+
+                                <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                                    @if ($linkedAbsenceIncident)
+                                        Se actualizara la incidencia/ausencia vinculada y la jornada se recalculara. No se creara un duplicado.
+                                    @else
+                                        Se creara una incidencia/ausencia aprobada para esta fecha y la jornada se recalculara. No se registran horas trabajadas.
+                                    @endif
+                                </div>
+                            @elseif ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $alertResolutionForm['status'] === Alert::STATUS_CORRECTED)
+                                <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Se registrará la falta confirmada como ausencia injustificada, sin agregar horas trabajadas, y se recalculará la jornada.</p>
+                            @elseif ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $linkedAbsenceIncident && $linkedAbsenceIncident->status === AttendanceIncident::STATUS_APPROVED)
+                                <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                                    Esta falta tiene una incidencia/ausencia vinculada. Al guardar este dictamen, esa incidencia quedara cancelada y la jornada se recalculara.
+                                </div>
+                            @endif
+
+                            @if ($workspaceTab === 'incidencias')
+                                @if ($selectedAlertForResolution?->rule_code === 'scheduled_rest_work')
+                                    <p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">Registra si el trabajo en el descanso asignado estaba autorizado y explica el motivo. La evaluación conserva las horas trabajadas y el descanso programado; no determina por sí sola el pago.</p>
+                                @elseif ($selectedAlertForResolution?->rule_code === 'minimum_break_missing')
+                                    <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Si faltan marcajes de pausa, corrígelos y recalcula antes de guardar. Si los registros son correctos, explica si no hubo pausa y qué medida se tomó. Un comentario no agrega ni descuenta tiempo.</p>
+                                @elseif ($selectedAlertForResolution?->rule_code === 'overtime_detected')
+                                    <p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">Autorizar las horas extra conserva el tiempo trabajado. La duración de la jornada, las pausas y los casos semanales requieren su propia revisión.</p>
+                                @else
+                                    <p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">La revisión no modifica los marcajes ni elimina las horas trabajadas o el exceso detectado. Si el cálculo cambia se solicitará otra revisión conservando el historial.</p>
+                                @endif
+                            @endif
+                            <flux:textarea label="Comentario obligatorio" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe el motivo y las acciones de seguimiento." />
+
+                            <div class="flex justify-end gap-2">
+                                <button type="button" class="btn-ghost" wire:click="closeAlertsPanel">Cancelar</button>
+                                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="resolveSelectedAlert">
+                                    <span wire:loading wire:target="resolveSelectedAlert" class="btn-spinner"></span>
+                                    <span wire:loading.remove wire:target="resolveSelectedAlert">{{ $workspaceTab === 'jornadas' ? 'Guardar aclaración' : ($selectedAlertForResolution?->rule_code === 'scheduled_rest_work' ? 'Guardar evaluación' : 'Guardar revisión') }}</span>
+                                    <span wire:loading wire:target="resolveSelectedAlert">Guardando</span>
+                                </button>
+                            </div>
+                        </form>
+                    @else
+                        <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                            Esta jornada no tiene incidencias pendientes.
+                        </div>
+                    @endif
+                    @if (! $isWeeklyPanel || $selectedWorkDay->historicalAlerts->isNotEmpty())
+                    <section class="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                        <h3 class="font-semibold">{{ $isWeeklyPanel ? 'Antecedentes del caso semanal' : '4. Consultar antecedentes' }}</h3>
+                    @if ($selectedWorkDay->historicalAlerts->isNotEmpty())
+                        <details class="space-y-3 rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                            <summary class="cursor-pointer font-semibold text-zinc-500">Ver historial ({{ $selectedWorkDay->historicalAlerts->count() }})</summary>
+                            <p class="text-xs text-zinc-500">Estos avisos corresponden a un cálculo anterior y ya no requieren atención.</p>
+                            @foreach ($selectedWorkDay->historicalAlerts as $historicalAlert)
+                                <div class="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800">
+                                    <p class="font-medium">{{ $historicalAlert->title }}</p>
+                                    <p class="text-xs text-zinc-500">Ya no aplica tras recálculo</p>
+                                    @if ($historicalAlert->resolved_at)<p class="mt-1 text-xs text-zinc-500">Cierre automático: {{ $historicalAlert->resolved_at->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('d/m/Y H:i') }}</p>@endif
+                                </div>
+                            @endforeach
+                        </details>
+                    @endif
+
+                    @if (! $isWeeklyPanel)
+                    <details class="space-y-3"><summary class="cursor-pointer text-sm font-semibold text-blue-700 dark:text-blue-300">Ver detalle técnico del cálculo</summary>
                     <section class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
                         <dl class="grid gap-3 sm:grid-cols-2">
                             <div>
@@ -1349,9 +1843,14 @@ new class extends Component {
                             </x-ui.badge>
                         </div>
 
+                        @if ($overtimeReviewMargin['within_margin'] ?? false)
+                            <p class="mb-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">Tiempo adicional dentro del margen: {{ $overtimeReviewMargin['overtime_minutes'] }} min de {{ $overtimeReviewMargin['minutes'] }} min configurados. Se conservan los minutos reales, sin autorización automática. Al recalcular no se solicita revisión diaria por este tiempo; los indicadores semanales y demás avisos se conservan.</p>
+                        @endif
                         <dl class="grid gap-3 sm:grid-cols-3">
                             <div>
-                                <dt class="text-xs font-medium uppercase text-zinc-500">Eventos</dt>
+                                <dt class="text-xs font-medium uppercase">
+                                    <a class="text-blue-600 underline hover:text-blue-800" href="{{ route('time-events.manual', ['from' => $selectedWorkDay->work_date->toDateString(), 'to' => $selectedWorkDay->work_date->toDateString(), 'worker' => $selectedWorkDay->worker_id, 'search' => $selectedWorkDay->worker?->employee_code ?? '']) }}">Eventos</a>
+                                </dt>
                                 <dd class="mt-1">
                                     {{ $selectedWorkDay->valid_time_event_count }}
                                     @if ($selectedWorkDay->first_event_at_utc)
@@ -1364,11 +1863,11 @@ new class extends Component {
                                 </dd>
                             </div>
                             <div>
-                                <dt class="text-xs font-medium uppercase text-zinc-500">Ordinario</dt>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Jornada sin extra</dt>
                                 <dd class="mt-1">{{ $this->workDayCalculationSplitLabel($selectedWorkDay, 'ordinary_minutes') }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs font-medium uppercase text-zinc-500">Extra</dt>
+                                <dt class="text-xs font-medium uppercase text-zinc-500">Extra total del día</dt>
                                 <dd class="mt-1">{{ $this->workDayCalculationSplitLabel($selectedWorkDay, 'overtime_minutes') }}</dd>
                             </div>
                             <div>
@@ -1389,114 +1888,20 @@ new class extends Component {
                                 <dd class="mt-1">{{ $this->incidentStatusLabel($selectedWorkDay) }}</dd>
                             </div>
                         </dl>
+                        @if ((int) data_get($selectedWorkDay->activeCalculation?->result_snapshot, 'ordinary_overtime.weekly_ordinary_excess_minutes', 0) > 0)
+                            <p class="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Este día tiene {{ $this->minutesLabel((int) data_get($selectedWorkDay->activeCalculation->result_snapshot, 'ordinary_overtime.weekly_ordinary_excess_minutes')) }} extra por límite semanal en días laborables. Ya están incluidas en el extra total; no significan una prolongación diaria.</p>
+                        @endif
+                        @if ((int) data_get($selectedWorkDay->activeCalculation?->result_snapshot, 'ordinary_overtime.schema_version', 0) >= 3)
+                            <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">Origen del extra: {{ $this->minutesLabel((int) data_get($selectedWorkDay->activeCalculation->result_snapshot, 'ordinary_overtime.daily_overtime_minutes', 0)) }} por prolongación diaria y {{ $this->minutesLabel((int) data_get($selectedWorkDay->activeCalculation->result_snapshot, 'ordinary_overtime.weekly_overtime_minutes', 0)) }} por límite semanal.</p>
+                        @endif
+                        @if (data_get($selectedWorkDay->activeCalculation?->result_snapshot, 'special_legal_cases.scheduled_rest.worked', false))
+                            <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">Trabajo en descanso asignado: {{ $this->workedMinutesLabel($selectedWorkDay) }}. Se conserva como concepto separado; no implica autorización de horas extra.</p>
+                        @endif
                     </section>
 
-                    <section class="space-y-3">
-                        <flux:heading>Incidencias</flux:heading>
-
-                        @forelse ($selectedWorkDay->alerts as $alert)
-                            <label class="block rounded-md border border-zinc-200 p-4 dark:border-zinc-700 {{ $selectedAlertId === $alert->id ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-zinc-900' }}">
-                                <div class="flex items-start gap-3">
-                                    @if ($canResolveAlerts)
-                                        <input type="radio" class="mt-1" wire:model.live="selectedAlertId" value="{{ $alert->id }}">
-                                    @else
-                                        <span class="mt-1 h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700"></span>
-                                    @endif
-
-                                    <div class="min-w-0 flex-1 space-y-2">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="font-medium">{{ $alert->title }}</p>
-                                            <x-ui.badge variant="{{ $this->alertSeverityVariant($alert->severity) }}">
-                                                {{ $this->alertSeverityLabel($alert->severity) }}
-                                            </x-ui.badge>
-                                            <x-ui.badge variant="{{ $this->alertStatusVariant($alert->status) }}">
-                                                {{ $this->contextualAlertStatusLabel($alert) }}
-                                            </x-ui.badge>
-                                        </div>
-
-                                        <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ $alert->description }}</p>
-                                        <p class="text-xs text-zinc-500">{{ $alert->alertType?->code }} - Detectada {{ $alert->detected_at?->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('Y-m-d H:i') }}</p>
-
-                                        @if ($alert->resolution)
-                                            <div class="rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-800">
-                                                <p class="font-medium">Dictamen</p>
-                                                <p class="mt-1 text-zinc-600 dark:text-zinc-300">{{ $alert->resolution }}</p>
-                                                <p class="mt-1 text-xs text-zinc-500">
-                                                    {{ $alert->resolver?->name ?? 'Usuario no disponible' }}
-                                                    @if ($alert->resolved_at)
-                                                        - {{ $alert->resolved_at->timezone($selectedWorkDay->timezone ?: $company->timezone)->format('Y-m-d H:i') }}
-                                                    @endif
-                                                </p>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </label>
-                        @empty
-                            <div class="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                                Esta jornada no tiene incidencias registradas.
-                            </div>
-                        @endforelse
+                    </details>
+                    @endif
                     </section>
-
-                    @if ($canResolveAlerts && $selectedWorkDay->alerts->isNotEmpty())
-                        @php($selectedAlertForResolution = $selectedWorkDay->alerts->firstWhere('id', $selectedAlertId))
-                        @php($linkedAbsenceIncident = $this->linkedAttendanceIncidentForAlert($selectedAlertForResolution))
-                        <form wire:submit="resolveSelectedAlert" class="space-y-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-700">
-                            <flux:select label="Dictamen" wire:model.live="alertResolutionForm.status">
-                                @foreach ($this->alertResolutionOptions($selectedAlertForResolution) as $status => $label)
-                                    <flux:select.option value="{{ $status }}">{{ $label }}</flux:select.option>
-                                @endforeach
-                            </flux:select>
-
-                            @if ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $alertResolutionForm['status'] === Alert::STATUS_JUSTIFIED)
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <flux:select label="Tipo de ausencia" wire:model="alertResolutionForm.incident_type">
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_JUSTIFIED_PAID_ABSENCE }}">Falta justificada pagada</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_JUSTIFIED_UNPAID_ABSENCE }}">Falta justificada no pagada</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_VACATION }}">Vacaciones</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_INCAPACITY }}">Incapacidad</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_PAID_PERMISSION }}">Permiso con goce</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_UNPAID_PERMISSION }}">Permiso sin goce</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_MATERNITY_PATERNITY }}">Maternidad / paternidad</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::TYPE_OTHER }}">Otra ausencia autorizada</flux:select.option>
-                                    </flux:select>
-
-                                    <flux:select label="Tratamiento operativo" wire:model="alertResolutionForm.payment_status">
-                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_PAID }}">Pagada</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_UNPAID }}">No pagada</flux:select.option>
-                                        <flux:select.option value="{{ AttendanceIncident::PAYMENT_NOT_APPLICABLE }}">No aplica</flux:select.option>
-                                    </flux:select>
-                                </div>
-
-                                <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                                    @if ($linkedAbsenceIncident)
-                                        Se actualizara la incidencia/ausencia vinculada y la jornada se recalculara. No se creara un duplicado.
-                                    @else
-                                        Se creara una incidencia/ausencia aprobada para esta fecha y la jornada se recalculara. No se registran horas trabajadas.
-                                    @endif
-                                </div>
-                            @elseif ($selectedAlertForResolution?->rule_code === 'scheduled_absence' && $linkedAbsenceIncident && $linkedAbsenceIncident->status === AttendanceIncident::STATUS_APPROVED)
-                                <div class="rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                                    Esta falta tiene una incidencia/ausencia vinculada. Al guardar este dictamen, esa incidencia quedara cancelada y la jornada se recalculara.
-                                </div>
-                            @endif
-
-                            <flux:textarea label="Comentario obligatorio" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe la razon del dictamen operativo." />
-
-                            <div class="flex justify-end gap-2">
-                                <button type="button" class="btn-ghost" wire:click="closeAlertsPanel">Cancelar</button>
-                                <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="resolveSelectedAlert">
-                                    <span wire:loading wire:target="resolveSelectedAlert" class="btn-spinner"></span>
-                                    <span wire:loading.remove wire:target="resolveSelectedAlert">Guardar dictamen</span>
-                                    <span wire:loading wire:target="resolveSelectedAlert">Guardando</span>
-                                </button>
-                            </div>
-                        </form>
-                    @else
-                        <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                            Esta jornada no tiene incidencias pendientes.
-                        </div>
                     @endif
                 @else
                     <p class="text-sm text-zinc-500">Selecciona una jornada.</p>

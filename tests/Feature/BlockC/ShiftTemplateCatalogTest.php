@@ -19,6 +19,7 @@ use App\Models\ShiftTemplate;
 use App\Models\User;
 use App\Models\Worker;
 use App\Support\RoleKey;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -328,6 +329,7 @@ class ShiftTemplateCatalogTest extends TestCase
             ->assertSee('17:00')
             ->assertSee('Trabajo programado bruto: 9 h');
     }
+
     public function test_shift_templates_ui_blocks_guest_without_company_and_foreign_tenant(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
@@ -343,7 +345,7 @@ class ShiftTemplateCatalogTest extends TestCase
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
-        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->expectException(ModelNotFoundException::class);
         Volt::test('scheduling.shifts')
             ->call('loadEditForm', $foreignTemplate->id);
     }
@@ -355,7 +357,8 @@ class ShiftTemplateCatalogTest extends TestCase
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($unauthorized)->withSession(['current_company_id' => $company->id]);
-        $this->get(route('dashboard'))->assertOk()->assertDontSee('Catálogo de turnos');
+        $this->get(route('dashboard'))->assertForbidden();
+        $this->get(route('settings.profile'))->assertOk()->assertDontSee('Catálogo de turnos');
 
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
         $this->get(route('dashboard'))

@@ -19,6 +19,7 @@ class CreateCompanyAction
     public function handle(User $user, array $data): Company
     {
         return DB::transaction(function () use ($user, $data): Company {
+            $isTrial = (bool) ($data['is_trial'] ?? false);
             $customerAccount = $this->resolveCustomerAccountFor($user, $data);
             $this->ensureCustomerAccountHasProduct->handle($customerAccount);
 
@@ -28,7 +29,9 @@ class CreateCompanyAction
                 'legal_name' => $data['legal_name'] ?? null,
                 'tax_id' => $data['tax_id'] ?? null,
                 'timezone' => $data['timezone'] ?? 'America/Mexico_City',
-                'status' => $data['status'] ?? 'active',
+                'status' => $isTrial ? 'active' : ($data['status'] ?? 'active'),
+                'is_trial' => $isTrial,
+                'trial_ends_at' => $isTrial ? now()->addDays(15) : null,
                 'settings' => [],
             ]);
 

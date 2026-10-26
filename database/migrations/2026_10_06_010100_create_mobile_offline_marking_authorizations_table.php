@@ -25,10 +25,10 @@ return new class extends Migration
             $table->unsignedInteger('policy_version');
             $table->unsignedBigInteger('issued_monotonic_milliseconds');
             $table->unsignedInteger('max_clock_drift_seconds')->default(120);
-            $table->timestamp('issued_at');
-            $table->timestamp('expires_at');
+            $table->dateTime('issued_at');
+            $table->dateTime('expires_at');
             $table->json('policy_snapshot');
-            $table->timestamp('revoked_at')->nullable();
+            $table->dateTime('revoked_at')->nullable();
             $table->timestamps();
 
             $table->index(['company_id', 'user_id', 'worker_id', 'expires_at'], 'moma_company_user_worker_expires_index');

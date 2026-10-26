@@ -31,8 +31,8 @@ class AlertTypeCatalog
                 'category' => 'daily',
             ],
             'daily_limit_exceeded' => [
-                'name' => 'Jornada excedida',
-                'description' => 'La duración trabajada supera el límite diario aplicable.',
+                'name' => 'Duración de jornada por revisar',
+                'description' => 'Revisión única de los límites superados de duración y prolongación diaria.',
                 'default_severity' => AlertType::SEVERITY_WARNING,
                 'category' => 'daily',
             ],
@@ -109,13 +109,13 @@ class AlertTypeCatalog
                 'category' => 'weekly',
             ],
             'weekly_hours_exceeded' => [
-                'name' => 'Horas semanales superiores al máximo',
-                'description' => 'La suma semanal trabajada supera el límite aplicable.',
+                'name' => 'Exceso del acumulado semanal de jornada',
+                'description' => 'El acumulado de jornada sin prolongación supera la referencia semanal; no se convierte automáticamente en horas extra.',
                 'default_severity' => AlertType::SEVERITY_HIGH,
                 'category' => 'weekly',
             ],
             'weekly_overtime_exceeded' => [
-                'name' => 'Tiempo extra semanal superior al límite',
+                'name' => 'Horas extra semanales superiores al límite',
                 'description' => 'La suma semanal de tiempo extraordinario requiere revisión.',
                 'default_severity' => AlertType::SEVERITY_HIGH,
                 'category' => 'weekly',

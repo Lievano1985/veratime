@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\LegalParameter;
 use App\Models\LegalRule;
 use App\Models\LegalRuleVersion;
+use Database\Seeders\LegalRuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -56,6 +57,24 @@ class LegalRuleVersioningFoundationTest extends TestCase
         $this->assertNotNull($version);
         $this->assertSame(2, $version->version);
         $this->assertSame(['minutes' => 450], $version->value);
+    }
+
+    public function test_mexico_progressive_weekly_limits_are_available_by_work_date(): void
+    {
+        $this->seed(LegalRuleSeeder::class);
+
+        $resolver = app(ResolveLegalRuleVersionForDateAction::class);
+
+        foreach ([
+            '2026-06-01' => [2880, 540],
+            '2027-06-01' => [2760, 540],
+            '2028-06-01' => [2640, 600],
+            '2029-06-01' => [2520, 660],
+            '2030-06-01' => [2400, 720],
+        ] as $date => [$weeklyMinutes, $overtimeMinutes]) {
+            $this->assertSame($weeklyMinutes, $resolver->handle('maximum_weekly_hours', $date)?->value['minutes']);
+            $this->assertSame($overtimeMinutes, $resolver->handle('weekly_overtime_double_limit', $date)?->value['minutes']);
+        }
     }
 
     public function test_ignores_inactive_rules_and_draft_versions(): void

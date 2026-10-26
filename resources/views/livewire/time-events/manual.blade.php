@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -47,11 +48,17 @@ new class extends Component {
 
     public string $statusFilter = '';
 
+    #[Url(as: 'from')]
     public string $dateFromFilter = '';
 
+    #[Url(as: 'to')]
     public string $dateToFilter = '';
 
+    #[Url(as: 'search')]
     public string $workerSearch = '';
+
+    #[Url(as: 'worker')]
+    public string $workerIdFilter = '';
 
     public bool $showCapturePanel = false;
 
@@ -211,6 +218,7 @@ new class extends Component {
 
     public function updatedWorkerSearch(): void
     {
+        $this->workerIdFilter = '';
         $this->resetPage();
     }
 
@@ -221,6 +229,7 @@ new class extends Component {
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
         $this->workerSearch = '';
+        $this->workerIdFilter = '';
         $this->resetPage();
     }
 
@@ -381,6 +390,7 @@ new class extends Component {
 
         $events = $company->timeEvents()
             ->with(['worker', 'sourceUser', 'voidedBy'])
+            ->when($this->workerIdFilter !== '', fn ($query) => $query->where('worker_id', $this->workerIdFilter))
             ->when($visibleCenterIds !== null, fn ($query) => $query->whereIn('center_id', $visibleCenterIds))
             ->when($this->dateFromFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '>=', $this->dateFromFilter))
             ->when($this->dateToFilter !== '', fn ($query) => $query->whereDate('occurred_local_date', '<=', $this->dateToFilter))

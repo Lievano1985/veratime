@@ -2275,3 +2275,148 @@ Estado: implementado / candidato a cierre.
 6. Confirmar que las alertas de domingo, descanso obligatorio, jornada incompleta o captura manual usan lenguaje preventivo y llevan a Jornadas.
 7. Entrar con una cuenta de otra empresa y confirmar que no aparecen trabajadores, eventos ni alertas de la empresa anterior.
 8. Confirmar que el Dashboard no crea, modifica ni elimina eventos, jornadas o alertas al abrirlo o cambiar filtros.
+
+## Regresión de dashboard, demo y actualización local (19-10-2026)
+
+1. Entrar como administrador y consultar una semana con una persona cuyos cálculos estén pendientes. Debe mostrarse como pendiente, sin confirmar cumplimiento. Mezclar un día válido y otro incompleto de la misma persona tampoco confirma su semana.
+2. Consultar una semana trabajada por una persona que después fue dada de baja. Sus jornadas deben continuar en el resumen histórico, siempre dentro de la empresa y el alcance permitido.
+3. Consultar 31-12-2026, 01-01-2027 y 04-01-2027: el siguiente ajuste debe ser futuro respecto de la fecha consultada; el límite histórico de la semana se distingue del vigente en esa fecha.
+4. Crear el demo un lunes y en fin de semana en una base aislada. Los casos de revisión quedan en Centro Diurno; el periodo de Centro Nocturno conserva cero alertas abiertas. La bandeja y el dashboard usan el mismo resultado persistido.
+5. En una copia descartable de una base anterior, ejecutar la actualización de fechas de marcaje y comparar valores y nulos antes/después. Verificar aceptación de una fecha de 2040. No usar `migrate:fresh` sobre una base con información que deba conservarse.
+6. Reejecutar el catálogo legal sobre una copia: conservar identificadores, fuentes y estados existentes. Una versión personalizada incompatible debe detener la actualización con un conflicto explícito.
+7. Un rol sin acceso operativo no abre el dashboard. Revisar su menú desde una pantalla permitida, por ejemplo Perfil. El superadministrador sin empresa activa debe llegar a Empresas.
+
+## Demo con actividad del día actual
+
+Al generar un demo nuevo se incluyen los marcajes del día local que ya hayan ocurrido. Los eventos conservan metadata demo y no representan asistencia real. Se respeta la programación publicada: no se inventan marcajes para días de descanso ni se crean eventos futuros. Una jornada en curso no se calcula como cerrada.
+
+Para avanzar un demo existente en entorno local: `php artisan demo:refresh-today ID_EMPRESA`. El comando es explícito y no se ejecuta al consultar el dashboard; repetirlo no duplica eventos. Requiere programación publicada para ese día. No crea automáticamente semanas posteriores.
+
+Caso reproducible de lunes: a las 11:30 de America/Mexico_City deben aparecer 2 trabajando, 3 en pausa y 0 jornadas completadas; al actualizar a las 19:00 deben aparecer 3 trabajando, 0 en pausa y 5 completadas. La cobertura incluye trabajando y en pausa. Revisar también que no haya eventos posteriores a la hora de actualización.
+
+## Desplegables de cumplimiento del dashboard
+
+1. En Vera Time Demo, fecha 19/10/2026 y todos los centros, verificar que las tarjetas en cero no tienen flecha.
+2. Abrir Ver personas en tiempo extra: aparece Diego Demo Operacion. Pulsar el nombre: el diálogo conserva período 12–18/10, 40 h 05 min extra, límite 9 h y exceso 31 h 05 min (si no se modificaron los cálculos de prueba).
+3. Revisar desglose de jornadas, cerrar con botón y con Escape; el foco vuelve al nombre. Abrir la tarjeta de jornadas mayores a 12 h: el resumen compara el máximo diario contra 12 h.
+4. Cambiar centro/fecha: las personas del desplegable deben corresponder a los contadores. Probar como supervisor con alcance restringido y comprobar que el detalle no expone otros centros, áreas o empresas.
+5. En un caso con varias alertas anteriores por persona, el contador sigue contando alertas; la lista muestra una persona con su número de alertas. El diálogo muestra únicamente las abiertas. Revisar escritorio, ancho móvil y modos claro/oscuro.
+
+## Regresión del flujo de tres pestañas (20-10-2026)
+
+1. Abrir Jornadas de Vera Time Demo del 12 al 18/10/2026. Filtrar Por completar y Finalizadas. Verificar que una jornada completa con extra no regresa a Por completar.
+2. Revisar un marcaje incompleto: solo debe ofrecer corregir los eventos con evidencia y recalcular, sin justificar la falta de datos mediante comentario. Verificar después que desaparece ese pendiente y aparecen las incidencias calculadas que correspondan.
+3. Confirmar una falta: debe quedar documentada como ausencia injustificada y cero horas, conservando historial. Probar también ausencia justificada y cambio de tipo con la misma incidencia vinculada.
+4. En Incidencias, alternar Pendientes/Revisadas/Todas. Un exceso semanal aparece una vez por trabajador, relación, semana y regla, con período y estado provisional si corresponde. Revisar un resultado no elimina el exceso.
+5. Recalcular sin cambiar hechos: conservar la revisión y primera detección. Cambiar horas: solicitar nueva revisión y conservar el historial anterior.
+6. En Prevención, verificar el caso controlado de miércoles con 8 horas extra y 3 días futuros publicados: 1 hora de margen al umbral de 9 horas del catálogo de prueba, sin inventar horas extra futuras. Sin programación, Sin proyección. Ausencias aprobadas no suman días futuros disponibles. Los límites se resuelven por fecha; no son constantes de la vista.
+7. Como RH con alcance de centro/área, comprobar que ninguna pestaña, contador, panel o proyección revela trabajadores o días ajenos. Probar identificadores manipulados de jornadas y alertas.
+8. Abrir cada acceso del dashboard: debe conservar fecha, centro y pestaña, con los mismos contadores que el rango equivalente de Jornadas. Revisar escritorio y ancho reducido, claro y oscuro.
+
+
+### Cobertura de asistencia (20-10-2026)
+
+- Con 10 personas esperadas, 8 finalizadas y 2 trabajando, verificar 100 % y 10 de 10 entradas; registrar una salida no debe disminuirlo.
+- Comprobar que una ausencia autorizada se descuenta del personal esperado y una falta injustificada permanece en la base.
+- Sin programación publicada, mostrar un guion; los marcajes duplicados, anulados o futuros no deben inflar el resultado.
+- Cambiar centro y usuario con alcance restringido: el porcentaje debe usar exclusivamente el personal visible.
+
+
+### Caso diario agrupado y cierre de seguimiento
+
+1. Consultar un día de Diego con horas extra y varios excesos: debe aparecer una sola fila diaria y los avisos en Ver avisos.
+2. Abrir Atender caso y autorizar horas extra: deben conservarse las horas y los demás pendientes en el mismo panel.
+3. Registrar una nota en Cerrar seguimiento diario: solo cierran los avisos diarios abiertos distintos de horas extra; comprobar autor, fecha y comentario.
+4. Si aún hay horas extra sin revisar, el caso sigue Pendiente. Con todos sus avisos atendidos, aparece en Revisadas con Seguimiento cerrado y el resultado calculado visible.
+5. Los casos semanales y otras jornadas mantienen sus estados; un usuario de otra empresa no puede cerrar el caso.
+6. Ante un error de captura, usar Corregir marcajes y recalcular; verificar que los avisos cambian según los nuevos datos y se conserva el historial.
+
+
+En el caso diario, pulsar Corregir marcajes y comprobar que Eventos abre con la misma fecha en Desde/Hasta y solo los eventos del trabajador seleccionado. Comprobar que no aparecen trabajadores con códigos parecidos; Limpiar debe retirar los filtros de fecha y trabajador.
+
+
+### Recálculo individual en panel lateral
+
+1. Corregir los marcajes de una persona y abrir su jornada o caso diario. Comprobar nombre y fecha junto a Recalcular esta jornada.
+2. Pulsar el botón y verificar que el resultado aparece en el mismo panel aunque la cola de trabajos no esté activa.
+3. Confirmar nuevos minutos, pausa y avisos; se conserva la versión anterior con su historial. Los acumulados semanales de esa persona deben actualizarse.
+4. Comparar otra persona del mismo centro y día: su cálculo y alertas no deben cambiar.
+5. Con dos inicios de pausa sin fin de pausa, verificar que sigue requiriendo aclaración. Recalcular no inventa un registro.
+6. Un usuario de consulta no ve ni puede ejecutar el botón; no se admiten jornadas de otra empresa o futuras.
+
+
+### Avisos vigentes e historial después de recalcular
+
+- Corregir una jornada de 14 h 30 min a 11 h con pausa y 3 h extra. Verificar 3 avisos vigentes y los 3 que dejaron de aplicar en Ver historial (3), con la etiqueta Ya no aplica tras recálculo.
+- Abrir el panel lateral: los históricos deben estar plegados y sin selección para dictamen; los avisos vigentes conservan sus acciones.
+- Una autorización o cierre de seguimiento por RH debe conservarse como Revisado junto al aviso vigente; no debe confundirse con un cierre automático.
+- Un caso con todos sus avisos cerrados por recálculo debe poder consultarse en Revisadas, con Sin avisos vigentes y su historial, incluidos los casos semanales.
+
+
+### Selector semanal de Cumplimiento laboral
+
+1. Elegir una semana del selector dentro del bloque y verificar número, rango, indicadores y detalles de personas del período elegido.
+2. Confirmar que la fecha operativa, el centro, la cobertura y los contadores de jornadas permanecen en su contexto original.
+3. Cambiar centro con una semana seleccionada y verificar que se conserva esa semana, respetando el alcance autorizado.
+4. Probar una semana sin jornadas: mostrar los estados vacíos, sin reutilizar cifras de otro período.
+5. En un cambio de año, comprobar el número ISO y el rango completo; por ejemplo Semana 53 · 28/12/2026 – 03/01/2027. No aceptar semanas en curso, futuras o fechas que no sean lunes.
+
+
+### Evaluación de trabajo en descanso asignado
+
+1. Abrir una jornada finalizada con Trabajo en día de descanso asignado: debe ofrecer Confirmar trabajo en descanso autorizado, Confirmar trabajo en descanso sin autorización y Registrar revisión y seguimiento.
+2. Guardar sin comentario debe mostrar validación. Guardar con comentario debe conservar autor, fecha y la decisión en el estado del aviso.
+3. Cambiar la evaluación con nueva evidencia debe conservar la decisión anterior en el historial.
+4. El cierre de seguimiento agrupado debe dejar este aviso pendiente. Evaluarlo no cambia horas, cálculo ni el descanso programado.
+
+
+### Conteo de jornadas mayores a doce horas
+
+- Con cuatro jornadas superiores a doce horas de la misma persona en la semana, comprobar 4 en la tarjeta y 1 persona involucrada; Ver personas debe seguir agrupando por trabajador.
+- Agregar una jornada de otra persona: comprobar 5 jornadas y 2 personas. Una jornada de exactamente doce horas no debe incrementar el contador.
+- Cambiar semana y centro: el contador de jornadas y el de personas deben usar el mismo período y alcance autorizado.
+
+
+### Retardos dictaminados en el listado de Jornadas
+
+- Confirmar un retardo: debe mostrar Retardo confirmado en ámbar y Finalizada con aclaración, conservando los minutos registrados.
+- Justificarlo con evidencia: mostrar Retardo justificado en azul y mantener la finalización con aclaración.
+- Ver jornada debe tener estilo neutro. Un retardo aún pendiente mantiene Por completar y la acción Completar / aclarar.
+
+
+### Ver esas jornadas desde el resumen del dashboard
+
+- Abrir una persona en Jornadas mayores a 12 h y comprobar un solo botón Ver esas jornadas junto a Cerrar; las fechas de cada fila permanecen como texto.
+- Pulsar el botón: debe abrir Jornadas con trabajador exacto, rango y centro correspondientes, mostrando solo los días de más de doce horas.
+- Comprobar que exactamente doce horas, otros trabajadores y otras semanas no aparecen. Quitar filtro de conflicto permite ver las demás jornadas del mismo trabajador y período.
+- Limpiar o buscar otro trabajador debe retirar el filtro exacto heredado. Manipular el trabajador en la URL no permite ver información de otra empresa.
+
+
+### Abrir pendientes de evaluación desde cumplimiento
+
+- Pulsar el contador Pendientes de evaluación: debe abrir Jornadas de la semana y centro consultados, mostrando únicamente los días que impiden evaluar a esas personas.
+- Las jornadas completas de esas personas, otras semanas y otras empresas no deben aparecer en ese filtro. Una persona puede tener varias jornadas pendientes.
+- Comprobar casos sin cálculo, secuencia incompleta, clasificación y distribución pendientes. Si falta una regla semanal necesaria, mostrar todas las jornadas relevantes del período.
+- Con cero pendientes, la celda no ofrece navegación. Quitar filtro de evaluación o Limpiar permite volver al listado habitual.
+
+### Evaluación semanal después de aclarar asistencia
+
+- Protección del cierre: cerrar un periodo listo, descargar CSV y Excel, corregir posteriormente una jornada o los datos del trabajador y volver a descargar. Las filas deben conservar lo que se confirmó al cerrar, y el resumen y su hash deben permanecer iguales. Las plantillas cambian orden/encabezados, no los valores históricos. Un cierre anterior sin detalle debe mostrar la explicación y no generar archivos con los cálculos actuales. Ver `docs/06-UX/UX-0004-CIERRES-Y-EXPORTACIONES-HISTORICAS.md`.
+
+- Validar la separación v3: 2026, 48 h de base laborable + 9 h de extra diario + 8 h en descanso no debe generar 17 h extra; mantiene 9 h extra y 8 h descanso. En 2027, seis días laborables de 8 h generan 2 h extra de origen semanal; 46 h de base + 9 h extra diario + 8 h en descanso mantiene 9 h extra. No contar las horas del descanso contra el saldo laborable. El extra total debe coincidir con diario + semanal y jornada sin extra + extra con el tiempo físico. El aviso de tres horas diarias no se dispara solo por extra semanal.
+
+- Siete jornadas de 8 h, con sábado y domingo publicados como descanso: conservar 8 h por día y 0 h extra por prolongación; revisar descanso trabajado ambos días y domingo por separado. La base laborable es 40 h y los descansos trabajados suman 16 h, sin generar un excedente laborable frente a 48 h. Si los siete días fueran laborables, el excedente laborable sí se identifica como extra semanal; no como prolongación diaria. Verificar que la reclasificación genere nuevas versiones, conserve cálculos anteriores y no afecte otros trabajadores ni empresas.
+
+- Con 48 h ordinarias y 27 h 35 min extra frente a referencias de 48 h y 9 h, no debe existir una solicitud vigente de exceso ordinario. El caso de horas extra muestra 27 h 35 min acumuladas y 18 h 35 min de exceso. Verificar que el total de 75 h 35 min se presente como ordinarias + extra, sin confundirse con el límite ordinario. Una revisión semanal previa con los mismos totales se conserva al actualizar el texto; cambios reales de acumulados requieren nueva revisión.
+
+- Configurar Margen de revisión del tiempo adicional en 10 minutos con fecha de vigencia: una jornada completa de 8 h 5 min con límite de 8 h conserva los 5 minutos extra y muestra el aviso informativo dentro del margen; al recalcular no quedan solicitudes diarias abiertas por esos minutos. Con 11 minutos se revisan los 11, sin descontar el margen. Los acumulados semanales mantienen todos los minutos. Verificar 0, el límite exacto, otra empresa y días anteriores a la vigencia.
+
+- En Incidencias, autorizar Tiempo extra detectado debe cerrar el seguimiento de Jornada excedida del mismo cálculo activo, conservando los minutos y la referencia a la autorización. Los avisos de más de doce horas, más de tres horas extra, pausas y semanales permanecen pendientes. Rechazar el tiempo extra no cierra Jornada excedida.
+
+- Una persona con exceso calculado y retardo pendiente debe aparecer tanto en Con excesos confirmados como en Pendientes de evaluación. Mostrar la aclaración de coincidencia. Resolver el retardo elimina el pendiente, pero conserva el exceso mientras el cálculo siga superando el límite. Varios excesos de la misma persona cuentan una sola vez en el resumen.
+
+- Consultar una semana cerrada con retardo o salida anticipada sin dictaminar y marcajes completos: la persona debe aparecer en Pendientes de evaluación y al abrir su filtro debe mostrarse el día afectado.
+- Resolver la asistencia: la persona sale de pendientes cuando todas sus jornadas relevantes estén resueltas y sus cálculos completos; entonces se clasifica según los límites semanales.
+- Verificar que una incapacidad, vacaciones, permiso o falta ya dictaminada en el cálculo activo, sin eventos ni minutos trabajados, no mantenga a la persona pendiente por tener cero horas.
+- Una ausencia sin aprobar, una secuencia incompleta o un día en revisión debe seguir pendiente. Un aviso de horas extra pendiente de autorización no bloquea por sí solo la evaluación de asistencia.
+- Comparar personas distintas del listado con el contador, respetando semana, centro y empresa. Varias jornadas de una misma persona cuentan una sola vez.

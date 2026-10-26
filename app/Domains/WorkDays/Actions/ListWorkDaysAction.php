@@ -2,19 +2,28 @@
 
 namespace App\Domains\WorkDays\Actions;
 
+use App\Domains\LegalRules\Actions\ResolveLegalRuleVersionForDateAction;
+use App\Domains\WorkDays\Support\ComplianceCalculationReadiness;
+use App\Domains\WorkDays\Support\WorkDayWorkflow;
 use App\Models\Alert;
 use App\Models\Company;
 use App\Models\WorkDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListWorkDaysAction
 {
     /**
-     * @param  array{worker_id?: ?int, employee_code?: ?string, date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, situation?: ?string, attention?: ?string, search?: ?string}  $filters
+     * @param  array{worker_id?: ?int, employee_code?: ?string, calculated_conflict?: ?string, date_from?: ?string, date_to?: ?string, center_id?: ?int, center_ids?: ?array<int>, relationship_ids?: ?array<int>, status?: ?string, schedule_status?: ?string, incident_type?: ?string, incident_status?: ?string, situation?: ?string, attention?: ?string, search?: ?string}  $filters
      * @return LengthAwarePaginator<int, WorkDay>
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->query($company, $filters)->paginate($perPage);
+    }
+
+    public function query(Company $company, array $filters = []): Builder
     {
         $today = CarbonImmutable::now($company->setting?->default_timezone ?: $company->timezone)->toDateString();
 
@@ -35,6 +44,11 @@ class ListWorkDaysAction
                 'alerts as resolved_alerts_count' => fn ($query) => $query->whereNotIn('status', Alert::OPEN_STATUSES),
             ])
             ->where('company_id', $company->id)
+            ->when($filters['workflow_view'] ?? false, fn ($query) => $query->where(fn ($activity) => $activity
+                ->where('expected_work_minutes', '>', 0)->orWhere('valid_time_event_count', '>', 0)
+                ->orWhereHas('activeCalculation', fn ($calculation) => $calculation
+                    ->where('total_work_minutes', '>', 0)->orWhereNotNull('result_snapshot->attendance_incident'))))
+            ->when($filters['viewer'] ?? null, fn ($query, $viewer) => WorkDayWorkflow::visibleTo($query, $company, $viewer, ($filters['date_to'] ?? null) ?: $today))
             ->whereDate('work_date', '<=', $today)
             ->where(function ($query) use ($today): void {
                 $query
@@ -75,11 +89,32 @@ class ListWorkDaysAction
             })
             ->when($filters['center_id'] ?? null, fn ($query, $centerId) => $query->where('center_id', $centerId))
             ->when($filters['worker_id'] ?? null, fn ($query, $workerId) => $query->where('worker_id', $workerId))
+            ->when(($filters['calculated_conflict'] ?? null) === 'twelve_hours_exceeded', fn ($query) => $query
+                ->whereHas('activeCalculation', fn ($calculation) => $calculation->where('total_work_minutes', '>', 720)))
+            ->when(($filters['calculated_conflict'] ?? null) === 'pending_evaluation', function (Builder $query) use ($company, $filters): void {
+                $query->where(fn (Builder $activity) => $activity->where('expected_work_minutes', '>', 0)
+                    ->orWhere('valid_time_event_count', '>', 0)
+                    ->orWhereHas('activeCalculation', fn (Builder $calculation) => $calculation->where('total_work_minutes', '>', 0)));
+                $weekStart = CarbonImmutable::parse($filters['date_from'] ?? 'today', $company->timezone)->startOfWeek();
+                $rules = app(ResolveLegalRuleVersionForDateAction::class);
+                if (($rules->handle('maximum_weekly_hours', $weekStart)?->value['minutes'] ?? 0) > 0
+                    && ($rules->handle('weekly_overtime_double_limit', $weekStart)?->value['minutes'] ?? 0) > 0) {
+                    ComplianceCalculationReadiness::pending($query, $company->id);
+                }
+            })
             ->when($filters['employee_code'] ?? null, fn ($query, $employeeCode) => $query->whereHas('worker', fn ($workerQuery) => $workerQuery->where('employee_code', $employeeCode)))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['workflow_state'] ?? null, fn ($query, $state) => WorkDayWorkflow::filter($query, $state))
             ->when($filters['schedule_status'] ?? null, fn ($query, $status) => $query->where('schedule_status', $status))
             ->when($filters['situation'] ?? null, fn ($query, $situation) => $this->applySituationFilter($query, $situation))
-            ->when($filters['attention'] ?? null, fn ($query, $attention) => $this->applyAttentionFilter($query, $attention))
+            ->when($filters['attention'] ?? null, function ($query, $attention) use ($filters): void {
+                if (($filters['workflow_view'] ?? false) && $attention === 'requires_attention') {
+                    WorkDayWorkflow::filter($query, 'pending');
+
+                    return;
+                }
+                $this->applyAttentionFilter($query, $attention);
+            })
             ->when($filters['incident_type'] ?? null, function ($query, $type): void {
                 if ($type === 'with_incidents') {
                     $query->where(function ($incidentQuery): void {
@@ -153,8 +188,7 @@ class ListWorkDaysAction
                 });
             })
             ->orderByDesc('work_date')
-            ->orderBy('worker_id')
-            ->paginate($perPage);
+            ->orderBy('worker_id');
     }
 
     private function applySituationFilter($query, string $situation): void

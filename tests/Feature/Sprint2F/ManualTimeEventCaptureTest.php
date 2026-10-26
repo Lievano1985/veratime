@@ -1,7 +1,9 @@
 <?php
 
-use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
 use App\Domains\Organization\Actions\AssignOperationalScopeAction;
+use App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\RegisterManualTimeEventAction;
+use App\Domains\TimeRecords\Actions\RejectManualTimeEventAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
@@ -12,7 +14,9 @@ use App\Models\WorkDay;
 use App\Models\Worker;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
 use Livewire\Volt\Volt;
 
 beforeEach(function (): void {
@@ -47,6 +51,29 @@ it('authorized role sees manual capture screen', function (): void {
     Volt::test('time-events.manual')
         ->assertSee('Eventos')
         ->assertSee($worker->full_name);
+});
+
+it('jornada link filters events by exact employee and day and can clear filters', function (): void {
+    [$company, $worker, $relationship, $center] = sprint2fManualFixture();
+    [, $foreignWorker, $foreignRelationship, $foreignCenter] = sprint2fManualFixture();
+    $user = sprint2fManualUserWithCompany($company, RoleKey::RH_ADMIN);
+    $attributes = ['company_id' => $company->id, 'worker_id' => $worker->id,
+        'employment_relationship_id' => $relationship->id, 'center_id' => $center->id,
+        'event_type' => 'clock_in', 'status' => 'valid', 'occurred_local_date' => '2026-08-17',
+        'occurred_local_time' => '08:00:00', 'occurred_at_utc' => '2026-08-17 14:00:00'];
+    $expected = TimeEvent::factory()->create($attributes);
+    TimeEvent::factory()->create(array_replace($attributes, ['occurred_local_date' => '2026-08-16', 'occurred_at_utc' => '2026-08-16 14:00:00']));
+    TimeEvent::factory()->create(array_replace($attributes, ['company_id' => $foreignWorker->company_id,
+        'worker_id' => $foreignWorker->id, 'employment_relationship_id' => $foreignRelationship->id, 'center_id' => $foreignCenter->id]));
+    $other = Worker::factory()->create(['company_id' => $company->id, 'status' => 'active', 'employee_code' => $worker->employee_code.'-2']);
+    TimeEvent::factory()->create(array_replace($attributes, ['worker_id' => $other->id, 'employment_relationship_id' => null]));
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+    Livewire::withQueryParams(['from' => '2026-08-17', 'to' => '2026-08-17', 'worker' => (string) $worker->id, 'search' => $worker->employee_code])
+        ->test('time-events.manual')->assertSet('dateFromFilter', '2026-08-17')->assertSet('dateToFilter', '2026-08-17')
+        ->assertSet('workerIdFilter', (string) $worker->id)->assertSet('workerSearch', $worker->employee_code)
+        ->assertViewHas('events', fn ($events) => $events->pluck('id')->all() === [$expected->id])
+        ->call('clearEventFilters')->assertSet('workerIdFilter', '')->assertSet('workerSearch', '')
+        ->assertViewHas('events', fn ($events) => $events->total() === 3);
 });
 
 it('manual selector only shows active company workers', function (): void {
@@ -388,13 +415,13 @@ it('manual review cannot be applied twice or by supervisor', function (): void {
         'metadata' => ['reason' => 'Entrada omitida para revision'],
     ]);
 
-    expect(fn () => app(\App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction::class)->handle($event, $supervisor))
-        ->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
+    expect(fn () => app(ApproveManualTimeEventAction::class)->handle($event, $supervisor))
+        ->toThrow(AuthorizationException::class);
 
-    app(\App\Domains\TimeRecords\Actions\ApproveManualTimeEventAction::class)->handle($event, $rh);
+    app(ApproveManualTimeEventAction::class)->handle($event, $rh);
 
-    expect(fn () => app(\App\Domains\TimeRecords\Actions\RejectManualTimeEventAction::class)->handle($event->refresh(), $rh, 'Segundo intento'))
-        ->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
+    expect(fn () => app(RejectManualTimeEventAction::class)->handle($event->refresh(), $rh, 'Segundo intento'))
+        ->toThrow(AuthorizationException::class);
 });
 
 it('manual capture preserves existing events and does not void replace or delete', function (): void {
@@ -430,7 +457,7 @@ it('manual capture blocks inactive company by policy', function (): void {
         'occurred_local_date' => '2026-08-16',
         'occurred_local_time' => '08:00',
         'reason' => 'Prueba manual',
-    ]))->toThrow(Illuminate\Auth\Access\AuthorizationException::class);
+    ]))->toThrow(AuthorizationException::class);
 });
 
 it('manual capture blocks inactive worker by domain validation', function (): void {

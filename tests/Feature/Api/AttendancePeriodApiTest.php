@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Attendance\Actions\CloseAttendancePeriodAction;
 use App\Domains\Integrations\Actions\IssueCompanyApiTokenAction;
 use App\Models\AttendancePeriod;
 use App\Models\Company;
@@ -27,11 +28,12 @@ it('lists and shows attendance periods only from the token company', function ()
 it('exports only closed attendance periods from the token company', function (): void {
     $account = CustomerAccount::factory()->create();
     $company = Company::factory()->create(['customer_account_id' => $account->id]);
-    $closedPeriod = AttendancePeriod::factory()->forCompany($company)->create(['status' => AttendancePeriod::STATUS_CLOSED]);
+    $closedPeriod = AttendancePeriod::factory()->forCompany($company)->create(['status' => AttendancePeriod::STATUS_OPEN]);
     $openPeriod = AttendancePeriod::factory()->forCompany($company)->create(['status' => AttendancePeriod::STATUS_OPEN]);
     $foreignPeriod = AttendancePeriod::factory()->create(['status' => AttendancePeriod::STATUS_CLOSED]);
     $user = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN, 'status' => 'active']);
     $token = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'period-export', ['exports:read'])->plainTextToken;
+    $closedPeriod = app(CloseAttendancePeriodAction::class)->handle($company, $closedPeriod, $user);
 
     $response = $this->withToken($token)->get('/api/v1/time/attendance-periods/'.$closedPeriod->id.'/payroll-csv');
 
@@ -45,4 +47,17 @@ it('exports only closed attendance periods from the token company', function ():
     $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$openPeriod->id.'/payroll-xlsx')->assertForbidden();
     $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$foreignPeriod->id.'/payroll-csv')->assertNotFound();
     $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$foreignPeriod->id.'/payroll-xlsx')->assertNotFound();
+});
+
+it('rejects legacy downloads through the API without producing current-data files', function (): void {
+    $account = CustomerAccount::factory()->create();
+    $company = Company::factory()->create(['customer_account_id' => $account->id]);
+    $period = AttendancePeriod::factory()->forCompany($company)->create(['status' => AttendancePeriod::STATUS_CLOSED,
+        'snapshot_schema_version' => 'attendance_period.v1']);
+    $user = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN, 'status' => 'active']);
+    $token = app(IssueCompanyApiTokenAction::class)->handle($user, $company, 'legacy-export', ['exports:read'])->plainTextToken;
+    foreach (['csv', 'xlsx'] as $format) {
+        $this->withToken($token)->getJson('/api/v1/time/attendance-periods/'.$period->id.'/payroll-'.$format)
+            ->assertUnprocessable()->assertJsonValidationErrors('payroll_export');
+    }
 });
