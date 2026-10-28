@@ -743,137 +743,144 @@ new class extends Component {
 
     {{ $assignments->links() }}
 
-    <x-side-panel wire:model="showAssignmentPanel" title="Aplicar modelo de horario" subheading="El modelo genera borradores semanales; los horarios publicados conservan su versión." maxWidth="max-w-3xl">
+    <x-side-panel wire:model="showAssignmentPanel" title="Aplicar modelo de horario" subheading="El modelo genera borradores semanales; los horarios publicados conservan su versión." max-width="max-w-3xl">
         <form wire:submit="saveAssignment" class="space-y-5 p-6">
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:select label="Alcance" wire:model.live="assignmentForm.assignment_scope">
-                    @if ($canAssignCompanyScopes)
-                        <flux:select.option value="company">Empresa</flux:select.option>
-                        <flux:select.option value="center">Centro</flux:select.option>
-                        <flux:select.option value="organizational_unit">Área, departamento o equipo</flux:select.option>
-                    @endif
-                    <flux:select.option value="employment_relationship">Relación laboral</flux:select.option>
-                </flux:select>
-
-                <flux:select label="Modelo activo" wire:model="assignmentForm.schedule_profile_id">
-                    <flux:select.option value="">Selecciona modelo</flux:select.option>
-                    @foreach ($profiles as $profile)
-                        <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            </div>
-
-            <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
-                {{ $this->profileApplicationHint($selectedAssignmentProfile) }}
-            </div>
-
-            @if (($assignmentForm['assignment_scope'] ?? 'company') === 'center')
-                <flux:select label="Centro" wire:model="assignmentForm.center_id">
-                    <flux:select.option value="">Selecciona centro</flux:select.option>
-                    @foreach ($centers as $center)
-                        <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            @endif
-
-            @if (($assignmentForm['assignment_scope'] ?? 'company') === 'organizational_unit')
+            <x-ui.panel-section title="Modelo y alcance" tone="blue">
                 <div class="grid gap-4 md:grid-cols-2">
-                    <flux:select label="Centro" wire:model.live="assignmentForm.center_id">
+                    <flux:select label="Alcance" wire:model.live="assignmentForm.assignment_scope">
+                        @if ($canAssignCompanyScopes)
+                            <flux:select.option value="company">Empresa</flux:select.option>
+                            <flux:select.option value="center">Centro</flux:select.option>
+                            <flux:select.option value="organizational_unit">Área, departamento o equipo</flux:select.option>
+                        @endif
+                        <flux:select.option value="employment_relationship">Relación laboral</flux:select.option>
+                    </flux:select>
+
+                    <flux:select label="Modelo activo" wire:model="assignmentForm.schedule_profile_id">
+                        <flux:select.option value="">Selecciona modelo</flux:select.option>
+                        @foreach ($profiles as $profile)
+                            <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+
+                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                    {{ $this->profileApplicationHint($selectedAssignmentProfile) }}
+                </div>
+
+                @if (($assignmentForm['assignment_scope'] ?? 'company') === 'center')
+                    <flux:select label="Centro" wire:model="assignmentForm.center_id">
                         <flux:select.option value="">Selecciona centro</flux:select.option>
                         @foreach ($centers as $center)
                             <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <flux:select label="Unidad" wire:model="assignmentForm.organizational_unit_id">
-                        <flux:select.option value="">Selecciona unidad</flux:select.option>
-                        @foreach ($units as $unit)
-                            <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }} ({{ $unit->unit_type }})</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </div>
-            @endif
+                @endif
 
-            @if (($assignmentForm['assignment_scope'] ?? 'company') === 'employment_relationship')
-                <div class="space-y-3">
+                @if (($assignmentForm['assignment_scope'] ?? 'company') === 'organizational_unit')
                     <div class="grid gap-4 md:grid-cols-2">
-                        <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="workerSearch" />
-                        <flux:select label="Filtrar por centro" wire:model.live="assignmentForm.center_id">
-                            <flux:select.option value="">Todos</flux:select.option>
+                        <flux:select label="Centro" wire:model.live="assignmentForm.center_id">
+                            <flux:select.option value="">Selecciona centro</flux:select.option>
                             @foreach ($centers as $center)
                                 <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
+                        <flux:select label="Unidad" wire:model="assignmentForm.organizational_unit_id">
+                            <flux:select.option value="">Selecciona unidad</flux:select.option>
+                            @foreach ($units as $unit)
+                                <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }} ({{ $unit->unit_type }})</flux:select.option>
+                            @endforeach
+                        </flux:select>
                     </div>
+                @endif
 
-                    <div class="grid gap-2">
-                        @forelse ($workerResults as $worker)
-                            <button type="button" wire:click="selectWorker({{ $worker->id }})" class="rounded-xl border border-surface-line bg-white p-3 text-left text-sm transition hover:border-brand-blue hover:bg-[#F5F9FF]">
-                                <span class="block font-medium">{{ $worker->employee_code }} - {{ $worker->full_name }}</span>
-                                <span class="text-xs text-surface-muted">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
-                            </button>
-                        @empty
-                            <p class="rounded-xl border border-dashed border-surface-line p-4 text-sm text-surface-muted">No hay trabajadores activos disponibles.</p>
-                        @endforelse
-                    </div>
-
-                    @if ($selectedWorker)
-                        <div class="flex items-center justify-between rounded-xl border border-status-rest-line bg-status-rest-bg p-3 text-sm text-status-rest-text">
-                            <span>{{ $selectedWorker->employee_code }} - {{ $selectedWorker->full_name }}</span>
-                            <button type="button" class="btn-ghost btn-sm" wire:click="clearSelectedWorker">Quitar</button>
+                @if (($assignmentForm['assignment_scope'] ?? 'company') === 'employment_relationship')
+                    <div class="space-y-3">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <flux:input label="Buscar trabajador" placeholder="Clave o nombre" wire:model.live.debounce.350ms="workerSearch" />
+                            <flux:select label="Filtrar por centro" wire:model.live="assignmentForm.center_id">
+                                <flux:select.option value="">Todos</flux:select.option>
+                                @foreach ($centers as $center)
+                                    <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
-                    @endif
-                </div>
-            @endif
 
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedAssignmentProfile) }}" wire:model="assignmentForm.effective_from" />
-                <flux:input type="date" label="Hasta opcional" wire:model="assignmentForm.effective_to" />
-            </div>
-            <flux:textarea label="Motivo" wire:model="assignmentForm.reason" />
+                        <div class="grid gap-2">
+                            @forelse ($workerResults as $worker)
+                                <button type="button" wire:click="selectWorker({{ $worker->id }})" class="rounded-xl border border-surface-line bg-white p-3 text-left text-sm transition hover:border-brand-blue hover:bg-[#F5F9FF]">
+                                    <span class="block font-medium">{{ $worker->employee_code }} - {{ $worker->full_name }}</span>
+                                    <span class="text-xs text-surface-muted">{{ $worker->activeEmploymentRelationship?->center?->name ?? 'Sin centro' }} - {{ $worker->activeEmploymentRelationship?->position_name ?? 'Sin puesto' }}</span>
+                                </button>
+                            @empty
+                                <p class="rounded-xl border border-dashed border-surface-line p-4 text-sm text-surface-muted">No hay trabajadores activos disponibles.</p>
+                            @endforelse
+                        </div>
 
-            @error('assignmentForm.assignment_scope')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
+                        @if ($selectedWorker)
+                            <div class="flex items-center justify-between rounded-xl border border-status-rest-line bg-status-rest-bg p-3 text-sm text-status-rest-text">
+                                <span>{{ $selectedWorker->employee_code }} - {{ $selectedWorker->full_name }}</span>
+                                <button type="button" class="btn-ghost btn-sm" wire:click="clearSelectedWorker">Quitar</button>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </x-ui.panel-section>
 
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Vigencia y motivo" tone="indigo">
+                <div class="grid gap-4 md:grid-cols-2">
+                                <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedAssignmentProfile) }}" wire:model="assignmentForm.effective_from" />
+                                <flux:input type="date" label="Hasta opcional" wire:model="assignmentForm.effective_to" />
+                            </div>
+                            <flux:textarea label="Motivo" wire:model="assignmentForm.reason" />
+
+                            @error('assignmentForm.assignment_scope')
+                                <p class="form-error">{{ $message }}</p>
+                            @enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showReplacePanel" title="Reemplazar aplicación" subheading="La aplicación anterior queda reemplazada y se conserva en historial." maxWidth="max-w-md">
+    <x-side-panel wire:model="showReplacePanel" title="Reemplazar aplicación" subheading="La aplicación anterior queda reemplazada y se conserva en historial." max-width="max-w-md">
         <form wire:submit="replaceAssignment" class="space-y-5 p-6">
-            <flux:select label="Nuevo modelo" wire:model="replaceForm.schedule_profile_id">
-                <flux:select.option value="">Selecciona modelo</flux:select.option>
-                @foreach ($profiles as $profile)
-                    <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
-                @endforeach
-            </flux:select>
-            <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
-                {{ $this->profileApplicationHint($selectedReplaceProfile) }}
-            </div>
-            <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedReplaceProfile) }}" wire:model="replaceForm.effective_from" />
-            <flux:input type="date" label="Hasta opcional" wire:model="replaceForm.effective_to" />
-            <flux:textarea label="Motivo" wire:model="replaceForm.reason" required />
-            @error('replaceForm.effective_from')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Modelo de reemplazo" tone="blue">
+                <flux:select label="Nuevo modelo" wire:model="replaceForm.schedule_profile_id">
+                    <flux:select.option value="">Selecciona modelo</flux:select.option>
+                    @foreach ($profiles as $profile)
+                        <flux:select.option value="{{ $profile->id }}">{{ $profile->code }} - {{ $profile->name }} | {{ $this->profileTypeLabel($profile) }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                    {{ $this->profileApplicationHint($selectedReplaceProfile) }}
+                </div>
+                <flux:input type="date" label="{{ $this->assignmentDateLabel($selectedReplaceProfile) }}" wire:model="replaceForm.effective_from" />
+                <flux:input type="date" label="Hasta opcional" wire:model="replaceForm.effective_to" />
+                <flux:textarea label="Motivo" wire:model="replaceForm.reason" required />
+                @error('replaceForm.effective_from')
+                    <p class="form-error">{{ $message }}</p>
+                @enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-primary">Reemplazar</button>
             </div>
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showEndPanel" title="Finalizar excepción" subheading="Al finalizar esta excepción, se volverá a utilizar la configuración heredada." maxWidth="max-w-md">
+    <x-side-panel wire:model="showEndPanel" title="Finalizar excepción" subheading="Al finalizar esta excepción, se volverá a utilizar la configuración heredada." max-width="max-w-md">
         <form wire:submit="endAssignment" class="space-y-5 p-6">
-            <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
-            <flux:textarea label="Motivo" wire:model="endForm.reason" required />
-            @error('endForm.effective_to')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Finalización de la excepción" tone="blue">
+                <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
+                <flux:textarea label="Motivo" wire:model="endForm.reason" required />
+                @error('endForm.effective_to')
+                    <p class="form-error">{{ $message }}</p>
+                @enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-danger">Finalizar</button>
             </div>

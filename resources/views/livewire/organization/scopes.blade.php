@@ -580,93 +580,97 @@ new class extends Component {
 
     <x-side-panel wire:model="showFormPanel" title="{{ $editingScopeId ? 'Editar alcance operativo' : 'Nuevo alcance operativo' }}" subheading="El usuario debe tener rol RH operativo o supervisor." labelledby="operational-scope-form-title">
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                @if ($errors->any())
-                    <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm text-status-pending-text">
-                        <p class="font-medium">Revisa los datos del alcance.</p>
-                        <ul class="mt-2 list-disc space-y-1 pl-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Usuario y alcance" tone="blue">
+                    @if ($errors->any())
+                        <div class="rounded-xl border border-status-pending-line bg-status-pending-bg px-4 py-3 text-sm text-status-pending-text">
+                            <p class="font-medium">Revisa los datos del alcance.</p>
+                            <ul class="mt-2 list-disc space-y-1 pl-5">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <flux:select label="Usuario operativo" wire:model.change="form.user_id">
+                        <flux:select.option value="">Selecciona RH operativo o supervisor</flux:select.option>
+                        @foreach ($scopeUsers as $scopeUser)
+                            <flux:select.option value="{{ $scopeUser->id }}">
+                                {{ $scopeUser->name }} - {{ $scopeUser->email }}
+                                ({{ $scopeUser->roleKeyForCompany($currentCompany) === RoleKey::RH_OPERATIVO ? 'RH operativo' : 'Supervisor' }})
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    @if ($this->selectedUserRoleKey() === RoleKey::RH_OPERATIVO)
+                        <div class="rounded-xl border border-surface-line bg-surface-bg px-3 py-2 text-sm text-brand-navy">
+                            RH operativo solo puede recibir alcance por centro completo.
+                        </div>
+                    @else
+                        <label class="form-label" for="operational-scope-kind">
+                            Tipo de alcance
+                        </label>
+                        <select
+                            id="operational-scope-kind"
+                            wire:model.live="form.scope_kind"
+                            class="form-select mt-2"
+                        >
+                            <option value="center">Centro completo</option>
+                            <option value="unit">Unidad organizacional</option>
+                        </select>
+                    @endif
+
+                    @error('form.scope_kind')
+                        <p class="form-error">{{ $message }}</p>
+                    @enderror
+
+                    @if (($form['scope_kind'] ?? 'center') === 'center')
+                        <div wire:key="scope-center-field">
+                        <flux:select label="Centro" wire:model.change="form.center_id">
+                            <flux:select.option value="">Selecciona un centro</flux:select.option>
+                            @foreach ($centers as $center)
+                                <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                             @endforeach
-                        </ul>
-                    </div>
-                @endif
+                        </flux:select>
+                        @error('form.center_id')
+                            <p class="form-error">{{ $message }}</p>
+                        @enderror
+                        </div>
+                    @else
+                        <div wire:key="scope-unit-field">
+                        <flux:select label="Unidad" wire:model.change="form.organizational_unit_id">
+                            <flux:select.option value="">Selecciona una unidad</flux:select.option>
+                            @foreach ($units as $unit)
+                                <flux:select.option value="{{ $unit->id }}">{{ $unit->name }} - {{ $unit->center?->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <p class="form-hint">Una unidad incluye sus descendientes dentro del mismo centro.</p>
+                        @error('form.organizational_unit_id')
+                            <p class="form-error">{{ $message }}</p>
+                        @enderror
+                        </div>
+                    @endif
+                </x-ui.panel-section>
 
-                <flux:select label="Usuario operativo" wire:model.change="form.user_id">
-                    <flux:select.option value="">Selecciona RH operativo o supervisor</flux:select.option>
-                    @foreach ($scopeUsers as $scopeUser)
-                        <flux:select.option value="{{ $scopeUser->id }}">
-                            {{ $scopeUser->name }} - {{ $scopeUser->email }}
-                            ({{ $scopeUser->roleKeyForCompany($currentCompany) === RoleKey::RH_OPERATIVO ? 'RH operativo' : 'Supervisor' }})
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                @if ($this->selectedUserRoleKey() === RoleKey::RH_OPERATIVO)
-                    <div class="rounded-xl border border-surface-line bg-surface-bg px-3 py-2 text-sm text-brand-navy">
-                        RH operativo solo puede recibir alcance por centro completo.
-                    </div>
-                @else
-                    <label class="form-label" for="operational-scope-kind">
-                        Tipo de alcance
-                    </label>
-                    <select
-                        id="operational-scope-kind"
-                        wire:model.live="form.scope_kind"
-                        class="form-select mt-2"
-                    >
-                        <option value="center">Centro completo</option>
-                        <option value="unit">Unidad organizacional</option>
-                    </select>
-                @endif
-
-                @error('form.scope_kind')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
-
-                @if (($form['scope_kind'] ?? 'center') === 'center')
-                    <div wire:key="scope-center-field">
-                    <flux:select label="Centro" wire:model.change="form.center_id">
-                        <flux:select.option value="">Selecciona un centro</flux:select.option>
-                        @foreach ($centers as $center)
-                            <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    @error('form.center_id')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
-                    </div>
-                @else
-                    <div wire:key="scope-unit-field">
-                    <flux:select label="Unidad" wire:model.change="form.organizational_unit_id">
-                        <flux:select.option value="">Selecciona una unidad</flux:select.option>
-                        @foreach ($units as $unit)
-                            <flux:select.option value="{{ $unit->id }}">{{ $unit->name }} - {{ $unit->center?->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <p class="form-hint">Una unidad incluye sus descendientes dentro del mismo centro.</p>
-                    @error('form.organizational_unit_id')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
-                    </div>
-                @endif
-
+            <x-ui.panel-section title="Vigencia y motivo" tone="indigo">
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:input type="date" label="Desde" wire:model.live="form.effective_from" />
-                    <flux:input type="date" label="Hasta" wire:model.live="form.effective_to" />
-                </div>
+                                    <flux:input type="date" label="Desde" wire:model.live="form.effective_from" />
+                                    <flux:input type="date" label="Hasta" wire:model.live="form.effective_to" />
+                                </div>
 
-                <flux:textarea label="Motivo" wire:model.live="form.reason" required />
+                                <flux:textarea label="Motivo" wire:model.live="form.reason" required />
 
-                @error('form.user_id')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
-                @error('form.reason')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
-            </div>
+                                @error('form.user_id')
+                                    <p class="form-error">{{ $message }}</p>
+                                @enderror
+                                @error('form.reason')
+                                    <p class="form-error">{{ $message }}</p>
+                                @enderror
+            </x-ui.panel-section>
+        </div>
 
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-primary">{{ $editingScopeId ? 'Actualizar alcance' : 'Guardar alcance' }}</button>
             </div>
@@ -675,15 +679,17 @@ new class extends Component {
 
     <x-side-panel wire:model="showEndPanel" title="Finalizar alcance" subheading="Cierra la vigencia sin borrar historial." labelledby="end-scope-form-title" max-width="max-w-md">
         <form wire:submit="endScope" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
-                <flux:textarea label="Motivo" wire:model="endForm.reason" required />
-                @error('endForm.effective_to')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Finalización del alcance" tone="blue">
+                    <flux:input type="date" label="Finaliza el" wire:model="endForm.effective_to" />
+                    <flux:textarea label="Motivo" wire:model="endForm.reason" required />
+                    @error('endForm.effective_to')
+                        <p class="form-error">{{ $message }}</p>
+                    @enderror
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-primary">Finalizar</button>
             </div>

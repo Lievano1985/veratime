@@ -18,7 +18,7 @@ class RequestCompanyDemoScenarioAction
         private readonly GenerateCompanyDemoScenarioAction $generateScenario,
     ) {}
 
-    public function handle(Company $company, User $requestedBy): CompanyDemoScenario
+    public function handle(Company $company, User $requestedBy, string $type = CompanyDemoScenario::TYPE_OPERATIONAL): CompanyDemoScenario
     {
         if (! $requestedBy->isSuperAdmin()
             && (! $requestedBy->belongsToCompany($company)
@@ -26,12 +26,23 @@ class RequestCompanyDemoScenarioAction
             throw new InvalidArgumentException('El usuario no puede preparar un escenario demo para esta empresa.');
         }
 
+        if (! in_array($type, [CompanyDemoScenario::TYPE_OPERATIONAL, CompanyDemoScenario::TYPE_CLOSED_WEEK], true)
+            || ($type === CompanyDemoScenario::TYPE_CLOSED_WEEK && ! $requestedBy->isSuperAdmin())) {
+            throw new InvalidArgumentException('Solo el superadministrador puede generar la semana cerrada para exportación.');
+        }
+
         $eligibility = $this->eligibility->handle($company);
         if (! $eligibility['allowed']) {
             throw new InvalidArgumentException((string) $eligibility['reason']);
         }
 
-        [$scenario, $shouldGenerate] = DB::transaction(function () use ($company, $requestedBy): array {
+        [$scenario, $shouldGenerate] = DB::transaction(function () use ($company, $requestedBy, $type): array {
+            Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $check = $this->eligibility->handle($company);
+            if (! $check['allowed']) {
+                throw new InvalidArgumentException((string) $check['reason']);
+            }
+
             $scenario = CompanyDemoScenario::query()
                 ->where('company_id', $company->id)
                 ->lockForUpdate()
@@ -44,6 +55,7 @@ class RequestCompanyDemoScenarioAction
             $scenario = CompanyDemoScenario::query()->updateOrCreate(
                 ['company_id' => $company->id],
                 [
+                    'scenario_type' => $type,
                     'requested_by_user_id' => $requestedBy->id,
                     'status' => CompanyDemoScenario::STATUS_PENDING,
                     'period_start' => null,

@@ -442,32 +442,34 @@ new class extends Component {
 
     <x-side-panel wire:model="showPrimaryPanel" title="Unidad principal" subheading="Cambia la segmentación actual del trabajador." labelledby="primary-unit-form-title">
         <form wire:submit="savePrimary" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <livewire:workers.multi-select wire:model.live="primaryForm.worker_ids" heading="Trabajadores" subheading="Selecciona uno o varios trabajadores activos." :result-limit="150" :show-primary-assignment-status="true" />
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Trabajadores y unidad principal" tone="blue">
+                    <livewire:workers.multi-select wire:model.live="primaryForm.worker_ids" heading="Trabajadores" subheading="Selecciona uno o varios trabajadores activos." :result-limit="150" :show-primary-assignment-status="true" />
 
-                <flux:select label="Operación" wire:model="primaryForm.operation">
-                    <flux:select.option value="replace">Asignar o cambiar unidad actual</flux:select.option>
-                    <flux:select.option value="assign">Asignar solo si no tiene unidad</flux:select.option>
-                </flux:select>
+                    <flux:select label="Operación" wire:model="primaryForm.operation">
+                        <flux:select.option value="replace">Asignar o cambiar unidad actual</flux:select.option>
+                        <flux:select.option value="assign">Asignar solo si no tiene unidad</flux:select.option>
+                    </flux:select>
 
-                <flux:select label="Unidad" wire:model="primaryForm.organizational_unit_id">
-                    <flux:select.option value="">Selecciona una unidad</flux:select.option>
-                    @foreach ($primaryUnits as $unit)
-                        <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-                @if ($primaryUnitHelp)
-                    <p class="form-hint">{{ $primaryUnitHelp }}</p>
-                @endif
+                    <flux:select label="Unidad" wire:model="primaryForm.organizational_unit_id">
+                        <flux:select.option value="">Selecciona una unidad</flux:select.option>
+                        @foreach ($primaryUnits as $unit)
+                            <flux:select.option value="{{ $unit->id }}">{{ $unit->code }} - {{ $unit->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    @if ($primaryUnitHelp)
+                        <p class="form-hint">{{ $primaryUnitHelp }}</p>
+                    @endif
 
-                <flux:textarea label="Motivo" wire:model="primaryForm.reason" placeholder="Requerido al reemplazar." />
+                    <flux:textarea label="Motivo" wire:model="primaryForm.reason" placeholder="Requerido al reemplazar." />
 
-                @error('primaryForm.organizational_unit_id')
-                    <p class="form-error">{{ $message }}</p>
-                @enderror
+                    @error('primaryForm.organizational_unit_id')
+                        <p class="form-error">{{ $message }}</p>
+                    @enderror
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closePanels">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>

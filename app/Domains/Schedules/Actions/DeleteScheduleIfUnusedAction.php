@@ -3,7 +3,6 @@
 namespace App\Domains\Schedules\Actions;
 
 use App\Models\Company;
-use App\Models\LaborCondition;
 use App\Models\Schedule;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -23,9 +22,8 @@ class DeleteScheduleIfUnusedAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedSchedule->assignments()->exists()
-                || LaborCondition::query()->where('company_id', $company->id)->where('schedule_id', $lockedSchedule->id)->exists()) {
-                throw new InvalidArgumentException('No se puede eliminar el horario porque ya tiene asignaciones o condiciones laborales. Puedes inactivarlo.');
+            if ($lockedSchedule->assignments()->exists()) {
+                throw new InvalidArgumentException('No se puede eliminar el horario porque ya tiene asignaciones de trabajadores. Puedes inactivarlo.');
             }
 
             $lockedSchedule->delete();

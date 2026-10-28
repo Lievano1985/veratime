@@ -1,7 +1,6 @@
 <?php
 
 use App\Domains\Attendance\Actions\CloseAttendancePeriodAction;
-use App\Domains\Attendance\Actions\ExportAttendancePeriodPayrollCsvAction;
 use App\Domains\Attendance\Actions\SavePayrollExportTemplateAction;
 use App\Models\AttendancePeriod;
 use App\Models\Center;
@@ -10,23 +9,17 @@ use App\Models\PayrollExportTemplate;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\RoleKey;
-use Livewire\Volt\Volt;
+use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
-it('creates the base CSV de periodos template for a company', function (): void {
+it('redirects the retired CSV editor to the new layout builder without creating legacy templates', function (): void {
     [$company, $user] = payrollTemplateCompanyUser();
-
-    $this->actingAs($user)
-        ->withSession(['current_company_id' => $company->id])
-        ->get(route('payroll-export-templates.index'))
-        ->assertOk()
-        ->assertSee('CSV de períodos');
-
-    $template = PayrollExportTemplate::query()->where('company_id', $company->id)->where('name', 'CSV de períodos')->firstOrFail();
-
-    expect($template->is_system)->toBeTrue()
-        ->and($template->is_default)->toBeTrue()
-        ->and($template->columns()->count())->toBe(count(ExportAttendancePeriodPayrollCsvAction::defaultColumns()));
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id])
+        ->get(route('payroll-export-templates.index'))->assertRedirect(route('export-layouts.index'));
+    expect(PayrollExportTemplate::where('company_id', $company->id)->count())->toBe(0);
+    expect(View::exists('livewire.payroll-export-templates.index'))->toBeFalse();
+    $this->get(route('export-layouts.index'))->assertOk()->assertSee('Layouts de exportación')
+        ->assertDontSee('href="'.route('payroll-export-templates.index').'"', false);
 });
 
 it('exports a closed period with a company custom column order and headers', function (): void {
@@ -95,31 +88,6 @@ it('exports a closed period as Excel using the selected company template', funct
     } finally {
         @unlink($path);
     }
-});
-
-it('saves a custom template from the configuration component', function (): void {
-    [$company, $user] = payrollTemplateCompanyUser();
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('payroll-export-templates.index')
-        ->call('openCreate')
-        ->set('form.name', 'Layout del despacho')
-        ->call('addColumn', 'numero_empleado')
-        ->call('addColumn', 'horas_ordinarias')
-        ->set('form.columns.1.header', 'HORAS BASE')
-        ->set('form.is_default', true)
-        ->call('save')
-        ->assertSee('Plantilla de CSV guardada.');
-
-    $this->assertDatabaseHas('payroll_export_templates', [
-        'company_id' => $company->id,
-        'name' => 'Layout del despacho',
-        'is_default' => true,
-    ]);
-    $this->assertDatabaseHas('payroll_export_template_columns', [
-        'source_key' => 'horas_ordinarias',
-        'header' => 'HORAS BASE',
-    ]);
 });
 
 it('does not resolve an export template from another company', function (): void {

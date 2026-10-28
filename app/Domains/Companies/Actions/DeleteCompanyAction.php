@@ -73,10 +73,11 @@ class DeleteCompanyAction
             'schedules',
             'time_events',
             'worker_credentials',
+            'export_layouts',
             'employment_unit_assignments',
             'operational_scope_assignments',
             'organizational_units',
-            'labor_conditions',
+            'retired_labor_conditions', // Recovery archive, removed with its company only.
             'employment_relationships',
             'workers',
             'mandatory_rest_days',

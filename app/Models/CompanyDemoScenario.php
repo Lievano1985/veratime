@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyDemoScenario extends Model
 {
+    public const TYPE_OPERATIONAL = 'operational';
+
+    public const TYPE_CLOSED_WEEK = 'closed_week';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PROCESSING = 'processing';
@@ -17,6 +21,7 @@ class CompanyDemoScenario extends Model
 
     protected $fillable = [
         'company_id',
+        'scenario_type',
         'requested_by_user_id',
         'status',
         'period_start',

@@ -604,3 +604,10 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* Shared numbered sections for operational side panels. */
+.vt-side-panel { counter-reset: panel-section; }
+.vt-panel-heading { counter-increment: panel-section; }
+.vt-panel-number::before { content: counter(panel-section, decimal-leading-zero); }
+.vt-panel-card { border: 1px solid var(--color-surface-line); border-radius: 1rem; background: var(--color-surface-card); padding: 1.25rem; }
+.dark .vt-panel-card { border-color: var(--color-zinc-700); background: var(--color-zinc-900); }

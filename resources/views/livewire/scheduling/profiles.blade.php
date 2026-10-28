@@ -940,30 +940,31 @@ new class extends Component {
     @endif
 
     @if ($canManageProfiles)
-        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingProfileId ? 'Editar modelo de horario' : 'Nuevo modelo de horario' }}" subheading="Define si este horario se repite cada semana, rota por ciclo o se capturará desde la programación semanal.">
+        <x-side-panel wire:model="showFormPanel" max-width="max-w-5xl" title="{{ $editingProfileId ? 'Editar modelo de horario' : 'Nuevo modelo de horario' }}" subheading="Define si este horario se repite cada semana, rota por ciclo o se capturará desde la programación semanal.">
             <form wire:submit="save" class="space-y-6 p-6">
-                <div class="grid gap-4 md:grid-cols-4">
-                    <flux:input label="Código" wire:model="form.code" required />
-                    <flux:input label="Nombre" wire:model="form.name" required />
-                    <flux:select label="Forma de operar" wire:model.live="form.profile_type">
-                        <flux:select.option value="pattern">Horario fijo o rol rotativo</flux:select.option>
-                        <flux:select.option value="calendar">Programación semanal manual</flux:select.option>
-                        <flux:select.option value="flexible">Horario flexible avanzado</flux:select.option>
-                        <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
-                    </flux:select>
-                    <flux:select label="Estado" wire:model="form.status">
-                        <flux:select.option value="active">Activo</flux:select.option>
-                        <flux:select.option value="inactive">Inactivo</flux:select.option>
-                    </flux:select>
-                </div>
+                <x-ui.panel-section title="Datos del modelo" tone="blue">
+                    <div class="grid gap-4 md:grid-cols-4">
+                        <flux:input label="Código" wire:model="form.code" required />
+                        <flux:input label="Nombre" wire:model="form.name" required />
+                        <flux:select label="Forma de operar" wire:model.live="form.profile_type">
+                            <flux:select.option value="pattern">Horario fijo o rol rotativo</flux:select.option>
+                            <flux:select.option value="calendar">Programación semanal manual</flux:select.option>
+                            <flux:select.option value="flexible">Horario flexible avanzado</flux:select.option>
+                            <flux:select.option value="on_call">Guardia avanzada</flux:select.option>
+                        </flux:select>
+                        <flux:select label="Estado" wire:model="form.status">
+                            <flux:select.option value="active">Activo</flux:select.option>
+                            <flux:select.option value="inactive">Inactivo</flux:select.option>
+                        </flux:select>
+                    </div>
 
-                <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
+                    <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
 
-                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
-                    {{ $this->formOperatingModelSummary() }}
-                </div>
-
-                @if (($form['profile_type'] ?? 'pattern') === 'pattern')
+                    <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                        {{ $this->formOperatingModelSummary() }}
+                    </div>
+                </x-ui.panel-section>
+@if (($form['profile_type'] ?? 'pattern') === 'pattern')
                 <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
                     Este modelo se reutiliza al generar nuevas semanas. Los horarios publicados conservan su versión y las excepciones se corrigen en el lote semanal.
                 </div>
@@ -995,8 +996,8 @@ new class extends Component {
                         <p class="form-error">{{ $message }}</p>
                     @enderror
 
-                    <section class="space-y-4">
-                        <flux:heading>Semana base</flux:heading>
+                    <section class="vt-panel-card space-y-4">
+                        <x-ui.panel-heading title="Semana base" tone="indigo" />
 
                         <div class="grid gap-3">
                             @foreach ($weeklyRules as $index => $rule)
@@ -1022,7 +1023,7 @@ new class extends Component {
                         </div>
 
                         <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
-                            <flux:heading>Vista previa de semana base</flux:heading>
+                            <x-ui.panel-heading title="Vista previa de semana base" tone="emerald" />
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($weeklyPreview as $line)
                                     <p><span class="font-medium">{{ $line['day'] }}</span>: {{ $line['value'] }}</p>
@@ -1035,13 +1036,13 @@ new class extends Component {
                         <p class="form-error">{{ $message }}</p>
                     @enderror
 
-                    <section class="space-y-4">
+                    <section class="vt-panel-card space-y-4">
                         <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
                             La fecha inicial de la asignación representa el Día 1 del ciclo. Longitud actual: <span class="font-medium">{{ count($cycleRules) }} días</span>.
                         </div>
 
                         <div class="flex items-center justify-between">
-                            <flux:heading>Rol rotativo / ciclo</flux:heading>
+                            <x-ui.panel-heading title="Rol rotativo / ciclo" tone="indigo" />
                             <button type="button" class="btn-ghost btn-sm" wire:click="addCycleDay">Agregar día</button>
                         </div>
 
@@ -1075,7 +1076,7 @@ new class extends Component {
                         </div>
 
                         <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
-                            <flux:heading>Vista previa del ciclo</flux:heading>
+                            <x-ui.panel-heading title="Vista previa del ciclo" tone="emerald" />
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($cyclePreview as $line)
                                     <p><span class="font-medium">{{ $line['day'] }}</span>: {{ $line['value'] }}</p>
@@ -1084,13 +1085,13 @@ new class extends Component {
                         </div>
                     </section>
                 @elseif ($this->formIsFlexible())
-                    <section class="space-y-4">
+                    <section class="vt-panel-card space-y-4">
                         <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
                             <p>Los minutos requeridos indican el trabajo esperado.</p>
                             <p>La ventana indica el periodo permitido para iniciar o realizar la jornada; no representa una hora fija.</p>
                         </div>
 
-                        <flux:heading>Reglas flexibles</flux:heading>
+                        <x-ui.panel-heading title="Reglas flexibles" tone="indigo" />
                         <div class="grid gap-3">
                             @foreach ($flexibleRules as $index => $rule)
                                 <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-4">
@@ -1132,7 +1133,7 @@ new class extends Component {
                         </div>
 
                         <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
-                            <flux:heading>Vista previa flexible</flux:heading>
+                            <x-ui.panel-heading title="Vista previa flexible" tone="emerald" />
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($flexiblePreview as $line)
                                     <p><span class="font-medium">{{ $line['day'] }}</span>: {{ $line['value'] }}</p>
@@ -1141,12 +1142,12 @@ new class extends Component {
                         </div>
                     </section>
                 @elseif ($this->formIsOnCall())
-                    <section class="space-y-4">
+                    <section class="vt-panel-card space-y-4">
                         <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
                             La disponibilidad no se contabiliza automáticamente como tiempo trabajado. El trabajo comenzará únicamente cuando exista una activación.
                         </div>
 
-                        <flux:heading>Reglas bajo demanda</flux:heading>
+                        <x-ui.panel-heading title="Reglas bajo demanda" tone="indigo" />
                         <div class="grid gap-3">
                             @foreach ($onCallRules as $index => $rule)
                                 <div class="grid items-end gap-3 rounded-2xl border border-surface-line bg-white p-3 md:grid-cols-4">
@@ -1180,7 +1181,7 @@ new class extends Component {
                         </div>
 
                         <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
-                            <flux:heading>Vista previa bajo demanda</flux:heading>
+                            <x-ui.panel-heading title="Vista previa bajo demanda" tone="emerald" />
                             <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
                                 @foreach ($onCallPreview as $line)
                                     <p><span class="font-medium">{{ $line['day'] }}</span>: {{ $line['value'] }}</p>
@@ -1194,7 +1195,7 @@ new class extends Component {
                     </div>
                 @endif
 
-                <div class="flex justify-end gap-3">
+                <div class="flex flex-wrap justify-end gap-3">
                     <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar</button>
                 </div>

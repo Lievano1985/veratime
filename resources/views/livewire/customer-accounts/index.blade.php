@@ -359,35 +359,36 @@ new class extends Component {
         </div>
     </section>
 
-    <x-side-panel wire:model="showProductPanel" title="Productos contratados" subheading="{{ $editingCustomerAccountName }}" labelledby="customer-account-product-title" maxWidth="max-w-xl" closeMethod="closeProductPanel">
+    <x-side-panel wire:model="showProductPanel" title="Productos contratados" subheading="{{ $editingCustomerAccountName }}" labelledby="customer-account-product-title" max-width="max-w-xl" closeMethod="closeProductPanel">
         <form wire:submit="saveProduct" class="space-y-5 p-6">
-            <flux:select label="Producto" wire:model.live="productForm.product_id">
-                @forelse ($products as $product)
-                    <flux:select.option value="{{ $product->id }}">{{ $product->name }}</flux:select.option>
-                @empty
-                    <flux:select.option value="">No hay productos activos</flux:select.option>
-                @endforelse
-            </flux:select>
+            <x-ui.panel-section title="Producto y contratación" tone="blue">
+                <flux:select label="Producto" wire:model.live="productForm.product_id">
+                    @forelse ($products as $product)
+                        <flux:select.option value="{{ $product->id }}">{{ $product->name }}</flux:select.option>
+                    @empty
+                        <flux:select.option value="">No hay productos activos</flux:select.option>
+                    @endforelse
+                </flux:select>
 
-            <flux:select label="Estado del producto" wire:model="productForm.status">
-                <flux:select.option value="{{ CustomerAccountProduct::STATUS_TRIAL }}">Prueba</flux:select.option>
-                <flux:select.option value="{{ CustomerAccountProduct::STATUS_ACTIVE }}">Activo</flux:select.option>
-                <flux:select.option value="{{ CustomerAccountProduct::STATUS_PAST_DUE }}">Pago vencido</flux:select.option>
-                <flux:select.option value="{{ CustomerAccountProduct::STATUS_SUSPENDED }}">Suspendido</flux:select.option>
-                <flux:select.option value="{{ CustomerAccountProduct::STATUS_CANCELLED }}">Cancelado</flux:select.option>
-            </flux:select>
+                <flux:select label="Estado del producto" wire:model="productForm.status">
+                    <flux:select.option value="{{ CustomerAccountProduct::STATUS_TRIAL }}">Prueba</flux:select.option>
+                    <flux:select.option value="{{ CustomerAccountProduct::STATUS_ACTIVE }}">Activo</flux:select.option>
+                    <flux:select.option value="{{ CustomerAccountProduct::STATUS_PAST_DUE }}">Pago vencido</flux:select.option>
+                    <flux:select.option value="{{ CustomerAccountProduct::STATUS_SUSPENDED }}">Suspendido</flux:select.option>
+                    <flux:select.option value="{{ CustomerAccountProduct::STATUS_CANCELLED }}">Cancelado</flux:select.option>
+                </flux:select>
 
-            <div class="grid gap-4 md:grid-cols-3">
-                <flux:input type="date" label="Inicio" wire:model="productForm.starts_at" />
-                <flux:input type="date" label="Fin de prueba" wire:model="productForm.trial_ends_at" />
-                <flux:input type="date" label="Fin efectivo" wire:model="productForm.ends_at" />
-            </div>
+                <div class="grid gap-4 md:grid-cols-3">
+                    <flux:input type="date" label="Inicio" wire:model="productForm.starts_at" />
+                    <flux:input type="date" label="Fin de prueba" wire:model="productForm.trial_ends_at" />
+                    <flux:input type="date" label="Fin efectivo" wire:model="productForm.ends_at" />
+                </div>
 
-            <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
-                Trial, activo y pago vencido permiten operar VERA Time. Suspendido y cancelado bloquean rutas operativas y detienen nuevos procesos automaticos.
-            </div>
-
-            <div class="flex justify-end gap-3">
+                <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+                    Trial, activo y pago vencido permiten operar VERA Time. Suspendido y cancelado bloquean rutas operativas y detienen nuevos procesos automaticos.
+                </div>
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="closeProductPanel">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="saveProduct">
                     <span wire:loading wire:target="saveProduct" class="btn-spinner"></span>

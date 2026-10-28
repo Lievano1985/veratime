@@ -1568,7 +1568,7 @@ new class extends Component {
         title="Incidencias de jornada"
         subheading="Revisa los registros, corrige si hace falta y atiende cada pendiente."
         labelledby="work-day-alerts-title"
-        maxWidth="max-w-3xl"
+        max-width="max-w-3xl"
         closeMethod="closeAlertsPanel"
     >
         <div class="flex flex-1 flex-col overflow-y-auto">
@@ -1577,9 +1577,9 @@ new class extends Component {
                     @php($panelAlert = $selectedWorkDay->alerts->firstWhere('id', $selectedAlertId))
                     @php($isWeeklyPanel = $panelAlert && in_array($panelAlert->rule_code, WorkDayWorkflow::WEEKLY_RULES, true))
                     @if (! $isWeeklyPanel)
-                    <section class="space-y-4 rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                    <section class="vt-panel-card space-y-4 text-sm">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-3 dark:border-zinc-800">
-                            <div><h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-500">1. Revisar la jornada</h3><p class="mt-1 font-semibold">{{ $selectedWorkDay->worker?->full_name }}</p></div>
+                            <div><x-ui.panel-heading title="Revisar la jornada" /><p class="mt-1 font-semibold">{{ $selectedWorkDay->worker?->full_name }}</p></div>
                             <span class="rounded-md bg-zinc-100 px-2 py-1 font-medium dark:bg-zinc-800">{{ $selectedWorkDay->work_date->format('d/m/Y') }}</span>
                         </div>
                         <dl class="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1609,7 +1609,7 @@ new class extends Component {
                         <p class="text-xs text-zinc-500">Si modificaste marcajes, recalcula para actualizar las horas mostradas.</p>
                     </section>
                     <section class="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:bg-blue-950 dark:text-blue-100">
-                        <h3 class="font-semibold">2. Corregir y actualizar si es necesario</h3>
+                        <x-ui.panel-heading title="Corregir y actualizar si es necesario" tone="indigo" />
                         <p>Si falta o está mal un registro, corrígelo con evidencia. Después recalcula esta jornada; también se actualizarán los acumulados semanales de esta persona.</p>
                         <div class="flex flex-wrap items-center gap-3">
                             <a class="font-semibold underline" href="{{ route('time-events.manual', ['from' => $selectedWorkDay->work_date->toDateString(), 'to' => $selectedWorkDay->work_date->toDateString(), 'worker' => $selectedWorkDay->worker_id, 'search' => $selectedWorkDay->worker?->employee_code ?? '']) }}">Corregir marcajes</a>
@@ -1625,7 +1625,7 @@ new class extends Component {
                         @php($caseWeek = CarbonImmutable::parse($panelAlert->metadata['week_start'] ?? $selectedWorkDay->work_date)->startOfWeek())
                         <section class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100">
                             <p class="mb-2 font-semibold">{{ $selectedWorkDay->worker?->full_name }}</p>
-                            <h3 class="font-semibold">Caso semanal: {{ $caseWeek->format('d/m/Y') }} al {{ $caseWeek->endOfWeek()->format('d/m/Y') }}</h3>
+                            <x-ui.panel-heading title="Caso semanal: {{ $caseWeek->format('d/m/Y') }} al {{ $caseWeek->endOfWeek()->format('d/m/Y') }}" />
                             <p class="mt-2">{{ $panelAlert->description }}</p>
                             @if ($panelAlert->rule_code === 'weekly_rest_missing')
                                 @php($weeklyRestSummary = app(\App\Domains\Alerts\Actions\ConfirmWeeklyRestReviewAction::class)->evidence($company, $panelAlert))
@@ -1649,8 +1649,8 @@ new class extends Component {
                         </section>
                     @endif
 
-                    <section class="space-y-3">
-                        <flux:heading>{{ $isWeeklyPanel ? 'Revisión del caso semanal' : '3. Atender cada pendiente' }}</flux:heading>
+                    <section class="vt-panel-card space-y-3">
+                        <x-ui.panel-heading title="{{ $isWeeklyPanel ? 'Revisión del caso semanal' : 'Atender cada pendiente' }}" tone="emerald" />
                         <p class="text-sm text-zinc-500">{{ $isWeeklyPanel ? 'Revisa el resultado de toda la semana y sus antecedentes.' : 'Si los marcajes y el cálculo están correctos, selecciona un asunto y registra su decisión. Cada revisión se guarda por separado.' }}</p>
 
                         @forelse ($selectedWorkDay->alerts as $alert)
@@ -1773,7 +1773,7 @@ new class extends Component {
                             @endif
                             <flux:textarea label="Comentario obligatorio" wire:model="alertResolutionForm.resolution" rows="4" placeholder="Describe el motivo y las acciones de seguimiento." />
 
-                            <div class="flex justify-end gap-2">
+                            <div class="flex flex-wrap justify-end gap-2">
                                 <button type="button" class="btn-ghost" wire:click="closeAlertsPanel">Cancelar</button>
                                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="resolveSelectedAlert">
                                     <span wire:loading wire:target="resolveSelectedAlert" class="btn-spinner"></span>
@@ -1788,8 +1788,8 @@ new class extends Component {
                         </div>
                     @endif
                     @if (! $isWeeklyPanel || $selectedWorkDay->historicalAlerts->isNotEmpty())
-                    <section class="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-                        <h3 class="font-semibold">{{ $isWeeklyPanel ? 'Antecedentes del caso semanal' : '4. Consultar antecedentes' }}</h3>
+                    <section class="vt-panel-card space-y-3">
+                        <x-ui.panel-heading title="{{ $isWeeklyPanel ? 'Antecedentes del caso semanal' : 'Consultar antecedentes' }}" tone="indigo" />
                     @if ($selectedWorkDay->historicalAlerts->isNotEmpty())
                         <details class="space-y-3 rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-700">
                             <summary class="cursor-pointer font-semibold text-zinc-500">Ver historial ({{ $selectedWorkDay->historicalAlerts->count() }})</summary>
@@ -1917,58 +1917,60 @@ new class extends Component {
         labelledby="process-work-days-title"
     >
         <form wire:submit="processWorkDays" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
-                    <dl class="grid gap-3">
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Empresa</dt>
-                            <dd class="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Alcance</dt>
-                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">Datos disponibles hasta hoy. Las fechas permiten reprocesar un rango puntual.</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Hora automatica</dt>
-                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">{{ $this->autoRefreshTimeLabel($company) }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Ultima ejecucion</dt>
-                            <dd class="mt-1 text-zinc-700 dark:text-zinc-200">{{ $this->lastRefreshLabel($company) }}</dd>
-                        </div>
-                    </dl>
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <flux:input wire:model="processForm.date_from" label="Desde" type="date" max="{{ $todayDate }}" />
-                    <flux:input wire:model="processForm.date_to" label="Hasta" type="date" max="{{ $todayDate }}" />
-                </div>
-                <flux:textarea wire:model="processForm.reason" label="Motivo obligatorio" placeholder="Ej. Reproceso por checadas capturadas tarde o revision de RH." rows="3" />
-
-                @if ($company->setting?->work_days_last_refreshed_at)
-                    <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                        Ultima ejecucion: {{ $company->setting->work_days_last_refreshed_at->timezone($company->setting->default_timezone ?: $company->timezone)->format('Y-m-d H:i') }}
-                        - {{ $company->setting->work_days_last_refresh_status }}
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Alcance del recálculo" tone="blue">
+                    <div class="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
+                        <dl class="grid gap-3">
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Empresa</dt>
+                                <dd class="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $company->name }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Alcance</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-200">Datos disponibles hasta hoy. Las fechas permiten reprocesar un rango puntual.</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Hora automatica</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-200">{{ $this->autoRefreshTimeLabel($company) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Ultima ejecucion</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-200">{{ $this->lastRefreshLabel($company) }}</dd>
+                            </div>
+                        </dl>
                     </div>
-                @endif
 
-                <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                    <p class="font-medium">Al ejecutar se procesara:</p>
-                    <ul class="mt-2 list-disc space-y-1 pl-5">
-                        <li>Jornadas programadas desde horarios publicados.</li>
-                        <li>Jornadas no programadas cuando existan eventos validos sin horario.</li>
-                        <li>Usa eventos validos ordenados por fecha real del hecho.</li>
-                        <li>Genera una version activa y conserva versiones anteriores.</li>
-                        <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
-                        <li>Calcula minutos ordinarios y extra con reglas versionadas.</li>
-                        <li>Identifica trabajo en domingo, descanso obligatorio y semanas sin descanso detectado.</li>
-                        <li>Genera o cierra alertas preventivas segun el calculo vigente.</li>
-                        <li>No genera incidencias ni cierres.</li>
-                    </ul>
-                </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <flux:input wire:model="processForm.date_from" label="Desde" type="date" max="{{ $todayDate }}" />
+                        <flux:input wire:model="processForm.date_to" label="Hasta" type="date" max="{{ $todayDate }}" />
+                    </div>
+                    <flux:textarea wire:model="processForm.reason" label="Motivo obligatorio" placeholder="Ej. Reproceso por checadas capturadas tarde o revision de RH." rows="3" />
+
+                    @if ($company->setting?->work_days_last_refreshed_at)
+                        <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                            Ultima ejecucion: {{ $company->setting->work_days_last_refreshed_at->timezone($company->setting->default_timezone ?: $company->timezone)->format('Y-m-d H:i') }}
+                            - {{ $company->setting->work_days_last_refresh_status }}
+                        </div>
+                    @endif
+
+                    <div class="rounded-md border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                        <p class="font-medium">Al ejecutar se procesara:</p>
+                        <ul class="mt-2 list-disc space-y-1 pl-5">
+                            <li>Jornadas programadas desde horarios publicados.</li>
+                            <li>Jornadas no programadas cuando existan eventos validos sin horario.</li>
+                            <li>Usa eventos validos ordenados por fecha real del hecho.</li>
+                            <li>Genera una version activa y conserva versiones anteriores.</li>
+                            <li>Clasifica la jornada como diurna, nocturna o mixta.</li>
+                            <li>Calcula minutos ordinarios y extra con reglas versionadas.</li>
+                            <li>Identifica trabajo en domingo, descanso obligatorio y semanas sin descanso detectado.</li>
+                            <li>Genera o cierra alertas preventivas segun el calculo vigente.</li>
+                            <li>No genera incidencias ni cierres.</li>
+                        </ul>
+                    </div>
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
+            <div class="flex flex-wrap justify-end gap-3 border-t border-zinc-200 p-4 dark:border-zinc-700">
                 <button type="button" class="btn-ghost" wire:click="closeProcessPanel">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="processWorkDays">
                     <span wire:loading wire:target="processWorkDays" class="btn-spinner"></span>

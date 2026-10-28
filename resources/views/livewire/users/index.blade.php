@@ -540,21 +540,23 @@ new class extends Component
 
     <x-side-panel wire:model="showCreatePanel" title="Nuevo usuario" subheading="Crea un acceso para la empresa activa." labelledby="user-create-title" max-width="max-w-xl">
         <form wire:submit="create" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <flux:input label="Nombre" wire:model="form.name" />
-                <flux:input type="email" label="Correo" wire:model="form.email" />
-                <flux:input label="Contraseña temporal" wire:model="form.password" />
-                <flux:select label="Rol" wire:model="form.role_key">
-                    @foreach ($roles as $role)
-                        <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-                <flux:select label="Estado inicial" wire:model="form.status">
-                    <flux:select.option value="active">Activo</flux:select.option>
-                    <flux:select.option value="inactive">Inactivo</flux:select.option>
-                </flux:select>
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Datos de acceso" tone="blue">
+                    <flux:input label="Nombre" wire:model="form.name" />
+                    <flux:input type="email" label="Correo" wire:model="form.email" />
+                    <flux:input label="Contraseña temporal" wire:model="form.password" />
+                    <flux:select label="Rol" wire:model="form.role_key">
+                        @foreach ($roles as $role)
+                            <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:select label="Estado inicial" wire:model="form.status">
+                        <flux:select.option value="active">Activo</flux:select.option>
+                        <flux:select.option value="inactive">Inactivo</flux:select.option>
+                    </flux:select>
+                </x-ui.panel-section>
             </div>
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Crear usuario</button>
             </div>
@@ -563,33 +565,35 @@ new class extends Component
 
     <x-side-panel wire:model="showEditPanel" title="Editar usuario" subheading="Actualiza datos, rol y acceso en la empresa activa." labelledby="user-edit-title" max-width="max-w-xl">
         <form wire:submit="update" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <flux:input label="Nombre" wire:model="editForm.name" />
-                <flux:select label="Rol" wire:model="editForm.role_key">
-                    @foreach ($roles as $role)
-                        <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-                @if ($isSuperAdmin)
-                    <flux:select label="Estado global del usuario" wire:model="editForm.user_status">
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Datos y permisos" tone="blue">
+                    <flux:input label="Nombre" wire:model="editForm.name" />
+                    <flux:select label="Rol" wire:model="editForm.role_key">
+                        @foreach ($roles as $role)
+                            <flux:select.option value="{{ $role->key }}">{{ $role->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    @if ($isSuperAdmin)
+                        <flux:select label="Estado global del usuario" wire:model="editForm.user_status">
+                            <flux:select.option value="active">Activo</flux:select.option>
+                            <flux:select.option value="inactive">Inactivo</flux:select.option>
+                        </flux:select>
+                    @else
+                        <div>
+                            <div class="form-label">Estado global del usuario</div>
+                            <x-ui.badge variant="{{ ($editForm['user_status'] ?? 'active') === 'active' ? 'success' : 'neutral' }}">
+                                {{ $this->statusLabel($editForm['user_status'] ?? 'active') }}
+                            </x-ui.badge>
+                            <p class="form-hint">Solo el super administrador puede cambiar el estado global.</p>
+                        </div>
+                    @endif
+                    <flux:select label="Acceso a esta empresa" wire:model="editForm.membership_status">
                         <flux:select.option value="active">Activo</flux:select.option>
                         <flux:select.option value="inactive">Inactivo</flux:select.option>
                     </flux:select>
-                @else
-                    <div>
-                        <div class="form-label">Estado global del usuario</div>
-                        <x-ui.badge variant="{{ ($editForm['user_status'] ?? 'active') === 'active' ? 'success' : 'neutral' }}">
-                            {{ $this->statusLabel($editForm['user_status'] ?? 'active') }}
-                        </x-ui.badge>
-                        <p class="form-hint">Solo el super administrador puede cambiar el estado global.</p>
-                    </div>
-                @endif
-                <flux:select label="Acceso a esta empresa" wire:model="editForm.membership_status">
-                    <flux:select.option value="active">Activo</flux:select.option>
-                    <flux:select.option value="inactive">Inactivo</flux:select.option>
-                </flux:select>
+                </x-ui.panel-section>
             </div>
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closeEditPanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
@@ -598,13 +602,15 @@ new class extends Component
 
     <x-side-panel wire:model="showResetPanel" title="Resetear contraseña" subheading="Genera una contraseña temporal para el usuario." labelledby="user-reset-title" max-width="max-w-lg">
         <form wire:submit="resetPassword" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <flux:input label="Nueva contraseña temporal" wire:model="resetForm.password" />
-                <div class="rounded-xl border border-status-warn-line bg-status-warn-bg px-3 py-2 text-sm text-status-warn-text">
-                    Comparte esta contraseña por un medio seguro. Vera Time solo la mostrará en esta sesión.
-                </div>
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Restablecer acceso" tone="blue">
+                    <flux:input label="Nueva contraseña temporal" wire:model="resetForm.password" />
+                    <div class="rounded-xl border border-status-warn-line bg-status-warn-bg px-3 py-2 text-sm text-status-warn-text">
+                        Comparte esta contraseña por un medio seguro. Vera Time solo la mostrará en esta sesión.
+                    </div>
+                </x-ui.panel-section>
             </div>
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closeResetPanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Actualizar contraseña</button>
             </div>
@@ -614,55 +620,57 @@ new class extends Component
 
 <x-side-panel wire:model="showWorkerLinkPanel" title="Vínculo con trabajador" subheading="Acceso personal web/PWA; no modifica el kiosco." max-width="max-w-lg">
     <form wire:submit="saveWorkerLink" class="flex flex-1 flex-col">
-        <div class="flex-1 space-y-4 p-6">
-            <flux:select label="Trabajador activo" wire:model="linkedWorkerId">
-                <flux:select.option value="">Seleccionar</flux:select.option>
-                @foreach ($linkWorkers as $worker)
-                    <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+        <div class="flex-1 space-y-5 p-4 sm:p-6">
+            <x-ui.panel-section title="Trabajador vinculado" tone="blue">
+                <flux:select label="Trabajador activo" wire:model="linkedWorkerId">
+                    <flux:select.option value="">Seleccionar</flux:select.option>
+                    @foreach ($linkWorkers as $worker)
+                        <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
 
-            @if ($linkedWorkerId)
-                <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
-                    <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
-                    <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
-                    <button type="button" wire:click="authorizeMobileDevice" class="btn-secondary mt-3">Generar código de vinculación</button>
+                @if ($linkedWorkerId)
+                    <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
+                        <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
+                        <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
+                        <button type="button" wire:click="authorizeMobileDevice" class="btn-secondary mt-3">Generar código de vinculación</button>
 
-                    @if ($mobileDeviceBindingAuthorizationCode)
-                        <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
-                            <p class="text-xs font-semibold text-status-warn-text">Comparte este código de forma segura. No volverá a mostrarse al cerrar este panel.</p>
-                            <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
-                        </div>
-                    @endif
+                        @if ($mobileDeviceBindingAuthorizationCode)
+                            <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
+                                <p class="text-xs font-semibold text-status-warn-text">Comparte este código de forma segura. No volverá a mostrarse al cerrar este panel.</p>
+                                <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
+                            </div>
+                        @endif
 
-                    <div class="mt-4 border-t border-surface-line pt-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivos vinculados</p>
-                        <div class="mt-2 space-y-2">
-                            @forelse ($mobileDeviceBindings as $binding)
-                                <div wire:key="mobile-device-binding-{{ $binding->id }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-line bg-white px-3 py-2">
-                                    <div>
-                                        <p class="text-sm font-semibold text-brand-navy">{{ $binding->device_name }}</p>
-                                        <p class="text-xs text-surface-muted">Activado {{ $binding->activated_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</p>
-                                        @if ($binding->status === 'revoked')
-                                            <p class="mt-1 text-xs text-surface-muted">Revocado {{ $binding->revoked_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}{{ $binding->revokedBy ? ' por '.$binding->revokedBy->name : '' }}</p>
-                                        @endif
+                        <div class="mt-4 border-t border-surface-line pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivos vinculados</p>
+                            <div class="mt-2 space-y-2">
+                                @forelse ($mobileDeviceBindings as $binding)
+                                    <div wire:key="mobile-device-binding-{{ $binding->id }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-line bg-white px-3 py-2">
+                                        <div>
+                                            <p class="text-sm font-semibold text-brand-navy">{{ $binding->device_name }}</p>
+                                            <p class="text-xs text-surface-muted">Activado {{ $binding->activated_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</p>
+                                            @if ($binding->status === 'revoked')
+                                                <p class="mt-1 text-xs text-surface-muted">Revocado {{ $binding->revoked_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}{{ $binding->revokedBy ? ' por '.$binding->revokedBy->name : '' }}</p>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <x-ui.badge variant="{{ $binding->status === 'active' ? 'success' : 'danger' }}">{{ $binding->status === 'active' ? 'Autorizado' : 'Revocado' }}</x-ui.badge>
+                                            @if ($binding->status === 'active')
+                                                <button type="button" wire:click="revokeMobileDevice({{ $binding->id }})" wire:confirm="Este teléfono ya no podrá usarse para marcajes que exijan dispositivo autorizado. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
+                                            @endif
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <x-ui.badge variant="{{ $binding->status === 'active' ? 'success' : 'danger' }}">{{ $binding->status === 'active' ? 'Autorizado' : 'Revocado' }}</x-ui.badge>
-                                        @if ($binding->status === 'active')
-                                            <button type="button" wire:click="revokeMobileDevice({{ $binding->id }})" wire:confirm="Este teléfono ya no podrá usarse para marcajes que exijan dispositivo autorizado. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
-                                        @endif
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-xs text-surface-muted">Aún no hay dispositivos móviles vinculados.</p>
-                            @endforelse
+                                @empty
+                                    <p class="text-xs text-surface-muted">Aún no hay dispositivos móviles vinculados.</p>
+                                @endforelse
+                            </div>
                         </div>
                     </div>
-                </div>
-            @endif
+                @endif
+            </x-ui.panel-section>
         </div>
-        <div class="flex justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
+        <div class="flex flex-wrap justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
     </form>
 </x-side-panel>
 </div>

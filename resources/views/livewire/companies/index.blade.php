@@ -5,6 +5,7 @@ use App\Domains\Companies\Actions\CreateTenantWithAdminAction;
 use App\Domains\Companies\Actions\DeleteCompanyAction;
 use App\Domains\Companies\Actions\AssessCompanyDemoScenarioEligibilityAction;
 use App\Domains\Companies\Actions\RequestCompanyDemoScenarioAction;
+use App\Domains\Companies\Actions\ResetCompanyDemoScenarioAction;
 use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
@@ -31,6 +32,9 @@ new class extends Component {
     public string $companySearch = '';
     public string $adminEmailSearch = '';
     public string $deleteConfirmation = '';
+    public string $demoScenarioType = 'operational';
+    public string $demoResetConfirmation = '';
+    public string $demoResetReplacement = 'empty';
 
     public function mount(CurrentCompany $currentCompany): void
     {
@@ -153,6 +157,10 @@ new class extends Component {
         $company = $this->authorizedCompany($companyId, 'update');
 
         $this->editingCompanyId = $company->id;
+        $this->demoScenarioType = 'operational';
+        $this->demoResetConfirmation = '';
+        $this->demoResetReplacement = 'empty';
+        $this->resetValidation(['demoReset', 'demoResetConfirmation']);
         $this->editForm = [
             'name' => $company->name,
             'legal_name' => $company->legal_name,
@@ -201,13 +209,32 @@ new class extends Component {
     {
         $company = $this->authorizedCompany($companyId, 'update');
 
-        $scenario = $action->handle($company, auth()->user());
+        $scenario = $action->handle($company, auth()->user(), $this->demoScenarioType);
 
         Session::flash('status', match ($scenario->status) {
             \App\Models\CompanyDemoScenario::STATUS_COMPLETED => 'El escenario demo se creó correctamente.',
             \App\Models\CompanyDemoScenario::STATUS_FAILED => 'No se pudo crear el escenario demo. Revisa el detalle mostrado en esta sección e inténtalo nuevamente.',
             default => 'El escenario demo ya se está preparando.',
         });
+    }
+
+    public function openDemoReset(int $companyId): void
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $this->loadEditForm($companyId);
+        \Flux\Flux::modal('reset-company-demo')->show();
+    }
+
+    public function resetDemo(int $companyId, ResetCompanyDemoScenarioAction $action): void
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $company = $this->authorizedCompany($companyId, 'update');
+        $result = $action->handle($company, auth()->user(), $this->demoResetConfirmation, $this->demoResetReplacement);
+        $this->demoResetConfirmation = '';
+        $this->demoResetReplacement = 'empty';
+        $this->resetValidation(['demoReset', 'demoResetConfirmation']);
+        \Flux\Flux::modal('reset-company-demo')->close();
+        Session::flash('status', $result ? 'El demo anterior se reemplazó correctamente.' : 'Demo eliminado. La empresa quedó sin datos de demostración.');
     }
 
     public function openDeleteDrawer(int $companyId): void
@@ -261,7 +288,7 @@ new class extends Component {
     public function with(CurrentCompany $currentCompany, AssessCompanyDemoScenarioEligibilityAction $assessDemo): array
     {
         $company = $currentCompany->get();
-        $company?->loadMissing('demoScenario');
+        $company?->load('demoScenario');
         $canManageCurrentCompany = $company ? Gate::allows('update', $company) : false;
 
         return [
@@ -438,7 +465,16 @@ new class extends Component {
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-sm font-semibold">Escenario de demostracion</p>
-                    @if ($demoStatus === 'completed')
+                    @if ($demoStatus === 'completed' && $currentDemoScenario->scenario_type === \App\Models\CompanyDemoScenario::TYPE_CLOSED_WEEK)
+                        <p class="text-xs">Período terminado: {{ $currentDemoScenario->period_start->format('d/m/Y') }} al {{ $currentDemoScenario->period_end->format('d/m/Y') }}. Los dos períodos están cerrados y listos para descargar desde Exportar períodos.</p>
+                        @if (data_get($currentDemoScenario->summary, 'weeks'))
+                            <p class="mt-1 text-xs">{{ data_get($currentDemoScenario->summary, 'workers') }} trabajadores ·
+                                @foreach (data_get($currentDemoScenario->summary, 'weeks') as $week)
+                                    Semana {{ $week['iso_week'] }}/{{ $week['iso_year'] }}{{ $loop->last ? '' : ' · ' }}
+                                @endforeach
+                            </p>
+                        @endif
+                    @elseif ($demoStatus === 'completed')
                         <p class="text-xs">Listo: 10 trabajadores, dos semanas completas y la semana en curso de programacion preparadas. El Centro Nocturno puede validarse, cerrarse y exportarse; el Diurno conserva alertas de prueba.</p>
                     @elseif ($demoStatus === 'failed')
                         <p class="text-xs">No se pudo terminar de preparar el demo. Revisa el registro tecnico antes de operar la empresa.</p>
@@ -446,7 +482,12 @@ new class extends Component {
                         <p class="text-xs">Preparando horarios, marcajes, incidencias y jornadas. Actualiza esta pagina en unos momentos.</p>
                     @endif
                 </div>
-                <span class="text-xs font-semibold uppercase tracking-wide">{{ $demoStatus }}</span>
+                <div class="flex items-center gap-3">
+                    @if ($isSuperAdmin && in_array($demoStatus, ['completed', 'failed'], true))
+                        <button type="button" class="btn-danger shrink-0" wire:click="openDemoReset({{ $currentDemoScenario->company_id }})">Borrar datos de empresa</button>
+                    @endif
+                    <span class="text-xs font-semibold uppercase tracking-wide">{{ $demoStatus }}</span>
+                </div>
             </div>
         </section>
     @endif
@@ -638,9 +679,39 @@ new class extends Component {
                                         Generar escenario demo
                                     </button>
                                 </flux:modal.trigger>
+                            @elseif ($isSuperAdmin && in_array(data_get($editingDemoEligibility, 'scenario.status'), ['completed', 'failed'], true))
+                                <button type="button" class="btn-danger shrink-0" wire:click="openDemoReset({{ $editingCompanyId }})">Borrar datos de empresa</button>
                             @endif
                         </div>
                     </section>
+
+                    @if ($isSuperAdmin && in_array(data_get($editingDemoEligibility, 'scenario.status'), ['completed', 'failed'], true))
+                        <div class="mt-4 rounded-xl border border-status-warn-line bg-status-warn-bg p-4">
+                            <p class="text-sm text-status-warn-text">Puedes borrar todos los datos operativos de esta empresa y dejarla vacía, o sustituirlos por otro escenario. Se conservan la empresa, usuarios, configuración y layouts.</p>
+                        </div>
+                        <flux:modal name="reset-company-demo" focusable class="max-w-lg">
+                            <form wire:submit="resetDemo({{ $editingCompanyId }})" class="space-y-5 p-6">
+                                <flux:heading size="lg">Borrar o reemplazar demo</flux:heading>
+                                <p class="text-sm text-surface-muted">Se borrarán TODOS los datos operativos de esta empresa: trabajadores, centros, horarios, marcajes, incidencias, cálculos, períodos (incluidos los cerrados) y registros agregados después del demo. Se guardará una copia interna antes de continuar.</p>
+                                <flux:select wire:model="demoResetReplacement" label="Después de borrar el demo">
+                                    <option value="empty">Dejar empresa vacía</option>
+                                    <option value="operational">Generar demo de operación y revisión</option>
+                                    <option value="closed_week">Generar dos semanas terminadas para exportar</option>
+                                </flux:select>
+                                <flux:input wire:model="demoResetConfirmation" label="Escribe el nombre de la empresa para confirmar" />
+                                <p class="text-sm font-semibold text-brand-navy">{{ $editForm['name'] }}</p>
+                                @error('demoReset') <p role="alert" class="text-sm text-status-danger-text">{{ $message }}</p> @enderror
+                                @error('demoResetConfirmation') <p role="alert" class="text-sm text-status-danger-text">{{ $message }}</p> @enderror
+                                <div class="flex justify-end gap-3">
+                                    <flux:modal.close><button type="button" class="btn-secondary" wire:loading.attr="disabled" wire:target="resetDemo">Cancelar</button></flux:modal.close>
+                                    <button type="submit" class="btn-danger" wire:loading.attr="disabled" wire:target="resetDemo">
+                                        <span wire:loading.remove wire:target="resetDemo">Confirmar limpieza</span>
+                                        <span wire:loading wire:target="resetDemo">Procesando...</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </flux:modal>
+                    @endif
 
                     @if (data_get($editingDemoEligibility, 'allowed'))
                         <flux:modal name="confirm-company-demo-generation" focusable class="max-w-lg">
@@ -648,9 +719,23 @@ new class extends Component {
                                 <div class="space-y-2">
                                     <flux:heading size="lg">Preparar escenario de demostración</flux:heading>
                                     <flux:subheading>
-                                        Se crearán datos ficticios de centros, trabajadores, horarios, marcajes, incidencias, jornadas, alertas y periodos. Esta operación sólo puede realizarse una vez por empresa.
+                                        Se crearán datos ficticios de centros, trabajadores, horarios, marcajes, incidencias, jornadas, alertas y periodos. Solo se genera en una empresa sin datos operativos. El superadministrador puede borrar o reemplazar un demo existente.
                                     </flux:subheading>
                                 </div>
+
+                                @if ($isSuperAdmin)
+                                    <fieldset class="space-y-3">
+                                        <legend class="text-sm font-semibold text-brand-navy">¿Qué escenario quieres generar?</legend>
+                                        <label class="flex gap-3 rounded-xl border border-surface-line p-4">
+                                            <input type="radio" wire:model="demoScenarioType" value="operational">
+                                            <span><strong>Operación y revisión</strong><span class="block text-sm text-surface-muted">Demo actual con jornadas, alertas y pendientes para practicar su atención.</span></span>
+                                        </label>
+                                        <label class="flex gap-3 rounded-xl border border-surface-line p-4">
+                                            <input type="radio" wire:model="demoScenarioType" value="closed_week">
+                                            <span><strong>Dos semanas terminadas para exportar</strong><span class="block text-sm text-surface-muted">Dos últimas semanas completas de lunes a domingo, con 5 trabajadores, incidencias aprobadas y períodos cerrados. Listas para CSV y layouts.</span></span>
+                                        </label>
+                                    </fieldset>
+                                @endif
 
                                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                                     <flux:modal.close>
@@ -689,7 +774,7 @@ new class extends Component {
                 <div class="flex-1 space-y-6 p-6">
                     <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                         <div>
-                            <h3 class="font-display text-sm font-bold text-brand-navy">Datos de empresa</h3>
+                            <x-ui.panel-heading title="Datos de empresa" tone="blue" />
                             <p class="text-xs text-surface-muted">Información base del tenant operativo.</p>
                         </div>
                         <flux:input wire:model="createForm.name" label="Nombre comercial" required />
@@ -722,7 +807,7 @@ new class extends Component {
                     @if ($isSuperAdmin)
                         <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                             <div>
-                                <h3 class="font-display text-sm font-bold text-brand-navy">Administrador principal</h3>
+                                <x-ui.panel-heading title="Administrador principal" tone="indigo" />
                                 <p class="text-xs text-surface-muted">Este usuario quedara como administrador general de la empresa. El super admin no se agrega como miembro operativo.</p>
                             </div>
                             <flux:input wire:model="createForm.admin_name" label="Nombre" required />
@@ -737,7 +822,7 @@ new class extends Component {
                     @endif
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <button type="button" class="btn-ghost" wire:click="closeCreateDrawer">
                         Cancelar
                     </button>
@@ -758,30 +843,32 @@ new class extends Component {
             max-width="max-w-xl"
         >
             <form wire:submit="delete" class="flex flex-1 flex-col">
-                <div class="flex-1 space-y-5 p-6">
-                    @if ($deletingCompany)
-                        <div class="rounded-2xl border border-status-pending-line bg-status-pending-bg p-4 text-sm text-status-pending-text">
-                            <p class="font-semibold">Eliminacion destructiva</p>
-                            <p class="mt-2">
-                                Se eliminaran los datos asociados a <strong>{{ $deletingCompany->name }}</strong>,
-                                incluyendo configuracion, centros, trabajadores, horarios, jornadas, periodos, importaciones
-                                y membresias de esa empresa.
-                            </p>
-                            <p class="mt-2">
-                                Si la cuenta cliente queda sin empresas, tambien se eliminara la cuenta cliente.
-                            </p>
-                        </div>
+                <div class="flex-1 space-y-5 p-4 sm:p-6">
+                    <x-ui.panel-section title="Confirmación de eliminación" tone="blue">
+                        @if ($deletingCompany)
+                            <div class="rounded-2xl border border-status-pending-line bg-status-pending-bg p-4 text-sm text-status-pending-text">
+                                <p class="font-semibold">Eliminacion destructiva</p>
+                                <p class="mt-2">
+                                    Se eliminaran los datos asociados a <strong>{{ $deletingCompany->name }}</strong>,
+                                    incluyendo configuracion, centros, trabajadores, horarios, jornadas, periodos, importaciones
+                                    y membresias de esa empresa.
+                                </p>
+                                <p class="mt-2">
+                                    Si la cuenta cliente queda sin empresas, tambien se eliminara la cuenta cliente.
+                                </p>
+                            </div>
 
-                        <flux:input
-                            wire:model="deleteConfirmation"
-                            label="Escribe el nombre de la empresa para confirmar"
-                            placeholder="{{ $deletingCompany->name }}"
-                            required
-                        />
-                    @endif
+                            <flux:input
+                                wire:model="deleteConfirmation"
+                                label="Escribe el nombre de la empresa para confirmar"
+                                placeholder="{{ $deletingCompany->name }}"
+                                required
+                            />
+                        @endif
+                    </x-ui.panel-section>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <button type="button" class="btn-ghost" wire:click="closeDeleteDrawer">
                         Cancelar
                     </button>

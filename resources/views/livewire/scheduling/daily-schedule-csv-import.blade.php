@@ -6,7 +6,7 @@
         title="Importación CSV"
         subheading="Carga programación para este borrador y revisa la vista previa antes de aplicar."
         labelledby="daily-schedule-csv-import-title"
-        maxWidth="max-w-none"
+        max-width="max-w-none"
         widthStyle="width: max(22rem, calc(100vw - 18rem)); max-width: 100vw;"
     >
         <div class="space-y-4 p-6">
@@ -21,7 +21,7 @@
             <div class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p class="font-display font-bold text-brand-navy">Nuevo archivo</p>
+                        <x-ui.panel-heading title="Nuevo archivo" tone="blue" />
                         <p class="mt-1 text-xs text-surface-muted">Usa solo CSV UTF-8 con los encabezados de la plantilla. No se aceptan Excel ni archivos comprimidos.</p>
                     </div>
                     <a href="{{ $templateUrl }}" class="btn-outline btn-sm">
@@ -63,7 +63,7 @@
                 <div class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                            <p class="font-display font-bold text-brand-navy">Vista previa: {{ $activeImport->original_filename }}</p>
+                            <x-ui.panel-heading title="Vista previa: {{ $activeImport->original_filename }}" tone="indigo" />
                             <p class="mt-1 flex flex-wrap items-center gap-2 text-xs text-surface-muted">
                                 <span>Estado:</span>
                                 <x-ui.badge variant="{{ $activeImport->status === 'validated' || $activeImport->status === 'applied' ? 'success' : ($activeImport->status === 'invalid' ? 'danger' : ($activeImport->status === 'cancelled' ? 'neutral' : 'warning')) }}">

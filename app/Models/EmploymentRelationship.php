@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class EmploymentRelationship extends Model
 {
@@ -52,22 +51,6 @@ class EmploymentRelationship extends Model
         return $this->belongsTo(Center::class);
     }
 
-    public function laborConditions(): HasMany
-    {
-        return $this->hasMany(LaborCondition::class);
-    }
-
-    public function activeLaborCondition(): HasOne
-    {
-        return $this->hasOne(LaborCondition::class)
-            ->where('status', 'active')
-            ->where(function ($query): void {
-                $query->whereNull('effective_to')
-                    ->orWhere('effective_to', '>=', now()->toDateString());
-            })
-            ->latest('effective_from');
-    }
-
     public function scheduleAssignments(): HasMany
     {
         return $this->hasMany(ScheduleAssignment::class);
@@ -77,6 +60,7 @@ class EmploymentRelationship extends Model
     {
         return $this->hasMany(TimeEvent::class);
     }
+
     public function employmentUnitAssignments(): HasMany
     {
         return $this->hasMany(EmploymentUnitAssignment::class);
@@ -97,7 +81,7 @@ class EmploymentRelationship extends Model
         return $this->hasMany(WorkDay::class);
     }
 
-    public function isEffectiveOn(string|\DateTimeInterface $date): bool
+    public function isEffectiveOn(string|DateTimeInterface $date): bool
     {
         $workDate = CarbonImmutable::parse($date)->toDateString();
 

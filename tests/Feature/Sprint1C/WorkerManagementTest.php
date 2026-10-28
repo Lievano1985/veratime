@@ -1,13 +1,13 @@
 <?php
 
 use App\Domains\Workers\Actions\CreateWorkerAction;
+use App\Domains\Workers\Actions\SaveWorkerWithEmploymentRelationshipAction;
 use App\Domains\Workers\Actions\UpdateWorkerAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\DailyScheduleAssignment;
 use App\Models\EmploymentRelationship;
 use App\Models\EmploymentUnitAssignment;
-use App\Models\LaborCondition;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
 use App\Models\ScheduleBatch;
@@ -78,9 +78,7 @@ it('user can create worker in active company', function (): void {
     Volt::test('workers.index')
         ->set('form.employee_code', 'EMP-001')
         ->set('form.full_name', 'Maria Lopez')
-        ->set('form.email', 'maria@example.test')
         ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'Operadora')
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
         ->call('save');
@@ -89,7 +87,7 @@ it('user can create worker in active company', function (): void {
         'company_id' => $company->id,
         'employee_code' => 'EMP-001',
         'full_name' => 'Maria Lopez',
-        'email' => 'maria@example.test',
+        'email' => null,
         'status' => 'active',
         'source' => 'web',
     ]);
@@ -100,7 +98,7 @@ it('user can create worker in active company', function (): void {
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $center->id,
-        'position_name' => 'Operadora',
+        'position_name' => null,
         'started_at' => '2026-07-01 00:00:00',
         'status' => 'active',
         'source' => 'web',
@@ -178,7 +176,6 @@ it('user can update own worker', function (): void {
         ->set('form.employee_code', 'NEW')
         ->set('form.full_name', 'Actualizado')
         ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'Auxiliar')
         ->set('form.started_at', now()->subMonth()->toDateString())
         ->set('form.status', 'active')
         ->call('save');
@@ -213,7 +210,6 @@ it('corrects center on the same employment relationship when there is no protect
     Volt::test('workers.index')
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $newCenter->id)
-        ->set('form.position_name', 'Auxiliar')
         ->set('form.started_at', '2026-06-15')
         ->set('form.relationship_change_reason', 'Centro capturado incorrectamente en alta.')
         ->call('save');
@@ -250,13 +246,14 @@ it('corrects position on the same employment relationship when there is no prote
 
     $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
-    Volt::test('workers.index')
-        ->call('loadEditForm', $worker->id)
-        ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'Supervisor')
-        ->set('form.started_at', '2026-07-01')
-        ->set('form.relationship_change_reason', 'Puesto capturado incorrectamente.')
-        ->call('save');
+    app(SaveWorkerWithEmploymentRelationshipAction::class)->handle($company, $worker, $center, [
+        'employee_code' => $worker->employee_code,
+        'full_name' => $worker->full_name,
+        'status' => $worker->status,
+        'position_name' => 'Supervisor',
+        'started_at' => '2026-07-01',
+        'relationship_change_reason' => 'Puesto capturado incorrectamente.',
+    ], $user);
 
     $this->assertDatabaseHas('employment_relationships', [
         'id' => $relationship->id,
@@ -289,7 +286,6 @@ it('corrects started at on the same employment relationship when there is no pro
     Volt::test('workers.index')
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'Auxiliar')
         ->set('form.started_at', '2026-06-20')
         ->set('form.relationship_change_reason', 'Fecha de ingreso capturada incorrectamente.')
         ->call('save');
@@ -331,7 +327,6 @@ it('editing worker basics without relationship changes does not create a new rel
         ->set('form.employee_code', 'BASIC-2')
         ->set('form.full_name', 'Nombre actualizado')
         ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'Auxiliar')
         ->set('form.started_at', '2026-07-01')
         ->call('save');
 
@@ -442,7 +437,6 @@ it('blocks administrative correction when relationship already has protected pub
     Volt::test('workers.index')
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $newCenter->id)
-        ->set('form.position_name', 'Auxiliar')
         ->set('form.started_at', '2026-06-15')
         ->set('form.relationship_change_reason', 'Centro y fecha capturados mal.')
         ->call('save')
@@ -488,7 +482,6 @@ it('allows a new future relationship only after protected evidence dates', funct
     Volt::test('workers.index')
         ->call('loadEditForm', $worker->id)
         ->set('form.center_id', (string) $newCenter->id)
-        ->set('form.position_name', 'Supervisor')
         ->set('form.started_at', '2026-07-20')
         ->set('form.relationship_change_reason', 'Cambio operativo futuro.')
         ->call('save');
@@ -506,7 +499,7 @@ it('allows a new future relationship only after protected evidence dates', funct
         'company_id' => $company->id,
         'worker_id' => $worker->id,
         'center_id' => $newCenter->id,
-        'position_name' => 'Supervisor',
+        'position_name' => 'Auxiliar',
         'started_at' => '2026-07-20 00:00:00',
         'status' => 'active',
     ]);
@@ -613,7 +606,6 @@ it('employment relationship is created with center from same company', function 
         ->set('form.employee_code', 'REL-001')
         ->set('form.full_name', 'Relacion Valida')
         ->set('form.center_id', (string) $center->id)
-        ->set('form.position_name', 'General')
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
         ->call('save');
@@ -651,7 +643,7 @@ it('blocks employment relationship with center from another company', function (
     ]);
 });
 
-it('worker form validates required fields email and status', function (): void {
+it('worker form validates required fields and status', function (): void {
     $company = Company::factory()->create();
     $user = workerUserWithCompany($company);
 
@@ -660,7 +652,6 @@ it('worker form validates required fields email and status', function (): void {
     Volt::test('workers.index')
         ->set('form.employee_code', '')
         ->set('form.full_name', '')
-        ->set('form.email', 'invalid-email')
         ->set('form.center_id', '')
         ->set('form.started_at', '')
         ->set('form.status', 'archived')
@@ -668,7 +659,6 @@ it('worker form validates required fields email and status', function (): void {
         ->assertHasErrors([
             'form.employee_code' => 'required',
             'form.full_name' => 'required',
-            'form.email' => 'email',
             'form.center_id' => 'required',
             'form.started_at' => 'required',
             'form.status',
@@ -798,9 +788,8 @@ it('worker creation flow does not create labor conditions or worker credentials 
         ->set('form.status', 'active')
         ->call('save');
 
-    expect(Schema::hasTable('labor_conditions'))->toBeTrue()
+    expect(Schema::hasTable('labor_conditions'))->toBeFalse()
         ->and(Schema::hasTable('worker_credentials'))->toBeTrue()
-        ->and(LaborCondition::query()->count())->toBe(0)
         ->and(WorkerCredential::query()->count())->toBe(0);
 });
 
@@ -828,4 +817,58 @@ it('worker actions normalize an empty birth date and preserve valid dates', func
     expect($updated->getRawOriginal('birth_date'))->toBeNull();
     $data['birth_date'] = '1991-02-03';
     expect(app(UpdateWorkerAction::class)->handle($worker, $data)->birth_date->format('Y-m-d'))->toBe('1991-02-03');
+});
+
+it('simplifies the worker form while preserving existing contact data and operational fields', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $user = workerUserWithCompany($company);
+    $worker = Worker::factory()->create([
+        'company_id' => $company->id,
+        'email' => 'kept@example.test',
+        'phone' => '5551234567',
+        'birth_date' => '1990-01-01',
+        'rfc' => 'RFC-PRESERVADO',
+        'curp' => 'CURP-PRESERVADA',
+    ]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id, 'worker_id' => $worker->id,
+        'center_id' => $center->id, 'started_at' => '2026-07-01',
+    ]);
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+    Volt::test('workers.index')->call('loadEditForm', $worker->id)
+        ->assertDontSeeHtml('wire:model="form.email"')
+        ->assertDontSeeHtml('wire:model="form.phone"')
+        ->assertDontSeeHtml('wire:model="form.birth_date"')
+        ->assertDontSeeHtml('wire:model="form.curp"')
+        ->assertDontSeeHtml('wire:model="form.position_name"')
+        ->assertSee('Identificación')->assertSee('Datos laborales')->assertSee('RFC')
+        ->set('form.full_name', 'Nombre actualizado')->call('save')->assertHasNoErrors();
+    expect($worker->fresh()->full_name)->toBe('Nombre actualizado')
+        ->and($worker->fresh()->email)->toBe('kept@example.test')
+        ->and($worker->fresh()->phone)->toBe('5551234567')
+        ->and($worker->fresh()->rfc)->toBe('RFC-PRESERVADO')
+        ->and($worker->fresh()->curp)->toBe('CURP-PRESERVADA')
+        ->and($worker->fresh()->birth_date->toDateString())->toBe('1990-01-01');
+});
+
+it('requests a reason only when center or employment start changes', function (): void {
+    $company = Company::factory()->create();
+    $center = Center::factory()->create(['company_id' => $company->id]);
+    $otherCenter = Center::factory()->create(['company_id' => $company->id]);
+    $worker = Worker::factory()->create(['company_id' => $company->id]);
+    EmploymentRelationship::factory()->create([
+        'company_id' => $company->id, 'worker_id' => $worker->id, 'center_id' => $center->id,
+        'started_at' => '2026-07-01', 'position_name' => 'Puesto histórico',
+    ]);
+    $this->actingAs(workerUserWithCompany($company))->withSession(['current_company_id' => $company->id]);
+    Volt::test('workers.index')->call('loadEditForm', $worker->id)
+        ->assertDontSee('Motivo del cambio laboral')
+        ->set('form.full_name', 'Nombre corregido')->assertDontSee('Motivo del cambio laboral')
+        ->set('form.center_id', (string) $otherCenter->id)->assertSee('Motivo del cambio laboral')
+        ->set('form.center_id', (string) $center->id)->assertDontSee('Motivo del cambio laboral')
+        ->set('form.started_at', '2026-07-02')->assertSee('Motivo del cambio laboral')
+        ->set('form.started_at', '2026-07-01')->assertDontSee('Motivo del cambio laboral')
+        ->call('save')->assertHasNoErrors();
+    expect($worker->fresh()->activeEmploymentRelationship->position_name)->toBe('Puesto histórico');
 });

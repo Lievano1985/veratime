@@ -1,13 +1,9 @@
 <?php
 
-use App\Domains\Workers\Actions\BlockWorkerCredentialAction;
-use App\Domains\Workers\Actions\CreateOrReplaceLaborConditionAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
-use App\Domains\Workers\Actions\ResetWorkerCredentialPinAction;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
-use App\Models\LaborCondition;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Worker;
@@ -18,157 +14,23 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Volt\Volt;
 
-it('creates labor conditions table with mysql compatible json metadata', function (): void {
-    expect(Schema::hasTable('labor_conditions'))->toBeTrue()
-        ->and(Schema::hasColumn('labor_conditions', 'metadata'))->toBeTrue();
+it('retires labor conditions while preserving worker and credential controls', function (): void {
+    [$company, $user, $worker, $relationship] = sprint1DWorkerContext();
+    expect(Schema::hasTable('labor_conditions'))->toBeFalse()
+        ->and(Schema::hasTable('retired_labor_conditions'))->toBeTrue();
+    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+    Volt::test('workers.index')->call('loadEditForm', $worker->id)
+        ->assertDontSee('Condición laboral vigente')->assertDontSee('Guardar condición')
+        ->assertDontSee('Estado condición')->assertDontSee('Sin condición')
+        ->assertSee('Estado del trabajador')->assertSee('Credencial kiosco')
+        ->assertSet('form.center_id', (string) $relationship->center_id)
+        ->assertSet('form.status', 'active');
 });
 
 it('creates worker credentials table without plaintext pin column', function (): void {
     expect(Schema::hasTable('worker_credentials'))->toBeTrue()
         ->and(Schema::hasColumn('worker_credentials', 'pin_hash'))->toBeTrue()
         ->and(Schema::hasColumn('worker_credentials', 'temporal_pin'))->toBeFalse();
-});
-
-it('user can create an initial labor condition for own active relationship', function (): void {
-    [$company, $user, $worker] = sprint1DWorkerContext();
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('workers.index')
-        ->call('loadEditForm', $worker->id)
-        ->set('conditionForm.work_modality', 'hybrid')
-        ->set('conditionForm.weekly_hours', '40')
-        ->set('conditionForm.rest_day_of_week', '0')
-        ->set('conditionForm.effective_from', '2026-08-01')
-        ->set('conditionForm.status', 'active')
-        ->call('saveLaborCondition');
-
-    $condition = LaborCondition::query()->first();
-
-    expect($condition)->not->toBeNull()
-        ->and($condition->company_id)->toBe($company->id)
-        ->and($condition->employment_relationship_id)->toBe($worker->activeEmploymentRelationship->id)
-        ->and($condition->work_modality)->toBe('hybrid')
-        ->and($condition->effective_from->toDateString())->toBe('2026-08-01')
-        ->and($condition->status)->toBe('active');
-});
-
-it('replacing active labor condition closes previous condition and preserves history', function (): void {
-    [$company, $user, $worker, $relationship] = sprint1DWorkerContext();
-    $original = LaborCondition::factory()->create([
-        'company_id' => $company->id,
-        'employment_relationship_id' => $relationship->id,
-        'work_modality' => 'onsite',
-        'weekly_hours' => 48,
-        'effective_from' => '2026-08-01',
-        'effective_to' => null,
-        'status' => 'active',
-    ]);
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('workers.index')
-        ->call('loadEditForm', $worker->id)
-        ->set('conditionForm.work_modality', 'remote')
-        ->set('conditionForm.weekly_hours', '40')
-        ->set('conditionForm.effective_from', '2026-08-15')
-        ->set('conditionForm.status', 'active')
-        ->call('saveLaborCondition');
-
-    $original->refresh();
-
-    expect($original->work_modality)->toBe('onsite')
-        ->and($original->weekly_hours)->toBe('48.00')
-        ->and($original->effective_from->toDateString())->toBe('2026-08-01')
-        ->and($original->status)->toBe('replaced')
-        ->and($original->effective_to->toDateString())->toBe('2026-08-14')
-        ->and(LaborCondition::query()->where('employment_relationship_id', $relationship->id)->count())->toBe(2);
-});
-
-it('blocks active labor condition overlap with same or previous effective date', function (): void {
-    [$company, $user, $worker, $relationship] = sprint1DWorkerContext();
-    LaborCondition::factory()->create([
-        'company_id' => $company->id,
-        'employment_relationship_id' => $relationship->id,
-        'effective_from' => '2026-08-10',
-        'effective_to' => null,
-        'status' => 'active',
-    ]);
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('workers.index')
-        ->call('loadEditForm', $worker->id)
-        ->set('conditionForm.work_modality', 'field')
-        ->set('conditionForm.effective_from', '2026-08-10')
-        ->call('saveLaborCondition')
-        ->assertHasErrors(['conditionForm.effective_from']);
-
-    expect(LaborCondition::query()->where('employment_relationship_id', $relationship->id)->count())->toBe(1);
-});
-
-it('validates labor condition required and valid fields', function (): void {
-    [$company, $user, $worker] = sprint1DWorkerContext();
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('workers.index')
-        ->call('loadEditForm', $worker->id)
-        ->set('conditionForm.work_modality', 'invalid')
-        ->set('conditionForm.weekly_hours', '200')
-        ->set('conditionForm.rest_day_of_week', '9')
-        ->set('conditionForm.effective_from', '')
-        ->set('conditionForm.status', 'archived')
-        ->call('saveLaborCondition')
-        ->assertHasErrors([
-            'conditionForm.work_modality',
-            'conditionForm.weekly_hours',
-            'conditionForm.rest_day_of_week',
-            'conditionForm.effective_from' => 'required',
-            'conditionForm.status',
-        ]);
-});
-
-it('does not allow labor condition for relationship from another company', function (): void {
-    $company = Company::factory()->create();
-    $otherCompany = Company::factory()->create();
-    $worker = Worker::factory()->create(['company_id' => $company->id]);
-    $foreignWorker = Worker::factory()->create(['company_id' => $otherCompany->id]);
-    $foreignRelationship = EmploymentRelationship::factory()->create([
-        'company_id' => $otherCompany->id,
-        'worker_id' => $foreignWorker->id,
-    ]);
-
-    $this->expectException(InvalidArgumentException::class);
-
-    app(CreateOrReplaceLaborConditionAction::class)->handle($company, $worker, $foreignRelationship, [
-        'work_modality' => 'onsite',
-        'effective_from' => '2026-08-01',
-        'status' => 'active',
-    ]);
-});
-
-it('does not allow unauthorized role to create labor conditions', function (): void {
-    [$company, $user, $worker] = sprint1DWorkerContext('supervisor');
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    Volt::test('workers.index')
-        ->assertForbidden();
-
-    expect(LaborCondition::query()->count())->toBe(0)
-        ->and($user->can('create', [LaborCondition::class, $company, $worker->activeEmploymentRelationship]))->toBeFalse();
-});
-
-it('blocks labor condition operations when company is inactive', function (): void {
-    [$company, $user, $worker] = sprint1DWorkerContext(companyState: ['status' => 'inactive']);
-
-    $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
-
-    expect($user->can('create', [LaborCondition::class, $company, $worker->activeEmploymentRelationship]))->toBeFalse();
-
-    Volt::test('workers.index')
-        ->assertForbidden();
 });
 
 it('creates worker credential with hashed pin and no plaintext exposure', function (): void {
@@ -383,13 +245,14 @@ it('does not expose pin hash in worker screen', function (): void {
         ->assertDontSee($credential->pin_hash);
 });
 
-it('does not create kiosk events, labor condition schedules, or worker credential auth flow', function (): void {
+it('keeps credentials separate from retired labor conditions', function (): void {
     expect(Schema::hasTable('time_entries'))->toBeFalse()
-        ->and(Schema::hasTable('labor_conditions'))->toBeTrue()
+        ->and(Schema::hasTable('labor_conditions'))->toBeFalse()
+        ->and(Schema::hasTable('retired_labor_conditions'))->toBeTrue()
         ->and(Schema::hasTable('worker_credentials'))->toBeTrue();
 });
 
-it('worker screen does not expose workers from another company for conditions or credentials', function (): void {
+it('worker screen does not expose workers or credentials from another company', function (): void {
     $company = Company::factory()->create();
     $otherCompany = Company::factory()->create();
     $user = sprint1DUserWithCompany($company);

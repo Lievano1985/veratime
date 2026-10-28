@@ -9,11 +9,11 @@ use App\Domains\Organization\Actions\CreateOrganizationalUnitAction;
 use App\Domains\Products\Actions\EnsureCustomerAccountHasProductAction;
 use App\Domains\Schedules\Actions\CreateScheduleAssignmentAction;
 use App\Domains\Schedules\Actions\SaveScheduleDaysAction;
-use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
 use App\Domains\Scheduling\Actions\AssignScheduleProfileAction;
 use App\Domains\Scheduling\Actions\CreateScheduleProfileAction;
-use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
+use App\Domains\Scheduling\Actions\CreateShiftTemplateAction;
 use App\Domains\Scheduling\Actions\UpdateScheduleProfileAction;
+use App\Domains\Scheduling\Actions\UpdateShiftTemplateAction;
 use App\Domains\TimeRecords\Actions\CreateTimeEventAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
 use App\Models\Center;
@@ -21,7 +21,6 @@ use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\CustomerAccount;
 use App\Models\EmploymentRelationship;
-use App\Models\LaborCondition;
 use App\Models\MandatoryRestDay;
 use App\Models\OrganizationalUnit;
 use App\Models\Role;
@@ -42,9 +41,13 @@ use Illuminate\Support\Facades\Hash;
 class VeraTimeDemoSeeder extends Seeder
 {
     private const COMPANY_TAX_ID = 'VTD260712XX1';
+
     private const DEMO_PASSWORD = 'VeraDemo123!';
+
     private const DEMO_PIN = '1234';
+
     private const DEMO_ATTENDANCE_START = '2026-07-20';
+
     private const DEMO_ATTENDANCE_END = '2026-08-05';
 
     public function run(): void
@@ -258,7 +261,7 @@ class VeraTimeDemoSeeder extends Seeder
             ->where('company_id', $company->id)
             ->where('schedule_day_id', $day->id)
             ->where('name', $name)
-            ->first() ?? new ScheduleBreak();
+            ->first() ?? new ScheduleBreak;
 
         $break->fill([
             'name' => $name,
@@ -345,7 +348,7 @@ class VeraTimeDemoSeeder extends Seeder
                     'status' => 'active',
                     'source' => 'demo_seed',
                     'external_id' => 'demo-'.$code,
-                'metadata' => ['demo' => true],
+                    'metadata' => ['demo' => true],
                 ],
             );
 
@@ -358,11 +361,9 @@ class VeraTimeDemoSeeder extends Seeder
                     'ended_at' => null,
                     'status' => 'active',
                     'source' => 'demo_seed',
-                'metadata' => ['demo' => true],
+                    'metadata' => ['demo' => true],
                 ],
             );
-
-            $this->laborCondition($company, $relationship, $schedule);
 
             app(CreateOrUpdateWorkerCredentialAction::class)->handle($company, $worker, [
                 'access_code' => 'K-'.$code,
@@ -374,7 +375,7 @@ class VeraTimeDemoSeeder extends Seeder
                 app(CreateScheduleAssignmentAction::class)->handle($company, $worker, $schedule, $relationship, [
                     'effective_from' => '2026-08-01',
                     'source' => 'demo_seed',
-                'metadata' => ['demo' => true],
+                    'metadata' => ['demo' => true],
                 ]);
             }
 
@@ -384,29 +385,6 @@ class VeraTimeDemoSeeder extends Seeder
         return $workers;
     }
 
-    private function laborCondition(Company $company, EmploymentRelationship $relationship, Schedule $schedule): void
-    {
-        $condition = LaborCondition::query()
-            ->where('company_id', $company->id)
-            ->where('employment_relationship_id', $relationship->id)
-            ->whereDate('effective_from', self::DEMO_ATTENDANCE_START)
-            ->first() ?? new LaborCondition();
-
-        $condition->fill([
-            'employment_relationship_id' => $relationship->id,
-            'schedule_id' => $schedule->id,
-            'work_modality' => 'onsite',
-            'weekly_hours' => 48,
-            'rest_day_of_week' => 0,
-            'policy_id' => null,
-            'effective_from' => self::DEMO_ATTENDANCE_START,
-            'effective_to' => null,
-            'status' => 'active',
-            'metadata' => ['demo' => true],
-        ]);
-        $condition->company()->associate($company);
-        $condition->save();
-    }
     /**
      * @return array<string, OrganizationalUnit>
      */
@@ -455,8 +433,8 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}> $workers
-     * @param array<string, OrganizationalUnit> $units
+     * @param  array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}>  $workers
+     * @param  array<string, OrganizationalUnit>  $units
      */
     private function organizationalAssignments(Company $company, array $users, array $workers, array $units): void
     {
@@ -469,9 +447,9 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, Center> $centers
-     * @param array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}> $workers
-     * @param array<string, OrganizationalUnit> $units
+     * @param  array<string, Center>  $centers
+     * @param  array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}>  $workers
+     * @param  array<string, OrganizationalUnit>  $units
      */
     private function scheduleProfiles(Company $company, User $createdBy, array $centers, array $workers, array $units): void
     {
@@ -603,6 +581,7 @@ class VeraTimeDemoSeeder extends Seeder
             'metadata' => ['demo' => true],
         ], unit: $unit);
     }
+
     private function mandatoryRestDays(Company $company): void
     {
         $this->mandatoryRestDay($company, 'Demo descanso empresa', '2026-09-16', 'company_internal', 'company', null, 'Referencia demo interna');
@@ -639,7 +618,7 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}> $workers
+     * @param  array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center}>  $workers
      */
     private function timeEvents(Company $company, User $sourceUser, array $workers): void
     {
@@ -720,8 +699,8 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array{worker: Worker, relationship: EmploymentRelationship, center: Center} $context
-     * @param array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}> $days
+     * @param  array{worker: Worker, relationship: EmploymentRelationship, center: Center}  $context
+     * @param  array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}>  $days
      */
     private function seedDayShiftEvents(CreateTimeEventAction $action, Company $company, array $context, string $workerKey, string $source, array $days): void
     {
@@ -735,8 +714,8 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array{worker: Worker, relationship: EmploymentRelationship, center: Center} $context
-     * @param array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}> $days
+     * @param  array{worker: Worker, relationship: EmploymentRelationship, center: Center}  $context
+     * @param  array<int, array{date: string, in: string, break_start: string, break_end: string, out: string}>  $days
      */
     private function seedNightShiftEvents(CreateTimeEventAction $action, Company $company, array $context, string $workerKey, array $days): void
     {
@@ -751,8 +730,8 @@ class VeraTimeDemoSeeder extends Seeder
     }
 
     /**
-     * @param array{worker: Worker, relationship: EmploymentRelationship, center: Center} $context
-     * @param array<string, mixed> $metadata
+     * @param  array{worker: Worker, relationship: EmploymentRelationship, center: Center}  $context
+     * @param  array<string, mixed>  $metadata
      */
     private function event(
         CreateTimeEventAction $action,

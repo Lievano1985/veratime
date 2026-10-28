@@ -2294,29 +2294,34 @@ new class extends Component {
         </section>
     @endif
 
-    <x-side-panel wire:model="showCreatePanel" title="Nueva programacion semanal" subheading="La semana siempre cubre lunes a domingo. No se publica automaticamente." maxWidth="max-w-2xl">
+    <x-side-panel wire:model="showCreatePanel" title="Nueva programacion semanal" subheading="La semana siempre cubre lunes a domingo. No se publica automaticamente." max-width="max-w-2xl">
         <form class="space-y-5 p-6">
-            <flux:select label="Centro de trabajo" wire:model.live="batchForm.center_id">
-                <flux:select.option value="">Selecciona centro</flux:select.option>
-                @foreach ($centers as $center)
-                    <flux:select.option value="{{ $center->id }}">{{ $center->name }} | {{ $center->timezone }}</flux:select.option>
-                @endforeach
-            </flux:select>
-            <div class="grid gap-4 md:grid-cols-3">
-                <flux:input type="date" label="Fecha de la semana" wire:model.live="batchForm.period_start" />
-                <flux:input type="text" label="Semana natural" value="{{ ($batchForm['period_start'] ?? '') && ($batchForm['period_end'] ?? '') ? ($batchForm['period_start'].' a '.$batchForm['period_end']) : '' }}" disabled />
-                <flux:select label="Semanas a crear" wire:model="batchForm.weeks">
-                    <flux:select.option value="1">1 semana</flux:select.option>
-                    <flux:select.option value="2">2 semanas</flux:select.option>
-                    <flux:select.option value="3">3 semanas</flux:select.option>
-                    <flux:select.option value="4">4 semanas</flux:select.option>
+            <x-ui.panel-section title="Centro y semana" tone="blue">
+                <flux:select label="Centro de trabajo" wire:model.live="batchForm.center_id">
+                    <flux:select.option value="">Selecciona centro</flux:select.option>
+                    @foreach ($centers as $center)
+                        <flux:select.option value="{{ $center->id }}">{{ $center->name }} | {{ $center->timezone }}</flux:select.option>
+                    @endforeach
                 </flux:select>
-            </div>
-            <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                Cada semana se crea como lote independiente lunes-domingo. Se abrira la ultima semana creada para revision.
-            </div>
-            <flux:textarea label="Notas opcionales" wire:model="batchForm.notes" rows="3" />
-            <div class="flex justify-end gap-3">
+                <div class="grid gap-4 md:grid-cols-3">
+                    <flux:input type="date" label="Fecha de la semana" wire:model.live="batchForm.period_start" />
+                    <flux:input type="text" label="Semana natural" value="{{ ($batchForm['period_start'] ?? '') && ($batchForm['period_end'] ?? '') ? ($batchForm['period_start'].' a '.$batchForm['period_end']) : '' }}" disabled />
+                    <flux:select label="Semanas a crear" wire:model="batchForm.weeks">
+                        <flux:select.option value="1">1 semana</flux:select.option>
+                        <flux:select.option value="2">2 semanas</flux:select.option>
+                        <flux:select.option value="3">3 semanas</flux:select.option>
+                        <flux:select.option value="4">4 semanas</flux:select.option>
+                    </flux:select>
+                </div>
+                <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                    Cada semana se crea como lote independiente lunes-domingo. Se abrira la ultima semana creada para revision.
+                </div>
+            </x-ui.panel-section>
+
+            <x-ui.panel-section title="Notas de programación" tone="indigo">
+                <flux:textarea label="Notas opcionales" wire:model="batchForm.notes" rows="3" />
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCreatePanel', false)">Cancelar</button>
                 <button type="button" class="btn-ghost" wire:click="createEmptyBatch" wire:loading.attr="disabled" wire:target="createEmptyBatch">
                     <span wire:loading wire:target="createEmptyBatch" class="btn-spinner"></span>
@@ -2332,30 +2337,31 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showPrepareWeeksPanel" title="Preparar semanas futuras" subheading="Crea borradores lunes-domingo desde modelos. No publica automaticamente." maxWidth="max-w-xl">
+    <x-side-panel wire:model="showPrepareWeeksPanel" title="Preparar semanas futuras" subheading="Crea borradores lunes-domingo desde modelos. No publica automaticamente." max-width="max-w-xl">
         <form wire:submit="prepareFutureWeeks" class="space-y-5 p-6">
-            @if ($selectedBatch)
-                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
-                    <p>Centro: {{ $selectedBatch->center?->name }}</p>
-                    <p>Desde semana: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+            <x-ui.panel-section title="Semanas por preparar" tone="blue">
+                @if ($selectedBatch)
+                    <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <p>Centro: {{ $selectedBatch->center?->name }}</p>
+                        <p>Desde semana: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                    </div>
+                @endif
+
+                <flux:select label="Semanas a preparar" wire:model="prepareWeeksForm.weeks">
+                    <flux:select.option value="1">1 semana</flux:select.option>
+                    <flux:select.option value="2">2 semanas</flux:select.option>
+                    <flux:select.option value="3">3 semanas</flux:select.option>
+                    <flux:select.option value="4">4 semanas</flux:select.option>
+                </flux:select>
+
+                <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                    Se generaran solo borradores desde modelos. Las semanas ya existentes se abriran o saltaran sin duplicarse.
                 </div>
-            @endif
 
-            <flux:select label="Semanas a preparar" wire:model="prepareWeeksForm.weeks">
-                <flux:select.option value="1">1 semana</flux:select.option>
-                <flux:select.option value="2">2 semanas</flux:select.option>
-                <flux:select.option value="3">3 semanas</flux:select.option>
-                <flux:select.option value="4">4 semanas</flux:select.option>
-            </flux:select>
-
-            <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                Se generaran solo borradores desde modelos. Las semanas ya existentes se abriran o saltaran sin duplicarse.
-            </div>
-
-            @error('prepareWeeksForm.weeks')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-            @error('generation')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-
-            <div class="flex justify-end gap-3">
+                @error('prepareWeeksForm.weeks')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('generation')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showPrepareWeeksPanel', false)">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="prepareFutureWeeks">
                     <span wire:loading wire:target="prepareFutureWeeks" class="btn-spinner"></span>
@@ -2366,26 +2372,27 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showCloneWeekPanel" title="Clonar semana publicada" subheading="Copia una semana publicada a borrador o publicala directo si no tiene bloqueos." maxWidth="max-w-xl">
+    <x-side-panel wire:model="showCloneWeekPanel" title="Clonar semana publicada" subheading="Copia una semana publicada a borrador o publicala directo si no tiene bloqueos." max-width="max-w-xl">
         <form wire:submit="clonePublishedWeek" class="space-y-5 p-6">
-            @if ($selectedBatch)
-                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
-                    <p class="font-medium">Semana origen</p>
-                    <p>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
-                    <p>Version: {{ $selectedBatch->version ?? 'Sin version' }}</p>
+            <x-ui.panel-section title="Origen y destino" tone="blue">
+                @if ($selectedBatch)
+                    <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <p class="font-medium">Semana origen</p>
+                        <p>{{ $selectedBatch->center?->name }} - {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                        <p>Version: {{ $selectedBatch->version ?? 'Sin version' }}</p>
+                    </div>
+                @endif
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <flux:input type="date" label="Fecha de la semana destino" wire:model.live="cloneWeekForm.target_date" />
+                    <flux:input type="text" label="Semana destino" value="{{ ($cloneWeekForm['target_date'] ?? '') && ($cloneWeekForm['target_end'] ?? '') ? ($cloneWeekForm['target_date'].' a '.$cloneWeekForm['target_end']) : '' }}" disabled />
                 </div>
-            @endif
-
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:input type="date" label="Fecha de la semana destino" wire:model.live="cloneWeekForm.target_date" />
-                <flux:input type="text" label="Semana destino" value="{{ ($cloneWeekForm['target_date'] ?? '') && ($cloneWeekForm['target_end'] ?? '') ? ($cloneWeekForm['target_date'].' a '.$cloneWeekForm['target_end']) : '' }}" disabled />
-            </div>
-            <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
-                Puedes dejar la copia en borrador para revisar o publicarla directo. Los trabajadores sin relacion vigente en la semana destino se omitiran.
-            </div>
-            @error('cloneWeekForm.target_date')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-
-            <div class="flex justify-end gap-3">
+                <div class="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+                    Puedes dejar la copia en borrador para revisar o publicarla directo. Los trabajadores sin relacion vigente en la semana destino se omitiran.
+                </div>
+                @error('cloneWeekForm.target_date')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCloneWeekPanel', false)">Cancelar</button>
                 <button type="submit" class="btn-ghost" wire:loading.attr="disabled" wire:target="clonePublishedWeek">
                     <span wire:loading wire:target="clonePublishedWeek" class="btn-spinner"></span>
@@ -2401,18 +2408,20 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showCorrectionPanel" title="Crear correccion" subheading="Se creara un borrador correctivo sin modificar la publicacion vigente." maxWidth="max-w-2xl">
+    <x-side-panel wire:model="showCorrectionPanel" title="Crear correccion" subheading="Se creara un borrador correctivo sin modificar la publicacion vigente." max-width="max-w-2xl">
         <form wire:submit="createCorrection" class="space-y-5 p-6">
-            @if ($selectedBatch)
-                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
-                    <p>Centro: {{ $selectedBatch->center?->name }}</p>
-                    <p>Periodo: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
-                    <p>Version actual: {{ $selectedBatch->version }}</p>
-                </div>
-            @endif
-            <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara un borrador correctivo. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
-            <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Motivo de la corrección" tone="blue">
+                @if ($selectedBatch)
+                    <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                        <p>Centro: {{ $selectedBatch->center?->name }}</p>
+                        <p>Periodo: {{ $selectedBatch->period_start->toDateString() }} a {{ $selectedBatch->period_end->toDateString() }}</p>
+                        <p>Version actual: {{ $selectedBatch->version }}</p>
+                    </div>
+                @endif
+                <p class="text-sm text-zinc-600 dark:text-zinc-300">Se creara un borrador correctivo. La version publicada continuara vigente hasta que la correccion sea revisada y publicada.</p>
+                <flux:textarea label="Motivo general de correccion" wire:model="correctionForm.correction_reason" rows="4" required />
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showCorrectionPanel', false)">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="createCorrection">
                     <span wire:loading wire:target="createCorrection" class="btn-spinner"></span>
@@ -2423,20 +2432,24 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showDayPanel" title="Editar dia" subheading="Los cambios manuales se guardan con referencia estable." maxWidth="max-w-3xl">
+    <x-side-panel wire:model="showDayPanel" title="Editar dia" subheading="Los cambios manuales se guardan con referencia estable." max-width="max-w-3xl">
         <form wire:submit="saveDay" class="space-y-5 p-6">
-            <flux:select label="Tipo de dia" wire:model.live="dayForm.day_type">
-                <flux:select.option value="shift">Turno</flux:select.option>
-                <flux:select.option value="rest">Descanso</flux:select.option>
-                <flux:select.option value="flexible">Flexible</flux:select.option>
-                <flux:select.option value="on_call">Guardia bajo llamada</flux:select.option>
-                <flux:select.option value="unassigned">Pendiente</flux:select.option>
-            </flux:select>
+            <x-ui.panel-section title="Configuración del día" tone="blue">
+                <flux:select label="Tipo de dia" wire:model.live="dayForm.day_type">
+                    <flux:select.option value="shift">Turno</flux:select.option>
+                    <flux:select.option value="rest">Descanso</flux:select.option>
+                    <flux:select.option value="flexible">Flexible</flux:select.option>
+                    <flux:select.option value="on_call">Guardia bajo llamada</flux:select.option>
+                    <flux:select.option value="unassigned">Pendiente</flux:select.option>
+                </flux:select>
 
-            @include('livewire.scheduling.partials.daily-editor-fields', ['formRoot' => 'dayForm', 'shiftTemplates' => $shiftTemplates, 'previewTemplate' => $previewTemplate])
+                @include('livewire.scheduling.partials.daily-editor-fields', ['formRoot' => 'dayForm', 'shiftTemplates' => $shiftTemplates, 'previewTemplate' => $previewTemplate])
+            </x-ui.panel-section>
 
-            <flux:textarea label="Motivo" wire:model="dayForm.reason" required />
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Justificación del cambio" tone="indigo">
+                <flux:textarea label="Motivo" wire:model="dayForm.reason" required />
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showDayPanel', false)">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="saveDay">
                     <span wire:loading wire:target="saveDay" class="btn-spinner"></span>
@@ -2447,45 +2460,50 @@ new class extends Component {
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showBulkPanel" title="Cambio masivo" subheading="Aplica una configuracion a varios trabajadores y fechas dentro del lote." maxWidth="max-w-4xl">
+    <x-side-panel wire:model="showBulkPanel" title="Cambio masivo" subheading="Aplica una configuracion a varios trabajadores y fechas dentro del lote." max-width="max-w-4xl">
         <form wire:submit="applyBulk" class="space-y-5 p-6">
-            <livewire:workers.multi-select
-                wire:model.live="bulkWorkerIds"
-                heading="Trabajadores"
-                subheading="Selecciona uno o varios trabajadores del centro del lote."
-                :center-id="(string) ($selectedBatch?->center_id ?? '')"
-                :result-limit="150"
-                :key="'daily-bulk-workers-'.($selectedBatch?->id ?? 'none')"
-            />
-            @error('bulkForm.employment_relationship_ids')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:input type="date" label="Desde" wire:model.live="bulkForm.date_from" />
-                <flux:input type="date" label="Hasta" wire:model.live="bulkForm.date_to" />
-            </div>
-            <flux:select label="Aplicar" wire:model.live="bulkForm.day_type">
-                <flux:select.option value="shift">Turno</flux:select.option>
-                <flux:select.option value="rest">Descanso</flux:select.option>
-                <flux:select.option value="flexible">Flexible</flux:select.option>
-                <flux:select.option value="on_call">Guardia bajo llamada</flux:select.option>
-                <flux:select.option value="unassigned">Pendiente</flux:select.option>
-            </flux:select>
-
-            @include('livewire.scheduling.partials.daily-editor-fields', ['formRoot' => 'bulkForm', 'shiftTemplates' => $shiftTemplates, 'previewTemplate' => $previewTemplate])
-
-            @if ($bulkPreview)
-                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
-                    <p>{{ $bulkPreview['workers'] }} trabajadores, {{ $bulkPreview['dates'] }} fechas, {{ $bulkPreview['total'] }} dias a modificar.</p>
-                    <p>{{ $bulkPreview['manual'] }} dias manuales existentes y {{ $bulkPreview['generated'] }} dias generados desde perfil.</p>
+            <x-ui.panel-section title="Trabajadores y fechas" tone="blue">
+                <livewire:workers.multi-select
+                    wire:model.live="bulkWorkerIds"
+                    heading="Trabajadores"
+                    subheading="Selecciona uno o varios trabajadores del centro del lote."
+                    :center-id="(string) ($selectedBatch?->center_id ?? '')"
+                    :result-limit="150"
+                    :key="'daily-bulk-workers-'.($selectedBatch?->id ?? 'none')"
+                />
+                @error('bulkForm.employment_relationship_ids')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="grid gap-4 md:grid-cols-2">
+                    <flux:input type="date" label="Desde" wire:model.live="bulkForm.date_from" />
+                    <flux:input type="date" label="Hasta" wire:model.live="bulkForm.date_to" />
                 </div>
-            @endif
+            </x-ui.panel-section>
 
-            <flux:textarea label="Motivo" wire:model="bulkForm.reason" required />
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" wire:model="confirmBulk" class="rounded border-zinc-300">
-                <span>Confirmo aplicar este cambio masivo.</span>
-            </label>
-            @error('confirmBulk')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-            <div class="flex justify-end gap-3">
+            <x-ui.panel-section title="Configuración del cambio" tone="indigo">
+                <flux:select label="Aplicar" wire:model.live="bulkForm.day_type">
+                                <flux:select.option value="shift">Turno</flux:select.option>
+                                <flux:select.option value="rest">Descanso</flux:select.option>
+                                <flux:select.option value="flexible">Flexible</flux:select.option>
+                                <flux:select.option value="on_call">Guardia bajo llamada</flux:select.option>
+                                <flux:select.option value="unassigned">Pendiente</flux:select.option>
+                            </flux:select>
+
+                            @include('livewire.scheduling.partials.daily-editor-fields', ['formRoot' => 'bulkForm', 'shiftTemplates' => $shiftTemplates, 'previewTemplate' => $previewTemplate])
+
+                            @if ($bulkPreview)
+                                <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                                    <p>{{ $bulkPreview['workers'] }} trabajadores, {{ $bulkPreview['dates'] }} fechas, {{ $bulkPreview['total'] }} dias a modificar.</p>
+                                    <p>{{ $bulkPreview['manual'] }} dias manuales existentes y {{ $bulkPreview['generated'] }} dias generados desde perfil.</p>
+                                </div>
+                            @endif
+
+                            <flux:textarea label="Motivo" wire:model="bulkForm.reason" required />
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" wire:model="confirmBulk" class="rounded border-zinc-300">
+                                <span>Confirmo aplicar este cambio masivo.</span>
+                            </label>
+                            @error('confirmBulk')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="$set('showBulkPanel', false)">Cancelar</button>
                 <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="applyBulk">
                     <span wire:loading wire:target="applyBulk" class="btn-spinner"></span>

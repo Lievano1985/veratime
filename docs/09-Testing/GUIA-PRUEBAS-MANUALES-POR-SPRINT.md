@@ -306,6 +306,9 @@ La zona horaria del centro se guarda, pero todavÃƒÂ­a no debe generar cÃƒ�
 
 ## Sprint 1D - Condiciones laborales y credenciales de kiosco
 
+> Actualización 26/10/2026: las condiciones laborales se retiraron. Sus casos históricos de prueba ya no aplican. Probar alta, empresa, centro y estado del trabajador, además de las credenciales. Ver `RETIRO-CONDICION-LABORAL.md` en esta carpeta.
+
+
 **Estado:** Cerrado.
 
 ### Funcionalidad esperada
@@ -1910,7 +1913,7 @@ Validar que Vera Time permita limpiar catalogos capturados por error sin elimina
 | Unidades | Eliminar unidad usada por asignacion o horario diario. | Se bloquea y sugiere inactivar. |
 | Trabajadores | Eliminar trabajador sin horarios, asistencias ni asignaciones. | Se elimina junto con relacion/credencial libre. |
 | Trabajadores | Eliminar trabajador con asistencias, horarios o asignaciones. | Se bloquea y sugiere baja/inactivacion. |
-| Horarios legacy | Eliminar horario sin asignaciones ni condiciones laborales. | Se elimina. |
+| Horarios legacy | Eliminar horario sin asignaciones de trabajadores. | Se elimina. |
 | Asignaciones legacy | Eliminar asignacion sin asistencias en su vigencia. | Se elimina. |
 | Turnos | Eliminar plantilla sin reglas ni horarios diarios. | Se elimina junto con sus segmentos. |
 | Perfiles | Eliminar perfil sin asignaciones ni horarios generados. | Se elimina junto con reglas libres. |
@@ -2420,3 +2423,40 @@ En el caso diario, pulsar Corregir marcajes y comprobar que Eventos abre con la 
 - Verificar que una incapacidad, vacaciones, permiso o falta ya dictaminada en el cálculo activo, sin eventos ni minutos trabajados, no mantenga a la persona pendiente por tener cero horas.
 - Una ausencia sin aprobar, una secuencia incompleta o un día en revisión debe seguir pendiente. Un aviso de horas extra pendiente de autorización no bloquea por sí solo la evaluación de asistencia.
 - Comparar personas distintas del listado con el contador, respetando semana, centro y empresa. Varias jornadas de una misma persona cuentan una sola vez.
+
+
+## Creador independiente de layouts — 26/10/2026
+
+Referencia: `docs/06-UX/CREADOR-LAYOUTS-EXPORTACION.md`.
+
+1. Entrar en Configuración → Layouts de exportación; comprobar que CSV de períodos conserva su acceso.
+2. Usar NomiPAQ DYH: verificar códigos 0001/0002, fechas como encabezados y ejemplos `1FINJ`, `2.5HE2`, `0.5RET` sin filas superiores adicionales.
+3. Arrastrar Fechas a Filas y volver a Trabajadores en Filas; repetir con los botones. Los valores deben conservar su cruce trabajador/fecha.
+4. En Incidencias, excluir permisos y comprobar celdas vacías; activar nuevamente. Cambiar el orden por arrastre y flechas.
+5. En Nomenclaturas, cambiar FINJ por F y retardos a minutos: ver `1F` y `30RET`. Claves vacías/duplicadas deben impedir guardar.
+6. Crear desde cero, guardar, volver a abrir, duplicar y comprobar que cada layout conserva su configuración. Un layout ajeno no debe abrirse manipulando el ID.
+7. Abrir una misma revisión en dos sesiones: guardar una y verificar que la segunda no sobrescribe sus cambios.
+8. Seleccionar un cierre compatible, revisar período real y descargar XLSX/CSV/TXT. Los cambios sin guardar, el layout inactivo y los conflictos deben impedir la descarga.
+9. Abrir XLSX: códigos como texto con ceros, fechas reales, cantidades+códigos como texto. Verificar ambas orientaciones.
+10. Confirmar que hay advertencias por conceptos aprobados fuera de la selección; conceptos sin origen/destino preciso permanecen como referencia pendiente.
+11. Ejecutar una exportación con el CSV anterior y comprobar que conserva su comportamiento. No usar el archivo ficticio para cargar nómina real.
+12. Validar el bloque resultante en una empresa de prueba del destino con sus claves, unidades y códigos reales antes de considerar el layout validado para esa instalación.
+
+
+### Catálogo ampliado de layouts — 27/10/2026
+
+- Abrir un layout anterior y comprobar que las nomenclaturas/selecciones originales permanecen; buscar Domingo, Prima y Festivo: aparecen desactivados.
+- Activar solo Domingo, asignar su código y probar días/horas/minutos. En el ejemplo del 18/10 deben resultar 1 día, 8 horas o 480 minutos según la unidad.
+- Cambiar a Prima dominical aplicable: su unidad es días, sin importes ni porcentajes. Activar Domingo y Prima juntos debe mantener el conflicto explícito de la celda.
+- Probar incapacidad general, maternidad/paternidad y otra incidencia aprobadas con nomenclaturas propias; no transformar el tipo combinado en una incapacidad MAT.
+- Buscar y probar conceptos de descanso, festivo, pausas, tiempo nocturno, salida anticipada y ausencia; los conceptos desactivados no se exportan.
+- Abrir/buscar no debe escribir cambios en el layout; guardar sí conserva las nuevas reglas elegidas. El CSV anterior continúa funcionando.
+
+
+### Integración de layouts en exportación de períodos — 27/10/2026
+
+1. Configuración > Layouts de exportación: guardar NomiPAQ y marcar Usar como predeterminado; comprobar la etiqueta. Marcar otro layout y comprobar que el anterior pierde la marca.
+2. Períodos de asistencia > período cerrado > Exportar con layout: comprobar la preselección, elegir otro si aplica y descargar en su formato configurado.
+3. Inactivar el predeterminado: ya no debe quedar seleccionado. Sin layouts activos se muestra acceso a configuración; no se descarga el formato antiguo automáticamente.
+4. Abrir Exportador CSV anterior y verificar sus dos descargas y su configuración.
+5. Verificar aislamiento por empresa, rechazo de períodos abiertos, cierres antiguos sin detalle y conflictos. La instantánea SHA-256 del período permanece idéntica antes y después de exportar.

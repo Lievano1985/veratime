@@ -349,24 +349,25 @@ new class extends Component {
         >
             <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
                 <div class="flex-1 space-y-4 p-6">
-                    <flux:input wire:model="form.code" label="Codigo" required />
-                    <flux:input wire:model="form.name" label="Nombre" required />
-                    <flux:input wire:model="form.timezone" label="Zona horaria" required />
+                    <x-ui.panel-section title="Datos del centro" tone="blue">
+                        <flux:input wire:model="form.code" label="Codigo" required />
+                        <flux:input wire:model="form.name" label="Nombre" required />
+                        <flux:input wire:model="form.timezone" label="Zona horaria" required />
 
-                    <div>
-                        <label class="form-label">Estado</label>
-                        <select wire:model="form.status" class="form-select">
-                            <option value="active">Activo</option>
-                            <option value="inactive">Inactivo</option>
-                        </select>
-                        @error('form.status')
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
                         <div>
-                            <h3 class="font-display text-sm font-bold text-brand-navy">Dirección</h3>
+                            <label class="form-label">Estado</label>
+                            <select wire:model="form.status" class="form-select">
+                                <option value="active">Activo</option>
+                                <option value="inactive">Inactivo</option>
+                            </select>
+                            @error('form.status')
+                                <p class="form-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </x-ui.panel-section>
+<section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4">
+                        <div>
+                            <x-ui.panel-heading title="Dirección" tone="indigo" />
                             <p class="text-xs text-surface-muted">Campos opcionales del centro de trabajo.</p>
                         </div>
 
@@ -396,7 +397,7 @@ new class extends Component {
                     </section>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                         Cancelar
                     </button>

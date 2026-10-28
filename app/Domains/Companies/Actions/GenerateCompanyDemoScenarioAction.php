@@ -2,6 +2,8 @@
 
 namespace App\Domains\Companies\Actions;
 
+use App\Domains\Alerts\Actions\ResolveAlertAction;
+use App\Domains\Attendance\Actions\CloseAttendancePeriodAction;
 use App\Domains\Attendance\Actions\CreateAttendancePeriodAction;
 use App\Domains\AttendanceIncidents\Actions\CreateAttendanceIncidentAction;
 use App\Domains\Organization\Actions\AssignPrimaryOrganizationalUnitAction;
@@ -17,6 +19,7 @@ use App\Domains\WorkDays\Actions\ProcessCompanyWorkDaysAction;
 use App\Domains\WorkDays\Actions\ProcessSingleWorkDayAction;
 use App\Domains\Workers\Actions\CreateEmploymentRelationshipAction;
 use App\Domains\Workers\Actions\CreateWorkerAction;
+use App\Models\Alert;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CompanyDemoScenario;
@@ -86,6 +89,14 @@ class GenerateCompanyDemoScenarioAction
         }
 
         $actor = $this->scenarioActor($company, $scenario);
+        if ($scenario->scenario_type === CompanyDemoScenario::TYPE_CLOSED_WEEK) {
+            if (! $scenario->requestedBy?->isSuperAdmin()) {
+                throw new InvalidArgumentException('La semana cerrada requiere un superadministrador.');
+            }
+
+            return $this->generateClosedWeeks($scenario, $company, $actor);
+        }
+
         [$periodStart, $periodEnd] = $this->completedBiweeklyRange($company);
         $today = CarbonImmutable::now($company->timezone ?: 'America/Mexico_City')->startOfDay();
         $currentWeekStart = $today->startOfWeek(CarbonInterface::MONDAY);
@@ -160,6 +171,10 @@ class GenerateCompanyDemoScenarioAction
             throw new InvalidArgumentException('El demo debe estar completado para actualizar el dia actual.');
         }
 
+        if ($scenario->scenario_type === CompanyDemoScenario::TYPE_CLOSED_WEEK) {
+            return $scenario;
+        }
+
         $company = $scenario->company;
         $actor = $this->scenarioActor($company, $scenario);
         $now = CarbonImmutable::now($company->timezone ?: 'America/Mexico_City');
@@ -172,6 +187,12 @@ class GenerateCompanyDemoScenarioAction
         ];
 
         return DB::transaction(function () use ($scenario, $company, $actor, $now, $date, $patterns): CompanyDemoScenario {
+            Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $current = CompanyDemoScenario::query()->where('company_id', $company->id)->find($scenario->id);
+            if (! $current || $current->status !== CompanyDemoScenario::STATUS_COMPLETED) {
+                return $scenario;
+            }
+            $scenario = $current;
             $created = 0;
             $assignments = DailyScheduleAssignment::query()
                 ->with('employmentRelationship.worker', 'employmentRelationship.center')
@@ -226,6 +247,70 @@ class GenerateCompanyDemoScenarioAction
         });
     }
 
+    private function generateClosedWeeks(CompanyDemoScenario $scenario, Company $company, User $actor): CompanyDemoScenario
+    {
+        $start = CarbonImmutable::now($company->timezone ?: 'America/Mexico_City')
+            ->startOfWeek(CarbonInterface::MONDAY)->subWeeks(2);
+        $end = $start->addDays(13);
+
+        return DB::transaction(function () use ($scenario, $company, $actor, $start, $end): CompanyDemoScenario {
+            $structure = $this->createStructure($company);
+            $workers = $this->createWorkers($company, $structure, $start->subMonth()->toDateString(), ['adm_1', 'day_1', 'day_3', 'night_1', 'night_2']);
+            $this->createSchedules($company, $start->toDateString(), $workers, $structure, $actor);
+            foreach ($structure['centers'] as $center) {
+                foreach ([$start, $start->addWeek()] as $monday) {
+                    $batch = $this->createBatch->handle($company, $center, [
+                        'period_start' => $monday->toDateString(), 'creation_source' => 'profile',
+                        'notes' => 'Dos semanas demo finalizadas para exportación.',
+                    ], $actor);
+                    $this->generateBatch->handle($actor, $company, $batch);
+                    $this->publishBatch->handle($actor, $company, $batch);
+                }
+            }
+            foreach ([['adm_1', 1, 2, 'vacation', 'paid'], ['day_1', 3, 3, 'paid_permission', 'paid'], ['day_3', 8, 8, 'unjustified_absence', 'unpaid'], ['night_1', 10, 10, 'incapacity', 'not_applicable']] as [$key, $from, $to, $type, $payment]) {
+                $this->createIncident->handle($company, $actor, [
+                    'worker_id' => $workers[$key]['worker']->id,
+                    'start_date' => $start->addDays($from)->toDateString(),
+                    'end_date' => $start->addDays($to)->toDateString(),
+                    'incident_type' => $type, 'payment_status' => $payment,
+                    'reference' => 'DEMO-EXPORT-'.$key, 'notes' => 'Incidencia ficticia aprobada para probar exportaciones.',
+                ]);
+            }
+            $events = $this->createTimeEvents($company, $actor, $workers, $start->toDateString(), $end->toDateString(), [], closedWeek: true);
+            $this->processWorkDays->handle($company, $start->toDateString(), $end->toDateString(),
+                actor: $actor, mode: 'company_demo', reason: 'Dos semanas demo finalizadas para exportación.', onlyPendingOrStale: false);
+            foreach (Alert::query()->where('company_id', $company->id)
+                ->whereIn('status', Alert::OPEN_STATUSES)->get() as $alert) {
+                app(ResolveAlertAction::class)->handle($company, $alert, $actor, [
+                    'status' => Alert::STATUS_JUSTIFIED,
+                    'resolution' => 'Revisión ficticia del escenario demo de dos semanas cerradas; datos exclusivos para pruebas de exportación.',
+                ]);
+            }
+            $periods = [];
+            foreach ($structure['centers'] as $center) {
+                $period = $this->createAttendancePeriod->handle($company, $center, [
+                    'name' => 'Dos semanas demo cerradas - '.$center->name,
+                    'period_start' => $start->toDateString(), 'period_end' => $end->toDateString(),
+                    'notes' => 'Datos ficticios: período cerrado con instantánea para probar CSV y layouts.',
+                ], createdBy: $actor);
+                $periods[] = app(CloseAttendancePeriodAction::class)->handle($company, $period, $actor)->id;
+            }
+            $scenario->forceFill([
+                'status' => CompanyDemoScenario::STATUS_COMPLETED, 'period_start' => $start->toDateString(),
+                'period_end' => $end->toDateString(), 'completed_at' => now(),
+                'summary' => ['schema_version' => 1, 'scenario' => 'closed_weeks_export_v2',
+                    'weeks' => collect([$start, $start->addWeek()])->map(fn ($monday) => [
+                        'iso_year' => $monday->isoWeekYear(), 'iso_week' => $monday->isoWeek(),
+                        'start' => $monday->toDateString(), 'end' => $monday->addDays(6)->toDateString(),
+                    ])->all(),
+                    'workers' => count($workers), 'centers' => count($structure['centers']),
+                    'time_events' => $events, 'attendance_periods' => count($periods), 'closed_period_ids' => $periods],
+            ])->save();
+
+            return $scenario->refresh();
+        });
+    }
+
     /** @return array{0: string, 1: string} */
     private function completedBiweeklyRange(Company $company): array
     {
@@ -239,7 +324,7 @@ class GenerateCompanyDemoScenarioAction
     private function scenarioActor(Company $company, CompanyDemoScenario $scenario): User
     {
         $requested = $scenario->requestedBy;
-        if ($requested && $requested->status === 'active' && $requested->belongsToCompany($company)) {
+        if ($requested && $requested->status === 'active' && ($requested->isSuperAdmin() || $requested->belongsToCompany($company))) {
             return $requested;
         }
 
@@ -275,7 +360,7 @@ class GenerateCompanyDemoScenarioAction
     }
 
     /** @return array<string, array{worker: Worker, relationship: EmploymentRelationship, center: Center, unit: OrganizationalUnit, pattern: string}> */
-    private function createWorkers(Company $company, array $structure, string $startedAt): array
+    private function createWorkers(Company $company, array $structure, string $startedAt, ?array $workerKeys = null): array
     {
         $definitions = [
             ['adm_1', 'DEMO-DIA-001', 'Andrea Demo Administracion', 'Analista administrativa', 'day', 'administration', 'administration'],
@@ -290,6 +375,9 @@ class GenerateCompanyDemoScenarioAction
             ['night_2', 'DEMO-NOC-005', 'Jorge Demo Nocturno', 'Operador nocturno', 'night', 'night_operations', 'nocturnal'],
         ];
 
+        if ($workerKeys !== null) {
+            $definitions = array_values(array_filter($definitions, fn ($definition) => in_array($definition[0], $workerKeys, true)));
+        }
         $workers = [];
         foreach ($definitions as [$key, $code, $name, $position, $centerKey, $unitKey, $pattern]) {
             $worker = $this->createWorker->handle($company, [
@@ -418,7 +506,7 @@ class GenerateCompanyDemoScenarioAction
     /**
      * @param  array<string, array<string, 'late_arrival'|'early_departure'|'extended_no_break'|'extended_no_break_late'|'incomplete'>>  $pendingReviewCases
      */
-    private function createTimeEvents(Company $company, User $actor, array $workers, string $periodStart, string $periodEnd, array $pendingReviewCases): int
+    private function createTimeEvents(Company $company, User $actor, array $workers, string $periodStart, string $periodEnd, array $pendingReviewCases, bool $closedWeek = false): int
     {
         $currentWeekStart = CarbonImmutable::parse($periodEnd)->addDay()->startOfWeek(CarbonInterface::MONDAY);
         $absenceDates = [
@@ -429,10 +517,15 @@ class GenerateCompanyDemoScenarioAction
             'adm_2' => [$currentWeekStart->addDay()->toDateString()],
             'mixed_2' => [$currentWeekStart->addDays(3)->toDateString()],
         ];
+        if ($closedWeek) {
+            $absenceDates = ['adm_1' => [CarbonImmutable::parse($periodStart)->addDay()->toDateString(), CarbonImmutable::parse($periodStart)->addDays(2)->toDateString()], 'day_1' => [CarbonImmutable::parse($periodStart)->addDays(3)->toDateString()],
+                'day_3' => [CarbonImmutable::parse($periodStart)->addDays(8)->toDateString()],
+                'night_1' => [CarbonImmutable::parse($periodStart)->addDays(10)->toDateString()]];
+        }
         $count = 0;
         $date = CarbonImmutable::parse($periodStart);
         $end = CarbonImmutable::parse($periodEnd);
-        $supplementalWeekendWorkers = $this->supplementalWeekendWorkers($periodStart, $periodEnd);
+        $supplementalWeekendWorkers = $closedWeek ? [] : $this->supplementalWeekendWorkers($periodStart, $periodEnd);
 
         while ($date->lte($end)) {
             $workersForDate = $date->isWeekday()

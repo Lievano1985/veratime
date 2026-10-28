@@ -32,15 +32,15 @@ class SaveWorkerWithEmploymentRelationshipAction
                 ? $this->updateWorkerAction->handle($worker, $data)
                 : $this->createWorkerAction->handle($company, $data);
 
+            $relationship = $worker->activeEmploymentRelationship()->first();
+
             $relationshipData = [
                 'center_id' => $center->id,
-                'position_name' => $data['position_name'] ?? null,
+                'position_name' => array_key_exists('position_name', $data) ? $data['position_name'] : $relationship?->position_name,
                 'started_at' => $data['started_at'],
                 'status' => 'active',
                 'source' => $data['relationship_source'] ?? 'web',
             ];
-
-            $relationship = $worker->activeEmploymentRelationship()->first();
 
             if (! $relationship) {
                 $this->createRelationshipAction->handle($company, $worker, $center, $relationshipData);

@@ -328,43 +328,45 @@ new class extends Component {
         max-width="max-w-xl"
     >
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <flux:input label="Nombre" wire:model="form.name" />
-                <flux:input type="date" label="Fecha" wire:model="form.date" />
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Descanso y alcance" tone="blue">
+                    <flux:input label="Nombre" wire:model="form.name" />
+                    <flux:input type="date" label="Fecha" wire:model="form.date" />
 
-                <flux:select label="Tipo" wire:model="form.type">
-                    <flux:select.option value="legal_mandatory">Legal obligatorio</flux:select.option>
-                    <flux:select.option value="electoral">Electoral</flux:select.option>
-                    <flux:select.option value="company_internal">Interno de empresa</flux:select.option>
-                </flux:select>
+                    <flux:select label="Tipo" wire:model="form.type">
+                        <flux:select.option value="legal_mandatory">Legal obligatorio</flux:select.option>
+                        <flux:select.option value="electoral">Electoral</flux:select.option>
+                        <flux:select.option value="company_internal">Interno de empresa</flux:select.option>
+                    </flux:select>
 
-                <flux:select label="Alcance" wire:model.live="form.scope">
-                    <flux:select.option value="national">Nacional</flux:select.option>
-                    <flux:select.option value="subnational">Entidad federativa</flux:select.option>
-                    <flux:select.option value="company">Empresa</flux:select.option>
-                </flux:select>
+                    <flux:select label="Alcance" wire:model.live="form.scope">
+                        <flux:select.option value="national">Nacional</flux:select.option>
+                        <flux:select.option value="subnational">Entidad federativa</flux:select.option>
+                        <flux:select.option value="company">Empresa</flux:select.option>
+                    </flux:select>
 
-                <flux:input
-                    label="Entidad federativa"
-                    placeholder="Ej. MX-TAB"
-                    wire:model="form.jurisdiction_code"
-                    :disabled="$form['scope'] !== 'subnational'"
-                />
+                    <flux:input
+                        label="Entidad federativa"
+                        placeholder="Ej. MX-TAB"
+                        wire:model="form.jurisdiction_code"
+                        :disabled="$form['scope'] !== 'subnational'"
+                    />
 
-                <div class="space-y-1">
-                    <flux:textarea label="Fundamento o referencia" wire:model="form.source_reference" rows="3" />
-                    <p class="form-hint">
-                        Ejemplo: LFT artículo 74, acuerdo electoral o política interna
-                    </p>
-                </div>
+                    <div class="space-y-1">
+                        <flux:textarea label="Fundamento o referencia" wire:model="form.source_reference" rows="3" />
+                        <p class="form-hint">
+                            Ejemplo: LFT artículo 74, acuerdo electoral o política interna
+                        </p>
+                    </div>
 
-                <flux:select label="Estado" wire:model="form.status">
-                    <flux:select.option value="active">Activo</flux:select.option>
-                    <flux:select.option value="inactive">Inactivo</flux:select.option>
-                </flux:select>
+                    <flux:select label="Estado" wire:model="form.status">
+                        <flux:select.option value="active">Activo</flux:select.option>
+                        <flux:select.option value="inactive">Inactivo</flux:select.option>
+                    </flux:select>
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="resetForm">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar descanso</button>
             </div>

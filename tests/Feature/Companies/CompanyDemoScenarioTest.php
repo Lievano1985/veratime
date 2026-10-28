@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Companies;
 
+use App\Domains\Attendance\Actions\ResolveAttendancePeriodPayrollRowsAction;
 use App\Domains\Attendance\Actions\ValidateAttendancePeriodForClosingAction;
+use App\Domains\Companies\Actions\AssessCompanyDemoScenarioEligibilityAction;
 use App\Domains\Companies\Actions\GenerateCompanyDemoScenarioAction;
 use App\Domains\Companies\Actions\RequestCompanyDemoScenarioAction;
+use App\Domains\Companies\Actions\ResetCompanyDemoScenarioAction;
 use App\Domains\Dashboard\Actions\BuildOperationalDashboardAction;
 use App\Domains\WorkDays\Jobs\RecalculateWorkDayFromTimeEventJob;
 use App\Models\Alert;
@@ -13,20 +16,26 @@ use App\Models\AttendancePeriod;
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\CompanyDemoScenario;
+use App\Models\KioskDevice;
 use App\Models\Role;
 use App\Models\ScheduleBatch;
 use App\Models\ShiftTemplate;
 use App\Models\TimeEvent;
 use App\Models\User;
 use App\Models\Worker;
+use App\Models\WorkerCredential;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Database\Seeders\AlertTypeSeeder;
 use Database\Seeders\LegalRuleSeeder;
 use Database\Seeders\ProductSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Livewire\Volt\Volt;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -270,6 +279,195 @@ class CompanyDemoScenarioTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin);
+    }
+
+    public function test_closed_week_is_frozen_and_exportable_without_changing_current_day(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-27 12:00:00', 'America/Mexico_City'));
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        $scenario = app(RequestCompanyDemoScenarioAction::class)->handle($company, $super, CompanyDemoScenario::TYPE_CLOSED_WEEK);
+        $this->assertSame(CompanyDemoScenario::STATUS_COMPLETED, $scenario->status, $scenario->error_message ?? '');
+        $this->assertSame('2026-10-12', $scenario->period_start->toDateString());
+        $this->assertSame('2026-10-25', $scenario->period_end->toDateString());
+        $this->assertSame(5, Worker::query()->where('company_id', $company->id)->count());
+        $this->assertSame([42, 43], array_column($scenario->summary['weeks'], 'iso_week'));
+        $this->assertSame(4, AttendanceIncident::query()->where('company_id', $company->id)->count());
+        $this->assertSame(4, ScheduleBatch::query()->where('company_id', $company->id)->count());
+
+        $periods = AttendancePeriod::query()->where('company_id', $company->id)->get();
+        $this->assertCount(2, $periods);
+        foreach ($periods as $period) {
+            $this->assertSame(AttendancePeriod::STATUS_CLOSED, $period->status);
+            $rows = app(ResolveAttendancePeriodPayrollRowsAction::class)->handle($period);
+            $this->assertNotEmpty($rows);
+        }
+        $this->assertSame(0, Alert::query()->where('company_id', $company->id)->whereIn('status', Alert::OPEN_STATUSES)->count());
+        $count = TimeEvent::query()->count();
+        app(GenerateCompanyDemoScenarioAction::class)->refreshCurrentDay($scenario);
+        app(GenerateCompanyDemoScenarioAction::class)->handle($scenario);
+        $this->assertSame($count, TimeEvent::query()->count());
+        $other = Company::factory()->create();
+        $otherWorker = Worker::factory()->create(['company_id' => $other->id]);
+        $setting = $company->setting;
+        $setting->update(['late_arrival_tolerance_minutes' => 13]);
+        $replacement = app(ResetCompanyDemoScenarioAction::class)
+            ->handle($company, $super, $company->name, CompanyDemoScenario::TYPE_OPERATIONAL);
+        $this->assertSame(CompanyDemoScenario::STATUS_COMPLETED, $replacement->status);
+        $this->assertSame(CompanyDemoScenario::TYPE_OPERATIONAL, $replacement->scenario_type);
+        $this->assertNotSame($scenario->id, $replacement->id);
+        $log = DB::table('company_demo_reset_logs')->where('company_id', $company->id)->first();
+        $this->assertSame(hash('sha256', $log->snapshot_json), $log->snapshot_sha256);
+        $snapshot = json_decode($log->snapshot_json, true, flags: JSON_THROW_ON_ERROR);
+        $this->assertCount(2, $snapshot['tables']['attendance_periods']);
+        $this->assertSame($periods->first()->snapshot_sha256, $snapshot['tables']['attendance_periods'][0]['snapshot_sha256']);
+        app(ResetCompanyDemoScenarioAction::class)->handle($company, $super, $company->name);
+        $this->assertDatabaseMissing('workers', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('centers', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('work_days', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('time_events', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('attendance_periods', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('company_demo_scenarios', ['company_id' => $company->id]);
+        $this->assertDatabaseHas('workers', ['id' => $otherWorker->id]);
+        $this->assertDatabaseHas('company_user', ['company_id' => $company->id]);
+        $this->assertSame(13, $setting->fresh()->late_arrival_tolerance_minutes);
+        $this->assertTrue(app(AssessCompanyDemoScenarioEligibilityAction::class)->handle($company)['allowed']);
+
+    }
+
+    public function test_two_export_weeks_align_with_iso_weeks_across_year_boundary(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2027-01-11 12:00:00', 'America/Mexico_City'));
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        $scenario = app(RequestCompanyDemoScenarioAction::class)->handle($company, $super, CompanyDemoScenario::TYPE_CLOSED_WEEK);
+        $this->assertSame(CompanyDemoScenario::STATUS_COMPLETED, $scenario->status, $scenario->error_message ?? '');
+        $this->assertSame('2026-12-28', $scenario->period_start->toDateString());
+        $this->assertSame('2027-01-10', $scenario->period_end->toDateString());
+        $this->assertSame([53, 1], array_column($scenario->summary['weeks'], 'iso_week'));
+        $this->assertSame([2026, 2027], array_column($scenario->summary['weeks'], 'iso_year'));
+        $this->assertSame(5, Worker::query()->where('company_id', $company->id)->count());
+        foreach ($scenario->summary['weeks'] as $week) {
+            $this->assertTrue(CarbonImmutable::parse($week['start'])->isMonday());
+            $this->assertTrue(CarbonImmutable::parse($week['end'])->isSunday());
+        }
+        foreach (AttendancePeriod::query()->where('company_id', $company->id)->get() as $period) {
+            $this->assertSame('2026-12-28', $period->period_start->toDateString());
+            $this->assertSame('2027-01-10', $period->period_end->toDateString());
+            $this->assertNotEmpty(app(ResolveAttendancePeriodPayrollRowsAction::class)->handle($period));
+        }
+    }
+
+    public function test_company_admin_cannot_request_closed_week(): void
+    {
+        [$company, $admin] = $this->companyWithAdmin();
+        $this->expectException(InvalidArgumentException::class);
+        app(RequestCompanyDemoScenarioAction::class)->handle($company, $admin, CompanyDemoScenario::TYPE_CLOSED_WEEK);
+    }
+
+    public function test_only_super_admin_sees_closed_week_choice(): void
+    {
+        [$company, $admin] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        $this->actingAs($super)->withSession(['current_company_id' => $company->id]);
+        Volt::test('companies.index')->call('loadEditForm', $company->id)
+            ->assertSee('Dos semanas terminadas para exportar')->assertSee('Operación y revisión');
+        $this->actingAs($admin);
+        Volt::test('companies.index')->call('loadEditForm', $company->id)
+            ->assertDontSee('Dos semanas terminadas para exportar');
+    }
+
+    public function test_demo_reset_rejects_non_super_admin(): void
+    {
+        [$company, $admin] = $this->companyWithAdmin();
+        $this->expectException(AuthorizationException::class);
+        app(ResetCompanyDemoScenarioAction::class)->handle($company, $admin, $company->name);
+    }
+
+    public function test_super_admin_can_clear_added_operational_data(): void
+    {
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        CompanyDemoScenario::query()->create(['company_id' => $company->id, 'status' => 'completed']);
+        $worker = Worker::factory()->create(['company_id' => $company->id]);
+        app(ResetCompanyDemoScenarioAction::class)->handle($company, $super, $company->name);
+        $this->assertDatabaseMissing('workers', ['id' => $worker->id]);
+        $this->assertDatabaseHas('companies', ['id' => $company->id]);
+        $this->assertDatabaseCount('company_demo_reset_logs', 1);
+    }
+
+    public function test_demo_reset_rolls_back_if_replacement_fails(): void
+    {
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        $old = CompanyDemoScenario::query()->create(['company_id' => $company->id, 'status' => 'completed']);
+        $center = Center::factory()->create(['company_id' => $company->id, 'metadata' => ['demo' => true, 'scenario' => 'company_onboarding_v1']]);
+        $generator = Mockery::mock(GenerateCompanyDemoScenarioAction::class);
+        $generator->shouldReceive('handle')->once()->andReturnUsing(function ($scenario) {
+            $scenario->update(['status' => 'failed', 'error_message' => 'Simulated failure']);
+
+            return $scenario->fresh();
+        });
+        $this->app->instance(GenerateCompanyDemoScenarioAction::class, $generator);
+        try {
+            app(ResetCompanyDemoScenarioAction::class)->handle($company, $super, $company->name, 'closed_week');
+            $this->fail('Expected a replacement failure.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('Se conservó el anterior', $exception->getMessage());
+        }
+        $this->assertDatabaseHas('company_demo_scenarios', ['id' => $old->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('centers', ['id' => $center->id]);
+        $this->assertDatabaseCount('company_demo_reset_logs', 0);
+    }
+
+    public function test_demo_reset_requires_company_name_and_finished_scenario(): void
+    {
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        CompanyDemoScenario::query()->create(['company_id' => $company->id, 'status' => 'processing']);
+        foreach (['wrong name', $company->name] as $confirmation) {
+            try {
+                app(ResetCompanyDemoScenarioAction::class)->handle($company, $super, $confirmation);
+                $this->fail('Expected reset rejection.');
+            } catch (ValidationException $exception) {
+                $this->assertNotEmpty($exception->errors());
+            }
+        }
+        $this->assertDatabaseCount('company_demo_scenarios', 1);
+    }
+
+    public function test_super_admin_can_reset_from_company_form_and_fields_are_cleared(): void
+    {
+        [$company] = $this->companyWithAdmin();
+        $super = User::factory()->create(['status' => 'active', 'global_role' => RoleKey::SUPER_ADMIN]);
+        CompanyDemoScenario::query()->create(['company_id' => $company->id, 'status' => 'completed']);
+        $worker = Worker::factory()->create(['company_id' => $company->id]);
+        WorkerCredential::factory()->create(['company_id' => $company->id, 'worker_id' => $worker->id]);
+        $center = Center::factory()->create(['company_id' => $company->id]);
+        KioskDevice::factory()->create(['company_id' => $company->id, 'center_id' => $center->id]);
+        $this->actingAs($super)->withSession(['current_company_id' => $company->id]);
+        Volt::test('companies.index')->call('loadEditForm', $company->id)
+            ->assertSee('Borrar datos de empresa')
+            ->call('openDemoReset', $company->id)->assertSet('editingCompanyId', $company->id)
+            ->assertSet('demoResetConfirmation', '')->assertSet('demoResetReplacement', 'empty')
+            ->set('demoResetConfirmation', 'incorrect')
+            ->call('resetDemo', $company->id)->assertHasErrors(['demoResetConfirmation'])
+            ->set('demoResetConfirmation', $company->name)
+            ->call('resetDemo', $company->id)->assertHasNoErrors()
+            ->assertSet('demoResetConfirmation', '')->assertSet('demoResetReplacement', 'empty')
+            ->assertDontSee('Borrar datos de empresa')->assertSee('Generar escenario demo');
+        $this->assertDatabaseMissing('worker_credentials', ['company_id' => $company->id]);
+        $this->assertDatabaseMissing('kiosk_devices', ['company_id' => $company->id]);
+        $this->assertDatabaseHas('users', ['id' => $super->id]);
+    }
+
+    public function test_company_admin_cannot_open_demo_reset(): void
+    {
+        [$company, $admin] = $this->companyWithAdmin();
+        CompanyDemoScenario::query()->create(['company_id' => $company->id, 'status' => 'completed']);
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+        Volt::test('companies.index')->call('loadEditForm', $company->id)
+            ->assertDontSee('Borrar datos de empresa')->call('openDemoReset', $company->id)->assertForbidden();
     }
 
     /** @return array{0: Company, 1: User} */

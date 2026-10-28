@@ -143,7 +143,7 @@
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan
                         @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany]))
-                            <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Periodos de asistencia</flux:navlist.item>
+                            <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Exportar períodos</flux:navlist.item>
                         @endif
                         <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
                         @if (auth()->user()->isSuperAdmin())
@@ -158,8 +158,9 @@
                             <flux:navlist.item icon="cog-6-tooth" :href="route('company-settings.index')" :current="request()->routeIs('company-settings.*')" wire:navigate>Configuración de empresa</flux:navlist.item>
                         @endif
 
-                        @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\PayrollExportTemplate::class, $activeCompany]))
-                            <flux:navlist.item icon="table-cells" :href="route('payroll-export-templates.index')" :current="request()->routeIs('payroll-export-templates.*')" wire:navigate>CSV de períodos</flux:navlist.item>
+
+                        @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\ExportLayout::class, $activeCompany]))
+                            <flux:navlist.item icon="squares-2x2" :href="route('export-layouts.index')" :current="request()->routeIs('export-layouts.*')" wire:navigate>Layouts de exportación</flux:navlist.item>
                         @endif
 
                         @if ($canManageUsers)

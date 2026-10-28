@@ -669,102 +669,105 @@ new class extends Component {
         {{ $events->links() }}
     </section>
 
-    <x-side-panel wire:model="showAssistedPanel" title="Captura asistida" subheading="Registra eventos en vivo para un trabajador activo." maxWidth="max-w-xl" closeMethod="closeAssistedPanel">
+    <x-side-panel wire:model="showAssistedPanel" title="Captura asistida" subheading="Registra eventos en vivo para un trabajador activo." max-width="max-w-xl" closeMethod="closeAssistedPanel">
         <div class="grid gap-5 p-6">
-            <flux:select label="Trabajador" wire:model.live="assistedWorkerId">
-                <flux:select.option value="">Selecciona</flux:select.option>
-                @foreach ($workers as $worker)
-                    <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            <x-ui.panel-section title="Trabajador y registro en vivo" tone="blue">
+                <flux:select label="Trabajador" wire:model.live="assistedWorkerId">
+                    <flux:select.option value="">Selecciona</flux:select.option>
+                    @foreach ($workers as $worker)
+                        <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
 
-            @if ($assistedState)
-                <div class="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900/60 sm:grid-cols-3">
-                    <div>
-                        <p class="text-xs uppercase text-zinc-500">Estado</p>
-                        <p class="font-medium">{{ $this->stateLabel($assistedState['state']) }}</p>
+                @if ($assistedState)
+                    <div class="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900/60 sm:grid-cols-3">
+                        <div>
+                            <p class="text-xs uppercase text-zinc-500">Estado</p>
+                            <p class="font-medium">{{ $this->stateLabel($assistedState['state']) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase text-zinc-500">Fecha local</p>
+                            <p class="font-medium">{{ $assistedState['local_date'] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase text-zinc-500">Zona horaria</p>
+                            <p class="font-medium">{{ $assistedState['timezone'] }}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-xs uppercase text-zinc-500">Fecha local</p>
-                        <p class="font-medium">{{ $assistedState['local_date'] }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs uppercase text-zinc-500">Zona horaria</p>
-                        <p class="font-medium">{{ $assistedState['timezone'] }}</p>
-                    </div>
-                </div>
 
-                @if ($assistedState['last_event'])
-                    <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
-                        <flux:heading>Ultimo evento</flux:heading>
-                        <dl class="mt-3 grid gap-3 sm:grid-cols-2">
-                            <div>
-                                <dt class="text-xs uppercase text-zinc-500">Tipo</dt>
-                                <dd class="font-medium">{{ $this->eventLabel($assistedState['last_event']->event_type) }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs uppercase text-zinc-500">Hora local</dt>
-                                <dd class="font-medium">{{ $assistedState['last_event']->occurred_local_time }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs uppercase text-zinc-500">Fuente</dt>
-                                <dd class="font-medium">{{ $assistedState['last_event']->source }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs uppercase text-zinc-500">Estado</dt>
-                                <dd class="font-medium">{{ $this->statusLabel($assistedState['last_event']->status) }}</dd>
-                            </div>
-                        </dl>
+                    @if ($assistedState['last_event'])
+                        <div class="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-700">
+                            <flux:heading>Ultimo evento</flux:heading>
+                            <dl class="mt-3 grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <dt class="text-xs uppercase text-zinc-500">Tipo</dt>
+                                    <dd class="font-medium">{{ $this->eventLabel($assistedState['last_event']->event_type) }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs uppercase text-zinc-500">Hora local</dt>
+                                    <dd class="font-medium">{{ $assistedState['last_event']->occurred_local_time }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs uppercase text-zinc-500">Fuente</dt>
+                                    <dd class="font-medium">{{ $assistedState['last_event']->source }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs uppercase text-zinc-500">Estado</dt>
+                                    <dd class="font-medium">{{ $this->statusLabel($assistedState['last_event']->status) }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    @endif
+
+                    <div class="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                        @if (in_array('clock_in', $assistedState['allowed_actions'], true))
+                            <button type="button" class="btn-primary" wire:click="recordAssisted('clock_in')">Registrar entrada</button>
+                        @endif
+                        @if (in_array('break_start', $assistedState['allowed_actions'], true))
+                            <button type="button" class="btn-primary" wire:click="recordAssisted('break_start')">Iniciar pausa</button>
+                        @endif
+                        @if (in_array('break_end', $assistedState['allowed_actions'], true))
+                            <button type="button" class="btn-primary" wire:click="recordAssisted('break_end')">Terminar pausa</button>
+                        @endif
+                        @if (in_array('clock_out', $assistedState['allowed_actions'], true))
+                            <button type="button" class="btn-primary" wire:click="recordAssisted('clock_out')">Registrar salida</button>
+                        @endif
+                        @if (empty($assistedState['allowed_actions']))
+                            <span class="text-sm text-zinc-500">No hay acciones disponibles para el estado actual.</span>
+                        @endif
                     </div>
+                @else
+                    <p class="text-sm text-zinc-500">No hay trabajadores activos disponibles.</p>
                 @endif
-
-                <div class="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-                    @if (in_array('clock_in', $assistedState['allowed_actions'], true))
-                        <button type="button" class="btn-primary" wire:click="recordAssisted('clock_in')">Registrar entrada</button>
-                    @endif
-                    @if (in_array('break_start', $assistedState['allowed_actions'], true))
-                        <button type="button" class="btn-primary" wire:click="recordAssisted('break_start')">Iniciar pausa</button>
-                    @endif
-                    @if (in_array('break_end', $assistedState['allowed_actions'], true))
-                        <button type="button" class="btn-primary" wire:click="recordAssisted('break_end')">Terminar pausa</button>
-                    @endif
-                    @if (in_array('clock_out', $assistedState['allowed_actions'], true))
-                        <button type="button" class="btn-primary" wire:click="recordAssisted('clock_out')">Registrar salida</button>
-                    @endif
-                    @if (empty($assistedState['allowed_actions']))
-                        <span class="text-sm text-zinc-500">No hay acciones disponibles para el estado actual.</span>
-                    @endif
-                </div>
-            @else
-                <p class="text-sm text-zinc-500">No hay trabajadores activos disponibles.</p>
-            @endif
+            </x-ui.panel-section>
         </div>
     </x-side-panel>
 
-    <x-side-panel wire:model="showCapturePanel" title="Captura justificada" subheading="Registra un evento justificado para revision." maxWidth="max-w-xl" closeMethod="closeCapturePanel">
+    <x-side-panel wire:model="showCapturePanel" title="Captura justificada" subheading="Registra un evento justificado para revision." max-width="max-w-xl" closeMethod="closeCapturePanel">
         <form wire:submit="capture" class="grid gap-4 p-6">
-            <flux:select label="Trabajador" wire:model="workerId">
-                <flux:select.option value="">Selecciona</flux:select.option>
-                @foreach ($workers as $worker)
-                    <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            <x-ui.panel-section title="Detalle de la captura" tone="blue">
+                <flux:select label="Trabajador" wire:model="workerId">
+                    <flux:select.option value="">Selecciona</flux:select.option>
+                    @foreach ($workers as $worker)
+                        <flux:select.option value="{{ $worker->id }}">{{ $worker->full_name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
 
-            <flux:select label="Tipo de evento" wire:model="eventType">
-                <flux:select.option value="clock_in">Entrada</flux:select.option>
-                <flux:select.option value="clock_out">Salida</flux:select.option>
-                <flux:select.option value="break_start">Inicio de pausa</flux:select.option>
-                <flux:select.option value="break_end">Fin de pausa</flux:select.option>
-            </flux:select>
+                <flux:select label="Tipo de evento" wire:model="eventType">
+                    <flux:select.option value="clock_in">Entrada</flux:select.option>
+                    <flux:select.option value="clock_out">Salida</flux:select.option>
+                    <flux:select.option value="break_start">Inicio de pausa</flux:select.option>
+                    <flux:select.option value="break_end">Fin de pausa</flux:select.option>
+                </flux:select>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <flux:input label="Fecha" type="date" wire:model="occurredLocalDate" />
-                <flux:input label="Hora" type="time" wire:model="occurredLocalTime" />
-            </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <flux:input label="Fecha" type="date" wire:model="occurredLocalDate" />
+                    <flux:input label="Hora" type="time" wire:model="occurredLocalTime" />
+                </div>
 
-            <flux:textarea label="Motivo" wire:model="reason" rows="5" placeholder="Describe por que se captura manualmente este evento." />
-
-            <div class="flex justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                <flux:textarea label="Motivo" wire:model="reason" rows="5" placeholder="Describe por que se captura manualmente este evento." />
+            </x-ui.panel-section>
+<div class="flex flex-wrap justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
                 <button type="button" class="btn-ghost" wire:click="closeCapturePanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar captura manual</button>
             </div>

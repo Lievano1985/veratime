@@ -420,45 +420,47 @@ new class extends Component {
             labelledby="organizational-unit-form-title"
         >
             <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-                <div class="flex-1 space-y-4 p-6">
-                    <flux:select label="Centro" wire:model.live="form.center_id">
-                        <flux:select.option value="">Selecciona un centro</flux:select.option>
-                        @foreach ($centers as $center)
-                            <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-
-                    <flux:select label="Tipo" wire:model.live="form.type">
-                        <flux:select.option value="department">Departamento</flux:select.option>
-                        <flux:select.option value="area">Area</flux:select.option>
-                        <flux:select.option value="team">Equipo</flux:select.option>
-                    </flux:select>
-
-                    @if ($form['type'] !== 'department')
-                        <flux:select label="Unidad padre" wire:model="form.parent_id">
-                            <flux:select.option value="">{{ $form['type'] === 'area' ? 'Centro directo o departamento' : 'Selecciona un area' }}</flux:select.option>
-                            @foreach ($parentOptions as $parent)
-                                <flux:select.option value="{{ $parent->id }}">{{ $parent->code }} - {{ $parent->name }}</flux:select.option>
+                <div class="flex-1 space-y-5 p-4 sm:p-6">
+                    <x-ui.panel-section title="Datos de la unidad" tone="blue">
+                        <flux:select label="Centro" wire:model.live="form.center_id">
+                            <flux:select.option value="">Selecciona un centro</flux:select.option>
+                            @foreach ($centers as $center)
+                                <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                    @endif
 
-                    <flux:input label="Codigo" wire:model="form.code" required />
-                    <flux:input label="Nombre" wire:model="form.name" required />
-
-                    @if ($editingUnitId)
-                        <flux:select label="Estado" wire:model="form.status">
-                            <flux:select.option value="active">Activa</flux:select.option>
-                            <flux:select.option value="inactive">Inactiva</flux:select.option>
+                        <flux:select label="Tipo" wire:model.live="form.type">
+                            <flux:select.option value="department">Departamento</flux:select.option>
+                            <flux:select.option value="area">Area</flux:select.option>
+                            <flux:select.option value="team">Equipo</flux:select.option>
                         </flux:select>
-                    @endif
 
-                    @error('form.parent_id')
-                        <p class="form-error">{{ $message }}</p>
-                    @enderror
+                        @if ($form['type'] !== 'department')
+                            <flux:select label="Unidad padre" wire:model="form.parent_id">
+                                <flux:select.option value="">{{ $form['type'] === 'area' ? 'Centro directo o departamento' : 'Selecciona un area' }}</flux:select.option>
+                                @foreach ($parentOptions as $parent)
+                                    <flux:select.option value="{{ $parent->id }}">{{ $parent->code }} - {{ $parent->name }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                        @endif
+
+                        <flux:input label="Codigo" wire:model="form.code" required />
+                        <flux:input label="Nombre" wire:model="form.name" required />
+
+                        @if ($editingUnitId)
+                            <flux:select label="Estado" wire:model="form.status">
+                                <flux:select.option value="active">Activa</flux:select.option>
+                                <flux:select.option value="inactive">Inactiva</flux:select.option>
+                            </flux:select>
+                        @endif
+
+                        @error('form.parent_id')
+                            <p class="form-error">{{ $message }}</p>
+                        @enderror
+                    </x-ui.panel-section>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                         Cancelar
                     </button>

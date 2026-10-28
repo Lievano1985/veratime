@@ -19,6 +19,9 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
 
     $company = Company::query()->where('tax_id', 'VTD260712XX1')->firstOrFail();
 
+    expect(Schema::hasTable('labor_conditions'))->toBeFalse();
+    $this->assertDatabaseCount('retired_labor_conditions', 0);
+
     expect($company->name)->toBe('Vera Time Demo Completo')
         ->and(User::query()->whereIn('email', [
             'admin.demo@veratime.local',
@@ -29,7 +32,6 @@ it('runs the Vera Time demo seeder and creates expected Sprint 2 data', function
         ->and($company->centers()->count())->toBe(2)
         ->and($company->workers()->count())->toBe(4)
         ->and($company->employmentRelationships()->count())->toBe(4)
-        ->and($company->laborConditions()->count())->toBe(4)
         ->and($company->workerCredentials()->count())->toBe(4)
         ->and($company->schedules()->count())->toBe(2)
         ->and($company->scheduleDays()->count())->toBe(14)

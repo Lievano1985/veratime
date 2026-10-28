@@ -295,24 +295,26 @@ new class extends Component {
         max-width="max-w-xl"
     >
         <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-4 p-6">
-                <livewire:workers.multi-select wire:model="form.worker_ids" />
-                @error('form.worker_ids')
-                    <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                @enderror
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Trabajadores y horario" tone="blue">
+                    <livewire:workers.multi-select wire:model="form.worker_ids" />
+                    @error('form.worker_ids')
+                        <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
 
-                <flux:select label="Horario" wire:model="form.schedule_id">
-                    <flux:select.option value="">Selecciona</flux:select.option>
-                    @foreach ($schedules as $schedule)
-                        <flux:select.option value="{{ $schedule->id }}">{{ $schedule->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                    <flux:select label="Horario" wire:model="form.schedule_id">
+                        <flux:select.option value="">Selecciona</flux:select.option>
+                        @foreach ($schedules as $schedule)
+                            <flux:select.option value="{{ $schedule->id }}">{{ $schedule->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
 
-                <flux:input type="date" label="Desde" wire:model="form.effective_from" />
-                <flux:input type="date" label="Hasta" wire:model="form.effective_to" />
+                    <flux:input type="date" label="Desde" wire:model="form.effective_from" />
+                    <flux:input type="date" label="Hasta" wire:model="form.effective_to" />
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
+            <div class="flex flex-wrap justify-end gap-3 border-t border-zinc-200 p-6 dark:border-zinc-700">
                 <button type="button" class="btn-ghost" wire:click="closeFormPanel">
                     Cancelar
                 </button>

@@ -503,36 +503,38 @@ new class extends Component {
     >
         <div class="space-y-8 p-6">
                 <form wire:submit="save" class="space-y-5">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <flux:input label="Codigo" wire:model="form.code" />
-                        <flux:input label="Nombre" wire:model="form.name" />
-                        <flux:select label="Tipo legal" wire:model="form.legal_type">
-                            <flux:select.option value="diurnal">Diurno</flux:select.option>
-                            <flux:select.option value="nocturnal">Nocturno</flux:select.option>
-                            <flux:select.option value="mixed">Mixto</flux:select.option>
-                            <flux:select.option value="variable">Variable</flux:select.option>
-                        </flux:select>
-                        <flux:input label="Zona horaria" wire:model="form.timezone" />
-                        <flux:select label="Estado" wire:model="form.status">
-                            <flux:select.option value="active">Activo</flux:select.option>
-                            <flux:select.option value="inactive">Inactivo</flux:select.option>
-                        </flux:select>
-                        <div></div>
-                        <flux:input type="date" label="Vigente desde" wire:model="form.effective_from" />
-                        <flux:input type="date" label="Vigente hasta" wire:model="form.effective_to" />
-                    </div>
+                    <x-ui.panel-section title="Datos del horario" tone="blue">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input label="Codigo" wire:model="form.code" />
+                            <flux:input label="Nombre" wire:model="form.name" />
+                            <flux:select label="Tipo legal" wire:model="form.legal_type">
+                                <flux:select.option value="diurnal">Diurno</flux:select.option>
+                                <flux:select.option value="nocturnal">Nocturno</flux:select.option>
+                                <flux:select.option value="mixed">Mixto</flux:select.option>
+                                <flux:select.option value="variable">Variable</flux:select.option>
+                            </flux:select>
+                            <flux:input label="Zona horaria" wire:model="form.timezone" />
+                            <flux:select label="Estado" wire:model="form.status">
+                                <flux:select.option value="active">Activo</flux:select.option>
+                                <flux:select.option value="inactive">Inactivo</flux:select.option>
+                            </flux:select>
+                            <div></div>
+                            <flux:input type="date" label="Vigente desde" wire:model="form.effective_from" />
+                            <flux:input type="date" label="Vigente hasta" wire:model="form.effective_to" />
+                        </div>
 
-                    <div class="flex justify-end">
-                        <button type="submit" class="btn-primary">
-                            Guardar horario
-                        </button>
-                    </div>
-                </form>
+                        <div class="flex flex-wrap justify-end">
+                            <button type="submit" class="btn-primary">
+                                Guardar horario
+                            </button>
+                        </div>
+                    </x-ui.panel-section>
+</form>
 
                 @if ($editingScheduleId)
-                    <section class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                    <section class="vt-panel-card space-y-4">
                         <div>
-                            <flux:heading>Dias del horario</flux:heading>
+                            <x-ui.panel-heading title="Dias del horario" tone="indigo" />
                             <flux:subheading>Define entrada, salida y si el dia cruza medianoche.</flux:subheading>
                         </div>
 
@@ -549,7 +551,7 @@ new class extends Component {
                                 </div>
                             @endforeach
 
-                            <div class="flex justify-end">
+                            <div class="flex flex-wrap justify-end">
                                 <button type="submit" class="btn-primary">
                                     Guardar dias
                                 </button>
@@ -557,9 +559,9 @@ new class extends Component {
                         </form>
                     </section>
 
-                    <section class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                    <section class="vt-panel-card space-y-4">
                         <div>
-                            <flux:heading>Pausas programadas</flux:heading>
+                            <x-ui.panel-heading title="Pausas programadas" tone="emerald" />
                             <flux:subheading>Registra pausas por dia sin calcular efectos legales todavia.</flux:subheading>
                         </div>
 
@@ -582,7 +584,7 @@ new class extends Component {
                                 </div>
                             </div>
 
-                            <div class="flex justify-end">
+                            <div class="flex flex-wrap justify-end">
                                 <button type="submit" class="btn-primary">
                                     Guardar pausa
                                 </button>

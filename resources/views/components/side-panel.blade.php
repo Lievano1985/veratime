@@ -2,7 +2,7 @@
     'title',
     'subheading' => null,
     'labelledby' => 'side-panel-title',
-    'maxWidth' => 'max-w-md',
+    'maxWidth' => 'max-w-xl',
     'widthStyle' => null,
     'closeMethod' => null,
 ])
@@ -32,7 +32,7 @@
     ></button>
 
     <aside
-        class="absolute right-0 top-0 flex h-full w-full {{ $maxWidth }} transform-gpu flex-col overflow-y-auto border-l border-zinc-200 bg-white shadow-xl will-change-transform dark:border-zinc-700 dark:bg-zinc-900"
+        class="vt-side-panel absolute right-0 top-0 flex h-full w-full {{ $maxWidth }} transform-gpu flex-col overflow-y-auto border-l border-zinc-200 bg-white shadow-xl will-change-transform dark:border-zinc-700 dark:bg-zinc-900"
         @if ($widthStyle) style="{{ $widthStyle }}" @endif
         x-show="open"
         x-transition:enter="transform transition-transform ease-out duration-750"
@@ -42,7 +42,7 @@
         x-transition:leave-start="translate-x-0"
         x-transition:leave-end="translate-x-full"
     >
-        <div class="flex items-start justify-between gap-4 border-b border-zinc-200 p-6 dark:border-zinc-700">
+        <div class="flex shrink-0 items-start justify-between gap-4 border-b border-surface-line bg-white px-5 py-5 sm:px-6 dark:border-zinc-700 dark:bg-zinc-900">
             <div>
                 <flux:heading id="{{ $labelledby }}">{{ $title }}</flux:heading>
 
@@ -56,6 +56,8 @@
             </flux:button>
         </div>
 
-        {{ $slot }}
+        <div class="vt-side-panel-content flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-bg dark:bg-zinc-950">
+            {{ $slot }}
+        </div>
     </aside>
 </div>

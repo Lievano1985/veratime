@@ -87,7 +87,7 @@ class WorkDayWorkspaceTest extends TestCase
         Volt::test('work-days.index')->call('openIncident', $weekly->id)
             ->assertSee('Confirmar revisión semanal')->assertDontSee('Comentario obligatorio')
             ->assertSee('Días trabajados')->assertSee('Días sin trabajo registrado')
-            ->assertDontSee('1. Revisar la jornada')->assertDontSee('Ver detalle técnico del cálculo')
+            ->assertDontSee('Revisar la jornada')->assertDontSee('Ver detalle técnico del cálculo')
             ->assertDontSee('Extra total del día')->assertDontSee('Sin dictamen')
             ->assertSee('Descanso trabajado autorizado.')
             ->call('confirmWeeklyRestReview')->assertHasNoErrors()->assertSee('Revisado: semana sin descanso');
@@ -363,7 +363,7 @@ class WorkDayWorkspaceTest extends TestCase
         $weekly = $this->alert($day, 'weekly_overtime_exceeded');
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
         Volt::test('work-days.index')->call('openIncident', $pause->id)
-            ->assertSeeInOrder(['1. Revisar la jornada', '2. Corregir y actualizar si es necesario', '3. Atender cada pendiente', '4. Consultar antecedentes'])
+            ->assertSeeInOrder(['Revisar la jornada', 'Corregir y actualizar si es necesario', 'Atender cada pendiente', 'Consultar antecedentes'])
             ->assertSee('Horas programadas')->assertSee('Marcajes válidos actuales')
             ->assertSee('Ver detalle técnico del cálculo')->assertSee('Extra total del día')
             ->assertDontSee('Cerrar seguimiento diario')

@@ -3,14 +3,12 @@
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Domains\Organization\Actions\ResolveUserOperationalScopeAction;
 use App\Domains\Workers\Actions\BlockWorkerCredentialAction;
-use App\Domains\Workers\Actions\CreateOrReplaceLaborConditionAction;
 use App\Domains\Workers\Actions\CreateOrUpdateWorkerCredentialAction;
 use App\Domains\Workers\Actions\DeleteWorkerIfUnusedAction;
 use App\Domains\Workers\Actions\ResetWorkerCredentialPinAction;
 use App\Domains\Workers\Actions\SaveWorkerWithEmploymentRelationshipAction;
 use App\Domains\Workers\Actions\TerminateWorkerAction;
 use App\Models\EmploymentRelationship;
-use App\Models\LaborCondition;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
 use App\Support\RoleKey;
@@ -22,7 +20,6 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     public array $form = [];
-    public array $conditionForm = [];
     public array $credentialForm = [];
     public bool $showFormPanel = false;
     public ?int $editingWorkerId = null;
@@ -32,7 +29,6 @@ new class extends Component {
     public function mount(): void
     {
         $this->form = $this->emptyForm();
-        $this->conditionForm = $this->emptyConditionForm();
         $this->credentialForm = $this->emptyCredentialForm();
     }
 
@@ -55,31 +51,17 @@ new class extends Component {
 
         $worker = $this->authorizedWorker($workerId, $currentCompany);
         $relationship = $worker->activeEmploymentRelationship;
-        $condition = $relationship?->activeLaborCondition;
         $credential = $worker->credential;
 
         $this->editingWorkerId = $worker->id;
         $this->form = [
             'employee_code' => $worker->employee_code,
             'full_name' => $worker->full_name,
-            'birth_date' => $worker->birth_date?->format('Y-m-d') ?? '',
-            'email' => $worker->email ?? '',
-            'phone' => $worker->phone ?? '',
             'rfc' => $worker->rfc ?? '',
-            'curp' => $worker->curp ?? '',
             'center_id' => $relationship?->center_id ? (string) $relationship->center_id : '',
-            'position_name' => $relationship?->position_name ?? '',
             'started_at' => $relationship?->started_at?->format('Y-m-d') ?? now()->toDateString(),
             'status' => $worker->status,
             'relationship_change_reason' => '',
-        ];
-        $this->conditionForm = [
-            'work_modality' => $condition?->work_modality ?? 'onsite',
-            'weekly_hours' => $condition?->weekly_hours ?? '',
-            'rest_day_of_week' => $condition?->rest_day_of_week ?? '',
-            'effective_from' => $condition?->effective_from?->format('Y-m-d') ?? now()->toDateString(),
-            'effective_to' => $condition?->effective_to?->format('Y-m-d') ?? '',
-            'status' => $condition?->status ?? 'active',
         ];
         $this->credentialForm = [
             'access_code' => $credential?->access_code ?? $worker->employee_code,
@@ -109,18 +91,13 @@ new class extends Component {
                     ->ignore($worker?->id),
             ],
             'form.full_name' => ['required', 'string', 'max:255'],
-            'form.birth_date' => ['nullable', 'date', 'before:today'],
-            'form.email' => ['nullable', 'email', 'max:255'],
-            'form.phone' => ['nullable', 'string', 'max:50'],
             'form.rfc' => ['nullable', 'string', 'max:20'],
-            'form.curp' => ['nullable', 'string', 'max:30'],
             'form.center_id' => [
                 'required',
                 Rule::exists('centers', 'id')
                     ->where('company_id', $company->id)
                     ->where('status', 'active'),
             ],
-            'form.position_name' => ['nullable', 'string', 'max:255'],
             'form.started_at' => ['required', 'date'],
             'form.status' => ['required', Rule::in(['active', 'inactive', 'terminated', 'suspended'])],
             'form.relationship_change_reason' => ['nullable', 'string', 'max:500'],
@@ -171,43 +148,6 @@ new class extends Component {
         }
 
         Session::flash('status', 'Trabajador eliminado.');
-    }
-
-    public function saveLaborCondition(
-        CurrentCompany $currentCompany,
-        CreateOrReplaceLaborConditionAction $action,
-    ): void {
-        $worker = $this->authorizedWorker($this->editingWorkerId ?? 0, $currentCompany);
-        $relationship = $worker->activeEmploymentRelationship;
-
-        abort_unless($relationship, 422);
-
-        Gate::authorize('create', [LaborCondition::class, $relationship->company, $relationship]);
-
-        if ($condition = $relationship->activeLaborCondition()->first()) {
-            Gate::authorize('update', $condition);
-        }
-
-        $validated = $this->validate([
-            'conditionForm.work_modality' => ['required', Rule::in(['onsite', 'hybrid', 'remote', 'field'])],
-            'conditionForm.weekly_hours' => ['nullable', 'numeric', 'min:0', 'max:168'],
-            'conditionForm.rest_day_of_week' => ['nullable', 'integer', 'between:0,6'],
-            'conditionForm.effective_from' => ['required', 'date'],
-            'conditionForm.effective_to' => ['nullable', 'date', 'after_or_equal:conditionForm.effective_from'],
-            'conditionForm.status' => ['required', Rule::in(['active', 'inactive', 'replaced'])],
-        ])['conditionForm'];
-
-        try {
-            $action->handle($relationship->company, $worker, $relationship, $validated);
-        } catch (\InvalidArgumentException $exception) {
-            $this->addError('conditionForm.effective_from', $exception->getMessage());
-
-            return;
-        }
-
-        $this->conditionForm = $this->emptyConditionForm();
-
-        Session::flash('status', 'Condicion laboral guardada.');
     }
 
     public function saveCredential(
@@ -318,14 +258,12 @@ new class extends Component {
         $this->editingWorkerId = null;
         $this->resetWorkerForms();
         $this->resetValidation('form');
-        $this->resetValidation('conditionForm');
         $this->resetValidation('credentialForm');
     }
 
     private function resetWorkerForms(): void
     {
         $this->form = $this->emptyForm();
-        $this->conditionForm = $this->emptyConditionForm();
         $this->credentialForm = $this->emptyCredentialForm();
         $this->clearCredentialTemporalPin();
     }
@@ -345,7 +283,6 @@ new class extends Component {
             'workers' => $company->workers()
                 ->with([
                     'activeEmploymentRelationship.center',
-                    'activeEmploymentRelationship.activeLaborCondition',
                     'credential',
                 ])
                 ->when($scope !== null, function ($query) use ($scope): void {
@@ -390,8 +327,6 @@ new class extends Component {
                     ->with([
                         'credential',
                         'activeEmploymentRelationship.center',
-                        'activeEmploymentRelationship.activeLaborCondition',
-                        'activeEmploymentRelationship.laborConditions' => fn ($query) => $query->orderByDesc('effective_from'),
                     ])
                     ->find($this->editingWorkerId)
                 : null,
@@ -406,7 +341,6 @@ new class extends Component {
             ->with([
                 'credential',
                 'activeEmploymentRelationship.center',
-                'activeEmploymentRelationship.activeLaborCondition',
             ])
             ->whereKey($workerId)
             ->firstOrFail();
@@ -430,28 +364,11 @@ new class extends Component {
         return [
             'employee_code' => '',
             'full_name' => '',
-            'birth_date' => '',
-            'email' => '',
-            'phone' => '',
             'rfc' => '',
-            'curp' => '',
             'center_id' => '',
-            'position_name' => '',
             'started_at' => now()->toDateString(),
             'status' => 'active',
             'relationship_change_reason' => '',
-        ];
-    }
-
-    private function emptyConditionForm(): array
-    {
-        return [
-            'work_modality' => 'onsite',
-            'weekly_hours' => '',
-            'rest_day_of_week' => '',
-            'effective_from' => now()->toDateString(),
-            'effective_to' => '',
-            'status' => 'active',
         ];
     }
 
@@ -508,7 +425,7 @@ new class extends Component {
                 <flux:input wire:model.live.debounce.300ms="search" label="Buscar" placeholder="Código, nombre o RFC" />
 
                 <div>
-                    <label class="form-label">Estado</label>
+                    <label class="form-label">Estado del trabajador</label>
                     <x-ui.select wire:model.live="statusFilter" class="h-10 border-primary-border dark:border-primary-border">
                         <option value="">Todos</option>
                         <option value="active">Activo</option>
@@ -526,8 +443,6 @@ new class extends Component {
                     <th class="table-head-cell">Código</th>
                     <th class="table-head-cell">Nombre</th>
                     <th class="table-head-cell">Centro actual</th>
-                    <th class="table-head-cell">Puesto</th>
-                    <th class="table-head-cell">Condición</th>
                     <th class="table-head-cell">Credencial</th>
                     <th class="table-head-cell">Estado</th>
                     <th class="table-head-cell text-right">Acciones</th>
@@ -536,14 +451,11 @@ new class extends Component {
             <tbody>
                 @forelse ($workers as $worker)
                     @php($relationship = $worker->activeEmploymentRelationship)
-                    @php($condition = $relationship?->activeLaborCondition)
                     @php($credential = $worker->credential)
                     <tr class="table-row">
                         <td class="table-cell font-mono text-brand-navy">{{ $worker->employee_code }}</td>
                         <td class="table-cell font-semibold text-brand-navy">{{ $worker->full_name }}</td>
                         <td class="table-cell text-surface-muted">{{ $relationship?->center?->name ?? 'Sin centro activo' }}</td>
-                        <td class="table-cell text-surface-muted">{{ $relationship?->position_name ?: 'Sin puesto' }}</td>
-                        <td class="table-cell text-surface-muted">{{ $condition?->work_modality ?? 'Sin condición' }}</td>
                         <td class="table-cell">
                             <span class="{{ $credential?->status === 'active' ? 'badge-success' : ($credential?->status === 'reset_required' ? 'badge-warn' : ($credential?->status === 'blocked' ? 'badge-danger' : 'badge-muted')) }}">
                                 <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
@@ -581,7 +493,7 @@ new class extends Component {
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="table-cell py-8 text-center text-surface-muted">
+                        <td colspan="6" class="table-cell py-8 text-center text-surface-muted">
                             Aún no hay trabajadores registrados para esta empresa.
                         </td>
                     </tr>
@@ -597,26 +509,24 @@ new class extends Component {
             :title="$editingWorkerId ? 'Editar trabajador' : 'Nuevo trabajador'"
             subheading="Los datos aplican solo a la empresa activa."
             labelledby="worker-form-title"
+            max-width="max-w-2xl"
         >
-            <form wire:submit="save" class="flex flex-1 flex-col overflow-y-auto">
-                <div class="flex-1 space-y-5 p-6">
-                    <section class="space-y-4 rounded-2xl border border-surface-line bg-[#F7F9FC] p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
-                        <div>
-                            <flux:heading size="sm">Datos generales</flux:heading>
-                            <flux:subheading>Identificación y relación laboral base.</flux:subheading>
-                        </div>
-
-                        <flux:input wire:model="form.employee_code" label="Código interno" required />
+            <form wire:submit="save" class="flex min-h-0 flex-1 flex-col">
+                <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50/70 p-4 sm:p-6">
+                    <section class="space-y-4 rounded-2xl border border-surface-line bg-white p-5">
+                        <x-ui.panel-heading title="Identificación" description="Datos del trabajador dentro de la empresa." tone="blue" />
                         <flux:input wire:model="form.full_name" label="Nombre completo" required />
-                        <flux:input wire:model="form.birth_date" label="Fecha de nacimiento" type="date" />
-                        <flux:input wire:model="form.email" label="Email" type="email" />
-                        <flux:input wire:model="form.phone" label="Teléfono" />
-                        <flux:input wire:model="form.rfc" label="RFC" />
-                        <flux:input wire:model="form.curp" label="CURP" />
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <flux:input wire:model="form.employee_code" label="Código interno" required />
+                            <flux:input wire:model="form.rfc" label="RFC" />
+                        </div>
+                    </section>
 
+                    <section class="space-y-4 rounded-2xl border border-surface-line bg-white p-5">
+                        <x-ui.panel-heading title="Datos laborales" description="Centro, ingreso y estado del trabajador." tone="indigo" />
                         <div>
                             <label class="form-label">Centro</label>
-                            <select wire:model="form.center_id" class="form-select">
+                            <select wire:model.live="form.center_id" class="form-select">
                                 <option value="">Selecciona un centro</option>
                                 @foreach ($centers as $center)
                                     <option value="{{ $center->id }}">{{ $center->code }} - {{ $center->name }}</option>
@@ -627,20 +537,22 @@ new class extends Component {
                             @enderror
                         </div>
 
-                        <flux:input wire:model="form.position_name" label="Puesto" />
-                        <flux:input wire:model="form.started_at" label="Fecha de ingreso" type="date" required />
+                        <flux:input wire:model.live="form.started_at" label="Fecha de ingreso" type="date" required />
 
-                        @if ($editingWorkerId)
+                        @if ($editingWorkerId && $editingWorker?->activeEmploymentRelationship && (
+                            (string) ($form['center_id'] ?? '') !== (string) $editingWorker->activeEmploymentRelationship->center_id
+                            || ($form['started_at'] ?? '') !== $editingWorker->activeEmploymentRelationship->started_at?->format('Y-m-d')
+                        ))
                             <flux:textarea
                                 wire:model="form.relationship_change_reason"
                                 label="Motivo del cambio laboral"
-                                placeholder="Obligatorio si cambias centro, puesto o fecha de ingreso."
+                                placeholder="Obligatorio si cambias centro o fecha de ingreso."
                                 rows="3"
                             />
                         @endif
 
                         <div>
-                            <label class="form-label">Estado</label>
+                            <label class="form-label">Estado del trabajador</label>
                             <select wire:model="form.status" class="form-select">
                                 <option value="active">Activo</option>
                                 <option value="inactive">Inactivo</option>
@@ -654,104 +566,12 @@ new class extends Component {
                     </section>
 
                     @if ($editingWorkerId)
-                        @php($relationship = $editingWorker?->activeEmploymentRelationship)
-                        @php($activeCondition = $relationship?->activeLaborCondition)
                         @php($credential = $editingWorker?->credential)
 
-                        <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
-                            <div class="mb-4">
-                                <flux:heading size="sm">Condición laboral vigente</flux:heading>
-                                <flux:subheading>
-                                    {{ $activeCondition ? $activeCondition->work_modality.' desde '.$activeCondition->effective_from->format('Y-m-d') : 'Sin condición activa' }}
-                                </flux:subheading>
-                            </div>
-
-                            @if ($relationship)
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="form-label">Modalidad</label>
-                                        <select wire:model="conditionForm.work_modality" class="form-select">
-                                            <option value="onsite">Presencial</option>
-                                            <option value="hybrid">Híbrido</option>
-                                            <option value="remote">Remoto</option>
-                                            <option value="field">Campo</option>
-                                        </select>
-                                        @error('conditionForm.work_modality')
-                                            <p class="form-error">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <flux:input wire:model="conditionForm.weekly_hours" label="Horas semanales" type="number" step="0.5" min="0" />
-
-                                        <div>
-                                            <label class="form-label">Día de descanso</label>
-                                            <select wire:model="conditionForm.rest_day_of_week" class="form-select">
-                                                <option value="">Sin definir</option>
-                                                <option value="0">Domingo</option>
-                                                <option value="1">Lunes</option>
-                                                <option value="2">Martes</option>
-                                                <option value="3">Miércoles</option>
-                                                <option value="4">Jueves</option>
-                                                <option value="5">Viernes</option>
-                                                <option value="6">Sábado</option>
-                                            </select>
-                                            @error('conditionForm.rest_day_of_week')
-                                                <p class="form-error">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </div>
-
-                                    <div class="grid gap-4 sm:grid-cols-2">
-                                        <flux:input wire:model="conditionForm.effective_from" label="Vigente desde" type="date" required />
-                                        <flux:input wire:model="conditionForm.effective_to" label="Vigente hasta" type="date" />
-                                    </div>
-
-                                    <div>
-                                        <label class="form-label">Estado condición</label>
-                                        <select wire:model="conditionForm.status" class="form-select">
-                                            <option value="active">Activa</option>
-                                            <option value="inactive">Inactiva</option>
-                                            <option value="replaced">Reemplazada</option>
-                                        </select>
-                                        @error('conditionForm.status')
-                                            <p class="form-error">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
-                                    @error('conditionForm.effective_from')
-                                        <p class="form-error">{{ $message }}</p>
-                                    @enderror
-
-                                    <div class="flex justify-end">
-                                        <button type="button" class="btn-primary btn-sm" wire:click="saveLaborCondition">Guardar condición</button>
-                                    </div>
-
-                                    @if ($relationship->laborConditions->isNotEmpty())
-                                        <div class="rounded-xl border border-surface-line bg-white">
-                                            <div class="border-b border-surface-line px-3 py-2 text-xs font-bold uppercase tracking-wide text-surface-muted">
-                                                Historial
-                                            </div>
-                                            <div class="divide-y divide-surface-line text-sm">
-                                                @foreach ($relationship->laborConditions as $condition)
-                                                    <div class="px-3 py-2 text-surface-text">
-                                                        {{ $condition->work_modality }} · {{ $condition->effective_from->format('Y-m-d') }} - {{ $condition->effective_to?->format('Y-m-d') ?? 'Actual' }} · {{ $condition->status }}
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @endif
-                                </div>
-                            @else
-                                <p class="text-sm text-surface-muted">Primero guarda una relación laboral activa.</p>
-                            @endif
-                        </section>
-
-                        <section class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-4 shadow-[0_14px_35px_-28px_rgba(2,25,57,0.22)]">
-                            <div class="mb-4">
-                                <flux:heading size="sm">Credencial kiosco</flux:heading>
-                                <flux:subheading>{{ $credential ? 'Estado: '.$credential->status : 'Sin credencial creada' }}</flux:subheading>
-                            </div>
+                        <section class="space-y-4 rounded-2xl border border-surface-line bg-white p-5">
+                            <x-ui.panel-heading title="Credencial kiosco" description="Acceso para registrar entradas y salidas." tone="emerald">
+                                    <p class="mt-2 text-xs font-medium text-surface-muted">{{ match ($credential?->status) { 'active' => 'Activa', 'blocked' => 'Bloqueada', 'reset_required' => 'Requiere restablecer NIP', default => 'Sin credencial creada' } }}</p>
+                                </x-ui.panel-heading>
 
                             <div class="space-y-4">
                                 <flux:input wire:model="credentialForm.access_code" label="Código de acceso" required />
@@ -790,7 +610,7 @@ new class extends Component {
                     @endif
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+                <div class="flex shrink-0 justify-end gap-3 border-t border-surface-line bg-white px-5 py-4">
                     <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar trabajador</button>
                 </div>

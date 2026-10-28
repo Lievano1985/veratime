@@ -18,6 +18,8 @@ tags:
 
 # AI-0004 — Modelo de datos y multi-tenant para Codex
 
+> Actualización 26/10/2026: `labor_conditions` se retiró de la operación. Su archivo `retired_labor_conditions` conserva `company_id` solo para recuperación. No reintroducir este formulario ni usarlo en cálculos. Ver `docs/09-Testing/RETIRO-CONDICION-LABORAL.md`.
+
 ## 1. Base de datos aprobada
 
 Usar:

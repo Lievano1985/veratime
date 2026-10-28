@@ -508,26 +508,27 @@ new class extends Component {
     @endif
 
     @if ($canManageShiftTemplates)
-        <x-side-panel wire:model="showFormPanel" maxWidth="max-w-5xl" title="{{ $editingTemplateId ? 'Editar plantilla de turno' : 'Nueva plantilla de turno' }}" subheading="Las horas son locales de reloj; la zona horaria se resolverá al publicar días.">
+        <x-side-panel wire:model="showFormPanel" max-width="max-w-5xl" title="{{ $editingTemplateId ? 'Editar plantilla de turno' : 'Nueva plantilla de turno' }}" subheading="Las horas son locales de reloj; la zona horaria se resolverá al publicar días.">
             <form wire:submit="save" class="space-y-6 p-6">
-            <div class="grid gap-4 md:grid-cols-3">
-                <flux:input label="Código" wire:model="form.code" required />
-                <flux:input label="Nombre" wire:model="form.name" required />
-                <flux:select label="Estado" wire:model="form.status">
-                    <flux:select.option value="active">Activa</flux:select.option>
-                    <flux:select.option value="inactive">Inactiva</flux:select.option>
-                </flux:select>
-            </div>
+            <x-ui.panel-section title="Datos de la plantilla" tone="blue">
+                <div class="grid gap-4 md:grid-cols-3">
+                    <flux:input label="Código" wire:model="form.code" required />
+                    <flux:input label="Nombre" wire:model="form.name" required />
+                    <flux:select label="Estado" wire:model="form.status">
+                        <flux:select.option value="active">Activa</flux:select.option>
+                        <flux:select.option value="inactive">Inactiva</flux:select.option>
+                    </flux:select>
+                </div>
 
-            <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
+                <flux:textarea label="Descripción" wire:model="form.description" rows="2" />
 
-            @error('segments')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-
-            <div class="space-y-4">
+                @error('segments')
+                    <p class="form-error">{{ $message }}</p>
+                @enderror
+            </x-ui.panel-section>
+<div class="vt-panel-card space-y-4">
                 <div class="flex items-center justify-between">
-                    <flux:heading>Segmentos diarios</flux:heading>
+                    <x-ui.panel-heading title="Segmentos diarios" tone="indigo" />
                     <button type="button" class="btn-primary btn-sm" wire:click="addSegment"><span class="text-base leading-none">+</span>Agregar segmento</button>
                 </div>
 
@@ -581,7 +582,7 @@ new class extends Component {
             </div>
 
             <div class="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4">
-                <flux:heading>Vista previa</flux:heading>
+                <x-ui.panel-heading title="Vista previa" tone="emerald" />
                 @if ($preview['valid'])
                     <div class="mt-3 space-y-1 text-sm">
                         @foreach ($preview['lines'] as $line)
@@ -603,7 +604,7 @@ new class extends Component {
                 @endif
             </div>
 
-            <div class="flex justify-end gap-3">
+            <div class="flex flex-wrap justify-end gap-3">
                 <button type="button" class="btn-ghost" wire:click="closeFormPanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>

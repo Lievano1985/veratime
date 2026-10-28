@@ -324,41 +324,43 @@ new class extends Component {
 
     <x-side-panel wire:model="showCreatePanel" title="Registrar incidencia" subheading="Clasifica ausencias o permisos para el cierre operativo." labelledby="attendance-incident-create-title" max-width="max-w-3xl">
         <form wire:submit="createIncident" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-5 p-6">
-                <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
-                    Esto no calcula nómina. Solo clasifica la asistencia del periodo para cierre y exportación posterior.
-                </div>
+            <div class="flex-1 space-y-5 p-4 sm:p-6">
+                <x-ui.panel-section title="Detalle de la incidencia" tone="blue">
+                    <div class="rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-navy">
+                        Esto no calcula nómina. Solo clasifica la asistencia del periodo para cierre y exportación posterior.
+                    </div>
 
-                <div class="grid gap-4 lg:grid-cols-2">
-                    <flux:select label="Trabajador" wire:model="form.worker_id">
-                        <flux:select.option value="">Selecciona trabajador</flux:select.option>
-                        @foreach ($workers as $worker)
-                            <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} - {{ $worker->full_name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <flux:select label="Trabajador" wire:model="form.worker_id">
+                            <flux:select.option value="">Selecciona trabajador</flux:select.option>
+                            @foreach ($workers as $worker)
+                                <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} - {{ $worker->full_name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                    <flux:select label="Tipo" wire:model="form.incident_type">
-                        @foreach (AttendanceIncident::types() as $type)
-                            <flux:select.option value="{{ $type }}">{{ $this->typeLabel($type) }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+                        <flux:select label="Tipo" wire:model="form.incident_type">
+                            @foreach (AttendanceIncident::types() as $type)
+                                <flux:select.option value="{{ $type }}">{{ $this->typeLabel($type) }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                    <flux:input label="Desde" type="date" wire:model="form.start_date" />
-                    <flux:input label="Hasta" type="date" wire:model="form.end_date" />
+                        <flux:input label="Desde" type="date" wire:model="form.start_date" />
+                        <flux:input label="Hasta" type="date" wire:model="form.end_date" />
 
-                    <flux:select label="Pago operativo" wire:model="form.payment_status">
-                        @foreach (AttendanceIncident::paymentStatuses() as $paymentStatus)
-                            <flux:select.option value="{{ $paymentStatus }}">{{ $this->paymentLabel($paymentStatus) }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+                        <flux:select label="Pago operativo" wire:model="form.payment_status">
+                            @foreach (AttendanceIncident::paymentStatuses() as $paymentStatus)
+                                <flux:select.option value="{{ $paymentStatus }}">{{ $this->paymentLabel($paymentStatus) }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                    <flux:input label="Referencia o folio opcional" wire:model="form.reference" placeholder="Ej. IMSS, autorización interna o folio RH" />
-                </div>
+                        <flux:input label="Referencia o folio opcional" wire:model="form.reference" placeholder="Ej. IMSS, autorización interna o folio RH" />
+                    </div>
 
-                <flux:textarea label="Comentario" wire:model="form.notes" rows="4" placeholder="Contexto operativo para RH. No captures datos sensibles innecesarios." />
+                    <flux:textarea label="Comentario" wire:model="form.notes" rows="4" placeholder="Contexto operativo para RH. No captures datos sensibles innecesarios." />
+                </x-ui.panel-section>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-surface-line p-6">
+            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <button type="button" class="btn-ghost" wire:click="closeCreatePanel">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar incidencia</button>
             </div>
