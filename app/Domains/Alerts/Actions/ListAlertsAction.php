@@ -4,6 +4,7 @@ namespace App\Domains\Alerts\Actions;
 
 use App\Models\Alert;
 use App\Models\Company;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ListAlertsAction
@@ -14,11 +15,13 @@ class ListAlertsAction
      */
     public function handle(Company $company, array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
+        $timezone = $company->setting?->default_timezone ?: $company->timezone;
+
         return Alert::query()
             ->with(['alertType', 'worker', 'workDay.center', 'workDay.activeCalculation'])
             ->where('company_id', $company->id)
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('detected_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('detected_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->where('detected_at', '>=', CarbonImmutable::parse($date, $timezone)->startOfDay()->utc()))
+            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->where('detected_at', '<', CarbonImmutable::parse($date, $timezone)->startOfDay()->addDay()->utc()))
             ->when(
                 $filters['status'] ?? null,
                 fn ($query, $status) => $query->where('status', $status),

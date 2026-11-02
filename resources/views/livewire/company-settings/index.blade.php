@@ -36,6 +36,7 @@ new class extends Component {
     public string $activeTab = 'operation';
 
     public array $settingsForm = [];
+    public string $schedulingInterface = '';
     public array $legalParameterForm = [];
     public array $kioskEnrollmentKeyForm = ['key' => '', 'key_confirmation' => ''];
     public array $pendingRequestCenters = [];
@@ -80,6 +81,16 @@ new class extends Component {
         $this->loadSettingsForm($company->refresh());
 
         Session::flash('status', 'Configuracion de empresa actualizada.');
+    }
+
+    public function updateSchedulingInterface(\App\Domains\Scheduling\Actions\UpdateSchedulingInterfaceAction $action, CurrentCompany $currentCompany): void
+    {
+        $company = $this->currentCompanyOrFail($currentCompany);
+        Gate::authorize('configureSchedulingInterface', $company);
+        $this->validate(['schedulingInterface' => ['required', Rule::in(['planner', 'classic'])]]);
+        $action->handle(auth()->user(), $company, $this->schedulingInterface);
+        Session::flash('status', 'Modelo de horarios activado: '.\App\Domains\Scheduling\Support\SchedulingInterface::label($this->schedulingInterface).'.');
+        $this->redirectRoute('company-settings.index');
     }
 
     public function updateKioskEnrollmentKey(SetKioskEnrollmentKeyAction $action, CurrentCompany $currentCompany): void
@@ -431,6 +442,9 @@ new class extends Component {
 
     private function loadSettingsForm(Company $company): void
     {
+        if (auth()->user()->isSuperAdmin()) {
+            $this->schedulingInterface = \App\Domains\Scheduling\Support\SchedulingInterface::forCompany($company);
+        }
         $settings = array_merge(Company::defaultSettings(), $company->setting?->toArray() ?? []);
 
         $this->settingsForm = [
@@ -581,6 +595,32 @@ new class extends Component {
                 <button type="submit" class="btn-primary">Guardar configuración</button>
             </form>
         </section>
+    @endif
+
+    @if ($activeTab === 'operation')
+        @can('configureSchedulingInterface', $currentCompany)
+            <section class="max-w-2xl rounded-xl border border-surface-line bg-white p-5">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div><h2 class="font-semibold text-brand-navy">Forma de crear horarios</h2><p class="mt-1 text-sm text-surface-muted">Activa un único modelo para esta empresa. Las empresas inician con el planificador nuevo.</p></div>
+                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">Solo superadministrador</span>
+                </div>
+                <form wire:submit="updateSchedulingInterface" class="space-y-4">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-surface-line p-4 has-[:checked]:border-brand-blue has-[:checked]:bg-blue-50">
+                            <input type="radio" wire:model="schedulingInterface" value="planner" class="mt-1 border-slate-300 text-brand-blue" />
+                            <span><span class="block text-sm font-semibold">Planificador de horarios</span><span class="mt-1 block text-xs leading-relaxed text-surface-muted">Modelo nuevo: calendario, asignaciones por grupos y cambios rápidos en una pantalla.</span></span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-surface-line p-4 has-[:checked]:border-brand-blue has-[:checked]:bg-blue-50">
+                            <input type="radio" wire:model="schedulingInterface" value="classic" class="mt-1 border-slate-300 text-brand-blue" />
+                            <span><span class="block text-sm font-semibold">Modelos de Horarios</span><span class="mt-1 block text-xs leading-relaxed text-surface-muted">Modelos de horario, aplicación de modelos y programación semanal en pantallas separadas.</span></span>
+                        </label>
+                    </div>
+                    <p class="text-xs leading-relaxed text-surface-muted">El catálogo de turnos y la información existente se conservan. El cambio ajusta el menú y el acceso al modelo activo; no modifica horarios ni publicaciones.</p>
+                    @error('schedulingInterface')<p role="alert" class="form-error">{{ $message }}</p>@enderror
+                    <button type="submit" class="btn-primary cursor-pointer" wire:loading.attr="disabled" wire:target="updateSchedulingInterface">Activar modelo</button>
+                </form>
+            </section>
+        @endcan
     @endif
 
     @if ($activeTab === 'identity')

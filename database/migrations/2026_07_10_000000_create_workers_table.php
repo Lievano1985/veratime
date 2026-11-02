@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignIdFor(Company::class)->constrained()->cascadeOnDelete();
             $table->string('employee_code');
             $table->string('full_name');
+            $table->date('birth_date')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->string('curp')->nullable();

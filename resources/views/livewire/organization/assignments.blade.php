@@ -360,6 +360,8 @@ new class extends Component {
         </div>
     </div>
 
+    <x-organization.navigation group="workers" active="assignments" />
+
     @if (session('status'))
         <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}

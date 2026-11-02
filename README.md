@@ -4,6 +4,12 @@ Plataforma SaaS multi-tenant para la gestion del Registro Electronico de la Jorn
 
 Vera es la marca principal. Vera Time es el producto enfocado en medir, administrar y evidenciar el tiempo laboral de las personas trabajadoras.
 
+## Base de instalación del 1 de noviembre de 2026
+
+Las migraciones se consolidaron de 84 a 63 para la etapa previa a clientes reales. Una base nueva se instala normalmente; una base de pruebas con el historial anterior debe recrearse de forma explícita. Consultar [el procedimiento de instalación y recreación](docs/10-Deployment/DEP-0002-BASE-CONSOLIDADA-2026-11-01.md) antes de ejecutar comandos de base de datos.
+
+Las secciones de sprints siguientes conservan el historial de desarrollo. Para el recorrido y las pruebas actuales, consultar [la guía de pruebas](docs/09-Testing/GUIA-PRUEBAS-MANUALES-POR-SPRINT.md) y el informe de auditoría del 1 de noviembre de 2026.
+
 ## Sprint 0
 
 Base tecnica inicial:
@@ -59,22 +65,19 @@ Rutas web relevantes:
 - `/kiosk` (publica para checado con codigo/NIP)
 
 
-## Seeder demo local
+## Instalación limpia y demos opcionales
 
-Para cargar datos demo locales hasta Sprint 2:
+La instalación normal carga solo catálogos, sin empresas ni usuarios:
 
 ```bash
-php artisan db:seed --class=VeraTimeDemoSeeder
+php artisan db:seed
 ```
 
-Datos demo principales:
+Para crear el acceso de plataforma, ejecuta `php artisan veratime:create-super-admin` desde una terminal interactiva. Solicita nombre, correo, contraseña oculta y confirmación. No acepta la contraseña como argumento ni la toma de variables de entorno; solo guarda su hash. No reemplaza cuentas existentes.
 
-- Empresa: `Vera Time Demo Completo`.
-- Usuarios: `owner.demo@veratime.local`, `admin.demo@veratime.local`, `rh.demo@veratime.local`.
-- Password demo local: `VeraDemo123!`.
-- NIP demo local para kiosco: `1234`.
+Las empresas se crean vacías desde Empresas. Para cargar datos ficticios se utiliza Generar demo y se elige uno de los escenarios disponibles. La captura manual sigue disponible. Los seeders históricos se retiraron de database/seeders; sus fixtures se conservan exclusivamente bajo tests/Fixtures/Seeders y rechazan ejecutarse fuera del entorno de pruebas.
 
-El seeder es idempotente y solo crea datos ficticios/locales. No crea motor legal, calculos, `work_days`, alertas, incidencias, reportes, API ni CSV.
+ProductSeeder solo registra el catálogo de productos: no activa productos en cuentas, no cambia sus estados ni restablece sus fechas o metadatos. El alta de cuentas y la administración de productos mantienen sus flujos específicos.
 
 ## Comandos utiles
 

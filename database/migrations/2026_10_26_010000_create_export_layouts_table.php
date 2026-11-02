@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('name', 120);
             $table->string('application', 120)->nullable();
             $table->string('status', 20)->default('active');
+            $table->boolean('is_default')->default(false)->index();
             $table->unsignedInteger('revision')->default(1);
             $table->json('configuration');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

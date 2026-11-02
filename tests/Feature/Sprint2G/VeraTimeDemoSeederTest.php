@@ -8,8 +8,8 @@ use App\Models\User;
 use App\Models\WorkDay;
 use App\Models\Worker;
 use App\Models\WorkerCredential;
-use Database\Seeders\VeraTimeDemoSeeder;
-use Database\Seeders\VeraTimeOperationalVerificationSeeder;
+use Tests\Fixtures\Seeders\VeraTimeDemoSeeder;
+use Tests\Fixtures\Seeders\VeraTimeOperationalVerificationSeeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 

@@ -10,9 +10,9 @@ use App\Models\DailyScheduleAssignment;
 use App\Models\ImportBatch;
 use App\Models\ScheduleBatch;
 use App\Models\User;
-use Database\Seeders\VeraTimeDailyScheduleCsvScenarioSeeder;
-use Database\Seeders\VeraTimeDailyScheduleScenarioSeeder;
-use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimeDailyScheduleCsvScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimeDailyScheduleScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimePublishedScheduleScenarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -35,13 +35,13 @@ class DailyScheduleCsvImportUiTest extends TestCase
 
         Volt::test('scheduling.daily')
             ->call('selectBatch', $batch->id)
-            ->assertSee('Importar CSV')
+            ->assertSee('Importar Excel / CSV')
             ->assertDontSee('Historial de importaciones');
 
         Livewire::test(DailyScheduleCsvImport::class, ['scheduleBatchId' => $batch->id])
             ->call('openPanel')
-            ->assertSee('Importación CSV')
-            ->assertSee('Descargar plantilla')
+            ->assertSee('Importar horarios desde Excel o CSV')
+            ->assertSee('Descargar Excel')
             ->assertDontSee('Historial de importaciones');
     }
 
@@ -163,7 +163,8 @@ class DailyScheduleCsvImportUiTest extends TestCase
             ->assertSee('OPEN-08-16')
             ->assertSee('MID-11-19')
             ->assertSee('Descanso')
-            ->assertDontSee('Reemplazar')
+            ->assertSee('Reemplazar')
+            ->assertSee('Actual: Pendiente')
             ->assertDontSee('Sin observaciones')
             ->set('confirmApply', true)
             ->call('applyImport')

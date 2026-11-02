@@ -22,6 +22,7 @@ return new class extends Migration
             $table->foreignId('previous_batch_id')->nullable()->constrained('schedule_batches')->restrictOnDelete()->cascadeOnUpdate();
             $table->string('creation_source')->default('manual');
             $table->text('notes')->nullable();
+            $table->text('correction_reason')->nullable();
             $table->string('snapshot_schema_version')->nullable();
             $table->longText('snapshot_canonical_json')->nullable();
             $table->char('snapshot_sha256', 64)->nullable();

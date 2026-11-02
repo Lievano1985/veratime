@@ -28,6 +28,7 @@ class ScheduleProfileUiTest extends TestCase
     public function test_routes_sidebar_and_legacy_navigation_state(): void
     {
         $company = Company::factory()->create(['status' => 'active']);
+        $company->setting()->create(array_replace(Company::defaultSettings(), ['metadata' => ['scheduling_interface' => 'classic']]));
         $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
 
         $this->assertTrue(Route::has('scheduling.profiles'));
@@ -42,7 +43,8 @@ class ScheduleProfileUiTest extends TestCase
             ->assertSee('Catálogo de turnos')
             ->assertSee('Modelos de horario')
             ->assertSee('Aplicacion de modelos')
-            ->assertSee('Descansos obligatorios')
+            ->assertSee('Días Inhábiles Oficiales')
+            ->assertDontSee('Planificador de horarios')
             ->assertDontSee('Horarios legacy')
             ->assertDontSee('Asignación de Horarios legacy');
     }

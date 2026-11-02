@@ -302,7 +302,10 @@ class CompanyManagementTest extends TestCase
             ->assertSee('Empresa inactiva global');
 
         Volt::test('companies.index')
+            ->assertSet('showEditDrawer', false)
             ->call('loadEditForm', $inactiveCompany->id)
+            ->assertSet('showEditDrawer', true)
+            ->assertSee('Editar empresa')
             ->set('editForm.name', 'Empresa inactiva editada')
             ->set('editForm.legal_name', $inactiveCompany->legal_name)
             ->set('editForm.tax_id', $inactiveCompany->tax_id)

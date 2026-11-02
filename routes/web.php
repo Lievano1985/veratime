@@ -36,22 +36,26 @@ Route::middleware(['auth', 'current.company'])->group(function () {
         Route::get('dashboard', OperationalDashboardController::class)
             ->middleware('verified')
             ->name('dashboard');
+        Volt::route('my-dashboard', 'personal.dashboard')->name('personal.dashboard');
         Volt::route('my-day', 'personal.my-day')->name('personal.my-day');
         Volt::route('users', 'users.index')->name('users.index');
         Volt::route('api-tokens', 'api-tokens.index')->name('api-tokens.index');
         Volt::route('company-settings', 'company-settings.index')->name('company-settings.index');
+        Route::get('workers/excel/template', \App\Http\Controllers\Workers\WorkerWorkbookTemplateController::class)->name('workers.xlsx.template');
         Route::redirect('configuration/csv-periodos', '/time/configuration/export-layouts')->name('payroll-export-templates.index');
         Volt::route('configuration/export-layouts', 'export-layouts.index')->name('export-layouts.index');
         Volt::route('centers', 'centers.index')->name('centers.index');
         Volt::route('workers', 'workers.index')->name('workers.index');
-        Volt::route('schedules', 'schedules.index')->name('schedules.index');
+        Volt::route('schedules', 'schedules.index')->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('schedules.index');
+        Route::get('scheduling/planner', \App\Livewire\Scheduling\Planner::class)->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('scheduling.planner');
         Volt::route('scheduling/shifts', 'scheduling.shifts')->name('scheduling.shifts');
-        Volt::route('scheduling/profiles', 'scheduling.profiles')->name('scheduling.profiles');
-        Volt::route('scheduling/profile-assignments', 'scheduling.profile-assignments')->name('scheduling.profile-assignments');
-        Volt::route('scheduling/daily', 'scheduling.daily')->name('scheduling.daily');
+        Volt::route('scheduling/profiles', 'scheduling.profiles')->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('scheduling.profiles');
+        Volt::route('scheduling/profile-assignments', 'scheduling.profile-assignments')->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('scheduling.profile-assignments');
+        Volt::route('scheduling/daily', 'scheduling.daily')->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('scheduling.daily');
         Route::get('scheduling/daily/csv/template', DailyScheduleCsvTemplateController::class)->name('scheduling.daily.csv.template');
+        Route::get('scheduling/daily/excel/template', \App\Http\Controllers\Scheduling\DailyScheduleXlsxTemplateController::class)->name('scheduling.daily.xlsx.template');
         Route::get('scheduling/daily/imports/{importBatch}/errors', DailyScheduleCsvErrorReportController::class)->name('scheduling.daily.imports.errors');
-        Volt::route('schedule-assignments', 'schedule-assignments.index')->name('schedule-assignments.index');
+        Volt::route('schedule-assignments', 'schedule-assignments.index')->middleware(\App\Domains\Scheduling\Middleware\EnsureSchedulingInterface::class)->name('schedule-assignments.index');
         Volt::route('mandatory-rest-days', 'mandatory-rest-days.index')->name('mandatory-rest-days.index');
         Volt::route('organization/units', 'organization.units')->name('organization.units');
         Volt::route('organization/assignments', 'organization.assignments')->name('organization.assignments');

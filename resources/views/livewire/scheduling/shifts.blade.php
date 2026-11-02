@@ -25,9 +25,12 @@ new class extends Component {
     public bool $showFormPanel = false;
     public ?int $editingTemplateId = null;
     public ?int $viewingTemplateId = null;
+    #[\Livewire\Attributes\Locked]
+    public bool $embedded = false;
 
-    public function mount(): void
+    public function mount(bool $embedded = false): void
     {
+        $this->embedded = $embedded;
         $this->form = $this->emptyForm();
         $this->segments = [$this->emptySegment(1)];
         $this->filters = ['search' => '', 'status' => 'active'];
@@ -44,6 +47,7 @@ new class extends Component {
         }
     }
 
+    #[\Livewire\Attributes\On('planner-create-shift')]
     public function openCreatePanel(CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
@@ -70,6 +74,7 @@ new class extends Component {
             'status' => $template->status,
         ];
         $this->segments = $template->segments->map(fn ($segment) => [
+            '_key' => 'saved-'.$segment->id,
             'segment_type' => $segment->segment_type,
             'timing_mode' => $segment->timing_mode,
             'start_local_time' => $segment->start_local_time ? substr((string) $segment->start_local_time, 0, 5) : '',
@@ -156,7 +161,7 @@ new class extends Component {
         ]);
 
         try {
-            $template
+            $saved = $template
                 ? $updateAction->handle($company, $template, $validated['form'], $this->preparedSegments())
                 : $createAction->handle($company, $validated['form'], $this->preparedSegments());
         } catch (\InvalidArgumentException $exception) {
@@ -169,7 +174,11 @@ new class extends Component {
         $this->segments = [$this->emptySegment(1)];
         $this->resetPage();
 
-        Session::flash('status', $template ? 'Plantilla de turno actualizada.' : 'Plantilla de turno creada.');
+        if ($this->embedded) {
+            $this->dispatch('planner-shift-saved', templateId: $saved->id);
+        } else {
+            Session::flash('status', $template ? 'Plantilla de turno actualizada.' : 'Plantilla de turno creada.');
+        }
     }
 
     public function inactivate(int $templateId, CurrentCompany $currentCompany, InactivateShiftTemplateAction $action): void
@@ -366,6 +375,7 @@ new class extends Component {
     private function emptySegment(int $order): array
     {
         return [
+            '_key' => (string) \Illuminate\Support\Str::uuid(),
             'segment_type' => 'work',
             'timing_mode' => 'fixed',
             'start_local_time' => '08:00',
@@ -380,7 +390,8 @@ new class extends Component {
     }
 }; ?>
 
-<section class="flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text">
+<section @class(['flex h-full w-full flex-1 flex-col gap-6 bg-surface-bg p-6 text-surface-text' => ! $embedded])>
+    @if (! $embedded)
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h1 class="font-display text-2xl font-bold text-brand-navy">Catálogo de turnos</h1>
@@ -438,10 +449,11 @@ new class extends Component {
                         <td class="table-cell">{{ $template->segments->count() }}</td>
                         <td class="table-cell">
                             <span class="block">{{ $this->formatMinutes($metrics['effective_work_minutes']) }}</span>
-                            <span class="text-xs text-surface-muted">Bruto: {{ $this->formatMinutes($metrics['gross_work_minutes']) }}</span>
+                            <span class="text-xs text-surface-muted">Descanso sin pago: {{ $this->formatMinutes($metrics['unpaid_break_minutes']) }}</span>
                         </td>
                         <td class="table-cell">
                             {{ $this->formatMinutes($metrics['total_span_minutes']) }}
+                            <span class="block text-xs text-surface-muted">De entrada a salida</span>
                             @if ($metrics['crosses_midnight'])
                                 <span class="badge ml-1 bg-brand-blue/10 text-status-shift-text">+1 día</span>
                             @endif
@@ -507,6 +519,8 @@ new class extends Component {
         </section>
     @endif
 
+    @endif
+
     @if ($canManageShiftTemplates)
         <x-side-panel wire:model="showFormPanel" max-width="max-w-5xl" title="{{ $editingTemplateId ? 'Editar plantilla de turno' : 'Nueva plantilla de turno' }}" subheading="Las horas son locales de reloj; la zona horaria se resolverá al publicar días.">
             <form wire:submit="save" class="space-y-6 p-6">
@@ -529,11 +543,14 @@ new class extends Component {
 <div class="vt-panel-card space-y-4">
                 <div class="flex items-center justify-between">
                     <x-ui.panel-heading title="Segmentos diarios" tone="indigo" />
-                    <button type="button" class="btn-primary btn-sm" wire:click="addSegment"><span class="text-base leading-none">+</span>Agregar segmento</button>
+                    <button type="button" class="btn-primary cursor-pointer" wire:click="addSegment">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        Agregar segmento
+                    </button>
                 </div>
 
                 @foreach ($segments as $index => $segment)
-                    <div class="rounded-2xl border border-surface-line bg-white p-4">
+                    <div wire:key="shift-segment-{{ $segment['_key'] ?? $index }}" class="rounded-2xl border border-surface-line bg-white p-4">
                         <div class="mb-3 flex items-center justify-between">
                             <p class="text-sm font-medium">Segmento {{ $index + 1 }}</p>
                             <div class="flex gap-2">
@@ -561,12 +578,12 @@ new class extends Component {
 
                         @if (($segment['timing_mode'] ?? 'fixed') === 'fixed')
                             <div class="mt-4 grid gap-4 md:grid-cols-4">
-                                <flux:input label="Hora inicial" type="time" wire:model.live.debounce.250ms="segments.{{ $index }}.start_local_time" />
+                                <flux:input label="Hora inicial" type="time" step="60" wire:model.blur="segments.{{ $index }}.start_local_time" />
                                 <flux:select label="Día inicial" wire:model.live="segments.{{ $index }}.start_day_offset">
                                     <flux:select.option value="0">Mismo día</flux:select.option>
                                     <flux:select.option value="1">Día siguiente</flux:select.option>
                                 </flux:select>
-                                <flux:input label="Hora final" type="time" wire:model.live.debounce.250ms="segments.{{ $index }}.end_local_time" />
+                                <flux:input label="Hora final" type="time" step="60" wire:model.blur="segments.{{ $index }}.end_local_time" />
                                 <flux:select label="Día final" wire:model.live="segments.{{ $index }}.end_day_offset">
                                     <flux:select.option value="0">Mismo día</flux:select.option>
                                     <flux:select.option value="1">Día siguiente</flux:select.option>

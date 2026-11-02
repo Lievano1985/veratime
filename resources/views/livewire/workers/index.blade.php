@@ -25,6 +25,7 @@ new class extends Component {
     public ?int $editingWorkerId = null;
     public string $statusFilter = '';
     public string $search = '';
+    public ?array $createdAccount = null;
 
     public function mount(): void
     {
@@ -39,6 +40,7 @@ new class extends Component {
         Gate::authorize('viewAny', [Worker::class, $company]);
 
         $this->editingWorkerId = null;
+        $this->createdAccount = null;
         $this->resetWorkerForms();
         $this->resetValidation();
         $this->showFormPanel = true;
@@ -91,6 +93,8 @@ new class extends Component {
                     ->ignore($worker?->id),
             ],
             'form.full_name' => ['required', 'string', 'max:255'],
+            'form.email' => [$worker ? 'nullable' : 'required', 'email', 'max:255'],
+            'form.account_password' => ['nullable', 'string', 'min:8', 'max:100'],
             'form.rfc' => ['nullable', 'string', 'max:20'],
             'form.center_id' => [
                 'required',
@@ -119,7 +123,17 @@ new class extends Component {
         }
 
         try {
-            $action->handle($company, $worker, $center, $validated, auth()->user());
+            if (! $worker) {
+                $validated['account_password'] = filled($validated['account_password'] ?? null)
+                    ? $validated['account_password'] : \Illuminate\Support\Str::password(16);
+            }
+            $savedWorker = $action->handle($company, $worker, $center, $validated, auth()->user());
+            if (! $worker) {
+                $this->createdAccount = [
+                    'email' => $savedWorker->userLinks()->with('user')->firstOrFail()->user->email,
+                    'password' => $validated['account_password'],
+                ];
+            }
         } catch (\InvalidArgumentException $exception) {
             $this->addError('form.started_at', $exception->getMessage());
             $this->addError('form.relationship_change_reason', $exception->getMessage());
@@ -132,7 +146,7 @@ new class extends Component {
         $this->resetWorkerForms();
         $this->resetValidation();
 
-        Session::flash('status', $worker ? 'Trabajador actualizado.' : 'Trabajador creado.');
+        Session::flash('status', $worker ? 'Trabajador actualizado.' : 'Trabajador creado con su cuenta de acceso vinculada.');
     }
 
     public function delete(int $workerId, CurrentCompany $currentCompany, DeleteWorkerIfUnusedAction $action): void
@@ -388,6 +402,15 @@ new class extends Component {
 }; ?>
 
 <section class="w-full space-y-8 bg-surface-bg p-6 text-surface-text">
+    @if ($createdAccount)
+        <div class="rounded-2xl border border-blue-200 bg-blue-50 p-5" role="status">
+            <p class="font-semibold text-brand-navy">Cuenta de trabajador creada</p>
+            <p class="mt-2 text-sm">Acceso: <strong>{{ $createdAccount['email'] }}</strong></p>
+            <p class="mt-1 text-sm">Contraseña temporal: <strong>{{ $createdAccount['password'] }}</strong></p>
+            <p class="mt-2 text-sm text-surface-muted">Comparte estos datos por un medio seguro. La contraseña solo se muestra en esta sesión. El dispositivo móvil requiere su autorización habitual.</p>
+            <button type="button" class="btn-secondary mt-3" wire:click="$set('createdAccount', null)">Ocultar credenciales</button>
+        </div>
+    @endif
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h1 class="font-display text-2xl font-bold text-brand-navy">Trabajadores</h1>
@@ -395,12 +418,17 @@ new class extends Component {
         </div>
 
         @if ($canManageWorkers)
-            <button type="button" class="btn-primary" wire:click="openCreatePanel">
-                <span class="text-base leading-none">+</span>
-                Nuevo trabajador
-            </button>
+            <div class="flex flex-wrap items-center gap-3">
+                <livewire:workers.import-workbook />
+                <button type="button" class="btn-primary" wire:click="openCreatePanel">
+                    <span class="text-base leading-none">+</span>
+                    Nuevo trabajador
+                </button>
+            </div>
         @endif
     </div>
+
+    <x-organization.navigation group="workers" active="workers" />
 
     @if (session('status'))
         <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
@@ -515,11 +543,16 @@ new class extends Component {
                 <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50/70 p-4 sm:p-6">
                     <section class="space-y-4 rounded-2xl border border-surface-line bg-white p-5">
                         <x-ui.panel-heading title="Identificación" description="Datos del trabajador dentro de la empresa." tone="blue" />
-                        <flux:input wire:model="form.full_name" label="Nombre completo" required />
                         <div class="grid gap-4 sm:grid-cols-2">
                             <flux:input wire:model="form.employee_code" label="Código interno" required />
                             <flux:input wire:model="form.rfc" label="RFC" />
                         </div>
+                        <flux:input wire:model="form.full_name" label="Nombre completo" required />
+                        @if (! $editingWorkerId)
+                            <flux:input wire:model="form.email" label="Correo de acceso" type="email" required />
+                            <flux:input wire:model="form.account_password" label="Contraseña inicial (opcional)" type="password" autocomplete="new-password" />
+                            <p class="text-sm text-surface-muted">El correo es obligatorio y será su acceso. Se creará una cuenta con rol Trabajador vinculada automáticamente. Si dejas la contraseña vacía, generaremos una al guardar.</p>
+                        @endif
                     </section>
 
                     <section class="space-y-4 rounded-2xl border border-surface-line bg-white p-5">

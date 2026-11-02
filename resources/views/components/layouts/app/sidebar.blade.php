@@ -1,3 +1,4 @@
+@php($homeRouteName = \App\Support\WebHomeRoute::forUser(auth()->user(), app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get()))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
@@ -59,7 +60,7 @@
         >
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="vera-sidebar-logo mb-4 flex w-full justify-center rounded-lg px-2 py-2" wire:navigate>
+            <a href="{{ route($homeRouteName) }}" class="vera-sidebar-logo mb-4 flex w-full justify-center rounded-lg px-2 py-2" wire:navigate>
                 <x-app-logo class="h-14 w-36" href="#"></x-app-logo>
             </a>
 
@@ -70,16 +71,23 @@
             @php($canManageUsers = $activeCompany && auth()->user()->can('viewAny', [\App\Models\User::class, $activeCompany]))
             @php($roleKey = $activeCompany ? auth()->user()->roleKeyForCompany($activeCompany) : null)
             @php($isSupervisor = $roleKey === \App\Support\RoleKey::SUPERVISOR)
+            @php($isWorker = $roleKey === \App\Support\RoleKey::TRABAJADOR)
             @php($hasPersonalTimeAccess = $activeCompany && \App\Models\UserWorkerLink::query()->where('company_id', $activeCompany->id)->where('user_id', auth()->id())->where('status', 'active')->exists())
             @php($canViewCenters = $activeCompany && auth()->user()->can('viewAny', [\App\Models\Center::class, $activeCompany]))
             @php($canViewShiftTemplates = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ShiftTemplate::class, $activeCompany]))
             @php($canViewScheduleProfiles = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleProfile::class, $activeCompany]))
             @php($canViewScheduleBatches = $activeCompany && auth()->user()->can('viewAny', [\App\Models\ScheduleBatch::class, $activeCompany]))
             @php($canViewMandatoryRestDays = $activeCompany && auth()->user()->can('viewAny', [\App\Models\MandatoryRestDay::class, $activeCompany]))
-            @php($hasScheduleNavigation = $canViewShiftTemplates || $canViewScheduleProfiles || $canViewScheduleBatches || $canViewMandatoryRestDays)
+            @php($canViewAttendanceIncidents = ! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\AttendanceIncident::class, $activeCompany]))
+            @php($hasScheduleNavigation = $canViewShiftTemplates || $canViewScheduleProfiles || $canViewScheduleBatches || $canViewMandatoryRestDays || $canViewAttendanceIncidents)
+            @php($usePlanner = ! $activeCompany || \App\Domains\Scheduling\Support\SchedulingInterface::forCompany($activeCompany) === 'planner')
 
             <flux:navlist variant="outline">
-                <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Inicio</flux:navlist.item>
+                @if ($isWorker)
+                    <flux:navlist.item icon="home" :href="route('personal.dashboard')" :current="request()->routeIs('personal.dashboard')" wire:navigate>Mi resumen</flux:navlist.item>
+                @else
+                    <flux:navlist.item icon="home" :href="route($homeRouteName)" :current="request()->routeIs($homeRouteName)" wire:navigate>Inicio</flux:navlist.item>
+                @endif
                 @if ($hasPersonalTimeAccess)
                     <flux:navlist.item icon="clock" :href="route('personal.my-day')" :current="request()->routeIs('personal.my-day')" wire:navigate>Mi jornada</flux:navlist.item>
                 @endif
@@ -90,18 +98,14 @@
                     </flux:navlist.group>
                 @endif
 
+                @unless ($isWorker)
                 <flux:navlist.group heading="Organización" class="grid">
                     @unless ($isSupervisor)
-                        <flux:navlist.item icon="building-office" :href="route('companies.index')" :current="request()->routeIs('companies.*')" wire:navigate>Empresas</flux:navlist.item>
-                        @if ($canViewCenters)
-                            <flux:navlist.item icon="map-pin" :href="route('centers.index')" :current="request()->routeIs('centers.*')" wire:navigate>Centros</flux:navlist.item>
-                        @endif
+                        <flux:navlist.item icon="building-office" :href="route('companies.index')" :current="request()->routeIs('companies.*', 'centers.*', 'organization.units')" wire:navigate>Organización</flux:navlist.item>
                     @endunless
 
                     @if (! $isSupervisor && $activeCompany && auth()->user()->can('viewAny', [\App\Models\OrganizationalUnit::class, $activeCompany]))
-                        <flux:navlist.item icon="building-office-2" :href="route('organization.units')" :current="request()->routeIs('organization.units')" wire:navigate>Áreas y departamentos</flux:navlist.item>
-                        <flux:navlist.item icon="users" :href="route('workers.index')" :current="request()->routeIs('workers.*')" wire:navigate>Trabajadores</flux:navlist.item>
-                        <flux:navlist.item icon="user-group" :href="route('organization.assignments')" :current="request()->routeIs('organization.assignments')" wire:navigate>Asignaciones organizacionales</flux:navlist.item>
+                        <flux:navlist.item icon="users" :href="route('workers.index')" :current="request()->routeIs('workers.*', 'organization.assignments')" wire:navigate>Trabajadores</flux:navlist.item>
                         <flux:navlist.item icon="shield-check" :href="route('organization.scopes')" :current="request()->routeIs('organization.scopes')" wire:navigate>Responsables y supervisores</flux:navlist.item>
                     @endif
 
@@ -110,32 +114,37 @@
                     @endif
                 </flux:navlist.group>
 
+                @endunless
+
                 @if ($hasScheduleNavigation)
                 <flux:navlist.group heading="Horarios" class="grid">
+                    @if ($usePlanner && ! $isSupervisor && $canViewScheduleBatches)
+                        <flux:navlist.item icon="calendar-days" :href="route('scheduling.planner')" :current="request()->routeIs('scheduling.planner')" wire:navigate>Planificador de horarios</flux:navlist.item>
+                    @endif
                     @if (! $isSupervisor && $canViewShiftTemplates)
                         <flux:navlist.item icon="calendar-days" :href="route('scheduling.shifts')" :current="request()->routeIs('scheduling.shifts')" wire:navigate>Catálogo de turnos</flux:navlist.item>
                     @endif
 
-                    @if (! $isSupervisor && $canViewScheduleProfiles)
+                    @if (! $usePlanner && ! $isSupervisor && $canViewScheduleProfiles)
                         <flux:navlist.item icon="calendar" :href="route('scheduling.profiles')" :current="request()->routeIs('scheduling.profiles')" wire:navigate>Modelos de horario</flux:navlist.item>
                         <flux:navlist.item icon="queue-list" :href="route('scheduling.profile-assignments')" :current="request()->routeIs('scheduling.profile-assignments')" wire:navigate>Aplicacion de modelos</flux:navlist.item>
                     @endif
 
                     @if (! $isSupervisor && $canViewMandatoryRestDays)
-                        <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Descansos obligatorios</flux:navlist.item>
+                        <flux:navlist.item icon="calendar-days" :href="route('mandatory-rest-days.index')" :current="request()->routeIs('mandatory-rest-days.*')" wire:navigate>Días Inhábiles Oficiales</flux:navlist.item>
                     @endif
 
-                    @if ($canViewScheduleBatches)
+                    @if (! $usePlanner && $canViewScheduleBatches)
                         <flux:navlist.item icon="calendar-days" :href="route('scheduling.daily')" :current="request()->routeIs('scheduling.daily')" wire:navigate>Programacion semanal</flux:navlist.item>
+                    @endif
+                    @if ($canViewAttendanceIncidents)
+                        <flux:navlist.item icon="clipboard-document-check" :href="route('attendance-incidents.index')" :current="request()->routeIs('attendance-incidents.*')" wire:navigate>Incidencias y ausencias</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
                 @endif
 
                 @if ($activeCompany && ($isSupervisor || auth()->user()->can('viewAny', [\App\Models\TimeEvent::class, $activeCompany]) || auth()->user()->can('viewAny', [\App\Models\WorkDay::class, $activeCompany])))
                     <flux:navlist.group heading="Registro de jornada" class="grid">
-                        @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendanceIncident::class, $activeCompany]))
-                            <flux:navlist.item icon="clipboard-document-check" :href="route('attendance-incidents.index')" :current="request()->routeIs('attendance-incidents.*')" wire:navigate>Incidencias y ausencias</flux:navlist.item>
-                        @endif
                         @unless ($isSupervisor)
                             <flux:navlist.item icon="clock" :href="route('time-events.manual')" :current="request()->routeIs('time-events.*') || request()->routeIs('time-clock.*')" wire:navigate>Eventos</flux:navlist.item>
                         @endunless

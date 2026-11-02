@@ -28,22 +28,16 @@ return new class extends Migration
             $table->string('last_seen_ip', 45)->nullable();
             $table->string('last_seen_user_agent', 1000)->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['company_id', 'status']);
             $table->index(['center_id', 'status']);
         });
 
-        Schema::table('company_settings', function (Blueprint $table) {
-            $table->boolean('require_authorized_kiosk_devices')->default(false)->after('kiosk_key_hash');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('company_settings', function (Blueprint $table) {
-            $table->dropColumn('require_authorized_kiosk_devices');
-        });
-
         Schema::dropIfExists('kiosk_devices');
     }
 };

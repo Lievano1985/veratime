@@ -3,6 +3,7 @@
 use App\Models\Center;
 use App\Models\Company;
 use App\Models\EmploymentRelationship;
+use App\Models\User;
 use App\Models\Worker;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -30,10 +31,14 @@ return new class extends Migration
             $table->string('external_id')->nullable();
             $table->string('idempotency_key')->nullable();
             $table->string('status')->default('valid');
+            $table->dateTime('voided_at')->nullable();
+            $table->foreignIdFor(User::class, 'voided_by_user_id')->nullable()->constrained('users')->restrictOnDelete()->cascadeOnUpdate();
+            $table->string('void_reason', 500)->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index('company_id');
+            $table->index(['company_id', 'voided_at'], 'time_events_company_voided_at_idx');
             $table->index(['company_id', 'worker_id', 'occurred_at_utc'], 'time_events_company_worker_utc_idx');
             $table->index(['company_id', 'worker_id', 'occurred_local_date'], 'time_events_company_worker_date_idx');
             $table->index(['company_id', 'center_id', 'occurred_local_date'], 'time_events_company_center_date_idx');

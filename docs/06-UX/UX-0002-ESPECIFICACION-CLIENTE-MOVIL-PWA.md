@@ -17,6 +17,12 @@ tags:
 
 # UX-0002 — Especificación del cliente móvil PWA
 
+## Aclaración de producto del 30 de octubre de 2026
+
+El responsable del producto confirma que Vera Time ya cuenta con una app móvil con georreferenciación para el marcaje. Su código y distribución no forman parte de la revisión de este repositorio. Los pendientes de interfaz, manifiesto y service worker descritos aquí corresponden específicamente a este cliente PWA propuesto y no deben interpretarse como ausencia de la app móvil existente.
+
+La bienvenida presenta la app como disponible, sin inventar enlaces de descarga, plataformas compatibles o funciones del cliente no verificadas. Los controles de ubicación, área, precisión, antigüedad, dispositivo vinculado y firma del servidor se describen según la política activada. Son controles para reducir marcajes no autorizados, no una garantía absoluta contra fraude.
+
 ## 1. Propósito
 
 Definir el alcance funcional básico del cliente móvil responsive/PWA de Vera Time para la persona trabajadora. El cliente usa la API personal existente y el mismo dominio de jornada que los canales web, administrativo y kiosco.

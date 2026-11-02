@@ -9,7 +9,7 @@ use App\Models\OperationalScopeAssignment;
 use App\Models\ScheduleProfile;
 use App\Models\ScheduleProfileAssignment;
 use App\Models\User;
-use Database\Seeders\VeraTimeScheduleProfileScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimeScheduleProfileScenarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;

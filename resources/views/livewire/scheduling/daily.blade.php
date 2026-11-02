@@ -1624,15 +1624,6 @@ new class extends Component {
         };
     }
 
-    private function calendarCellThemeClass(?DailyScheduleAssignment $assignment): string
-    {
-        return match ($assignment?->day_type) {
-            'shift', 'flexible', 'on_call' => 'shift-turno',
-            'rest' => 'shift-descanso',
-            default => 'shift-pendiente',
-        };
-    }
-
     private function batchStatusBadgeClass(string $status): string
     {
         return match ($status) {
@@ -1640,16 +1631,6 @@ new class extends Component {
             'superseded', 'cancelled' => 'border-surface-line bg-surface-bg text-surface-muted',
             default => 'border-status-warn-line bg-status-warn-bg text-status-warn-text',
         };
-    }
-
-    private function workerInitials(?string $name): string
-    {
-        return Str::of($name ?: 'VT')
-            ->explode(' ')
-            ->filter()
-            ->map(fn (string $part): string => Str::substr($part, 0, 1))
-            ->take(2)
-            ->implode('');
     }
 
     private function weekDayShortLabel(string $label): string
@@ -2197,49 +2178,19 @@ new class extends Component {
                         <div class="cell-head sticky left-0 z-[3] flex items-center">Trabajador</div>
                         @foreach ($weekDates as $i => $date)
                             <div class="cell-head {{ $i === count($weekDates) - 1 ? 'border-r-0' : '' }} {{ ($date['outside_period'] ?? false) ? 'opacity-55' : '' }}">
-                                <span class="block">{{ $this->weekDayShortLabel($date['label']) }}</span>
-                                <span class="block text-[11px] font-medium text-surface-muted">{{ $this->weekDateShortLabel($date['label']) }}</span>
+                                <x-scheduling.day-heading :date="$date['date'] ?? $date['label']" />
                             </div>
                         @endforeach
 
                         @forelse ($calendarRows as $row)
                             <div class="row-emp">
-                                <div class="emp-avatar bg-gradient-to-br from-brand-blue-bright to-brand-deep">
-                                    {{ $this->workerInitials($row['relationship']->worker?->full_name) }}
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="emp-name truncate">{{ $row['relationship']->worker?->full_name }}</div>
-                                    <div class="emp-code truncate">{{ $row['relationship']->worker?->employee_code }}</div>
-                                    <div class="emp-role truncate">{{ $row['relationship']->center?->name }} · {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</div>
-                                </div>
+                                <x-scheduling.worker-heading :name="$row['relationship']->worker?->full_name" :code="$row['relationship']->worker?->employee_code" :center="$row['relationship']->center?->name" :unit="$row['organizational_unit_name'] ?: 'Sin unidad'" />
                             </div>
-
                             @foreach ($row['cells'] as $cell)
                                 <div class="day-cell">
-                                    @if ($cell['outside_vigence'])
-                                        <div class="h-full rounded-xl border border-dashed border-surface-line bg-surface-bg p-2.5 text-[11px] text-surface-muted">
-                                            Fuera de vigencia
-                                        </div>
-                                    @else
-                                        <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" {{ ! $canEditSelectedBatch ? 'disabled' : '' }} class="{{ $this->calendarCellThemeClass($cell['assignment']) }} min-h-[82px] w-full text-left transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-18px_rgba(2,25,57,0.35)] disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none">
-                                            <div class="shift-label">
-                                                @if ($cell['assignment']?->shiftTemplate?->code)
-                                                    <span class="code-tag">{{ $cell['assignment']->shiftTemplate->code }}</span>
-                                                @endif
-                                                {{ $this->dayTypeLabel($cell['assignment']?->day_type) }}
-                                                @if ($cell['historical_only'])
-                                                    <span class="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-surface-muted">Baja</span>
-                                                @endif
-                                            </div>
-                                            @if ($cell['assignment']?->day_type === 'shift')
-                                                <div class="shift-time">{{ $this->mainShiftRange($cell['assignment']) }}</div>
-                                            @endif
-                                            @if ($cell['assignment']?->day_type !== 'shift')
-                                                <div class="shift-detail">{{ $this->assignmentSummary($cell['assignment']) }}</div>
-                                            @endif
-                                            <span class="shift-link">{{ $this->sourceLabel($cell['assignment']?->source_type) }}</span>
-                                        </button>
-                                    @endif
+                                    <x-scheduling.day-card :assignment="$cell['assignment']" :valid="! $cell['outside_vigence']" :editable="$canEditSelectedBatch" :historical="$cell['historical_only']" :summary="$this->assignmentSummary($cell['assignment'])"
+                                        wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')"
+                                        aria-label="{{ $row['relationship']->worker?->full_name }}, {{ $cell['date'] }}" />
                                 </div>
                             @endforeach
                         @empty
@@ -2251,28 +2202,13 @@ new class extends Component {
                 <div class="grid gap-3 p-5 lg:hidden">
                     @forelse ($calendarRows as $row)
                         <div class="rounded-2xl border border-surface-line bg-white p-4">
-                            <div class="mb-3 flex items-center gap-3">
-                                <div class="emp-avatar bg-gradient-to-br from-brand-blue-bright to-brand-deep">
-                                    {{ $this->workerInitials($row['relationship']->worker?->full_name) }}
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="emp-name truncate">{{ $row['relationship']->worker?->full_name }}</div>
-                                    <div class="emp-code truncate">{{ $row['relationship']->worker?->employee_code }}</div>
-                                    <div class="emp-role truncate">{{ $row['relationship']->center?->name }} · {{ $row['organizational_unit_name'] ?: 'Sin unidad' }}</div>
-                                </div>
-                            </div>
+                            <x-scheduling.worker-heading class="mb-3" :name="$row['relationship']->worker?->full_name" :code="$row['relationship']->worker?->employee_code" :center="$row['relationship']->center?->name" :unit="$row['organizational_unit_name'] ?: 'Sin unidad'" />
                             <div class="grid gap-2 sm:grid-cols-2">
                                 @foreach ($row['cells'] as $cell)
                                     @if (! $cell['outside_vigence'])
-                                        <button type="button" wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')" {{ ! $canEditSelectedBatch ? 'disabled' : '' }} class="{{ $this->calendarCellThemeClass($cell['assignment']) }} text-left transition disabled:cursor-default">
-                                            <span class="block font-mono text-[10.5px] text-surface-muted">{{ $cell['date'] }}</span>
-                                            <span class="shift-label mt-1">{{ $this->dayTypeLabel($cell['assignment']?->day_type) }}</span>
-                                            <span class="shift-detail block">
-                                                @if ($cell['assignment']?->day_type === 'shift')
-                                                    <span class="shift-time block">{{ $this->mainShiftRange($cell['assignment']) }}</span>
-                                                @else{{ $this->assignmentSummary($cell['assignment']) }}@endif
-                                            </span>
-                                        </button>
+                                        <x-scheduling.day-card :assignment="$cell['assignment']" :editable="$canEditSelectedBatch" :historical="$cell['historical_only']" :date-label="$cell['date']" :summary="$this->assignmentSummary($cell['assignment'])"
+                                            wire:click="openDayEditor({{ $row['relationship']->id }}, '{{ $cell['date'] }}')"
+                                            aria-label="{{ $row['relationship']->worker?->full_name }}, {{ $cell['date'] }}" />
                                     @endif
                                 @endforeach
                             </div>

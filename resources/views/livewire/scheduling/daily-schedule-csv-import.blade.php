@@ -1,9 +1,9 @@
 <section class="contents text-sm">
-    <button type="button" class="btn" wire:click="openPanel">Importar CSV</button>
+    <button type="button" class="btn" wire:click="openPanel">Importar Excel / CSV</button>
 
     <x-side-panel
         wire:model="showPanel"
-        title="Importación CSV"
+        title="Importar horarios desde Excel o CSV"
         subheading="Carga programación para este borrador y revisa la vista previa antes de aplicar."
         labelledby="daily-schedule-csv-import-title"
         max-width="max-w-none"
@@ -22,24 +22,31 @@
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <x-ui.panel-heading title="Nuevo archivo" tone="blue" />
-                        <p class="mt-1 text-xs text-surface-muted">Usa solo CSV UTF-8 con los encabezados de la plantilla. No se aceptan Excel ni archivos comprimidos.</p>
+                        <p class="mt-1 text-xs text-surface-muted">Descarga la semana en Excel, elige turnos en sus listas y sube el mismo archivo para revisar los cambios.</p>
                     </div>
-                    <a href="{{ $templateUrl }}" class="btn-outline btn-sm">
-                        Descargar plantilla
-                    </a>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <a href="{{ $excelTemplateUrl }}" class="btn-primary">Descargar Excel</a>
+                        <a href="{{ $templateUrl }}" class="text-xs font-medium text-brand-blue hover:underline">Plantilla CSV</a>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-brand-navy md:grid-cols-3">
+                    <p><span class="font-semibold">1. Descarga Excel</span><span class="mt-1 block text-xs text-surface-muted">Incluye las personas de los filtros, las fechas y los horarios actuales.</span></p>
+                    <p><span class="font-semibold">2. Elige los horarios</span><span class="mt-1 block text-xs text-surface-muted">Usa las listas de los días; la hoja Turnos muestra sus horas y descripción.</span></p>
+                    <p><span class="font-semibold">3. Sube y revisa</span><span class="mt-1 block text-xs text-surface-muted">Nada cambia hasta revisar la vista previa y aplicar al borrador.</span></p>
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-2">
                     <label class="space-y-1 md:col-span-2">
-                        <span class="form-label">Archivo CSV</span>
-                        <input type="file" wire:model="file" accept=".csv,text/csv" class="form-input">
+                        <span class="form-label">Archivo Excel (.xlsx) o CSV · máximo 10 MB</span>
+                        <input type="file" wire:model="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" class="form-input">
                         @error('file')<span class="form-error">{{ $message }}</span>@enderror
                     </label>
 
                     <label class="space-y-1">
                         <span class="form-label">Si ya existe programación</span>
                         <select wire:model="existingAssignmentPolicy" class="form-select">
-                            <option value="replace_existing">Usar datos del CSV</option>
+                            <option value="replace_existing">Usar horarios del archivo</option>
                             <option value="preserve_existing">Conservar lo existente</option>
                         </select>
                         @error('existingAssignmentPolicy')<span class="form-error">{{ $message }}</span>@enderror
@@ -59,7 +66,7 @@
             </div>
 
             @if ($activeImport)
-                @php($canApplyImport = $canUpdate && $activeImport->status === 'validated' && (int) $activeImport->invalid_rows === 0)
+                @php($canApplyImport = $canUpdate && $activeImport->status === 'validated' && (int) $activeImport->invalid_rows === 0 && (int) $activeImport->total_rows > 0)
                 <div class="space-y-4 rounded-2xl border border-surface-line bg-surface-card p-5 shadow-[0_20px_50px_-34px_rgba(2,25,57,0.22)]">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
@@ -110,6 +117,8 @@
                                 </div>
                             </div>
                         </div>
+                    @elseif ($activeImport->status === 'validated' && (int) $activeImport->total_rows === 0)
+                        <p class="rounded-xl bg-surface-bg p-4 text-sm text-surface-muted">No hay cambios para aplicar. Modifica los días que necesitas en el Excel y vuelve a cargarlo.</p>
                     @elseif ($canUpdate && in_array($activeImport->status, ['uploaded', 'invalid'], true))
                         <div class="rounded-xl border border-status-warn-line bg-status-warn-bg p-4 text-sm text-status-warn-text">
                             Corrige el archivo o revalida la carga. El botón para enviar horarios aparece cuando la vista previa queda validada sin errores.
@@ -144,8 +153,9 @@
                                             <td class="table-cell min-w-44 align-top {{ ($cell['day_type'] ?? null) === 'Descanso' ? 'bg-status-rest-bg text-status-rest-text' : '' }}">
                                                 @if ($cell)
                                                     <div class="space-y-1">
+                                                        <x-ui.badge :variant="$cell['variant']">{{ $cell['action'] }}</x-ui.badge>
                                                         <p class="font-medium">{{ $cell['shift_code'] ?: $cell['day_type'] }}</p>
-                                                        <p class="text-xs text-surface-muted">{{ $cell['day_type'] }}</p>
+                                                        <p class="text-xs text-surface-muted">Actual: {{ $cell['before'] }}</p>
                                                         @foreach ($cell['messages'] as $message)
                                                             <p class="text-xs text-status-warn-text">{{ $message }}</p>
                                                         @endforeach

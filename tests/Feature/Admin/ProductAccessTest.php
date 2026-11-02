@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Domains\Companies\Actions\UpdateCompanyAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
 use App\Models\CustomerAccountProduct;
@@ -13,6 +14,7 @@ use App\Support\RoleKey;
 use Database\Seeders\ProductSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class ProductAccessTest extends TestCase
@@ -26,7 +28,7 @@ class ProductAccessTest extends TestCase
         $this->seed(RoleSeeder::class);
     }
 
-    public function test_product_seeder_registers_vera_products_and_activates_time_for_existing_accounts(): void
+    public function test_product_seeder_registers_products_without_activating_existing_accounts(): void
     {
         $account = CustomerAccount::query()->create([
             'name' => 'Cuenta existente',
@@ -48,10 +50,24 @@ class ProductAccessTest extends TestCase
             'status' => Product::STATUS_DRAFT,
         ]);
 
-        $this->assertDatabaseHas('customer_account_products', [
+        $this->assertDatabaseMissing('customer_account_products', [
             'customer_account_id' => $account->id,
-            'status' => CustomerAccountProduct::STATUS_ACTIVE,
         ]);
+    }
+
+    public function test_reseeding_products_preserves_account_access_dates_status_and_metadata(): void
+    {
+        $this->seed(ProductSeeder::class);
+        $account = CustomerAccount::factory()->create();
+        $product = Product::where('key', ProductKey::TIME)->firstOrFail();
+        $access = CustomerAccountProduct::query()->updateOrCreate(
+            ['customer_account_id' => $account->id, 'product_id' => $product->id],
+            ['status' => CustomerAccountProduct::STATUS_SUSPENDED, 'starts_at' => '2026-01-01',
+                'trial_ends_at' => '2026-01-15', 'ends_at' => '2026-12-31', 'metadata' => ['note' => 'Preservar']],
+        );
+        $before = $access->getRawOriginal();
+        $this->seed(ProductSeeder::class);
+        $this->assertSame($before, $access->fresh()->getRawOriginal());
     }
 
     public function test_time_routes_are_blocked_when_customer_account_product_is_suspended(): void
@@ -63,6 +79,19 @@ class ProductAccessTest extends TestCase
             ->withSession(['current_company_id' => $company->id])
             ->get(route('workers.index'))
             ->assertForbidden();
+    }
+
+    public function test_editing_company_details_does_not_reactivate_a_suspended_product(): void
+    {
+        [$company] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        $access = CustomerAccountProduct::where('customer_account_id', $company->customer_account_id)->firstOrFail();
+        $access->update(['status' => CustomerAccountProduct::STATUS_SUSPENDED, 'ends_at' => '2026-12-31', 'metadata' => ['note' => 'Suspensión manual']]);
+        $before = $access->getRawOriginal();
+        $super = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN, 'status' => 'active']);
+        app(UpdateCompanyAction::class)->handle($company, [
+            'name' => 'Nombre corregido', 'account_type' => 'single_company',
+        ], $super);
+        $this->assertSame($before, $access->fresh()->getRawOriginal());
     }
 
     public function test_time_routes_allow_past_due_product_status(): void
@@ -87,7 +116,7 @@ class ProductAccessTest extends TestCase
 
         $this->actingAs($superAdmin);
 
-        \Livewire\Volt\Volt::test('customer-accounts.index')
+        Volt::test('customer-accounts.index')
             ->call('openProductPanel', $company->customer_account_id)
             ->assertSet('productForm.product_id', $timeProduct->id)
             ->set('productForm.status', CustomerAccountProduct::STATUS_SUSPENDED)

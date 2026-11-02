@@ -268,8 +268,8 @@ class AdvancedScheduleProfileDomainTest extends TestCase
 
     public function test_scenario_seeder_is_idempotent_and_creates_e1_isolated_scenarios_without_daily_schedules(): void
     {
-        Artisan::call('db:seed', ['--class' => 'VeraTimeScheduleProfileScenarioSeeder']);
-        Artisan::call('db:seed', ['--class' => 'VeraTimeScheduleProfileScenarioSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeScheduleProfileScenarioSeeder::class]);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeScheduleProfileScenarioSeeder::class]);
 
         $companies = Company::query()->whereIn('tax_id', ['VTSP-CYCLE', 'VTSP-FLEX', 'VTSP-ONCALL'])->get()->keyBy('tax_id');
 

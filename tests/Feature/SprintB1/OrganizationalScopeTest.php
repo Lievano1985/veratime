@@ -21,7 +21,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Worker;
 use App\Support\RoleKey;
-use Database\Seeders\VeraTimeDemoSeeder;
+use Tests\Fixtures\Seeders\VeraTimeDemoSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;

@@ -633,7 +633,12 @@ new class extends Component
                     <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
                         <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
                         <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
-                        <button type="button" wire:click="authorizeMobileDevice" class="btn-secondary mt-3">Generar código de vinculación</button>
+                        <button type="button" wire:click="authorizeMobileDevice" wire:loading.attr="disabled" wire:target="authorizeMobileDevice" class="btn-primary mt-3 cursor-pointer">
+                            <svg wire:loading.remove wire:target="authorizeMobileDevice" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="5" /><path d="m11.5 11.5 8-8M16 7l3 3M19 4l2 2" /></svg>
+                            <span wire:loading wire:target="authorizeMobileDevice" class="btn-spinner" aria-hidden="true"></span>
+                            <span wire:loading.remove wire:target="authorizeMobileDevice">Generar código de vinculación</span>
+                            <span wire:loading wire:target="authorizeMobileDevice">Generando código…</span>
+                        </button>
 
                         @if ($mobileDeviceBindingAuthorizationCode)
                             <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">

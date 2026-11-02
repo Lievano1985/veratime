@@ -25,8 +25,12 @@ return new class extends Migration
             $table->unsignedInteger('ordinary_minutes')->default(0);
             $table->unsignedInteger('night_minutes')->default(0);
             $table->unsignedInteger('overtime_minutes')->default(0);
+            $table->unsignedInteger('overtime_double_minutes')->default(0);
+            $table->unsignedInteger('overtime_triple_minutes')->default(0);
             $table->unsignedInteger('break_minutes')->default(0);
             $table->unsignedInteger('paid_break_minutes')->default(0);
+            $table->unsignedInteger('late_arrival_minutes')->default(0);
+            $table->unsignedInteger('early_departure_minutes')->default(0);
             $table->unsignedInteger('sunday_minutes')->default(0);
             $table->unsignedInteger('mandatory_rest_minutes')->default(0);
             $table->string('classification')->default('pending');

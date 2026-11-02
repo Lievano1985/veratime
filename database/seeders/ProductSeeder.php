@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\CustomerAccount;
-use App\Models\CustomerAccountProduct;
 use App\Models\Product;
 use App\Support\ProductKey;
 use Illuminate\Database\Seeder;
@@ -43,24 +41,5 @@ class ProductSeeder extends Seeder
             );
         }
 
-        $timeProduct = Product::query()->where('key', ProductKey::TIME)->firstOrFail();
-
-        CustomerAccount::query()
-            ->orderBy('id')
-            ->each(function (CustomerAccount $account) use ($timeProduct): void {
-                CustomerAccountProduct::query()->updateOrCreate(
-                    [
-                        'customer_account_id' => $account->id,
-                        'product_id' => $timeProduct->id,
-                    ],
-                    [
-                        'status' => CustomerAccountProduct::STATUS_ACTIVE,
-                        'starts_at' => null,
-                        'trial_ends_at' => null,
-                        'ends_at' => null,
-                        'metadata' => [],
-                    ],
-                );
-            });
     }
 }

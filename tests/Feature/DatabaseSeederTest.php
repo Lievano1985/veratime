@@ -11,17 +11,14 @@ class DatabaseSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_default_database_seeder_creates_only_the_vera_time_demo_company(): void
+    public function test_default_database_seeder_is_repeatable_without_creating_demo_companies_or_users(): void
     {
         $this->seed(DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
 
-        $this->assertSame(1, Company::query()->count());
-        $this->assertDatabaseHas('companies', [
-            'tax_id' => 'VTIME260705XX1',
-            'name' => 'Vera Time Demo',
-        ]);
-        $this->assertDatabaseMissing('companies', [
-            'tax_id' => 'VTD260712XX1',
-        ]);
+        $this->assertSame(0, Company::query()->count());
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('roles', 6);
+        $this->assertDatabaseCount('products', 3);
     }
 }

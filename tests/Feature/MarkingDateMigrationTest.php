@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\KioskTerminalAccessRequest;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -23,16 +22,11 @@ class MarkingDateMigrationTest extends TestCase
         });
     }
 
-    public function test_upgrade_keeps_existing_request_dates_and_nullable_values(): void
+    public function test_consolidated_schema_keeps_request_dates_and_nullable_values(): void
     {
-        Schema::table('kiosk_terminal_access_requests', function (Blueprint $table): void {
-            $table->timestamp('expires_at')->change();
-            $table->timestamp('reviewed_at')->nullable()->change();
-        });
         $request = KioskTerminalAccessRequest::factory()->create(['expires_at' => '2026-10-19 14:30:00', 'reviewed_at' => null]);
         $before = DB::table('kiosk_terminal_access_requests')->where('id', $request->id)->first();
-        $migration = require database_path('migrations/2026_10_19_000000_widen_marking_dates_to_datetime.php');
-        $migration->up();
+        $request->refresh();
         $after = DB::table('kiosk_terminal_access_requests')->where('id', $request->id)->first();
 
         $this->assertEquals($before, $after);
@@ -44,9 +38,10 @@ class MarkingDateMigrationTest extends TestCase
         $this->assertNull(DB::table('kiosk_terminal_access_requests')->where('id', $request->id)->value('reviewed_at'));
     }
 
-    public function test_fresh_installation_widens_all_marking_dates(): void
+    public function test_fresh_installation_creates_all_marking_dates_as_datetime(): void
     {
         foreach ([
+            'mobile_marking_policies' => ['valid_from', 'valid_until', 'offline_valid_until'],
             'kiosk_terminal_access_requests' => ['expires_at', 'reviewed_at', 'claimed_at'],
             'mobile_marking_time_references' => ['issued_at', 'expires_at'],
             'mobile_device_binding_authorizations' => ['expires_at', 'challenge_issued_at', 'challenge_expires_at', 'consumed_at'],

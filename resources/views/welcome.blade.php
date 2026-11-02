@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Vera Time') }} — Registro y evidencia de jornadas laborales</title>
     <meta name="description"
-        content="Vera Time convierte cada entrada y salida en jornadas calculadas, incidencias revisables y reportes listos para nómina.">
+        content="Planea horarios, registra asistencia desde kioscos autorizados y app móvil con georreferenciación, revisa jornadas y exporta resultados con Vera Time.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
@@ -18,9 +18,15 @@
     <style>
         .hero-gradient {
             background:
-                radial-gradient(circle at 12% 15%, color-mix(in oklab, var(--color-brand-sky), transparent 84%), transparent 42%),
-                radial-gradient(circle at 88% 65%, color-mix(in oklab, var(--color-brand-blue), transparent 86%), transparent 48%);
+                radial-gradient(ellipse at 88% 22%, #c4e2ff 0, transparent 48%),
+                radial-gradient(ellipse at 0 0, #dcefff 0, transparent 42%),
+                linear-gradient(115deg, #f2f9ff 0%, #f8fbff 44%, #e2f0ff 100%);
         }
+
+        .hero-orbit { border: 1.5px dashed #91c6ff; border-radius: 50%; }
+        .hero-glass { background: rgba(255,255,255,.88); box-shadow: 0 10px 28px -14px rgba(0,103,228,.28); backdrop-filter: blur(12px); }
+        .hero-phone { transform: rotate(7deg); box-shadow: 7px 10px 0 #0056ba, 12px 20px 35px -15px #0067e46b; }
+        .hero-map { background-color: #e6f3ff; background-image: linear-gradient(90deg, transparent 46%, #fff 46%, #fff 50%, transparent 50%), linear-gradient(0deg, transparent 42%, #fff 42%, #fff 47%, transparent 47%); background-size: 32px 42px; }
 
         @keyframes fadeInUp {
             from {
@@ -76,11 +82,12 @@
                 <img src="{{ asset('images/logo vera time.png') }}" alt="Vera Time" class="h-14 w-auto">
             </a>
 
-            <nav class="hidden items-center gap-8 text-sm font-medium text-surface-muted md:flex">
+            <nav class="hidden items-center gap-5 text-sm font-medium text-surface-muted xl:flex">
                 <a href="#producto" class="transition hover:text-brand-navy">Producto</a>
                 <a href="#como-funciona" class="transition hover:text-brand-navy">Cómo funciona</a>
                 <a href="#reforma" class="transition hover:text-brand-navy">Reforma 2027</a>
                 <a href="#kiosco" class="transition hover:text-brand-navy">Registro de asistencia</a>
+                <a href="#seguridad" class="transition hover:text-brand-navy">Seguridad</a>
                 <a href="#demo" class="transition hover:text-brand-navy">Agenda una demo</a>
             </nav>
 
@@ -100,55 +107,100 @@
     </header>
 
     {{-- Hero --}}
-    <section id="producto" class="hero-gradient relative mx-4 overflow-hidden sm:mx-6 lg:mx-8">
-        <div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-10">
-            <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
-                <div class="animate-in max-w-2xl">
-                    <p class="mb-4 text-sm font-semibold italic tracking-wide text-brand-blue">
-                        Preparado para la Reforma Laboral 2027
+    @php
+        $heroIcons = [
+            'shield' => '<path d="m12 3 8 3v5c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/>',
+            'pin' => '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+            'phone' => '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 5h4M11 19h2"/>',
+            'kiosk' => '<rect x="5" y="2" width="14" height="12" rx="2"/><path d="M9 14v6M15 14v6M6 22h12"/><circle cx="12" cy="8" r="1.5"/>',
+            'file' => '<path d="M6 2h8l5 5v15H6V2Zm8 0v6h5M9 12h7M9 16h7"/>',
+            'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l5 3"/>',
+            'users' => '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5v2"/>',
+        ];
+    @endphp
+    <section id="producto" class="hero-gradient relative isolate overflow-hidden">
+        <div aria-hidden="true" class="pointer-events-none absolute -left-40 -top-56 h-[26rem] w-[30rem] rounded-full border-[65px] border-blue-100/50"></div>
+        <div aria-hidden="true" class="pointer-events-none absolute -bottom-40 -left-28 h-80 w-[70%] rotate-12 rounded-[50%] bg-white/35"></div>
+        <div aria-hidden="true" class="pointer-events-none absolute -right-40 top-24 h-[38rem] w-[48rem] -rotate-12 rounded-[50%] bg-blue-200/20"></div>
+        <div class="relative mx-auto max-w-[1640px] px-6 pb-7 pt-12 sm:px-8 sm:pt-16 lg:px-10 lg:pt-16">
+            <div class="grid items-center gap-6 lg:grid-cols-[1fr_1.08fr] lg:gap-0">
+                <div class="animate-in relative z-20 min-w-0 lg:pb-5">
+                    <p class="mb-5 text-xs font-bold uppercase tracking-[.19em] text-brand-blue sm:text-sm">
+                        Horarios y asistencia con controles de seguridad
                     </p>
-                    <h1 class="font-display text-4xl font-bold leading-[1.1] tracking-tight text-brand-navy sm:text-5xl">
-                        El tiempo de tu equipo, con <span class="text-brand-blue">evidencia real</span>.
+                    <h1 class="font-display max-w-[760px] text-[2.5rem] font-bold leading-[1.04] tracking-[-.045em] text-brand-navy sm:text-5xl xl:text-[3.1rem] 2xl:text-[4.25rem]">
+                        El tiempo de tu equipo,<br class="hidden xl:block"> con <span class="text-brand-blue">registros<br class="hidden xl:block"> verificables.</span>
                     </h1>
-                    <p class="mt-6 max-w-md text-base leading-relaxed text-surface-muted sm:text-lg">
-                        Vera Time convierte cada entrada y salida en jornadas calculadas, incidencias revisables y
-                        reportes listos para nómina.
+                    <p class="mt-6 max-w-[620px] text-base leading-relaxed text-surface-muted sm:text-lg 2xl:text-[1.3rem]">
+                        Planea horarios, registra asistencia desde kioscos autorizados o la app móvil con
+                        georreferenciación y revisa jornadas con información exportable para RH y nómina.
                     </p>
 
                     @if (Route::has('login'))
-                        <div class="mt-8 flex flex-wrap items-center gap-3">
+                        <div class="mt-7 flex flex-wrap items-center gap-3 2xl:gap-4">
+                            <button type="button" data-demo-modal-open class="btn-primary btn-lg">Solicitar una demo <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 5 7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                             @guest
-                                <a href="{{ route('login') }}" class="btn-primary btn-lg">Iniciar sesión</a>
+                                <a href="{{ route('login') }}" class="btn-outline btn-lg">Iniciar sesión</a>
                             @else
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
-                                    <button type="submit" class="btn-primary btn-lg">Cerrar sesión</button>
+                                    <button type="submit" class="btn-outline btn-lg">Cerrar sesión</button>
                                 </form>
                             @endguest
-                            <a href="#como-funciona" class="btn-ghost btn-lg">Ver cómo funciona</a>
+                            <div class="flex max-w-[250px] items-center gap-3 text-xs font-medium leading-relaxed text-surface-muted sm:border-l sm:border-blue-100 sm:pl-4 2xl:text-sm">
+                                <svg class="h-8 w-8 shrink-0 text-brand-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $heroIcons['shield'] !!}</svg>
+                                <span>Información segura,<br>trazable y lista para revisión.</span>
+                            </div>
                         </div>
                     @endif
 
-                    <div class="mt-10 hidden flex-wrap gap-0">
-                        <div class="mr-6 border-r border-surface-line pr-6">
-                            <span class="font-display block text-xl text-brand-navy">13</span>
-                            <span class="text-xs text-surface-muted">tipos de incidencia detectados</span>
-                        </div>
-                        <div class="mr-6 border-r border-surface-line pr-6">
-                            <span class="font-display block text-xl text-brand-navy">3</span>
-                            <span class="text-xs text-surface-muted">formas de registrar asistencia</span>
-                        </div>
-                        <div>
-                            <span class="font-display block text-xl text-brand-navy">4</span>
-                            <span class="text-xs text-surface-muted">pasos: de horario a nómina</span>
-                        </div>
-                    </div>
+                    <ul aria-label="Capacidades de Vera Time" class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:flex">
+                        @foreach ([['kiosk', 'Kioscos autorizados'], ['phone', 'App móvil'], ['pin', 'Geolocalización'], ['file', 'Evidencia verificable']] as [$icon, $label])
+                            <li class="hero-glass flex items-center gap-2 rounded-2xl border border-blue-100 px-3 py-3 text-xs font-semibold text-brand-navy 2xl:text-[13px]">
+                                <svg class="h-6 w-6 shrink-0 text-brand-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $heroIcons[$icon] !!}</svg>
+                                {{ $label }}
+                            </li>
+                        @endforeach
+                    </ul>
                 </div>
 
-                <div class="animate-in-delay relative mx-auto w-full">
-                    <img src="{{ asset('images/marketing/hero_img.png') }}" alt="Panel de Vera Time"
-                        class="block w-full object-contain">
+                <div class="animate-in-delay relative mx-auto h-[370px] w-full max-w-[820px] sm:h-[500px] lg:h-[530px] 2xl:h-[590px]" role="img" aria-label="Ilustración de un registro de asistencia, app con ubicación y ejemplo de indicador. Datos ilustrativos.">
+                    <div aria-hidden="true" class="absolute inset-x-4 bottom-0 top-8 rounded-[48%] bg-blue-200/25"></div>
+                    <div aria-hidden="true" class="hero-orbit absolute -left-6 top-16 h-[72%] w-[105%] -rotate-[18deg]"></div>
+                    <div aria-hidden="true" class="hero-orbit absolute right-4 top-0 h-[90%] w-[64%] rotate-[30deg] opacity-60"></div>
+                    <svg aria-hidden="true" class="absolute right-[42%] top-0 h-12 w-12 fill-blue-300/60 text-blue-300/60 sm:h-16 sm:w-16" viewBox="0 0 24 24"><path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3.5" fill="#eef7ff"/></svg>
+                    <span aria-hidden="true" class="absolute right-4 top-9 h-7 w-7 rounded-full border-[8px] border-blue-300/60"></span>
+                    <div aria-hidden="true" class="hero-phone absolute right-[16%] top-0 z-[25] w-[96px] rounded-[24px] border-[5px] border-[#08254b] bg-white p-2 sm:w-[155px] sm:rounded-[28px] sm:p-3 2xl:w-[180px]">
+                        <div class="flex justify-between text-[7px] font-semibold text-brand-navy"><span>9:41</span><span>▰ ▪</span></div>
+                        <img src="{{ asset('images/logo vera time.png') }}" alt="" class="mx-auto my-2 h-6 w-auto sm:h-8">
+                        <p class="text-center text-[10px] font-bold text-brand-navy sm:text-xs">Jornada activa</p><p class="text-center text-[8px] text-surface-muted">Oficina CDMX</p>
+                        <div class="hero-map relative my-2 h-14 overflow-hidden rounded-lg sm:h-28"><svg class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-brand-blue" viewBox="0 0 24 24" fill="currentColor"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg></div>
+                        <span class="block rounded-lg bg-brand-blue px-1 py-2 text-center text-[8px] font-semibold text-white sm:text-[10px]">Registrar salida</span>
+                        <div class="mx-auto mt-2 h-0.5 w-8 rounded-full bg-slate-300"></div>
+                    </div>
+                    <img src="{{ asset('images/marketing/hero_img.png') }}" alt="" class="absolute bottom-0 left-0 z-20 w-full object-contain" fetchpriority="high">
+                    <div aria-hidden="true" class="hero-glass absolute left-0 top-6 z-30 flex items-center gap-3 rounded-2xl border border-white/80 px-3 py-3 sm:left-3 sm:top-10 sm:px-4 sm:py-4">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/85 text-white sm:h-11 sm:w-11"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4 10-10" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <div><p class="text-xs font-bold text-brand-navy sm:text-sm">Entrada registrada</p><p class="mt-0.5 text-[10px] text-surface-muted sm:text-xs">08:00 am · Kiosco Oficina</p></div>
+                        <svg class="hidden h-4 w-4 text-brand-blue sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg>
+                    </div>
+                    <div aria-hidden="true" class="hero-glass absolute right-0 top-[33%] z-30 w-[112px] rounded-2xl border border-white/80 p-3 sm:top-[24%] sm:w-[150px] sm:p-4">
+                        <p class="text-[10px] text-surface-muted sm:text-xs">Cumplimiento</p>
+                        <div class="mt-1 flex items-end justify-between"><strong class="text-xl text-brand-navy sm:text-3xl">98%</strong><div class="flex items-end gap-1" aria-hidden="true">@foreach ([10, 16, 23, 30] as $bar)<span class="w-1.5 rounded-sm bg-blue-400/70" style="height: {{ $bar }}px"></span>@endforeach</div></div>
+                        <div class="mt-2 h-1.5 rounded-full bg-blue-100"><div class="h-full w-[90%] rounded-full bg-emerald-500/80"></div></div>
+                        <p class="mt-1.5 text-[8px] text-surface-muted">Indicador ilustrativo</p>
+                    </div>
+                    <p class="absolute bottom-0 right-0 z-30 rounded bg-white/75 px-2 py-1 text-[8px] text-surface-muted">Vista ilustrativa del producto</p>
                 </div>
+            </div>
+
+            <div class="hero-glass relative z-30 mt-6 grid grid-cols-2 gap-y-6 rounded-[28px] border border-white/80 px-4 py-6 md:grid-cols-4 md:gap-y-0 sm:px-6 lg:mt-2 lg:px-8">
+                @foreach ([['users', 'Acceso por roles', 'y alcances autorizados', ''], ['clock', 'Control de jornadas', 'en tiempo real', ''], ['file', 'Reportes exportables', 'para RH y nómina', ''], ['shield', 'Control preventivo LFT', 'y Reforma 2027', '']] as [$icon, $title, $description, $note])
+                    <div class="flex items-center gap-3 px-2 sm:gap-4 sm:px-4 md:border-r md:border-blue-100 md:last:border-0">
+                        <svg class="h-8 w-8 shrink-0 text-brand-blue sm:h-10 sm:w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $heroIcons[$icon] !!}</svg>
+                        <div><p class="text-sm font-bold text-brand-navy sm:text-base 2xl:text-lg">{{ $title }}</p><p class="mt-0.5 text-xs text-surface-muted sm:text-sm">{{ $description }}</p>@if ($note)<p class="mt-0.5 text-[9px] text-surface-muted">{{ $note }}</p>@endif</div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </section>
@@ -159,7 +211,7 @@
             <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">Cómo funciona</h2>
 
             <div class="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                @foreach ([['01', 'Programación esperada', 'Defines turnos, horarios y descansos por trabajador, centro o unidad.'], ['02', 'Eventos reales', 'Kiosco, captura manual o importación CSV — y pronto biométricos y app móvil.'], ['03', 'Cálculo automático', 'Vera Time compara lo programado con lo ocurrido y genera jornadas e incidencias.'], ['04', 'Dictamen y exportación', 'RH revisa, dictamina y exporta el periodo listo para nómina.']] as [$n, $title, $body])
+                @foreach ([['01', 'Organiza tu operación', 'Configura centros y áreas, asigna responsables y carga trabajadores desde Excel.'], ['02', 'Planea la semana', 'Asigna horarios a varias personas y días a la vez. Reutiliza semanas y publica tu programación.'], ['03', 'Registra y revisa', 'Recibe marcajes desde kioscos autorizados o la app con georreferenciación. Compara horarios y registros y atiende las incidencias.'], ['04', 'Obtén resultados', 'Revisa jornadas, consulta proyecciones y cierra períodos para exportar resultados en Excel o CSV.']] as [$n, $title, $body])
                     <div class="border-t-2 border-brand-blue pt-4">
                         <span class="font-display text-sm font-semibold text-brand-blue">{{ $n }}</span>
                         <h3 class="mt-2 text-base font-bold text-brand-navy">{{ $title }}</h3>
@@ -169,12 +221,12 @@
             </div>
 
             <div class="relative left-1/2 mt-20 w-screen -translate-x-1/2 border-t border-surface-line"></div>
-            <h2 class="mt-16 font-display text-2xl font-bold leading-snug text-brand-navy sm:max-w-none sm:whitespace-nowrap sm:text-3xl">
-                Todo lo que necesitas para controlar el tiempo de tu equipo.
+            <h2 class="mt-16 font-display text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
+                Organiza horarios, revisa asistencia y conserva resultados.
             </h2>
 
-            <div class="relative mt-10 grid gap-4 lg:grid-cols-3">
-                <div class="relative aspect-video overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:aspect-auto">
+            <div class="relative mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div class="relative aspect-video min-w-0 overflow-hidden rounded-2xl border border-[#cfe2fb] bg-surface-card lg:aspect-auto">
                     <img data-feature-preview src="{{ asset('images/marketing/shot-kiosco.png') }}"
                         alt="Kiosco de Vera Time"
                         class="absolute inset-0 h-full w-full object-contain transition-opacity duration-700"
@@ -193,7 +245,7 @@
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
 
-                <div class="feature-carousel-shell relative lg:col-span-2">
+                <div class="feature-carousel-shell relative min-w-0 lg:col-span-2">
                 <div class="mb-3 flex items-center justify-between lg:hidden">
                     <button type="button" data-carousel-direction="previous" aria-label="Ver tarjetas anteriores"
                         class="flex h-10 w-10 items-center justify-center rounded-full border border-surface-line bg-white text-brand-navy shadow-sm transition hover:border-brand-blue hover:text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2">
@@ -207,17 +259,13 @@
                 </div>
                 <div id="feature-carousel" class="feature-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3">
                 @foreach ([
-        ['Organización y equipo', ['Directorio de trabajadores', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Administración de supervisores y responsables'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
-        ['Registro de asistencia', ['Kiosco de asistencia', 'Registro de entrada, salida y pausas', 'Captura manual justificada'], true, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round" stroke-linejoin="round"/>'],
-        ['Horarios y turnos', ['Programación semanal de horarios', 'Turnos fijos, nocturnos, mixtos, flexibles, rotativos y guardias', 'Descansos programados y obligatorios', 'Importación CSV de programación'], true, '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke-linecap="round"/>'],
-        ['Cálculo de jornadas', ['Horas ordinarias, extra dobles y extra triples', 'Domingos, descansos y festivos trabajados', 'Recálculo automático de jornadas', 'Cierre de periodos de asistencia'], true, '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8h8M8 12h3M8 16h3M14 12h2M14 16h2" stroke-linecap="round"/>'],
-        ['Incidencias', ['Faltas, retardos y salidas anticipadas', 'Vacaciones, incapacidades y permisos', 'Gestión de incidencias y ausencias', 'Dictamen y corrección de jornadas', 'Alertas operativas'], true, '<path d="M12 3.5l8 4.5v8l-8 4.5-8-4.5v-8L12 3.5z"/><path d="M12 9v4.5M12 16.5h.01" stroke-linecap="round"/>'],
-        ['Nómina y evidencia', ['Exportación CSV para nómina', 'Evidencia histórica y trazabilidad', 'Seguridad por empresa, rol y alcance'], true, '<path d="M5 4.5h11l3 3V19a1 1 0 01-1 1H5a1 1 0 01-1-1V5.5a1 1 0 011-1z"/><path d="M8 9h6M8 13h6M8 17h4" stroke-linecap="round"/>'],
-        ['Próximamente', ['Conexión con dispositivos biométricos', 'App Android para asistencia', 'Flujo avanzado de aprobación de incidencias', 'API e integraciones'], false, '<path d="M12 2.5c2.5 2 4 5.5 4 9 0 2-1 4-1 4h-6s-1-2-1-4c0-3.5 1.5-7 4-9z"/><path d="M9.5 15.5L8 20l4-2 4 2-1.5-4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10.5" r="1.6"/>'],
+        ['Organización y equipo', ['Directorio e importación de trabajadores desde XLS y XLSX', 'Centros, áreas y departamentos', 'Multiempresa y multiusuario', 'Roles y alcances por centro o unidad', 'Consulta personal de horarios y marcajes'], true, '<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 12.5c2.4.3 4 2 4 4.5" stroke-linecap="round"/>'],
+        ['Registro de asistencia', ['Kioscos autorizados por la empresa', 'App móvil con georreferenciación para marcar', 'Entrada, salida y pausas', 'Ubicación y área autorizada según la política activa', 'Captura manual con motivo y responsable'], true, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round" stroke-linejoin="round"/>'],
+        ['Horarios y turnos', ['Asignación por grupos, filas y días', 'Turnos fijos, nocturnos, mixtos, flexibles, rotativos y guardias', 'Borradores, publicación y correcciones', 'Clonación de semanas y horarios habituales', 'Importación de programación desde Excel y CSV'], true, '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke-linecap="round"/>'],
+        ['Jornadas y prevención', ['Tiempo ordinario y extra doble y triple', 'Pausas, puntualidad, domingos y descansos', 'Comparación de horarios y marcajes', 'Acumulados y proyecciones semanales', 'Tablero operativo y alertas preventivas'], true, '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8h8M8 12h3M8 16h3M14 12h2M14 16h2" stroke-linecap="round"/>'],
+        ['Incidencias', ['Vacaciones, incapacidades y permisos', 'Ausencias documentadas con o sin goce', 'Revisión de registros incompletos y diferencias', 'Seguimiento por aviso con decisión y comentario', 'Correcciones y recálculo con antecedentes'], true, '<path d="M12 3.5l8 4.5v8l-8 4.5-8-4.5v-8L12 3.5z"/><path d="M12 9v4.5M12 16.5h.01" stroke-linecap="round"/>'],
+        ['Resultados e integración', ['Cierre de períodos con información histórica', 'Exportación en Excel y CSV', 'Layouts con conceptos, unidades y nomenclaturas', 'API empresarial y personal con permisos', 'Trazabilidad y separación de datos por empresa'], true, '<path d="M5 4.5h11l3 3V19a1 1 0 01-1 1H5a1 1 0 01-1-1V5.5a1 1 0 011-1z"/><path d="M8 9h6M8 13h6M8 17h4" stroke-linecap="round"/>'],
     ] as [$category, $items, $available, $icon])
-                    @if (str_starts_with($category, 'Pr'))
-                        @continue
-                    @endif
                     <div
                         class="feature-carousel-card w-full flex-none snap-start rounded-2xl border {{ $available ? 'border-[#cfe2fb] bg-[#f2f7fe]' : 'border-dashed border-surface-line bg-surface-bg' }} p-5 lg:w-[calc((100%-1rem)/2)]">
                         <div
@@ -237,28 +285,6 @@
                                     {{ $item }}
                                 </li>
                             @endforeach
-                            @if ($category === 'Registro de asistencia')
-                                @foreach (['App Android para asistencia', 'Asistencia mediante WhatsApp', 'Autenticacion facial'] as $item)
-                                    <li class="flex gap-2 text-[13.5px] leading-snug text-surface-muted">
-                                        <span class="mt-[7px] h-[5px] w-[5px] flex-shrink-0 rounded-full bg-surface-muted"></span>
-                                        <span>{{ $item }} <span class="ml-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface-muted">Proximamente</span></span>
-                                    </li>
-                                @endforeach
-                            @endif
-                            @if ($category === 'Incidencias')
-                                <li class="flex gap-2 text-[13.5px] leading-snug text-surface-muted">
-                                    <span class="mt-[7px] h-[5px] w-[5px] flex-shrink-0 rounded-full bg-surface-muted"></span>
-                                    <span>Flujo avanzado de aprobacion <span class="ml-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface-muted">Proximamente</span></span>
-                                </li>
-                            @endif
-                            @if (str_contains($category, 'evidencia'))
-                                @foreach (['API e integraciones', 'Conexion con dispositivos biometricos', 'Geolocalizacion y geofencing'] as $item)
-                                    <li class="flex gap-2 text-[13.5px] leading-snug text-surface-muted">
-                                        <span class="mt-[7px] h-[5px] w-[5px] flex-shrink-0 rounded-full bg-surface-muted"></span>
-                                        <span>{{ $item }} <span class="ml-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface-muted">Proximamente</span></span>
-                                    </li>
-                                @endforeach
-                            @endif
                         </ul>
                     </div>
                 @endforeach
@@ -272,6 +298,34 @@
         </div>
     </section>
 
+    {{-- Seguridad de marcaje --}}
+    <section id="seguridad" class="border-t border-surface-line bg-[#f2f7fe]">
+        <div class="mx-auto max-w-6xl px-6 py-20">
+            <p class="text-xs font-bold uppercase tracking-wide text-brand-blue">Seguridad de marcaje</p>
+            <h2 class="font-display mt-3 max-w-3xl text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
+                Más controles para reducir el riesgo de marcajes falsos.
+            </h2>
+            <p class="mt-4 max-w-3xl text-sm leading-relaxed text-surface-muted sm:text-base">
+                Define desde qué terminal, dispositivo y ubicación se permite registrar asistencia.
+                Los controles se aplican según el canal y la política de seguridad activada por tu empresa.
+            </p>
+            <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ([
+                    ['Terminales aprobadas', 'Cada equipo de kiosco requiere autorización. Puedes limitarlo a un centro y revocar su acceso. El código y NIP del trabajador se utilizan desde una terminal habilitada.'],
+                    ['Marcaje georreferenciado', 'La app incorpora ubicación al marcaje. Con una política de área autorizada, el servidor comprueba la distancia, la precisión y la vigencia de la ubicación según sus parámetros.'],
+                    ['Dispositivo y firma', 'Las políticas móviles permiten exigir un dispositivo vinculado y validar la firma del marcaje. La empresa puede revocar el dispositivo autorizado.'],
+                    ['Cambios con responsable', 'Las capturas manuales requieren motivo y usuario autorizado. Los registros y sus revisiones conservan referencias para explicar el resultado de la jornada.'],
+                ] as [$title, $description])
+                    <article class="rounded-2xl border border-[#cfe2fb] bg-white p-5">
+                        <svg class="mb-4 h-7 w-7 text-brand-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 8 3v5c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <h3 class="text-base font-bold text-brand-navy">{{ $title }}</h3>
+                        <p class="mt-3 text-sm leading-relaxed text-surface-muted">{{ $description }}</p>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
     {{-- Reforma laboral 2027 --}}
     <section id="reforma" class="bg-brand-navy text-white">
         <div class="mx-auto max-w-6xl px-6 py-16">
@@ -279,7 +333,7 @@
             <div class="mt-16 grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:gap-20">
                 <div>
                     <h2 class="font-display mt-0 max-w-xl text-2xl font-bold leading-snug text-white sm:text-3xl">
-                        No vendemos un reloj checador. Vendemos tranquilidad legal.
+                        Información organizada para revisar el tiempo laboral.
                     </h2>
                     <p class="mt-5 max-w-xl text-sm leading-relaxed text-white/85">
                         La reforma a la Ley Federal del Trabajo (DOF, mayo 2026) obliga a registrar electrónicamente la jornada
@@ -298,10 +352,10 @@
                     @endforeach
                     </div>
                     <p class="mt-8 max-w-xl text-xs leading-relaxed text-white/55">
-                        La ley no exige una marca ni un tipo de dispositivo específico — exige poder demostrar el tiempo
-                        trabajado de forma confiable. Vera Time ya captura lo que la reforma pide desde hoy. Este contenido es
-                        informativo, no constituye asesoría legal; los lineamientos técnicos definitivos de la STPS aún están
-                        pendientes de publicación.
+                        Vera Time conserva marcajes, cálculos y resultados exportables para apoyar la revisión del tiempo
+                        laboral. Los requisitos aplicables y las disposiciones de la STPS deben revisarse para cada operación;
+                        el uso de la plataforma no constituye una certificación de cumplimiento.
+                        <a href="https://dof.gob.mx/nota_detalle_popup.php?codigo=5786537" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-white">Consultar el decreto en el DOF</a>.
                     </p>
                 </div>
 
@@ -312,7 +366,7 @@
                     </div>
 
                     <ul class="space-y-3">
-                    @foreach (['Hora de entrada y salida registradas', 'Tiempo efectivamente trabajado, calculado', 'Horas extraordinarias identificadas', 'Registro exportable para mostrar a la autoridad', 'No importa el dispositivo: kiosco, biométrico o app, todo cuenta como registro electrónico válido'] as $item)
+                    @foreach (['Entrada, salida y pausas identificadas', 'Tiempo trabajado calculado desde registros válidos', 'Tiempo ordinario y extraordinario desglosado', 'Información histórica de los períodos cerrados', 'Registros con origen y contexto para su revisión'] as $item)
                         <li class="flex items-start gap-2.5 text-sm text-white/90">
                             <span
                                 class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-brand-sky text-xs font-bold text-brand-navy">✓</span>
@@ -332,15 +386,16 @@
             <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
                 <div>
                     <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">
-                        Registra asistencia desde donde tu equipo esté.
+                        Kiosco autorizado y app con marcaje georreferenciado.
                     </h2>
                     <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
                         El kiosco se coloca en un dispositivo dentro del centro de trabajo. Cada colaborador registra su
-                        entrada, salida o pausa con su código y NIP — sin apps que instalar, sin fricción.
+                        entrada, salida o pausa con su código y NIP desde una terminal previamente autorizada por la empresa.
                     </p>
                     <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted sm:text-base">
-                        También puedes capturar eventos manualmente o importarlos por CSV. Próximamente: checado desde
-                        dispositivos biométricos y desde app móvil.
+                        La app móvil permite marcar con georreferenciación. Configura las políticas de ubicación y
+                        dispositivo para validar los registros según tu operación. Las excepciones se pueden capturar
+                        manualmente con motivo y responsable.
                     </p>
 
                     <div class="mt-5 flex flex-wrap gap-2">
@@ -349,11 +404,9 @@
                         <span
                             class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Captura
                             manual</span>
-                        <span
-                            class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Importación
-                            CSV</span>
-                        <span class="badge-muted">Biométrico · próximamente</span>
-                        <span class="badge-muted">App móvil · próximamente</span>
+                        <span class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">App móvil disponible</span>
+                        <span class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Georreferenciación</span>
+                        <span class="inline-flex items-center rounded-full border border-surface-line bg-white px-3 py-1.5 text-xs font-medium">Área autorizada según política</span>
                     </div>
                 </div>
 
@@ -366,10 +419,10 @@
 
             <div class="relative left-1/2 mt-16 w-screen -translate-x-1/2 bg-brand-navy py-8 text-white shadow-[0_24px_48px_-32px_rgba(2,25,57,0.45)]">
                 <div class="mx-auto max-w-6xl px-6 sm:px-8">
-                <h3 class="font-display text-base font-bold text-white">Cada periodo cerrado exporta, listo para tu
-                    proveedor de nómina</h3>
+                <h3 class="font-display text-base font-bold text-white">Del período revisado a resultados exportables para RH y nómina</h3>
+                <p class="mt-3 max-w-3xl text-sm leading-relaxed text-white/80">Descarga Excel o CSV y configura layouts con conceptos, unidades y nomenclaturas. El formato del sistema receptor se valida durante la integración.</p>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    @foreach (['RFC', 'CURP', 'NSS', 'Horas normales', 'Extra dobles', 'Extra triples', 'Retardos', 'Domingos trabajados', 'Vacaciones e incapacidades'] as $field)
+                    @foreach (['Datos del trabajador disponibles', 'Tiempo ordinario', 'Extra dobles', 'Extra triples', 'Retardos', 'Domingos trabajados', 'Vacaciones e incapacidades'] as $field)
                         <span
                             class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white">{{ $field }}</span>
                     @endforeach
@@ -520,8 +573,8 @@
             <h2 class="font-display max-w-lg text-2xl font-bold leading-snug text-brand-navy sm:text-3xl">Una suite. Soluciones
                 para cada necesidad.</h2>
             <p class="mt-4 max-w-md text-sm leading-relaxed text-surface-muted">
-                Cada producto VERA se contrata por separado y comparte la misma cuenta. Cuando actives otro, ya tiene
-                los datos que necesita.
+                Vera Time reúne la operación de horarios y asistencia. La suite VERA contempla productos adicionales
+                que se incorporarán con su propio alcance y disponibilidad.
             </p>
 
             <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -548,14 +601,43 @@
     </section>
 
     {{-- Footer --}}
-    <footer class="border-t border-surface-line">
-        <div
-            class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-12 sm:flex-row sm:items-center">
+    <footer id="contacto" class="border-t border-surface-line bg-white">
+        <div class="mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-3">
             <div>
                 <x-app-logo class="h-7 w-auto" />
-                <p class="mt-3 text-sm text-surface-muted">Orden y evidencia para el tiempo laboral de tu equipo.</p>
+                <p class="mt-3 max-w-xs text-sm leading-relaxed text-surface-muted">Orden y evidencia para el tiempo laboral de tu equipo.</p>
             </div>
 
+            <div>
+                <h2 class="font-display text-base font-semibold text-brand-navy">Contacto</h2>
+                <address class="mt-4 space-y-3 text-sm not-italic leading-relaxed text-surface-muted">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m4 3 4-.5 2 5-2.5 2a15 15 0 0 0 7 7l2-2.5 5 2-.5 4c-.1 1-1 1.7-2 1.5C9.5 20.5 3.5 14.5 2.5 5 2.3 4 3 3.1 4 3Z" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <p><span class="font-semibold text-brand-navy">Teléfono</span><br><a href="tel:9935901300" class="transition hover:text-brand-blue">993 590 1300</a></p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+                        <p><span class="font-semibold text-brand-navy">Dirección</span><br>Av. Paseo Tabasco núm. 1120, altos.<br>Colonia Jesús García, C.P. 86040.</p>
+                    </div>
+                </address>
+            </div>
+
+            <div>
+                <h2 class="font-display text-base font-semibold text-brand-navy">Redes sociales</h2>
+                <ul class="mt-4 space-y-3 text-sm text-surface-muted">
+                    <li class="flex items-start gap-3">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 22v-9h3l.5-4H14V7c0-1.2.3-2 2-2h2V1.4A25 25 0 0 0 15 1c-3 0-5 1.8-5 5v3H7v4h3v9h4Z"/></svg></span>
+                        <div><span class="block font-semibold text-brand-navy">Facebook</span><span>Vera Time</span></div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>
+                        <div><span class="block font-semibold text-brand-navy">Instagram</span><a href="https://www.instagram.com/veratime_/" target="_blank" rel="noopener noreferrer" class="transition hover:text-brand-blue">@veratime_<span class="sr-only"> (abre en una pestaña nueva)</span></a></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mx-auto flex max-w-6xl justify-end border-t border-surface-line px-6 py-5">
             @if (Route::has('login'))
                 @auth
                     <form method="POST" action="{{ route('logout') }}">
@@ -565,7 +647,8 @@
                 @else
                     <a href="{{ route('login') }}" class="btn-outline">Iniciar sesión</a>
                 @endauth
-            @endif        </div>
+            @endif
+        </div>
     </footer>
 
     <script>

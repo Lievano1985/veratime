@@ -2,6 +2,7 @@
 
 use App\Models\Center;
 use App\Models\Company;
+use App\Models\OrganizationalUnit;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,6 +16,7 @@ return new class extends Migration
             $table->uuid('public_id')->unique();
             $table->foreignIdFor(Company::class)->constrained()->restrictOnDelete();
             $table->foreignIdFor(Center::class)->nullable()->constrained()->restrictOnDelete();
+            $table->foreignIdFor(OrganizationalUnit::class)->nullable()->constrained()->restrictOnDelete();
             $table->string('status')->default('draft');
             $table->unsignedInteger('version')->default(1);
             $table->string('mode')->default('free');
@@ -25,12 +27,14 @@ return new class extends Migration
             $table->unsignedInteger('radius_meters')->nullable();
             $table->unsignedInteger('max_accuracy_meters')->nullable();
             $table->unsignedInteger('max_location_age_seconds')->nullable();
-            $table->timestamp('valid_from')->nullable();
-            $table->timestamp('valid_until')->nullable();
-            $table->timestamp('offline_valid_until')->nullable();
+            $table->unsignedInteger('offline_authorization_duration_minutes')->nullable();
+            $table->dateTime('valid_from')->nullable();
+            $table->dateTime('valid_until')->nullable();
+            $table->dateTime('offline_valid_until')->nullable();
             $table->timestamps();
 
             $table->index(['company_id', 'center_id', 'status'], 'mmp_company_center_status_index');
+            $table->index(['company_id', 'organizational_unit_id', 'status'], 'mmp_company_unit_status_index');
             $table->index(['company_id', 'status', 'valid_from'], 'mmp_company_status_valid_from_index');
         });
     }

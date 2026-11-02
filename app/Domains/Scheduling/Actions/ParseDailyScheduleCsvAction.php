@@ -5,6 +5,7 @@ namespace App\Domains\Scheduling\Actions;
 use App\Domains\Scheduling\Exceptions\DailyScheduleCsvHeaderException;
 use App\Domains\Scheduling\Exceptions\InvalidDailyScheduleCsvException;
 use App\Domains\Scheduling\Support\DailyScheduleCsvSchema;
+use App\Models\ScheduleBatch;
 use Illuminate\Support\Facades\Storage;
 
 class ParseDailyScheduleCsvAction
@@ -12,9 +13,11 @@ class ParseDailyScheduleCsvAction
     /**
      * @return array{headers: list<string>, rows: list<array{row_number: int, data: array<string, string>}>}
      */
-    public function handle(string $disk, string $path): array
+    public function handle(string $disk, string $path, ?ScheduleBatch $batch = null): array
     {
-        $stream = Storage::disk($disk)->readStream($path);
+        $stream = str_ends_with(mb_strtolower($path), '.xlsx')
+            ? app(ReadDailyScheduleXlsxAction::class)->handle($disk, $path, $batch)
+            : Storage::disk($disk)->readStream($path);
         if ($stream === false) {
             throw new InvalidDailyScheduleCsvException('No fue posible leer el archivo CSV privado.');
         }
@@ -70,7 +73,7 @@ class ParseDailyScheduleCsvAction
     }
 
     /**
-     * @param resource $stream
+     * @param  resource  $stream
      * @return array{headers: list<string>, delimiter: string}
      */
     private function readHeaders($stream): array
@@ -124,7 +127,7 @@ class ParseDailyScheduleCsvAction
     }
 
     /**
-     * @param list<string> $headers
+     * @param  list<string>  $headers
      */
     private function isHorizontalTemplate(array $headers): bool
     {
@@ -132,7 +135,7 @@ class ParseDailyScheduleCsvAction
     }
 
     /**
-     * @param list<string> $headers
+     * @param  list<string>  $headers
      */
     private function normalizeHorizontalHeaders(array $headers): array
     {
@@ -170,8 +173,8 @@ class ParseDailyScheduleCsvAction
     }
 
     /**
-     * @param array<string, string> $row
-     * @param list<string> $headers
+     * @param  array<string, string>  $row
+     * @param  list<string>  $headers
      * @return list<array{row_number: int, data: array<string, string>}>
      */
     private function expandHorizontalRow(int $rowNumber, array $row, array $headers): array
@@ -224,7 +227,7 @@ class ParseDailyScheduleCsvAction
     }
 
     /**
-     * @param list<string> $values
+     * @param  list<string>  $values
      */
     private function isEmptyRow(array $values): bool
     {

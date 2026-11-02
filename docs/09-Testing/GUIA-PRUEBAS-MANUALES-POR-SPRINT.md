@@ -2,6 +2,10 @@
 
 ## Objetivo
 
+Actualización 01/11/2026: consultar [la auditoría integral](AUDITORIA-INTEGRAL-2026-11-01.md) y [la nueva base de instalación](../10-Deployment/DEP-0002-BASE-CONSOLIDADA-2026-11-01.md). El planificador tiene su recorrido de aceptación en `docs/06-UX/UX-0010-PLANIFICADOR-ALTERNATIVO.md`; solo el modelo de horarios activado por el superadministrador está disponible para cada empresa.
+
+La descarga/carga de Excel con listas y revisión previa se describe en `docs/06-UX/UX-0011-EXCEL-PROGRAMACION-SEMANAL.md`.
+
 Esta guÃƒÂ­a sirve para que una persona no tÃƒÂ©cnica pueda revisar manualmente el avance de Vera Time por fases.
 
 La idea no es revisar cÃƒÂ³digo. La idea es entrar a la plataforma, navegar por las pantallas disponibles y confirmar que cada sprint funciona segÃƒÂºn lo construido y aprobado.

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Company;
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +19,10 @@ return new class extends Migration
             $table->date('effective_to')->nullable();
             $table->string('status')->default('active');
             $table->text('source_reference')->nullable();
+            $table->text('reason')->nullable();
+            $table->foreignIdFor(User::class, 'created_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
+            $table->foreignIdFor(User::class, 'updated_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
+            $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index(['company_id', 'code', 'status'], 'legal_parameters_company_code_status_idx');

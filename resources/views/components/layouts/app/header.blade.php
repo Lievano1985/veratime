@@ -1,3 +1,4 @@
+@php($homeRouteName = \App\Support\WebHomeRoute::forUser(auth()->user(), app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get()))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
@@ -7,12 +8,16 @@
         <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
-            <a href="{{ route('dashboard') }}" class="ml-2 mr-5 flex items-center space-x-2 lg:ml-0" wire:navigate>
+            <a href="{{ route($homeRouteName) }}" class="ml-2 mr-5 flex items-center space-x-2 lg:ml-0" wire:navigate>
                 <x-app-logo class="size-8" href="#"></x-app-logo>
             </a>
 
             <flux:navbar class="-mb-px max-lg:hidden">
-                <flux:navbar.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
+                @if ($homeRouteName === 'personal.dashboard')
+                    <flux:navbar.item icon="home" href="{{ route('personal.dashboard') }}" :current="request()->routeIs('personal.dashboard')" wire:navigate>Mi resumen</flux:navbar.item>
+                    <flux:navbar.item icon="clock" href="{{ route('personal.my-day') }}" :current="request()->routeIs('personal.my-day')" wire:navigate>Mi jornada</flux:navbar.item>
+                @else
+                <flux:navbar.item icon="layout-grid" href="{{ route($homeRouteName) }}" :current="request()->routeIs($homeRouteName)" wire:navigate>
                     Inicio
                 </flux:navbar.item>
 
@@ -31,6 +36,7 @@
                 <flux:navbar.item icon="calendar-days" href="{{ route('schedules.index') }}" :current="request()->routeIs('schedules.*')" wire:navigate>
                     Horarios
                 </flux:navbar.item>
+                @endif
             </flux:navbar>
 
             <flux:spacer />
@@ -112,13 +118,17 @@
         <flux:sidebar stashable sticky class="lg:hidden border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="mb-2 flex w-full justify-center" wire:navigate>
+            <a href="{{ route($homeRouteName) }}" class="mb-2 flex w-full justify-center" wire:navigate>
                 <x-app-logo class="size-8" href="#"></x-app-logo>
             </a>
 
             <flux:navlist variant="outline">
+                @if ($homeRouteName === 'personal.dashboard')
+                    <flux:navlist.item icon="home" href="{{ route('personal.dashboard') }}" :current="request()->routeIs('personal.dashboard')" wire:navigate>Mi resumen</flux:navlist.item>
+                    <flux:navlist.item icon="clock" href="{{ route('personal.my-day') }}" :current="request()->routeIs('personal.my-day')" wire:navigate>Mi jornada</flux:navlist.item>
+                @else
                 <flux:navlist.group heading="Plataforma">
-                    <flux:navlist.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
+                    <flux:navlist.item icon="layout-grid" href="{{ route($homeRouteName) }}" :current="request()->routeIs($homeRouteName)" wire:navigate>
                         Inicio
                     </flux:navlist.item>
                     <flux:navlist.item icon="building-office" href="{{ route('companies.index') }}" :current="request()->routeIs('companies.*')" wire:navigate>
@@ -134,6 +144,7 @@
                         Horarios
                     </flux:navlist.item>
                 </flux:navlist.group>
+                @endif
             </flux:navlist>
 
             <flux:spacer />

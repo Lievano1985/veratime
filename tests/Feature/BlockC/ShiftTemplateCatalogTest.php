@@ -320,14 +320,31 @@ class ShiftTemplateCatalogTest extends TestCase
 
         Volt::test('scheduling.shifts')
             ->call('openCreatePanel')
-            ->assertSeeHtml('wire:model.live.debounce.250ms="segments.0.start_local_time"')
-            ->assertSeeHtml('wire:model.live.debounce.250ms="segments.0.end_local_time"')
+            ->assertSeeHtml('wire:model.blur="segments.0.start_local_time"')
+            ->assertSeeHtml('wire:model.blur="segments.0.end_local_time"')
             ->assertSeeHtml('wire:model.live="segments.0.end_day_offset"')
             ->set('segments.0.start_local_time', '08:00')
             ->set('segments.0.end_local_time', '17:00')
             ->assertSee('08:00')
             ->assertSee('17:00')
             ->assertSee('Trabajo programado bruto: 9 h');
+    }
+
+    public function test_segment_identity_and_hours_follow_the_segment_when_reordered(): void
+    {
+        $company = Company::factory()->create(['status' => 'active']);
+        $admin = $this->userWithCompanyRole($company, RoleKey::ADMIN_EMPRESA);
+        $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
+        $component = Volt::test('scheduling.shifts')->call('openCreatePanel')
+            ->call('addSegment')->set('segments.1.start_local_time', '13:30')
+            ->set('segments.1.end_local_time', '15:30');
+        $key = $component->get('segments')[1]['_key'];
+        $component->call('moveSegment', 1, 'up')
+            ->assertSet('segments.0._key', $key)
+            ->assertSet('segments.0.start_local_time', '13:30')
+            ->assertSeeHtml('wire:key="shift-segment-'.$key.'"')
+            ->call('removeSegment', 1)
+            ->assertSet('segments.0.start_local_time', '13:30');
     }
 
     public function test_shift_templates_ui_blocks_guest_without_company_and_foreign_tenant(): void

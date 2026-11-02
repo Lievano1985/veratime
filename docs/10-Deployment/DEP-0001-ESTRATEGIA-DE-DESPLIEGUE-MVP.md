@@ -22,6 +22,8 @@ tags:
 
 # DEP-0001 — Estrategia de despliegue del MVP
 
+> Base de instalación actualizada el 01/11/2026: consultar [DEP-0002](DEP-0002-BASE-CONSOLIDADA-2026-11-01.md) antes de desplegar. Las migraciones se consolidaron para una instalación nueva o recreación de bases de prueba; no constituyen una actualización incremental del historial anterior.
+
 ## 1. Objetivo
 
 Definir la estrategia de despliegue del MVP de Vera Time considerando la infraestructura disponible actualmente:

@@ -15,9 +15,9 @@ use App\Models\User;
 use App\Support\RoleKey;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Database\Seeders\VeraTimeDailyScheduleScenarioSeeder;
-use Database\Seeders\VeraTimePublishedScheduleScenarioSeeder;
-use Database\Seeders\VeraTimeScheduleProfileScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimeDailyScheduleScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimePublishedScheduleScenarioSeeder;
+use Tests\Fixtures\Seeders\VeraTimeScheduleProfileScenarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
@@ -43,7 +43,7 @@ class DailyScheduleCalendarUiTest extends TestCase
             ]);
         }
         $this->actingAs($rh)->withSession(['current_company_id' => $company->id]);
-        Volt::test('scheduling.daily')->call('selectBatch', $batch->id)->assertSee('07:00-16:00');
+        Volt::test('scheduling.daily')->call('selectBatch', $batch->id)->assertSee('07:00–16:00');
     }
 
     public function test_managers_can_open_daily_scheduling_and_sidebar_entry_is_visible(): void
@@ -853,6 +853,8 @@ class DailyScheduleCalendarUiTest extends TestCase
     private function companyAndUser(string $taxId, string $email): array
     {
         $company = Company::query()->where('tax_id', $taxId)->firstOrFail();
+        $setting = $company->setting()->firstOrCreate([], Company::defaultSettings());
+        $setting->update(['metadata' => array_replace($setting->metadata ?? [], ['scheduling_interface' => 'classic'])]);
         $user = User::query()->where('email', $email)->firstOrFail();
 
         return [$company, $user];

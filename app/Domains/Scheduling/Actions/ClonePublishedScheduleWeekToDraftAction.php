@@ -15,22 +15,20 @@ use InvalidArgumentException;
 
 class ClonePublishedScheduleWeekToDraftAction
 {
-    public function __construct(private ValidateScheduleBatchAction $batchValidator)
-    {
-    }
+    public function __construct(private ValidateScheduleBatchAction $batchValidator) {}
 
     /**
      * @return array{batch: ScheduleBatch, assignments: int, segments: int, skipped: int}
      */
-    public function handle(User $actor, Company $company, ScheduleBatch $published, string $targetDate): array
+    public function handle(User $actor, Company $company, ScheduleBatch $published, string $targetDate, bool $allowCorrectedSource = false): array
     {
-        return DB::transaction(function () use ($actor, $company, $published, $targetDate): array {
+        return DB::transaction(function () use ($actor, $company, $published, $targetDate, $allowCorrectedSource): array {
             $published = ScheduleBatch::query()
                 ->with(['center', 'dailyAssignments.segments', 'dailyAssignments.employmentRelationship.worker'])
                 ->lockForUpdate()
                 ->findOrFail($published->id);
 
-            $this->authorize($actor, $company, $published);
+            $this->authorize($actor, $company, $published, $allowCorrectedSource);
             [$targetStart, $targetEnd] = $this->batchValidator->naturalWeekForDate($targetDate);
             $this->ensureTargetIsAvailable($company, $published, $targetStart, $targetEnd);
 
@@ -63,6 +61,7 @@ class ClonePublishedScheduleWeekToDraftAction
                     || ! $relationship->isEffectiveOn($targetWorkDate)
                     || $relationship->worker?->status !== 'active') {
                     $skipped++;
+
                     continue;
                 }
 
@@ -88,7 +87,7 @@ class ClonePublishedScheduleWeekToDraftAction
         });
     }
 
-    private function authorize(User $actor, Company $company, ScheduleBatch $published): void
+    private function authorize(User $actor, Company $company, ScheduleBatch $published, bool $allowCorrectedSource): void
     {
         if ($company->status !== 'active'
             || $actor->status !== 'active'
@@ -96,7 +95,7 @@ class ClonePublishedScheduleWeekToDraftAction
             || $published->center?->company_id !== $company->id
             || $published->center?->status !== 'active'
             || $published->status !== 'published'
-            || $published->previous_batch_id !== null
+            || (! $allowCorrectedSource && $published->previous_batch_id !== null)
             || ! $actor->belongsToCompany($company)
             || ! in_array($actor->roleKeyForCompany($company), RoleKey::companyManagers(), true)) {
             throw new InvalidArgumentException('Solo se puede clonar una semana publicada vigente de la empresa activa.');

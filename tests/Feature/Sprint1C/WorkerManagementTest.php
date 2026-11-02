@@ -78,6 +78,7 @@ it('user can create worker in active company', function (): void {
     Volt::test('workers.index')
         ->set('form.employee_code', 'EMP-001')
         ->set('form.full_name', 'Maria Lopez')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -87,7 +88,7 @@ it('user can create worker in active company', function (): void {
         'company_id' => $company->id,
         'employee_code' => 'EMP-001',
         'full_name' => 'Maria Lopez',
-        'email' => null,
+        'email' => 'worker@example.test',
         'status' => 'active',
         'source' => 'web',
     ]);
@@ -119,6 +120,7 @@ it('user cannot create duplicate employee code within same company', function ()
     Volt::test('workers.index')
         ->set('form.employee_code', 'EMP-DUP')
         ->set('form.full_name', 'Duplicado')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -141,6 +143,7 @@ it('employee code can repeat in another company', function (): void {
     Volt::test('workers.index')
         ->set('form.employee_code', 'SHARED')
         ->set('form.full_name', 'Trabajador propio')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -605,6 +608,7 @@ it('employment relationship is created with center from same company', function 
     Volt::test('workers.index')
         ->set('form.employee_code', 'REL-001')
         ->set('form.full_name', 'Relacion Valida')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -631,6 +635,7 @@ it('blocks employment relationship with center from another company', function (
     Volt::test('workers.index')
         ->set('form.employee_code', 'REL-FOREIGN')
         ->set('form.full_name', 'Centro Ajeno')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $foreignCenter->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -717,6 +722,7 @@ it('manipulated company id does not create worker in another company', function 
         ->set('form.company_id', $otherCompany->id)
         ->set('form.employee_code', 'SAFE-W')
         ->set('form.full_name', 'Trabajador Seguro')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -756,6 +762,7 @@ it('manipulated company id does not move existing worker to another company', fu
         ->set('form.company_id', $otherCompany->id)
         ->set('form.employee_code', 'OWN-W2')
         ->set('form.full_name', 'Trabajador propio')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', $relationship->started_at->toDateString())
         ->set('form.status', 'active')
@@ -783,6 +790,7 @@ it('worker creation flow does not create labor conditions or worker credentials 
     Volt::test('workers.index')
         ->set('form.employee_code', 'NO-1D')
         ->set('form.full_name', 'Sin Sprint 1D automatico')
+        ->set('form.email', 'worker@example.test')
         ->set('form.center_id', (string) $center->id)
         ->set('form.started_at', '2026-07-01')
         ->set('form.status', 'active')
@@ -809,7 +817,7 @@ function workerUserWithCompany(Company $company, string $roleKey = RoleKey::ADMI
 
 it('worker actions normalize an empty birth date and preserve valid dates', function (): void {
     $company = Company::factory()->create();
-    $data = ['employee_code' => 'EMPTY-DATE', 'full_name' => 'Fecha opcional', 'birth_date' => '', 'status' => 'active'];
+    $data = ['email' => 'date@example.test', 'employee_code' => 'EMPTY-DATE', 'full_name' => 'Fecha opcional', 'birth_date' => '', 'status' => 'active'];
     $worker = app(CreateWorkerAction::class)->handle($company, $data);
     expect($worker->fresh()->getRawOriginal('birth_date'))->toBeNull();
     $worker->update(['birth_date' => '1990-01-01']);

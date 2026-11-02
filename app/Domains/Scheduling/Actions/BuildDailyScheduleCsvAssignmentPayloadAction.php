@@ -16,11 +16,10 @@ class BuildDailyScheduleCsvAssignmentPayloadAction
         private BuildDailyScheduleSegmentsFromShiftTemplateAction $segmentsFromTemplate,
         private BuildDailyScheduleCsvPreviewFingerprintAction $fingerprints,
         private ValidateDailyScheduleAssignmentAction $assignmentValidator,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, string> $row
+     * @param  array<string, string>  $row
      * @return array{normalized: array<string, mixed>, warnings: list<string>, existing_assignment: DailyScheduleAssignment|null}
      */
     public function handle(ImportBatch $importBatch, ScheduleBatch $batch, EmploymentRelationship $relationship, array $row): array
@@ -51,6 +50,7 @@ class BuildDailyScheduleCsvAssignmentPayloadAction
             'source_reference' => [
                 'schema_version' => 1,
                 'source' => 'daily_schedule_csv',
+                'source_format' => $importBatch->metadata['source_format'] ?? 'csv',
                 'import_batch_id' => $importBatch->id,
                 'row_number' => null,
                 'file_sha256' => $importBatch->file_sha256,

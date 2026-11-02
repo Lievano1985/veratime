@@ -39,7 +39,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $home = \App\Support\WebHomeRoute::forUser(Auth::user());
+        if ($home === 'personal.dashboard') {
+            session()->forget('url.intended');
+            $this->redirect(route($home, absolute: false), navigate: true);
+
+            return;
+        }
+        $this->redirectIntended(default: route($home, absolute: false), navigate: true);
     }
 
     /**

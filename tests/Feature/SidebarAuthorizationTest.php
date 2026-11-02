@@ -19,7 +19,7 @@ it('does not show company catalog links that a worker cannot access', function (
     $this->actingAs($user)
         ->withSession(['current_company_id' => $company->id])
         ->get(route('dashboard'))
-        ->assertForbidden();
+        ->assertRedirect(route('personal.dashboard'));
 
     $this->get(route('settings.profile'))
         ->assertOk()

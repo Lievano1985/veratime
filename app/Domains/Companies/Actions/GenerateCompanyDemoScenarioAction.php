@@ -32,6 +32,7 @@ use App\Models\Worker;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class GenerateCompanyDemoScenarioAction
@@ -383,6 +384,7 @@ class GenerateCompanyDemoScenarioAction
             $worker = $this->createWorker->handle($company, [
                 'employee_code' => $code,
                 'full_name' => $name,
+                'email' => strtolower($code).'.'.Str::uuid().'@example.test',
                 'status' => 'active',
                 'source' => 'job',
                 'external_id' => 'demo:'.$code,

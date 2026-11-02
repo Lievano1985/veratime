@@ -44,4 +44,9 @@ class CompanyPolicy
     {
         return $user->isSuperAdmin();
     }
+
+    public function configureSchedulingInterface(User $user, Company $company): bool
+    {
+        return $user->isSuperAdmin() && $company->status === 'active' && $user->belongsToCompany($company);
+    }
 }

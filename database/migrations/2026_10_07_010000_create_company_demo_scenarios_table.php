@@ -13,6 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('company_id');
             $table->unsignedBigInteger('requested_by_user_id')->nullable();
             $table->string('status', 30)->default('pending');
+            $table->string('scenario_type')->default('operational');
             $table->date('period_start')->nullable();
             $table->date('period_end')->nullable();
             $table->json('summary')->nullable();

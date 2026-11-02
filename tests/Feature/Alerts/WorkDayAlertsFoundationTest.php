@@ -422,11 +422,15 @@ class WorkDayAlertsFoundationTest extends TestCase
         [$otherCompany, $otherWorkDay] = $this->calculatedWorkDay(['overtime_minutes' => 60]);
         app(EvaluateWorkDayAlertsAction::class)->handle($company, $workDay);
         app(EvaluateWorkDayAlertsAction::class)->handle($otherCompany, $otherWorkDay);
+        // Monday evening locally is already Tuesday in UTC; keep the local date filter inclusive.
+        Alert::query()->whereIn('company_id', [$company->id, $otherCompany->id])->update(['detected_at' => '2026-08-04 02:30:00']);
         $user = $this->userForCompany($company, RoleKey::ADMIN_EMPRESA);
 
         $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('alerts.index')
+            ->set('dateFrom', $workDay->work_date->toDateString())
+            ->set('dateTo', $workDay->work_date->toDateString())
             ->assertSee('Alertas')
             ->assertSee('Tiempo extra detectado');
 

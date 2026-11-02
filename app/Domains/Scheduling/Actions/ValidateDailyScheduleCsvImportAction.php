@@ -17,8 +17,7 @@ class ValidateDailyScheduleCsvImportAction
         private ParseDailyScheduleCsvAction $parser,
         private ResolveDailyScheduleCsvRowAction $rowResolver,
         private BuildDailyScheduleCsvPreviewFingerprintAction $fingerprints,
-    ) {
-    }
+    ) {}
 
     public function handle(User $actor, ImportBatch $importBatch): DailyScheduleCsvValidationResult
     {
@@ -30,7 +29,7 @@ class ValidateDailyScheduleCsvImportAction
         }
 
         $this->assertFileStillMatches($importBatch);
-        $parsed = $this->parser->handle((string) $importBatch->storage_disk, (string) $importBatch->storage_path);
+        $parsed = $this->parser->handle((string) $importBatch->storage_disk, (string) $importBatch->storage_path, $importBatch->scheduleBatch);
 
         return DB::transaction(function () use ($actor, $importBatch, $parsed): DailyScheduleCsvValidationResult {
             $lockedImport = ImportBatch::query()->lockForUpdate()->findOrFail($importBatch->id);

@@ -27,7 +27,7 @@ class CreateDailyScheduleCsvImportAction
         $disk = (string) ($data['storage_disk'] ?? 'local');
         $path = trim((string) ($data['storage_path'] ?? ''));
         $filename = trim((string) ($data['original_filename'] ?? basename($path)));
-        $reason = trim(preg_replace('/\s+/', ' ', (string) ($data['reason'] ?? 'Carga CSV desde programacion diaria.')) ?? '');
+        $reason = trim(preg_replace('/\s+/', ' ', (string) ($data['reason'] ?? 'Carga de horarios desde archivo.')) ?? '');
         $policy = (string) ($data['existing_assignment_policy'] ?? 'replace_existing');
         $idempotencyKey = blank($data['idempotency_key'] ?? null) ? null : trim((string) $data['idempotency_key']);
 
@@ -35,8 +35,8 @@ class CreateDailyScheduleCsvImportAction
             throw new InvalidArgumentException('El archivo CSV privado no existe.');
         }
 
-        if (! str_ends_with(mb_strtolower($filename), '.csv')) {
-            throw new InvalidArgumentException('El archivo debe tener extension .csv.');
+        if (! in_array(mb_strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['csv', 'xlsx'], true)) {
+            throw new InvalidArgumentException('El archivo debe ser Excel .xlsx o CSV .csv.');
         }
 
         if (! in_array($policy, ['preserve_existing', 'replace_existing'], true)) {
@@ -87,7 +87,7 @@ class CreateDailyScheduleCsvImportAction
                 'header_schema_version' => 1,
                 'idempotency_key' => $idempotencyKey,
                 'reason' => $reason,
-                'metadata' => ['created_from' => 'domain_action'],
+                'metadata' => ['created_from' => 'domain_action', 'source_format' => mb_strtolower(pathinfo($filename, PATHINFO_EXTENSION))],
             ]);
             $import->company()->associate($company);
             $import->creator()->associate($actor);

@@ -25,13 +25,23 @@ return new class extends Migration
             $table->foreignIdFor(User::class, 'created_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
             $table->foreignIdFor(User::class, 'cancelled_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
             $table->timestamp('cancelled_at')->nullable();
+            $table->foreignIdFor(User::class, 'validated_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
+            $table->timestamp('validated_at')->nullable();
+            $table->foreignIdFor(User::class, 'closed_by')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
+            $table->timestamp('closed_at')->nullable();
             $table->text('cancellation_reason')->nullable();
+            $table->json('validation_summary')->nullable();
+            $table->json('report_summary')->nullable();
+            $table->string('snapshot_schema_version')->nullable();
+            $table->longText('snapshot_canonical_json')->nullable();
+            $table->char('snapshot_sha256', 64)->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index(['company_id', 'center_id', 'period_start', 'period_end'], 'attendance_periods_company_center_dates_idx');
             $table->index(['company_id', 'status', 'period_start'], 'attendance_periods_company_status_start_idx');
             $table->index(['company_id', 'scope_type'], 'attendance_periods_company_scope_idx');
+            $table->index(['company_id', 'closed_at'], 'attendance_periods_company_closed_at_idx');
         });
     }
 

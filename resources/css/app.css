@@ -127,6 +127,14 @@ select:focus[data-flux-control] {
 }
 
 @layer components {
+    .worker-workbook-file::file-selector-button {
+        @apply mr-4 cursor-pointer rounded-[10px] border-0 bg-brand-blue px-4 py-2.5 text-[13px] font-semibold text-white;
+    }
+
+    .worker-workbook-file:focus-visible {
+        @apply rounded-lg outline-2 outline-offset-4 outline-brand-blue;
+    }
+
     .btn {
         @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border-[1.5px] border-surface-line bg-white px-3.5 py-2.5 text-[13px] font-semibold text-brand-navy transition hover:border-brand-blue hover:bg-surface-bg hover:text-brand-blue;
     }
@@ -611,3 +619,19 @@ select:focus[data-flux-control] {
 .vt-panel-number::before { content: counter(panel-section, decimal-leading-zero); }
 .vt-panel-card { border: 1px solid var(--color-surface-line); border-radius: 1rem; background: var(--color-surface-card); padding: 1.25rem; }
 .dark .vt-panel-card { border-color: var(--color-zinc-700); background: var(--color-zinc-900); }
+
+/* Match the original scheduling grid without inheriting generic table spacing. */
+.vt-planner-calendar > table { min-width: 1280px; }
+.vt-planner-calendar > table thead {
+    text-transform: none;
+    background: var(--color-surface-bg);
+    color: var(--color-brand-navy);
+}
+.vt-planner-calendar > table th {
+    white-space: normal;
+    padding: 0.75rem 0.875rem;
+    font-weight: inherit;
+}
+.vt-planner-calendar > table thead th { font-weight: 700; }
+.vt-planner-calendar > table tbody th { padding: 0.875rem; vertical-align: middle; }
+.vt-planner-calendar > table td { padding: 0.5rem; vertical-align: top; }

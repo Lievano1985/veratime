@@ -13,11 +13,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('company_settings', function (Blueprint $table): void {
-            $table->string('kiosk_enrollment_identifier', 32)->nullable()->unique()->after('require_pin_for_kiosk');
-            $table->string('kiosk_enrollment_key_hash')->nullable()->after('kiosk_enrollment_identifier');
-        });
-
         Schema::create('kiosk_terminal_access_requests', function (Blueprint $table): void {
             $table->id();
             $table->foreignIdFor(Company::class)->constrained()->cascadeOnDelete();
@@ -55,9 +50,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('kiosk_terminal_access_requests');
 
-        Schema::table('company_settings', function (Blueprint $table): void {
-            $table->dropUnique('company_settings_kiosk_enrollment_identifier_unique');
-            $table->dropColumn(['kiosk_enrollment_identifier', 'kiosk_enrollment_key_hash']);
-        });
     }
 };

@@ -82,7 +82,10 @@ class WorkerController extends Controller
 
         return response()->json([
             'data' => (new WorkerResource($worker))->resolve(),
-            'meta' => ['trace_id' => $request->attributes->get('api.trace_id')],
+            'meta' => [
+                'trace_id' => $request->attributes->get('api.trace_id'),
+                'account_login' => $worker->userLinks()->with('user')->firstOrFail()->user->email,
+            ],
         ], 201);
     }
 

@@ -24,8 +24,8 @@ class StoreDailyScheduleCsvUploadAction
         }
 
         $extension = mb_strtolower((string) $file->getClientOriginalExtension());
-        if ($extension !== 'csv') {
-            throw new InvalidArgumentException('El archivo debe tener extension .csv.');
+        if (! in_array($extension, ['csv', 'xlsx'], true)) {
+            throw new InvalidArgumentException('El archivo debe ser Excel .xlsx o CSV .csv.');
         }
 
         $maxSize = (int) config('imports.daily_schedule_csv.max_file_size_bytes', 10485760);
@@ -35,10 +35,11 @@ class StoreDailyScheduleCsvUploadAction
 
         $disk = 'local';
         $path = sprintf(
-            'imports/%d/daily-schedules/%s/%s.csv',
+            'imports/%d/daily-schedules/%s/%s.%s',
             $company->id,
             (string) Str::uuid(),
             Str::random(40),
+            $extension,
         );
 
         $stream = fopen($file->getRealPath(), 'rb');

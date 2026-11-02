@@ -39,20 +39,19 @@ class RoleSeederTest extends TestCase
         }
     }
 
-    public function test_database_seeder_creates_global_super_admin_user(): void
+    public function test_database_seeder_preserves_explicit_super_admin_without_creating_demo_companies(): void
     {
+        $superAdmin = User::factory()->create(['global_role' => RoleKey::SUPER_ADMIN, 'status' => 'active']);
+        $passwordHash = $superAdmin->password;
         $this->seed(DatabaseSeeder::class);
-
-        $superAdmin = User::query()
-            ->where('email', 'superadmin@veratime.local')
-            ->firstOrFail();
-
         $company = $superAdmin->defaultCompany();
 
         $this->assertTrue($superAdmin->isSuperAdmin());
         $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->global_role);
-        $this->assertNotNull($company);
-        $this->assertSame(RoleKey::SUPER_ADMIN, $superAdmin->roleKeyForCompany($company));
+        $this->assertNull($company);
+        $this->assertSame($passwordHash, $superAdmin->fresh()->password);
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('companies', 0);
         $this->assertDatabaseMissing('company_user', [
             'user_id' => $superAdmin->id,
         ]);

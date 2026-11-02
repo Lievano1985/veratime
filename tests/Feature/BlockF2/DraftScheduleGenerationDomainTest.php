@@ -301,8 +301,8 @@ class DraftScheduleGenerationDomainTest extends TestCase
 
     public function test_daily_schedule_scenario_seeder_is_idempotent_and_creates_only_draft_generation_scenarios(): void
     {
-        Artisan::call('db:seed', ['--class' => 'VeraTimeDailyScheduleScenarioSeeder']);
-        Artisan::call('db:seed', ['--class' => 'VeraTimeDailyScheduleScenarioSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeDailyScheduleScenarioSeeder::class]);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeDailyScheduleScenarioSeeder::class]);
 
         $companies = Company::query()->whereIn('tax_id', ['VTSP-OFFICE', 'VTSP-CYCLE', 'VTSP-FLEX', 'VTSP-ONCALL', 'VTSP-STORE', 'VTSP-NOPROFILE'])->get();
 

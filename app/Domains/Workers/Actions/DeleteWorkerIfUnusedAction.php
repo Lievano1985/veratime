@@ -3,6 +3,7 @@
 namespace App\Domains\Workers\Actions;
 
 use App\Models\Worker;
+use App\Support\RoleKey;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -18,6 +19,7 @@ class DeleteWorkerIfUnusedAction
 
             if ($lockedWorker->timeEvents()->exists()
                 || $lockedWorker->scheduleAssignments()->exists()
+                || $lockedWorker->mobileDeviceBindings()->exists()
                 || $lockedWorker->employmentRelationships()->whereHas('timeEvents')->exists()
                 || $lockedWorker->employmentRelationships()->whereHas('scheduleAssignments')->exists()
                 || $lockedWorker->employmentRelationships()->whereHas('employmentUnitAssignments')->exists()
@@ -27,6 +29,13 @@ class DeleteWorkerIfUnusedAction
             }
 
             $lockedWorker->credential()->delete();
+            // Keep login identities, but remove the personal access link before deleting an unused worker.
+            foreach ($lockedWorker->userLinks()->with('user')->get() as $link) {
+                if ($link->user?->roleKeyForCompany($lockedWorker->company) === RoleKey::TRABAJADOR) {
+                    $link->user->companies()->updateExistingPivot($lockedWorker->company_id, ['status' => 'inactive']);
+                }
+            }
+            $lockedWorker->userLinks()->delete();
             $lockedWorker->employmentRelationships()->delete();
             $lockedWorker->delete();
         });

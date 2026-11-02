@@ -16,7 +16,7 @@ class EnsureCustomerAccountHasProductAction
     ): CustomerAccountProduct {
         $product = $this->resolveProduct($productKey);
 
-        return CustomerAccountProduct::query()->updateOrCreate(
+        return CustomerAccountProduct::query()->firstOrCreate(
             [
                 'customer_account_id' => $customerAccount->id,
                 'product_id' => $product->id,

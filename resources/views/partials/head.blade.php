@@ -17,6 +17,7 @@
         'organization.scopes' => 'Responsables y supervisores',
         'organization.my-scope' => 'Mi alcance',
         'scheduling.shifts' => 'Catalogo de turnos',
+        'scheduling.planner' => 'Planificador de horarios',
         'scheduling.profiles' => 'Modelos de horario',
         'scheduling.profile-assignments' => 'Aplicacion de modelos',
         'scheduling.daily' => 'Programacion semanal',

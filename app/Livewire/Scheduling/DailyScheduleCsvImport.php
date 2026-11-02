@@ -8,6 +8,7 @@ use App\Domains\Scheduling\Actions\StoreDailyScheduleCsvUploadAction;
 use App\Domains\Scheduling\Actions\ValidateDailyScheduleCsvImportAction;
 use App\Domains\Scheduling\Exceptions\DailyScheduleCsvImportStateException;
 use App\Domains\Scheduling\Exceptions\DailyScheduleCsvStalePreviewException;
+use App\Domains\Scheduling\Exceptions\InvalidDailyScheduleCsvException;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\ImportBatch;
 use App\Models\ScheduleBatch;
@@ -74,11 +75,11 @@ class DailyScheduleCsvImport extends Component
             'file' => ['required', 'file', 'max:10240'],
             'existingAssignmentPolicy' => ['required', 'in:preserve_existing,replace_existing'],
         ], [
-            'file.required' => 'Selecciona un archivo CSV.',
+            'file.required' => 'Selecciona un archivo Excel .xlsx o CSV.',
         ]);
 
-        if (! $this->file instanceof TemporaryUploadedFile || mb_strtolower($this->file->getClientOriginalExtension()) !== 'csv') {
-            throw ValidationException::withMessages(['file' => 'El archivo debe tener extension .csv.']);
+        if (! $this->file instanceof TemporaryUploadedFile || ! in_array(mb_strtolower($this->file->getClientOriginalExtension()), ['csv', 'xlsx'], true)) {
+            throw ValidationException::withMessages(['file' => 'Elige la plantilla Excel .xlsx o un archivo CSV .csv.']);
         }
 
         $stored = null;
@@ -98,6 +99,11 @@ class DailyScheduleCsvImport extends Component
             $this->confirmApply = false;
             $this->resetPage('csvWorkersPage');
             session()->flash('csvImportMessage', 'Archivo validado. Revisa la vista previa antes de aplicar.');
+        } catch (InvalidDailyScheduleCsvException|\InvalidArgumentException $exception) {
+            if ($stored !== null && ! isset($result)) {
+                $storeUpload->deleteStoredFile($stored['disk'], $stored['path']);
+            }
+            throw ValidationException::withMessages(['file' => $exception->getMessage()]);
         } catch (Throwable $exception) {
             if ($stored !== null && ! isset($result)) {
                 $storeUpload->deleteStoredFile($stored['disk'], $stored['path']);
@@ -126,6 +132,8 @@ class DailyScheduleCsvImport extends Component
         if (! $this->confirmApply) {
             throw ValidationException::withMessages(['confirmApply' => 'Confirma que revisaste la vista previa antes de aplicar.']);
         }
+
+        $this->resetValidation(['confirmApply', 'csvImport']);
 
         try {
             $result = $applyImport->handle(auth()->user(), $import, $import->validation_sha256);
@@ -162,6 +170,11 @@ class DailyScheduleCsvImport extends Component
             'summary' => $activeImport ? $this->summaryFor($activeImport) : [],
             'canUpdate' => Gate::allows('update', $batch),
             'templateUrl' => route('scheduling.daily.csv.template', array_filter([
+                'schedule_batch_id' => $batch->id,
+                'worker_search' => $this->workerSearch,
+                'organizational_unit_id' => $this->organizationalUnitId,
+            ], fn ($value): bool => filled($value))),
+            'excelTemplateUrl' => route('scheduling.daily.xlsx.template', array_filter([
                 'schedule_batch_id' => $batch->id,
                 'worker_search' => $this->workerSearch,
                 'organizational_unit_id' => $this->organizationalUnitId,
@@ -315,7 +328,7 @@ class DailyScheduleCsvImport extends Component
     private function previewFor(ImportBatch $import): array
     {
         $rows = $import->rows()
-            ->with(['employmentRelationship.worker', 'existingDailyScheduleAssignment'])
+            ->with(['employmentRelationship.worker', 'existingDailyScheduleAssignment.shiftTemplate'])
             ->orderBy('row_number')
             ->get();
 
@@ -352,6 +365,9 @@ class DailyScheduleCsvImport extends Component
                 'day_type' => $this->dayTypeLabel($row->normalized_data['assignment']['day_type'] ?? null),
                 'shift_code' => $row->raw_data['codigo_turno'] ?? null,
                 'action' => $this->rowActionLabel($row),
+                'before' => $row->existingDailyScheduleAssignment
+                    ? ($row->existingDailyScheduleAssignment->shiftTemplate?->code ?: $this->dayTypeLabel($row->existingDailyScheduleAssignment->day_type))
+                    : 'Sin horario',
                 'variant' => $this->rowBadgeVariant($row),
                 'messages' => $this->rowMessages($row),
             ];

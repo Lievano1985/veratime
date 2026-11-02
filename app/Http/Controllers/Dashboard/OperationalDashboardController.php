@@ -5,17 +5,22 @@ namespace App\Http\Controllers\Dashboard;
 use App\Domains\Dashboard\Actions\BuildOperationalDashboardAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\WorkDay;
+use App\Support\WebHomeRoute;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class OperationalDashboardController
 {
-    public function __invoke(Request $request, CurrentCompany $currentCompany, BuildOperationalDashboardAction $dashboard): View
+    public function __invoke(Request $request, CurrentCompany $currentCompany, BuildOperationalDashboardAction $dashboard): View|RedirectResponse
     {
         $company = $currentCompany->get();
         abort_unless($company, 403);
+        if (WebHomeRoute::forUser($request->user(), $company) === 'personal.dashboard') {
+            return redirect()->route('personal.dashboard');
+        }
         Gate::authorize('viewAny', [WorkDay::class, $company]);
         $timezone = $company->setting?->default_timezone ?: $company->timezone;
         $lastClosedWeek = CarbonImmutable::now($timezone)->startOfWeek()->subWeek()->toDateString();

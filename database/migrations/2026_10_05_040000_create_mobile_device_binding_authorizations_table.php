@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('status')->default('pending');
             $table->dateTime('expires_at');
             $table->string('challenge_hash', 64)->nullable();
+            $table->text('challenge_encrypted')->nullable();
+            $table->string('requested_device_name', 120)->nullable();
             $table->dateTime('challenge_issued_at')->nullable();
             $table->dateTime('challenge_expires_at')->nullable();
             $table->dateTime('consumed_at')->nullable();

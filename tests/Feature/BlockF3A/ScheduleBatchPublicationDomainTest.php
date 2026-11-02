@@ -217,10 +217,10 @@ class ScheduleBatchPublicationDomainTest extends TestCase
 
     public function test_published_schedule_scenario_seeder_is_idempotent_and_keeps_invalid_scenarios_draft(): void
     {
-        Artisan::call('db:seed', ['--class' => 'VeraTimePublishedScheduleScenarioSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimePublishedScheduleScenarioSeeder::class]);
         $firstHashes = ScheduleBatch::query()->where('status', 'published')->pluck('snapshot_sha256', 'id')->all();
 
-        Artisan::call('db:seed', ['--class' => 'VeraTimePublishedScheduleScenarioSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimePublishedScheduleScenarioSeeder::class]);
         $secondHashes = ScheduleBatch::query()->where('status', 'published')->pluck('snapshot_sha256', 'id')->all();
 
         $publishableCompanies = Company::query()->whereIn('tax_id', ['VTSP-OFFICE', 'VTSP-CYCLE', 'VTSP-FLEX', 'VTSP-ONCALL'])->pluck('id');
@@ -237,7 +237,7 @@ class ScheduleBatchPublicationDomainTest extends TestCase
 
     private function seedDailyScenarios(): void
     {
-        Artisan::call('db:seed', ['--class' => 'VeraTimeDailyScheduleScenarioSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeDailyScheduleScenarioSeeder::class]);
     }
 
     private function publishScenario(string $taxId, string $email): ScheduleBatch

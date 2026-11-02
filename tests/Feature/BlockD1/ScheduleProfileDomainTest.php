@@ -352,8 +352,8 @@ class ScheduleProfileDomainTest extends TestCase
 
     public function test_demo_seeder_creates_idempotent_profiles_and_four_resolution_levels(): void
     {
-        Artisan::call('db:seed', ['--class' => 'VeraTimeDemoSeeder']);
-        Artisan::call('db:seed', ['--class' => 'VeraTimeDemoSeeder']);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeDemoSeeder::class]);
+        Artisan::call('db:seed', ['--class' => \Tests\Fixtures\Seeders\VeraTimeDemoSeeder::class]);
 
         $company = Company::query()->where('tax_id', 'VTD260712XX1')->firstOrFail();
         $resolver = app(ResolveScheduleProfileForRelationshipAction::class);

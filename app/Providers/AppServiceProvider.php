@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domains\Scheduling\Middleware\EnsureSchedulingInterface;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Alert;
 use App\Models\AttendanceIncident;
@@ -53,6 +54,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -69,6 +71,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Livewire::addPersistentMiddleware([EnsureSchedulingInterface::class]);
         RateLimiter::for('api', function ($request): Limit {
             $token = $request->user()?->currentAccessToken();
             $tokenId = $token && method_exists($token, 'getKey') ? $token->getKey() : $request->ip();

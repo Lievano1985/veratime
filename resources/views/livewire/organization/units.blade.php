@@ -294,6 +294,8 @@ new class extends Component {
         @endif
     </div>
 
+    <x-organization.navigation group="structure" active="units" />
+
     @if (session('status'))
         <div class="rounded-xl border border-status-rest-line bg-status-rest-bg px-4 py-3 text-sm font-medium text-status-rest-text">
             {{ session('status') }}
