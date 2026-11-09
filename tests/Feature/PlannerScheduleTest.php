@@ -409,6 +409,39 @@ class PlannerScheduleTest extends TestCase
         $this->assertSame(14, $company->scheduleBatches()->whereDate('period_start', '2026-11-23')->firstOrFail()->dailyAssignments()->count());
     }
 
+    public function test_a_worker_hired_after_publication_can_be_added_from_the_correction(): void
+    {
+        [$company, $center, $user, $people, $turn, $batch] = $this->scenario();
+        app(ApplyPlannerScheduleAction::class)->handle($user, $company, $batch, $this->input($people, $turn, 'manual'));
+        $ui = Livewire::withQueryParams(['centerId' => (string) $center->id, 'week' => '2026-11-02'])->test(Planner::class);
+        $ui->call('reviewWeek')->call('publish')->assertHasNoErrors();
+        $hash = $batch->fresh()->snapshot_sha256;
+
+        $newWorker = Worker::factory()->for($company)->create(['full_name' => 'Persona de nuevo ingreso']);
+        $relationship = EmploymentRelationship::factory()->for($company)->for($center)->for($newWorker)->create([
+            'started_at' => '2026-11-04',
+            'status' => 'active',
+        ]);
+
+        $ui->set('correctionReason', 'Alta de personal')->call('createCorrection')
+            ->assertSee('Actualizar plantilla')
+            ->set('search', $people[0]->worker->full_name)->call('refreshRoster')->assertHasNoErrors()
+            ->assertSet('search', '')->assertSee($newWorker->full_name)->assertSee('Se agregó 1 trabajador');
+        $correction = $company->scheduleBatches()->findOrFail($ui->get('batchId'));
+        $this->assertSame(5, $correction->dailyAssignments()->where('employment_relationship_id', $relationship->id)->where('day_type', 'unassigned')->count());
+        $ui->call('refreshRoster')->assertSee('La plantilla ya está actualizada');
+        $this->assertSame(19, $correction->dailyAssignments()->count());
+
+        $ui->set('search', $newWorker->full_name)->call('selectVisible');
+        $this->assertSame(array_map(fn ($day) => $relationship->id.'|2026-11-0'.$day, range(4, 8)), $ui->get('cells'));
+
+        $ui->set('brush', (string) $turn->id)->call('applyCells')->call('reviewWeek')->assertSet('review.valid', true)
+            ->call('publish')->assertHasNoErrors();
+        $this->assertSame(5, $correction->dailyAssignments()->where('employment_relationship_id', $relationship->id)->count());
+        $this->assertSame(14, $batch->dailyAssignments()->count());
+        $this->assertSame($hash, $batch->fresh()->snapshot_sha256);
+    }
+
     public function test_direct_publication_requires_review_and_late_joiners_only_get_effective_days(): void
     {
         [$company, $center, $user, $people, $turn, $batch] = $this->scenario();

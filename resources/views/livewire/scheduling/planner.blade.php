@@ -68,6 +68,7 @@
     @else
             @if ($editable)
                 <div class="flex flex-wrap justify-end gap-2">
+                    <button type="button" class="btn-outline" wire:click="refreshRoster" wire:loading.attr="disabled" title="Agregar al borrador los trabajadores vigentes que todavía no están incluidos">Actualizar plantilla</button>
                     @can('create', [\App\Models\ShiftTemplate::class, app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get()])
                         <button type="button" class="btn-outline cursor-pointer" wire:click="openCreateShift">+ Crear turno</button>
                     @endcan

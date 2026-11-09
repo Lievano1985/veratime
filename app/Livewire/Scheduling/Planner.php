@@ -3,6 +3,7 @@
 namespace App\Livewire\Scheduling;
 
 use App\Domains\Organization\Actions\ResolveEmploymentUnitsForDateAction;
+use App\Domains\Scheduling\Actions\AddMissingWorkersToDraftScheduleAction;
 use App\Domains\Scheduling\Actions\ApplyPlannerScheduleAction;
 use App\Domains\Scheduling\Actions\BulkReplaceDraftDailyScheduleAssignmentsAction;
 use App\Domains\Scheduling\Actions\ClonePublishedScheduleWeeksAction;
@@ -292,6 +293,23 @@ class Planner extends Component
                 ->where('company_id', $this->company()->id)->where('organizational_unit_id', $this->unitId)
                 ->where('status', 'active')->whereDate('effective_from', '<=', CarbonImmutable::parse($this->week)->addDays(6)->toDateString())
                 ->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $this->week))));
+    }
+
+    public function refreshRoster(AddMissingWorkersToDraftScheduleAction $action): void
+    {
+        $this->run(function () use ($action): void {
+            $added = $action->handle(auth()->user(), $this->company(), $this->batch());
+            $this->notice = match ($added) {
+                0 => 'La plantilla ya está actualizada para esta semana y centro.',
+                1 => 'Se agregó 1 trabajador al borrador con días pendientes de asignar.',
+                default => "Se agregaron {$added} trabajadores al borrador con días pendientes de asignar.",
+            };
+            if ($added > 0) {
+                $this->search = $this->unitId = '';
+                $this->clearSelection();
+                $this->resetPage();
+            }
+        });
     }
 
     public function selectVisible(): void
