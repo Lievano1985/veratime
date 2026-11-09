@@ -295,7 +295,7 @@ new class extends Component {
                 <tbody class="divide-y divide-zinc-200 [&>tr:nth-child(odd)]:bg-white [&>tr:nth-child(even)]:bg-zinc-50/60 dark:divide-zinc-700 dark:[&>tr:nth-child(odd)]:bg-zinc-900 dark:[&>tr:nth-child(even)]:bg-zinc-800/40">
                     @forelse ($events as $event)
                         <tr>
-                            <td class="px-4 py-3">{{ $event->occurred_local_date?->toDateString() }}</td>
+                            <td class="whitespace-nowrap px-4 py-3">{{ $event->occurred_local_date?->toDateString() }}</td>
                             <td class="px-4 py-3">{{ $event->worker->full_name }}</td>
                             <td class="px-4 py-3">{{ $this->eventLabel($event->event_type) }}</td>
                             <td class="px-4 py-3">{{ $event->occurred_local_time }}</td>

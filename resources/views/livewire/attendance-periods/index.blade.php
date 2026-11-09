@@ -408,7 +408,7 @@ new class extends Component {
                             <div class="text-xs text-zinc-500">{{ $period->name ?: 'Sin nombre adicional' }}</div>
                         </td>
                         <td class="px-4 py-3 text-zinc-700">{{ $this->scopeLabel($period) ?: 'Sin unidades' }}</td>
-                        <td class="px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3">
                             {{ $period->period_start?->format('Y-m-d') }} - {{ $period->period_end?->format('Y-m-d') }}
                         </td>
                         <td class="px-4 py-3">

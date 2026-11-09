@@ -418,7 +418,7 @@ new class extends Component {
                 <tbody>
                     @forelse ($restDays as $restDay)
                         <tr class="table-row">
-                            <td class="table-cell font-mono text-brand-navy">{{ $restDay->date?->toDateString() }}</td>
+                            <td class="whitespace-nowrap table-cell font-mono text-brand-navy">{{ $restDay->date?->toDateString() }}</td>
                             <td class="table-cell font-semibold text-brand-navy">{{ $restDay->name }}</td>
                             <td class="table-cell text-surface-muted">{{ $this->typeLabel($restDay->type) }}</td>
                             <td class="table-cell text-surface-muted">{{ $this->scopeLabel($restDay->scope) }}</td>

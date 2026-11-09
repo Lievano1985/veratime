@@ -160,6 +160,8 @@ class CompanySettingsTest extends TestCase
 
         Volt::test('company-settings.index')
             ->set('activeTab', 'mobile-marking')
+            ->call('openMobileMarkingPolicyForm')
+            ->assertSet('showMobilePolicyForm', true)
             ->set('mobilePolicyForm.mode', 'circle')
             ->set('mobilePolicyForm.requires_device_binding', true)
             ->set('mobilePolicyForm.center_latitude', '17.9971944')
@@ -167,6 +169,7 @@ class CompanySettingsTest extends TestCase
             ->set('mobilePolicyForm.radius_meters', 150)
             ->set('mobilePolicyForm.offline_authorization_duration_minutes', 720)
             ->call('saveMobileMarkingPolicyDraft')
+            ->assertSet('showMobilePolicyForm', false)
             ->assertHasNoErrors()
             ->assertSee('Borrador de política de marcaje móvil guardado.');
 
@@ -243,6 +246,8 @@ class CompanySettingsTest extends TestCase
             ->call('viewMobileMarkingPolicy', $policy->id)
             ->assertSee('Detalle de política v1')
             ->call('createMobileMarkingPolicyDraftVersion', $policy->id)
+            ->assertSet('showMobilePolicyDetails', false)
+            ->assertSet('showMobilePolicyForm', true)
             ->assertSee('Editar borrador')
             ->assertSee('Se creó el borrador v2');
 

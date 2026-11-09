@@ -716,7 +716,7 @@ new class extends Component {
                         </td>
                         <td class="table-cell">{{ $this->scopeLabel($assignment->assignment_scope) }}</td>
                         <td class="table-cell">{{ $this->assignmentTarget($assignment) }}</td>
-                        <td class="table-cell">{{ $this->assignmentPeriodLabel($assignment) }}</td>
+                        <td class="whitespace-nowrap table-cell">{{ $this->assignmentPeriodLabel($assignment) }}</td>
                         <td class="table-cell">
                             <span class="{{ $assignment->status === 'active' ? 'badge-success' : ($assignment->status === 'replaced' ? 'badge-warn' : 'badge-muted') }}"><span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ $assignment->status === 'active' ? 'Vigente' : ($assignment->status === 'inactive' ? 'Finalizada' : 'Reemplazada') }}</span>
                         </td>

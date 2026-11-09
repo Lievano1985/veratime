@@ -1875,7 +1875,7 @@ new class extends Component {
                                     {{ $blockStatus['label'] }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-3 py-2 text-zinc-600 dark:text-zinc-300">
+                            <td class="whitespace-nowrap px-3 py-2 text-zinc-600 dark:text-zinc-300">
                                 @if ($batch->published_at)
                                     {{ $batch->published_at->format('d/m/Y H:i') }}
                                 @else

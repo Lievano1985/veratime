@@ -45,7 +45,7 @@
                     <caption class="mb-3 text-left font-semibold" x-text="selected?.days_caption || 'Jornadas de la semana analizada'"></caption>
                     <thead><tr class="border-b border-zinc-200 dark:border-zinc-700"><th class="p-2">Fecha / centro</th><th class="p-2">Total</th><th class="p-2">Jornada sin extra</th><th class="p-2">Extra total</th></tr></thead>
                     <tbody><template x-for="day in selected.days" :key="day.id"><tr class="border-b border-zinc-100 dark:border-zinc-800">
-                        <td class="p-2"><span x-text="day.date"></span><span class="block text-xs text-zinc-500 dark:text-zinc-400" x-text="day.center"></span><span class="block text-xs text-zinc-500 dark:text-zinc-400" x-text="day.pending ? 'Cálculo pendiente' : 'Evaluado'"></span></td>
+                        <td class="p-2"><span class="whitespace-nowrap" x-text="day.date"></span><span class="block text-xs text-zinc-500 dark:text-zinc-400" x-text="day.center"></span><span class="block text-xs text-zinc-500 dark:text-zinc-400" x-text="day.pending ? 'Cálculo pendiente' : 'Evaluado'"></span></td>
                         <td class="p-2 whitespace-nowrap" x-text="hours(day.total_minutes)"></td><td class="p-2 whitespace-nowrap" x-text="hours(day.ordinary_minutes)"></td><td class="p-2 whitespace-nowrap" x-text="hours(day.overtime_minutes)"></td>
                     </tr></template></tbody>
                 </table></div>

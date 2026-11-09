@@ -47,6 +47,7 @@ new class extends Component {
 
     public ?int $viewingMobilePolicyId = null;
     public bool $showMobilePolicyDetails = false;
+    public bool $showMobilePolicyForm = false;
     public mixed $companyBrandImage = null;
 
     public function mount(CurrentCompany $currentCompany): void
@@ -284,6 +285,9 @@ new class extends Component {
 
     private function loadMobileMarkingPolicyForm(MobileMarkingPolicy $policy): void
     {
+        $this->closeMobileMarkingPolicyDetails();
+        $this->resetValidation('mobilePolicyForm');
+        $this->showMobilePolicyForm = true;
         $this->editingMobilePolicyId = $policy->id;
         $this->mobilePolicyForm = [
             'scope' => $policy->organizational_unit_id ? 'organizational_unit' : ($policy->center_id ? 'center' : 'company'),
@@ -301,8 +305,17 @@ new class extends Component {
         ];
     }
 
+    public function openMobileMarkingPolicyForm(CurrentCompany $currentCompany): void
+    {
+        Gate::authorize('update', $this->currentCompanyOrFail($currentCompany));
+        $this->closeMobileMarkingPolicyDetails();
+        $this->cancelMobileMarkingPolicyEdit();
+        $this->showMobilePolicyForm = true;
+    }
+
     public function cancelMobileMarkingPolicyEdit(): void
     {
+        $this->showMobilePolicyForm = false;
         $this->resetValidation('mobilePolicyForm');
         $this->resetMobilePolicyForm();
     }
@@ -365,7 +378,7 @@ new class extends Component {
             throw ValidationException::withMessages($messages);
         }
 
-        $this->resetMobilePolicyForm();
+        $this->cancelMobileMarkingPolicyEdit();
         Session::flash('status', 'Borrador de política de marcaje móvil guardado. Actívalo cuando estés listo para aplicarlo.');
     }
 
@@ -808,154 +821,150 @@ new class extends Component {
                 <p class="mt-1 text-sm">Sin una política activa, la app conserva el marcaje personal actual. Al activar una política se crea una nueva versión operativa; la anterior queda inactiva y los marcajes previos no cambian.</p>
             </div>
 
-            <form wire:submit="saveMobileMarkingPolicyDraft" class="space-y-5 rounded-lg border border-surface-line bg-surface-bg p-4">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <flux:heading size="lg">{{ $editingMobilePolicyId ? 'Editar borrador' : 'Nuevo borrador' }}</flux:heading>
-                        <flux:subheading>Revisa la configuración y actívala sólo cuando el piloto esté listo.</flux:subheading>
-                    </div>
-                    @if ($editingMobilePolicyId)
-                        <button type="button" wire:click="cancelMobileMarkingPolicyEdit" class="btn-secondary btn-sm">Cancelar edición</button>
-                    @endif
-                </div>
+            <x-side-panel wire:model="showMobilePolicyForm" :title="$editingMobilePolicyId ? 'Editar borrador' : 'Nuevo borrador'" subheading="Configura las reglas de marcaje móvil antes de activar la política." labelledby="mobile-policy-form-title" max-width="max-w-3xl" close-method="cancelMobileMarkingPolicyEdit">
+                <form wire:submit="saveMobileMarkingPolicyDraft" class="space-y-5 p-5 sm:p-6">
 
-                @error('mobilePolicyForm')<p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    @error('mobilePolicyForm')<p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
 
-                <div class="grid gap-3 md:grid-cols-3">
-                    <div>
-                        <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Aplica a</label>
-                        <x-ui.select wire:model.live="mobilePolicyForm.scope">
-                            <option value="company">Toda la empresa</option>
-                            <option value="center">Un centro</option>
-                            <option value="organizational_unit">Un departamento, área o equipo</option>
-                        </x-ui.select>
-                        @error('mobilePolicyForm.scope')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                    </div>
-
-                    @if ($mobilePolicyForm['scope'] === 'center')
-                        <div class="md:col-span-2">
-                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
-                            <x-ui.select wire:model="mobilePolicyForm.center_id">
-                                <option value="">Selecciona un centro</option>
-                                @foreach ($activeCenters as $center)
-                                    <option value="{{ $center->id }}">{{ $center->name }}</option>
-                                @endforeach
+                    <div class="grid gap-3 md:grid-cols-3">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Aplica a</label>
+                            <x-ui.select wire:model.live="mobilePolicyForm.scope">
+                                <option value="company">Toda la empresa</option>
+                                <option value="center">Un centro</option>
+                                <option value="organizational_unit">Un departamento, área o equipo</option>
                             </x-ui.select>
-                            @error('mobilePolicyForm.center_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            @error('mobilePolicyForm.scope')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
-                    @elseif ($mobilePolicyForm['scope'] === 'organizational_unit')
-                        <div class="md:col-span-2">
-                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Departamento, área o equipo</label>
-                            <x-ui.select wire:model="mobilePolicyForm.organizational_unit_id">
-                                <option value="">Selecciona una unidad</option>
-                                @foreach ($activeOrganizationalUnits as $unit)
-                                    <option value="{{ $unit->id }}">{{ $unit->name }} · {{ $unit->center?->name }}</option>
-                                @endforeach
+
+                        @if ($mobilePolicyForm['scope'] === 'center')
+                            <div class="md:col-span-2">
+                                <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Centro</label>
+                                <x-ui.select wire:model="mobilePolicyForm.center_id">
+                                    <option value="">Selecciona un centro</option>
+                                    @foreach ($activeCenters as $center)
+                                        <option value="{{ $center->id }}">{{ $center->name }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                @error('mobilePolicyForm.center_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            </div>
+                        @elseif ($mobilePolicyForm['scope'] === 'organizational_unit')
+                            <div class="md:col-span-2">
+                                <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Departamento, área o equipo</label>
+                                <x-ui.select wire:model="mobilePolicyForm.organizational_unit_id">
+                                    <option value="">Selecciona una unidad</option>
+                                    @foreach ($activeOrganizationalUnits as $unit)
+                                        <option value="{{ $unit->id }}">{{ $unit->name }} · {{ $unit->center?->name }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                @error('mobilePolicyForm.organizational_unit_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            </div>
+                        @else
+                            <div class="md:col-span-2 rounded-lg border border-dashed border-surface-line px-3 py-2 text-sm text-surface-muted">La política será la regla base para trabajadores sin una regla más específica.</div>
+                        @endif
+                    </div>
+
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Tipo de ubicación</label>
+                            <x-ui.select wire:model.live="mobilePolicyForm.mode">
+                                <option value="free">Sin perímetro</option>
+                                <option value="circle">Dentro de un radio</option>
                             </x-ui.select>
-                            @error('mobilePolicyForm.organizational_unit_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            @error('mobilePolicyForm.mode')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
-                    @else
-                        <div class="md:col-span-2 rounded-lg border border-dashed border-surface-line px-3 py-2 text-sm text-surface-muted">La política será la regla base para trabajadores sin una regla más específica.</div>
-                    @endif
-                </div>
-
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div>
-                        <label class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Tipo de ubicación</label>
-                        <x-ui.select wire:model.live="mobilePolicyForm.mode">
-                            <option value="free">Sin perímetro</option>
-                            <option value="circle">Dentro de un radio</option>
-                        </x-ui.select>
-                        @error('mobilePolicyForm.mode')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        <div class="space-y-2 rounded-lg border border-surface-line p-3">
+                            <flux:checkbox wire:model="mobilePolicyForm.requires_device_binding" label="Requerir dispositivo autorizado" />
+                            <flux:checkbox wire:model="mobilePolicyForm.requires_biometric_unlock" label="Requerir desbloqueo local con biometría" />
+                            <p class="text-xs text-surface-muted">La biometría sólo desbloquea una clave local: Vera no recibe ni guarda huellas o rostros.</p>
+                            @error('mobilePolicyForm.requires_biometric_unlock')<p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
                     </div>
-                    <div class="space-y-2 rounded-lg border border-surface-line p-3">
-                        <flux:checkbox wire:model="mobilePolicyForm.requires_device_binding" label="Requerir dispositivo autorizado" />
-                        <flux:checkbox wire:model="mobilePolicyForm.requires_biometric_unlock" label="Requerir desbloqueo local con biometría" />
-                        <p class="text-xs text-surface-muted">La biometría sólo desbloquea una clave local: Vera no recibe ni guarda huellas o rostros.</p>
-                        @error('mobilePolicyForm.requires_biometric_unlock')<p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                    </div>
-                </div>
 
-                @if ($mobilePolicyForm['mode'] === 'circle')
-                    <div
-                        x-data="{
-                            ...veraMapPicker(),
-                            latitude: @entangle('mobilePolicyForm.center_latitude'),
-                            longitude: @entangle('mobilePolicyForm.center_longitude'),
-                            radius: @entangle('mobilePolicyForm.radius_meters'),
-                        }"
-                        x-init="init()"
-                        class="rounded-lg border border-surface-line p-4"
-                    >
-                        <p class="mb-3 text-sm font-semibold text-surface-text">Perímetro autorizado</p>
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-                            <p class="text-xs text-surface-muted">Puedes capturar las coordenadas manualmente o elegir el punto en el mapa.</p>
-                            <button type="button" class="btn-secondary btn-sm" @click="open()">Elegir en mapa</button>
-                        </div>
-                        <div class="grid gap-3 md:grid-cols-3">
-                            <flux:input wire:model="mobilePolicyForm.center_latitude" label="Latitud" type="number" step="0.0000001" />
-                            <flux:input wire:model="mobilePolicyForm.center_longitude" label="Longitud" type="number" step="0.0000001" />
-                            <flux:input wire:model="mobilePolicyForm.radius_meters" label="Radio (metros)" type="number" min="1" max="100000" />
-                        </div>
-                        @foreach (['center_latitude', 'center_longitude', 'radius_meters'] as $field)
-                            @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                        @endforeach
+                    @if ($mobilePolicyForm['mode'] === 'circle')
+                        <div
+                            x-data="{
+                                ...veraMapPicker(),
+                                latitude: @entangle('mobilePolicyForm.center_latitude'),
+                                longitude: @entangle('mobilePolicyForm.center_longitude'),
+                                radius: @entangle('mobilePolicyForm.radius_meters'),
+                            }"
+                            x-init="init()"
+                            class="rounded-lg border border-surface-line p-4"
+                        >
+                            <p class="mb-3 text-sm font-semibold text-surface-text">Perímetro autorizado</p>
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                <p class="text-xs text-surface-muted">Puedes capturar las coordenadas manualmente o elegir el punto en el mapa.</p>
+                                <button type="button" class="btn-secondary btn-sm" @click="open()">Elegir en mapa</button>
+                            </div>
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <flux:input wire:model="mobilePolicyForm.center_latitude" label="Latitud" type="number" step="0.0000001" />
+                                <flux:input wire:model="mobilePolicyForm.center_longitude" label="Longitud" type="number" step="0.0000001" />
+                                <flux:input wire:model="mobilePolicyForm.radius_meters" label="Radio (metros)" type="number" min="1" max="100000" />
+                            </div>
+                            @foreach (['center_latitude', 'center_longitude', 'radius_meters'] as $field)
+                                @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            @endforeach
 
-                        <div x-cloak x-show="isOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Elegir ubicación en mapa" @keydown.escape.window="close()">
-                            <div class="absolute inset-0 bg-brand-navy/60" @click="close()"></div>
-                            <div class="relative flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
-                                <div class="flex items-start justify-between gap-4 border-b border-surface-line px-5 py-4">
-                                    <div>
-                                        <h3 class="text-base font-semibold text-brand-navy dark:text-white">Elegir perímetro autorizado</h3>
-                                        <p class="mt-1 text-xs text-surface-muted">Haz clic en el mapa o arrastra el pin. El círculo muestra el radio configurado.</p>
+                            <div x-cloak x-show="isOpen" class="mt-4">
+                                <div class="flex flex-col overflow-hidden rounded-xl border border-surface-line bg-white dark:bg-zinc-900">
+                                    <div class="flex items-start justify-between gap-4 border-b border-surface-line px-5 py-4">
+                                        <div>
+                                            <h3 class="text-base font-semibold text-brand-navy dark:text-white">Elegir perímetro autorizado</h3>
+                                            <p class="mt-1 text-xs text-surface-muted">Haz clic en el mapa o arrastra el pin. El círculo muestra el radio configurado.</p>
+                                        </div>
+                                        <button type="button" class="btn-ghost btn-sm" @click="close()">Cerrar</button>
                                     </div>
-                                    <button type="button" class="btn-ghost btn-sm" @click="close()">Cerrar</button>
-                                </div>
-                                <div class="space-y-3 p-5">
-                                    <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <p class="text-xs text-surface-muted">Coordenadas: <span class="font-mono text-surface-text" x-text="`${latitude || '—'}, ${longitude || '—'}`"></span></p>
-                                        <button type="button" class="btn-secondary btn-sm" @click="useCurrentLocation()">Usar mi ubicación actual</button>
+                                    <div class="space-y-3 p-5">
+                                        <div class="flex flex-wrap items-center justify-between gap-3">
+                                            <p class="text-xs text-surface-muted">Coordenadas: <span class="font-mono text-surface-text" x-text="`${latitude || '—'}, ${longitude || '—'}`"></span></p>
+                                            <button type="button" class="btn-secondary btn-sm" @click="useCurrentLocation()">Usar mi ubicación actual</button>
+                                        </div>
+                                        <p x-cloak x-show="locationError" x-text="locationError" class="text-xs text-red-600 dark:text-red-400"></p>
+                                        <div wire:ignore x-ref="map" class="h-80 overflow-hidden rounded-xl border border-surface-line sm:h-96"></div>
                                     </div>
-                                    <p x-cloak x-show="locationError" x-text="locationError" class="text-xs text-red-600 dark:text-red-400"></p>
-                                    <div wire:ignore x-ref="map" class="h-80 overflow-hidden rounded-xl border border-surface-line sm:h-96"></div>
-                                </div>
-                                <div class="flex justify-end border-t border-surface-line px-5 py-4">
-                                    <button type="button" class="btn-primary" @click="close()">Usar esta ubicación</button>
+                                    <div class="flex justify-end border-t border-surface-line px-5 py-4">
+                                        <button type="button" class="btn-primary" @click="close()">Usar esta ubicación</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    @endif
+
+                    <div class="rounded-lg border border-surface-line p-4">
+                        <p class="mb-1 text-sm font-semibold text-surface-text">Calidad de ubicación</p>
+                        <p class="mb-3 text-xs text-surface-muted">Opcional. Si se configura cualquiera de estos límites, la app debe enviar ubicación verificable en cada marcaje.</p>
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <flux:input wire:model="mobilePolicyForm.max_accuracy_meters" label="Precisión máxima (metros)" type="number" min="1" max="100000" />
+                            <flux:input wire:model="mobilePolicyForm.max_location_age_seconds" label="Antigüedad máxima de ubicación (segundos)" type="number" min="1" max="86400" />
+                        </div>
+                        @foreach (['max_accuracy_meters', 'max_location_age_seconds'] as $field)
+                            @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        @endforeach
                     </div>
-                @endif
 
-                <div class="rounded-lg border border-surface-line p-4">
-                    <p class="mb-1 text-sm font-semibold text-surface-text">Calidad de ubicación</p>
-                    <p class="mb-3 text-xs text-surface-muted">Opcional. Si se configura cualquiera de estos límites, la app debe enviar ubicación verificable en cada marcaje.</p>
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <flux:input wire:model="mobilePolicyForm.max_accuracy_meters" label="Precisión máxima (metros)" type="number" min="1" max="100000" />
-                        <flux:input wire:model="mobilePolicyForm.max_location_age_seconds" label="Antigüedad máxima de ubicación (segundos)" type="number" min="1" max="86400" />
+                    <div class="rounded-lg border border-surface-line p-4">
+                        <p class="mb-1 text-sm font-semibold text-surface-text">Marcaje sin conexión</p>
+                        <p class="mb-3 text-xs text-surface-muted">Opcional. Define por cuántos minutos la app puede conservar marcajes con una autorización de jornada. Requiere dispositivo autorizado y se valida con el reloj monotónico del equipo.</p>
+                        <flux:input wire:model="mobilePolicyForm.offline_authorization_duration_minutes" label="Vigencia de autorización offline (minutos)" type="number" min="1" max="4320" placeholder="Desactivado" />
+                        @error('mobilePolicyForm.offline_authorization_duration_minutes')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
-                    @foreach (['max_accuracy_meters', 'max_location_age_seconds'] as $field)
-                        @error("mobilePolicyForm.{$field}")<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                    @endforeach
-                </div>
 
-                <div class="rounded-lg border border-surface-line p-4">
-                    <p class="mb-1 text-sm font-semibold text-surface-text">Marcaje sin conexión</p>
-                    <p class="mb-3 text-xs text-surface-muted">Opcional. Define por cuántos minutos la app puede conservar marcajes con una autorización de jornada. Requiere dispositivo autorizado y se valida con el reloj monotónico del equipo.</p>
-                    <flux:input wire:model="mobilePolicyForm.offline_authorization_duration_minutes" label="Vigencia de autorización offline (minutos)" type="number" min="1" max="4320" placeholder="Desactivado" />
-                    @error('mobilePolicyForm.offline_authorization_duration_minutes')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                </div>
-
-                <div class="flex flex-wrap items-center gap-3">
-                    <button type="submit" class="btn-primary">{{ $editingMobilePolicyId ? 'Guardar cambios del borrador' : 'Guardar borrador' }}</button>
-                    <p class="text-xs text-surface-muted">La vigencia offline se aplica al activar este borrador y siempre requiere un dispositivo autorizado.</p>
-                </div>
-            </form>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" class="btn-outline" wire:click="cancelMobileMarkingPolicyEdit">Cancelar</button>
+                        <button type="submit" class="btn-primary" wire:loading.attr="disabled" wire:target="saveMobileMarkingPolicyDraft">{{ $editingMobilePolicyId ? 'Guardar cambios del borrador' : 'Guardar borrador' }}</button>
+                        <p class="text-xs text-surface-muted">La vigencia offline se aplica al activar este borrador y siempre requiere un dispositivo autorizado.</p>
+                    </div>
+                </form>
+            </x-side-panel>
 
             <div class="space-y-3">
-                <div>
-                    <flux:heading size="lg">Versiones de políticas</flux:heading>
-                    <flux:subheading>Puedes eliminar versiones inactivas. Los marcajes y sus evidencias se conservan.</flux:subheading>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <flux:heading size="lg">Versiones de políticas</flux:heading>
+                        <flux:subheading>Puedes eliminar versiones inactivas. Los marcajes y sus evidencias se conservan.</flux:subheading>
+                    </div>
+                    <button type="button" class="btn-primary" wire:click="openMobileMarkingPolicyForm">Nueva política</button>
                 </div>
 
                 <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
@@ -1087,7 +1096,7 @@ new class extends Component {
                                 <tr wire:key="offline-marking-capture-{{ $capture->id }}">
                                     <td class="px-3 py-3 font-medium">{{ $capture->worker?->full_name ?? 'Trabajador no disponible' }}</td>
                                     <td class="px-3 py-3">{{ ['clock_in' => 'Entrada', 'clock_out' => 'Salida', 'break_start' => 'Inicio de pausa', 'break_end' => 'Fin de pausa'][$capture->event_type] ?? $capture->event_type }}</td>
-                                    <td class="px-3 py-3 font-mono text-xs">{{ $capture->occurred_at_raw }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-xs">{{ $capture->occurred_at_raw }}</td>
                                     <td class="px-3 py-3"><x-ui.badge variant="warning">{{ $capture->review_reason }}</x-ui.badge></td>
                                     <td class="px-3 py-3">
                                         @if ($currentPolicy = $currentPoliciesForPendingCaptures->get($capture->worker_id))
@@ -1096,7 +1105,7 @@ new class extends Component {
                                             <span class="text-surface-muted">Sin política vigente</span>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-3 text-xs text-surface-muted">{{ $capture->created_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3 text-xs text-surface-muted">{{ $capture->created_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="6" class="px-3 py-8 text-center text-surface-muted">No hay marcajes offline pendientes de revision.</td></tr>
@@ -1174,7 +1183,7 @@ new class extends Component {
                                             <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                                         @enderror
                                     </td>
-                                    <td class="px-3 py-3 text-xs text-surface-muted">{{ $request->created_at->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3 text-xs text-surface-muted">{{ $request->created_at->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
                                     <td class="px-3 py-3 text-right">
                                         <div class="flex justify-end gap-2">
                                             <button type="button" wire:click="approveKioskTerminalRequest({{ $request->id }})" class="btn-primary btn-sm">Aceptar</button>
@@ -1216,7 +1225,7 @@ new class extends Component {
                                         <x-ui.badge variant="danger">Revocada</x-ui.badge>
                                     @endif
                                 </td>
-                                <td class="px-3 py-3 text-xs text-surface-muted">{{ $device->last_seen_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') ?? 'Sin conexion' }}</td>
+                                <td class="whitespace-nowrap px-3 py-3 text-xs text-surface-muted">{{ $device->last_seen_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') ?? 'Sin conexion' }}</td>
                                 <td class="px-3 py-3">{{ $device->createdBy?->name ?? 'No disponible' }}</td>
                                 <td class="px-3 py-3 text-right">
                                     <div class="flex justify-end gap-2">

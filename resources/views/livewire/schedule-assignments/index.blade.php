@@ -412,7 +412,7 @@ new class extends Component {
                             </td>
                             <td class="px-4 py-3">{{ $assignment->employmentRelationship?->center?->name ?? 'Sin centro' }}</td>
                             <td class="px-4 py-3">{{ $assignment->schedule->name }}</td>
-                            <td class="px-4 py-3">
+                            <td class="whitespace-nowrap px-4 py-3">
                                 {{ $assignment->effective_from?->toDateString() }}
                                 -
                                 {{ $assignment->effective_to?->toDateString() ?? 'Vigente' }}

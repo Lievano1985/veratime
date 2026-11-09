@@ -456,7 +456,7 @@ new class extends Component {
                             <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $schedule->name }}</td>
                             <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $schedule->legal_type }}</td>
                             <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ $schedule->timezone ?: 'Sin zona' }}</td>
-                            <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                            <td class="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
                                 {{ $schedule->effective_from?->toDateString() ?? 'Sin inicio' }}
                                 -
                                 {{ $schedule->effective_to?->toDateString() ?? 'Sin fin' }}

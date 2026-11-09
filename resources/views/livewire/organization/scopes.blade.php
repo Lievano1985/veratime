@@ -540,7 +540,7 @@ new class extends Component {
                                 @endif
                             </td>
                             <td class="table-cell">{{ $scope->responsibility_type === 'responsible' ? 'Responsable' : 'Supervisor' }}</td>
-                            <td class="table-cell">{{ $scope->effective_from?->toDateString() }} - {{ $scope->effective_to?->toDateString() ?? 'Abierta' }}</td>
+                            <td class="whitespace-nowrap table-cell">{{ $scope->effective_from?->toDateString() }} - {{ $scope->effective_to?->toDateString() ?? 'Abierta' }}</td>
                             <td class="table-cell">
                                 <x-ui.badge variant="{{ $scope->status === 'active' ? 'success' : ($scope->status === 'replaced' ? 'warning' : 'neutral') }}">
                                     {{ $scope->status === 'active' ? 'Vigente' : ($scope->status === 'inactive' ? 'Finalizado' : 'Reemplazado') }}

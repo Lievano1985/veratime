@@ -9,7 +9,7 @@
                 @php($case = $group['alert'])
                 @php($periodStart = \Carbon\CarbonImmutable::parse($case->workDay->work_date)->startOfWeek())
                 <tr class="border-t border-zinc-200 dark:border-zinc-700" wire:key="incident-{{ $group['key'] }}">
-                    <td class="p-3">{{ $group['weekly'] ? $periodStart->format('d/m/Y').' – '.$periodStart->endOfWeek()->format('d/m/Y') : $case->workDay->work_date->format('d/m/Y') }}<span class="block text-xs text-zinc-500">{{ $group['weekly'] ? 'Semanal · Acumulado sujeto a recálculo' : 'Diaria' }}</span></td>
+                    <td class="p-3"><span class="whitespace-nowrap">{{ $group['weekly'] ? $periodStart->format('d/m/Y').' – '.$periodStart->endOfWeek()->format('d/m/Y') : $case->workDay->work_date->format('d/m/Y') }}</span><span class="block text-xs text-zinc-500">{{ $group['weekly'] ? 'Semanal · Acumulado sujeto a recálculo' : 'Diaria' }}</span></td>
                     <td class="p-3">{{ $case->worker?->full_name }}<span class="block text-xs text-zinc-500">{{ $case->worker?->employee_code }} · {{ $case->workDay?->center?->name }}</span></td>
                     <td class="p-3">
                         @if (! $group['weekly'])<p class="mb-2 font-medium">{{ $this->workedMinutesLabel($case->workDay) }} trabajadas · {{ $this->workDayCalculationSplitLabel($case->workDay, 'overtime_minutes') }} extra</p>@endif
