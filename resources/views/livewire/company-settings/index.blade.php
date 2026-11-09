@@ -15,6 +15,7 @@ use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\RejectKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\RevokeKioskDeviceAction;
 use App\Domains\TimeRecords\Actions\SaveMobileMarkingPolicyDraftAction;
+use App\Domains\TimeRecords\Actions\ResolvePersonalMarkingSecurityAction;
 use App\Domains\TimeRecords\Actions\SetKioskEnrollmentKeyAction;
 use App\Domains\Tenancy\Support\CurrentCompany;
 use App\Models\Company;
@@ -400,6 +401,20 @@ new class extends Component {
         Gate::authorize('update', $company);
         $company->load('setting');
 
+        $pendingCaptures = $this->activeTab === 'mobile-marking'
+            ? MobileOfflineMarkingCapture::query()->with('worker')
+                ->where('company_id', $company->id)
+                ->where('status', MobileOfflineMarkingCapture::STATUS_PENDING_REVIEW)
+                ->latest('created_at')->limit(50)->get()
+            : collect();
+        $resolveSecurity = app(ResolvePersonalMarkingSecurityAction::class);
+        $now = \Carbon\CarbonImmutable::now('UTC');
+        $currentPolicies = $pendingCaptures->unique('worker_id')->mapWithKeys(fn ($capture) => [
+            $capture->worker_id => $capture->worker
+                ? $resolveSecurity->resolveEffectivePolicy($company, $capture->worker, $now)
+                : null,
+        ]);
+
         return [
             'currentCompany' => $company,
             'legalConfiguration' => app(ResolveCompanyLegalConfigurationAction::class)->handle($company),
@@ -433,13 +448,8 @@ new class extends Component {
                     ->where('company_id', $company->id)
                     ->find($this->viewingMobilePolicyId)
                 : null,
-            'pendingOfflineMarkingCaptures' => MobileOfflineMarkingCapture::query()
-                ->with('worker')
-                ->where('company_id', $company->id)
-                ->where('status', MobileOfflineMarkingCapture::STATUS_PENDING_REVIEW)
-                ->latest('created_at')
-                ->limit(50)
-                ->get(),
+            'pendingOfflineMarkingCaptures' => $pendingCaptures,
+            'currentPoliciesForPendingCaptures' => $currentPolicies,
         ];
     }
 
@@ -945,7 +955,7 @@ new class extends Component {
             <div class="space-y-3">
                 <div>
                     <flux:heading size="lg">Versiones de políticas</flux:heading>
-                    <flux:subheading>Puedes eliminar versiones inactivas que no tengan evidencias ni autorizaciones de marcaje asociadas.</flux:subheading>
+                    <flux:subheading>Puedes eliminar versiones inactivas. Los marcajes y sus evidencias se conservan.</flux:subheading>
                 </div>
 
                 <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
@@ -1068,6 +1078,7 @@ new class extends Component {
                                 <th class="px-3 py-2">Marcaje</th>
                                 <th class="px-3 py-2">Hora declarada</th>
                                 <th class="px-3 py-2">Motivo de revision</th>
+                                <th class="px-3 py-2">Política vigente</th>
                                 <th class="px-3 py-2">Recibido</th>
                             </tr>
                         </thead>
@@ -1078,10 +1089,17 @@ new class extends Component {
                                     <td class="px-3 py-3">{{ ['clock_in' => 'Entrada', 'clock_out' => 'Salida', 'break_start' => 'Inicio de pausa', 'break_end' => 'Fin de pausa'][$capture->event_type] ?? $capture->event_type }}</td>
                                     <td class="px-3 py-3 font-mono text-xs">{{ $capture->occurred_at_raw }}</td>
                                     <td class="px-3 py-3"><x-ui.badge variant="warning">{{ $capture->review_reason }}</x-ui.badge></td>
+                                    <td class="px-3 py-3">
+                                        @if ($currentPolicy = $currentPoliciesForPendingCaptures->get($capture->worker_id))
+                                            <button type="button" class="btn-outline btn-sm" wire:click="viewMobileMarkingPolicy({{ $currentPolicy->id }})">Ver v{{ $currentPolicy->version }}</button>
+                                        @else
+                                            <span class="text-surface-muted">Sin política vigente</span>
+                                        @endif
+                                    </td>
                                     <td class="px-3 py-3 text-xs text-surface-muted">{{ $capture->created_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="px-3 py-8 text-center text-surface-muted">No hay marcajes offline pendientes de revision.</td></tr>
+                                <tr><td colspan="6" class="px-3 py-8 text-center text-surface-muted">No hay marcajes offline pendientes de revision.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

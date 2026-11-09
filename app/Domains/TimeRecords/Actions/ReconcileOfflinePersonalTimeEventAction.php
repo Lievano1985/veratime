@@ -22,6 +22,8 @@ class ReconcileOfflinePersonalTimeEventAction
         private readonly CreateTimeEventAction $createTimeEvent,
         private readonly HashPersonalTimeEventPayloadAction $hashPayload,
         private readonly VerifyP256SignatureAction $verifySignature,
+        private readonly ResolvePersonalMarkingSecurityAction $resolveSecurity,
+        private readonly BuildMobileMarkingPolicySnapshotAction $snapshot,
     ) {}
 
     /**
@@ -81,8 +83,21 @@ class ReconcileOfflinePersonalTimeEventAction
             ? $authorization->issued_at->addMilliseconds($monotonic - $authorization->issued_monotonic_milliseconds)
             : null;
 
-        $reason = $this->verificationReason($authorization, $binding, $policy, $bindingId, $policyId, $policyVersion, $monotonic, $estimatedAt, $claimedAt, $signature, $data, $location);
+        $reason = $this->verificationReason($authorization, $binding, $bindingId, $policyId, $policyVersion, $monotonic, $estimatedAt, $claimedAt, $signature, $data, $location);
         $locationResult = $authorization ? $this->validateLocation($authorization->policy_snapshot, $location, $claimedAt) : ['reason' => null, 'location' => null];
+        $reviewSnapshot = null;
+        if ($authorization && ! $policy) {
+            $currentPolicy = $this->resolveSecurity->resolveEffectivePolicy($company, $worker, CarbonImmutable::now('UTC'));
+            if ($currentPolicy) {
+                $reviewSnapshot = $this->snapshot->handle($currentPolicy);
+                $locationResult = $this->validateLocation($reviewSnapshot, $location, $claimedAt);
+                if ($currentPolicy->requires_biometric_unlock && ! ($authorization->policy_snapshot['requires_biometric_unlock'] ?? false)) {
+                    $reason ??= 'current_policy_requires_biometric_unlock';
+                }
+            } else {
+                $reason ??= 'current_policy_unavailable';
+            }
+        }
         $reason ??= $locationResult['reason'];
 
         $capture = MobileOfflineMarkingCapture::query()->create([
@@ -108,6 +123,7 @@ class ReconcileOfflinePersonalTimeEventAction
             'signature' => $signature ?: null,
             'payload_hash' => $payloadHash,
             'policy_snapshot' => $authorization?->policy_snapshot,
+            'review_policy_snapshot' => $reviewSnapshot,
             'location_latitude' => $location['latitude'] ?? null,
             'location_longitude' => $location['longitude'] ?? null,
             'location_accuracy_meters' => $location['accuracy_meters'] ?? null,
@@ -117,7 +133,7 @@ class ReconcileOfflinePersonalTimeEventAction
             'distance_meters' => $locationResult['location']['distance_meters'] ?? null,
         ]);
 
-        if ($reason !== null || ! $authorization || ! $binding || ! $policy || ! $estimatedAt) {
+        if ($reason !== null || ! $authorization || ! $binding || ! $estimatedAt) {
             return ['capture' => $capture, 'event' => null, 'created' => true];
         }
 
@@ -159,7 +175,7 @@ class ReconcileOfflinePersonalTimeEventAction
     }
 
     /** @param array<string, mixed>|null $location */
-    private function verificationReason(?MobileOfflineMarkingAuthorization $authorization, ?MobileDeviceBinding $binding, mixed $policy, string $bindingId, string $policyId, ?int $policyVersion, ?int $monotonic, ?CarbonImmutable $estimatedAt, ?CarbonImmutable $claimedAt, string $signature, array $data, ?array $location): ?string
+    private function verificationReason(?MobileOfflineMarkingAuthorization $authorization, ?MobileDeviceBinding $binding, string $bindingId, string $policyId, ?int $policyVersion, ?int $monotonic, ?CarbonImmutable $estimatedAt, ?CarbonImmutable $claimedAt, string $signature, array $data, ?array $location): ?string
     {
         if (! $authorization) {
             return 'offline_authorization_unknown';
@@ -182,7 +198,7 @@ class ReconcileOfflinePersonalTimeEventAction
         if ($binding->revoked_at && $binding->revoked_at->lessThanOrEqualTo($estimatedAt)) {
             return 'binding_revoked_at_capture';
         }
-        if (! $policy || $policy->public_id !== $policyId || $authorization->policy_version !== $policyVersion) {
+        if (($authorization->policy_snapshot['public_id'] ?? null) !== $policyId || $authorization->policy_version !== $policyVersion) {
             return 'policy_mismatch';
         }
         if (! $claimedAt || abs($estimatedAt->diffInSeconds($claimedAt, false)) > $authorization->max_clock_drift_seconds) {

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api;
 
 use App\Domains\Integrations\Actions\IssueCompanyApiTokenAction;
+use App\Domains\TimeRecords\Actions\ActivateMobileMarkingPolicyAction;
+use App\Domains\TimeRecords\Actions\DeleteMobileMarkingPolicyAction;
 use App\Domains\Workers\Actions\RevokeMobileDeviceBindingAction;
 use App\Models\Company;
 use App\Models\CustomerAccount;
@@ -36,6 +38,45 @@ PEM;
     {
         parent::setUp();
         $this->seed(ProductSeeder::class);
+    }
+
+    public function test_deleting_an_inactive_policy_preserves_offline_history_and_applies_the_current_location_rule(): void
+    {
+        [$company, , , $token, $oldPolicy, $binding] = $this->offlineContext();
+        $authorization = $this->issueAuthorization($token, $binding, 1_000_000);
+        $capturedAt = CarbonImmutable::parse($authorization['issued_at'])->utc()->startOfSecond();
+        $beforeDeletion = $this->offlineEvent('before-policy-deletion', 'clock_in', $capturedAt, 1_000_000, $authorization, $binding, $oldPolicy);
+        $queued = $this->offlineEvent('queued-before-policy-deletion', 'clock_out', $capturedAt->addSecond(), 1_001_000, $authorization, $binding, $oldPolicy);
+        $url = '/api/v1/time/me/time-events/sync';
+        $this->withToken($token)->postJson($url, ['events' => [$beforeDeletion]])
+            ->assertJsonPath('data.0.status', 'accepted');
+
+        $this->travel(1)->minute();
+        $currentPolicy = MobileMarkingPolicy::factory()->for($company)->create([
+            'version' => 5,
+            'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+            'center_latitude' => 20,
+            'center_longitude' => -99,
+            'radius_meters' => 100,
+        ]);
+        app(ActivateMobileMarkingPolicyAction::class)->handle($company, $currentPolicy);
+        app(DeleteMobileMarkingPolicyAction::class)->handle($company, $oldPolicy->id);
+
+        $this->assertModelMissing($oldPolicy);
+        $this->assertDatabaseHas('mobile_offline_marking_captures', [
+            'client_event_id' => 'before-policy-deletion',
+            'mobile_marking_policy_id' => null,
+            'status' => MobileOfflineMarkingCapture::STATUS_ACCEPTED,
+        ]);
+        $this->withToken($token)->postJson($url, ['events' => [$queued]])
+            ->assertOk()
+            ->assertJsonPath('data.0.status', 'pending_review')
+            ->assertJsonPath('data.0.error_code', 'outside_area');
+
+        $capture = MobileOfflineMarkingCapture::query()->where('client_event_id', 'queued-before-policy-deletion')->firstOrFail();
+        $this->assertSame($oldPolicy->public_id, $capture->policy_snapshot['public_id']);
+        $this->assertSame($currentPolicy->public_id, $capture->review_policy_snapshot['public_id']);
+        $this->assertDatabaseCount('time_events', 1);
     }
 
     public function test_a_full_offline_workday_is_reconciled_once_after_the_authorization_has_expired(): void
