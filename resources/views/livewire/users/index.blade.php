@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -39,17 +40,10 @@ new class extends Component
 
     public bool $showEditPanel = false;
 
-    public bool $showResetPanel = false;
-
+    #[Locked]
     public ?int $editingUserId = null;
 
-    public ?int $resettingUserId = null;
-
     public ?string $temporaryPassword = null;
-
-    public bool $showWorkerLinkPanel = false;
-
-    public ?int $linkingUserId = null;
 
     public string $linkedWorkerId = '';
 
@@ -124,6 +118,13 @@ new class extends Component
             'user_status' => $user->status,
             'membership_status' => (string) $user->pivot->status,
         ];
+        $this->resetValidation();
+        $this->temporaryPassword = null;
+        $this->resetForm = ['password' => ''];
+        $this->linkedWorkerId = (string) (UserWorkerLink::query()
+            ->where('company_id', $company->id)->where('user_id', $user->id)
+            ->where('status', 'active')->value('worker_id') ?? '');
+        $this->mobileDeviceBindingAuthorizationCode = null;
         $this->showEditPanel = true;
     }
 
@@ -152,28 +153,15 @@ new class extends Component
 
         $action->handle($company, auth()->user(), $user, $validated);
 
-        $this->showEditPanel = false;
-        $this->editingUserId = null;
+        $this->closeEditPanel();
 
         Session::flash('status', 'Usuario actualizado.');
-    }
-
-    public function openResetPanel(int $userId, CurrentCompany $currentCompany): void
-    {
-        $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, $userId);
-
-        Gate::authorize('resetPassword', [$user, $company]);
-
-        $this->resettingUserId = $user->id;
-        $this->resetForm = ['password' => Str::random(12)];
-        $this->showResetPanel = true;
     }
 
     public function resetPassword(ResetCompanyUserPasswordAction $action, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, (int) $this->resettingUserId);
+        $user = $this->userForCompany($company, (int) $this->editingUserId);
 
         Gate::authorize('resetPassword', [$user, $company]);
 
@@ -184,8 +172,7 @@ new class extends Component
         $action->handle($company, auth()->user(), $user, $validated['password']);
 
         $this->temporaryPassword = $validated['password'];
-        $this->showResetPanel = false;
-        $this->resettingUserId = null;
+        $this->resetForm = ['password' => ''];
 
         Session::flash('status', 'Contraseña actualizada. Copia la contraseña temporal antes de continuar.');
     }
@@ -197,21 +184,10 @@ new class extends Component
         $this->resetValidation('form');
     }
 
-    public function openWorkerLinkPanel(int $userId, CurrentCompany $currentCompany): void
-    {
-        $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, $userId);
-        Gate::authorize('update', [$user, $company]);
-        $this->linkingUserId = $user->id;
-        $this->linkedWorkerId = (string) (UserWorkerLink::query()->where('company_id', $company->id)->where('user_id', $user->id)->where('status', 'active')->value('worker_id') ?? '');
-        $this->mobileDeviceBindingAuthorizationCode = null;
-        $this->showWorkerLinkPanel = true;
-    }
-
     public function saveWorkerLink(CurrentCompany $currentCompany, LinkUserToWorkerAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        $user = $this->userForCompany($company, (int) $this->editingUserId);
         Gate::authorize('update', [$user, $company]);
         $this->validate(['linkedWorkerId' => ['required', Rule::exists('workers', 'id')->where('company_id', $company->id)->where('status', 'active')]]);
         try {
@@ -220,24 +196,25 @@ new class extends Component
             throw ValidationException::withMessages(['linkedWorkerId' => $exception->getMessage()]);
         }
 
-        $this->showWorkerLinkPanel = false;
+        $this->mobileDeviceBindingAuthorizationCode = null;
         Session::flash('status', 'Cuenta vinculada con la persona trabajadora.');
     }
 
     public function revokeWorkerLink(CurrentCompany $currentCompany, RevokeUserWorkerLinkAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        $user = $this->userForCompany($company, (int) $this->editingUserId);
         Gate::authorize('update', [$user, $company]);
         $action->handle($company, $user);
         $this->linkedWorkerId = '';
+        $this->mobileDeviceBindingAuthorizationCode = null;
         Session::flash('status', 'Vínculo revocado; el historial laboral se conserva.');
     }
 
     public function authorizeMobileDevice(CurrentCompany $currentCompany, CreateMobileDeviceBindingAuthorizationAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        $user = $this->userForCompany($company, (int) $this->editingUserId);
         Gate::authorize('update', [$user, $company]);
 
         $worker = Worker::query()->where('company_id', $company->id)->where('status', 'active')->find($this->linkedWorkerId);
@@ -258,7 +235,7 @@ new class extends Component
     public function revokeMobileDevice(int $bindingId, CurrentCompany $currentCompany, RevokeMobileDeviceBindingAction $action): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
-        $user = $this->userForCompany($company, (int) $this->linkingUserId);
+        $user = $this->userForCompany($company, (int) $this->editingUserId);
         Gate::authorize('update', [$user, $company]);
         $binding = MobileDeviceBinding::query()
             ->where('company_id', $company->id)
@@ -280,15 +257,11 @@ new class extends Component
         $this->showEditPanel = false;
         $this->editingUserId = null;
         $this->editForm = $this->emptyEditForm();
-        $this->resetValidation('editForm');
-    }
-
-    public function closeResetPanel(): void
-    {
-        $this->showResetPanel = false;
-        $this->resettingUserId = null;
         $this->resetForm = ['password' => ''];
-        $this->resetValidation('resetForm');
+        $this->linkedWorkerId = '';
+        $this->mobileDeviceBindingAuthorizationCode = null;
+        $this->temporaryPassword = null;
+        $this->resetValidation();
     }
 
     public function clearTemporaryPassword(): void
@@ -329,10 +302,10 @@ new class extends Component
             'roles' => Role::query()->whereIn('key', $this->assignableRoleKeys($company))->orderBy('name')->get(),
             'isSuperAdmin' => auth()->user()->isSuperAdmin(),
             'linkWorkers' => $company->workers()->where('status', 'active')->orderBy('full_name')->get(),
-            'mobileDeviceBindings' => $this->linkingUserId && $this->linkedWorkerId
+            'mobileDeviceBindings' => $this->editingUserId && $this->linkedWorkerId
                 ? MobileDeviceBinding::query()
                     ->where('company_id', $company->id)
-                    ->where('user_id', $this->linkingUserId)
+                    ->where('user_id', $this->editingUserId)
                     ->where('worker_id', $this->linkedWorkerId)
                     ->with('revokedBy')
                     ->latest('activated_at')
@@ -445,7 +418,7 @@ new class extends Component
         </div>
     @endif
 
-    @if ($temporaryPassword)
+    @if ($temporaryPassword && ! $showEditPanel)
         <div class="flex flex-col gap-3 rounded-xl border border-status-warn-line bg-status-warn-bg px-4 py-3 text-sm text-status-warn-text sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <div class="font-semibold">Contraseña temporal</div>
@@ -515,10 +488,6 @@ new class extends Component
                                     <button type="button" class="btn-icon" wire:click="openEditPanel({{ $user->id }})" aria-label="Editar usuario" title="Editar">
                                         <svg class="h-4 w-4 text-surface-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </button>
-                                    <button type="button" class="btn-icon" wire:click="openWorkerLinkPanel({{ $user->id }})" aria-label="Vincular trabajador" title="Vincular trabajador">↔</button>
-                                    <button type="button" class="btn-icon" wire:click="openResetPanel({{ $user->id }})" aria-label="Resetear contraseña" title="Resetear contraseña">
-                                        <svg class="h-4 w-4 text-brand-blue" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 0 0-13.5-3.5L4 8m16 8-2.5 2.5A8 8 0 0 1 4 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -563,8 +532,8 @@ new class extends Component
         </form>
     </x-side-panel>
 
-    <x-side-panel wire:model="showEditPanel" title="Editar usuario" subheading="Actualiza datos, rol y acceso en la empresa activa." labelledby="user-edit-title" max-width="max-w-xl">
-        <form wire:submit="update" class="flex flex-1 flex-col overflow-y-auto">
+    <x-side-panel wire:model="showEditPanel" title="Editar usuario" subheading="Actualiza datos, rol y acceso en la empresa activa." labelledby="user-edit-title" max-width="max-w-xl" close-method="closeEditPanel">
+        <form wire:submit="update" class="flex flex-col">
             <div class="flex-1 space-y-5 p-4 sm:p-6">
                 <x-ui.panel-section title="Datos y permisos" tone="blue">
                     <flux:input label="Nombre" wire:model="editForm.name" />
@@ -598,84 +567,86 @@ new class extends Component
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
         </form>
-    </x-side-panel>
-
-    <x-side-panel wire:model="showResetPanel" title="Resetear contraseña" subheading="Genera una contraseña temporal para el usuario." labelledby="user-reset-title" max-width="max-w-lg">
-        <form wire:submit="resetPassword" class="flex flex-1 flex-col overflow-y-auto">
-            <div class="flex-1 space-y-5 p-4 sm:p-6">
-                <x-ui.panel-section title="Restablecer acceso" tone="blue">
-                    <flux:input label="Nueva contraseña temporal" wire:model="resetForm.password" />
-                    <div class="rounded-xl border border-status-warn-line bg-status-warn-bg px-3 py-2 text-sm text-status-warn-text">
-                        Comparte esta contraseña por un medio seguro. Vera Time solo la mostrará en esta sesión.
-                    </div>
-                </x-ui.panel-section>
-            </div>
-            <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
-                <button type="button" class="btn-ghost" wire:click="closeResetPanel">Cancelar</button>
-                <button type="submit" class="btn-primary">Actualizar contraseña</button>
-            </div>
-        </form>
-    </x-side-panel>
-</section>
-
-<x-side-panel wire:model="showWorkerLinkPanel" title="Vínculo con trabajador" subheading="Acceso personal web/PWA; no modifica el kiosco." max-width="max-w-lg">
-    <form wire:submit="saveWorkerLink" class="flex flex-1 flex-col">
-        <div class="flex-1 space-y-5 p-4 sm:p-6">
-            <x-ui.panel-section title="Trabajador vinculado" tone="blue">
-                <flux:select label="Trabajador activo" wire:model="linkedWorkerId">
-                    <flux:select.option value="">Seleccionar</flux:select.option>
-                    @foreach ($linkWorkers as $worker)
-                        <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                @if ($linkedWorkerId)
-                    <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
-                        <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
-                        <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
-                        <button type="button" wire:click="authorizeMobileDevice" wire:loading.attr="disabled" wire:target="authorizeMobileDevice" class="btn-primary mt-3 cursor-pointer">
-                            <svg wire:loading.remove wire:target="authorizeMobileDevice" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="5" /><path d="m11.5 11.5 8-8M16 7l3 3M19 4l2 2" /></svg>
-                            <span wire:loading wire:target="authorizeMobileDevice" class="btn-spinner" aria-hidden="true"></span>
-                            <span wire:loading.remove wire:target="authorizeMobileDevice">Generar código de vinculación</span>
-                            <span wire:loading wire:target="authorizeMobileDevice">Generando código…</span>
-                        </button>
-
-                        @if ($mobileDeviceBindingAuthorizationCode)
-                            <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
-                                <p class="text-xs font-semibold text-status-warn-text">Comparte este código de forma segura. No volverá a mostrarse al cerrar este panel.</p>
-                                <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
+        @if ($showEditPanel && $editingUserId)
+            <form wire:submit="resetPassword" class="flex flex-col">
+                <div class="flex-1 space-y-5 p-4 sm:p-6">
+                    <x-ui.panel-section title="Cambiar contraseña" tone="blue">
+                        <flux:input label="Nueva contraseña temporal" wire:model="resetForm.password" autocomplete="new-password" />
+                        <div class="rounded-xl border border-status-warn-line bg-status-warn-bg px-3 py-2 text-sm text-status-warn-text">
+                            Comparte esta contraseña por un medio seguro. La contraseña temporal reemplazará la actual.
+                        </div>
+                        @if ($temporaryPassword)
+                            <div class="rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
+                                <p class="text-xs font-semibold text-status-warn-text">Contraseña temporal actualizada</p>
+                                <code class="mt-2 block break-all font-mono">{{ $temporaryPassword }}</code>
+                                <button type="button" class="btn-outline btn-sm mt-2" wire:click="clearTemporaryPassword">Ocultar</button>
                             </div>
                         @endif
+                    </x-ui.panel-section>
+                </div>
+                <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-surface-line bg-white px-5 py-4 dark:border-zinc-700 dark:bg-zinc-900">
+                    <button type="submit" class="btn-primary">Actualizar contraseña</button>
+                </div>
+            </form>
+            <form wire:submit="saveWorkerLink" class="flex flex-col">
+                <div class="flex-1 space-y-5 p-4 sm:p-6">
+                    <x-ui.panel-section title="Trabajador vinculado" tone="blue">
+                        <flux:select label="Trabajador activo" wire:model="linkedWorkerId">
+                            <flux:select.option value="">Seleccionar</flux:select.option>
+                            @foreach ($linkWorkers as $worker)
+                                <flux:select.option value="{{ $worker->id }}">{{ $worker->employee_code }} — {{ $worker->full_name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                        <div class="mt-4 border-t border-surface-line pt-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivos vinculados</p>
-                            <div class="mt-2 space-y-2">
-                                @forelse ($mobileDeviceBindings as $binding)
-                                    <div wire:key="mobile-device-binding-{{ $binding->id }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-line bg-white px-3 py-2">
-                                        <div>
-                                            <p class="text-sm font-semibold text-brand-navy">{{ $binding->device_name }}</p>
-                                            <p class="text-xs text-surface-muted">Activado {{ $binding->activated_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</p>
-                                            @if ($binding->status === 'revoked')
-                                                <p class="mt-1 text-xs text-surface-muted">Revocado {{ $binding->revoked_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}{{ $binding->revokedBy ? ' por '.$binding->revokedBy->name : '' }}</p>
-                                            @endif
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <x-ui.badge variant="{{ $binding->status === 'active' ? 'success' : 'danger' }}">{{ $binding->status === 'active' ? 'Autorizado' : 'Revocado' }}</x-ui.badge>
-                                            @if ($binding->status === 'active')
-                                                <button type="button" wire:click="revokeMobileDevice({{ $binding->id }})" wire:confirm="Este teléfono ya no podrá usarse para marcajes que exijan dispositivo autorizado. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
-                                            @endif
-                                        </div>
+                        @if ($linkedWorkerId)
+                            <div class="rounded-xl border border-surface-line bg-surface-bg p-4">
+                                <p class="text-sm font-semibold text-brand-navy">Dispositivo móvil</p>
+                                <p class="mt-1 text-xs text-surface-muted">Genera un código de un solo uso para que esta persona vincule su teléfono. Vence en 15 minutos.</p>
+                                <button type="button" wire:click="authorizeMobileDevice" wire:loading.attr="disabled" wire:target="authorizeMobileDevice" class="btn-primary mt-3 cursor-pointer">
+                                    <svg wire:loading.remove wire:target="authorizeMobileDevice" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="5" /><path d="m11.5 11.5 8-8M16 7l3 3M19 4l2 2" /></svg>
+                                    <span wire:loading wire:target="authorizeMobileDevice" class="btn-spinner" aria-hidden="true"></span>
+                                    <span wire:loading.remove wire:target="authorizeMobileDevice">Generar código de vinculación</span>
+                                    <span wire:loading wire:target="authorizeMobileDevice">Generando código…</span>
+                                </button>
+
+                                @if ($mobileDeviceBindingAuthorizationCode)
+                                    <div class="mt-3 rounded-lg border border-status-warn-line bg-status-warn-bg p-3">
+                                        <p class="text-xs font-semibold text-status-warn-text">Comparte este código de forma segura. No volverá a mostrarse al cerrar este panel.</p>
+                                        <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-sm font-bold text-brand-navy">{{ $mobileDeviceBindingAuthorizationCode }}</code>
                                     </div>
-                                @empty
-                                    <p class="text-xs text-surface-muted">Aún no hay dispositivos móviles vinculados.</p>
-                                @endforelse
+                                @endif
+
+                                <div class="mt-4 border-t border-surface-line pt-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-surface-muted">Dispositivos vinculados</p>
+                                    <div class="mt-2 space-y-2">
+                                        @forelse ($mobileDeviceBindings as $binding)
+                                            <div wire:key="mobile-device-binding-{{ $binding->id }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-line bg-white px-3 py-2">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-brand-navy">{{ $binding->device_name }}</p>
+                                                    <p class="text-xs text-surface-muted">Activado {{ $binding->activated_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}</p>
+                                                    @if ($binding->status === 'revoked')
+                                                        <p class="mt-1 text-xs text-surface-muted">Revocado {{ $binding->revoked_at?->timezone($currentCompany->timezone)->format('d/m/Y H:i') }}{{ $binding->revokedBy ? ' por '.$binding->revokedBy->name : '' }}</p>
+                                                    @endif
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <x-ui.badge variant="{{ $binding->status === 'active' ? 'success' : 'danger' }}">{{ $binding->status === 'active' ? 'Autorizado' : 'Revocado' }}</x-ui.badge>
+                                                    @if ($binding->status === 'active')
+                                                        <button type="button" wire:click="revokeMobileDevice({{ $binding->id }})" wire:confirm="Este teléfono ya no podrá usarse para marcajes que exijan dispositivo autorizado. ¿Continuar?" class="btn-danger btn-sm">Revocar</button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <p class="text-xs text-surface-muted">Aún no hay dispositivos móviles vinculados.</p>
+                                        @endforelse
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                @endif
-            </x-ui.panel-section>
-        </div>
-        <div class="flex flex-wrap justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
-    </form>
-</x-side-panel>
+                        @endif
+                    </x-ui.panel-section>
+                </div>
+                <div class="flex flex-wrap justify-between border-t border-surface-line p-6"><button type="button" class="btn-ghost" wire:click="revokeWorkerLink" wire:confirm="¿Revocar el vínculo?">Revocar vínculo</button><button type="submit" class="btn-primary">Guardar vínculo</button></div>
+            </form>
+        @endif
+    </x-side-panel>
+</section>
 </div>

@@ -131,7 +131,7 @@ class UserManagementTest extends TestCase
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('users.index')
-            ->call('openResetPanel', $target->id)
+            ->call('openEditPanel', $target->id)
             ->set('resetForm.password', 'NuevaTemporal123')
             ->call('resetPassword')
             ->assertSee('Contraseña actualizada');
@@ -246,7 +246,7 @@ class UserManagementTest extends TestCase
         $this->assertSame($secondCompany->id, $user->defaultCompany()?->id);
     }
 
-    public function test_company_admin_can_open_a_worker_link_panel_with_an_authorized_mobile_device(): void
+    public function test_company_admin_can_generate_a_mobile_link_code_from_edit_user(): void
     {
         [$company, $admin] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
         [, $target] = $this->companyUser(RoleKey::RH_OPERATIVO, $company);
@@ -271,9 +271,20 @@ class UserManagementTest extends TestCase
         $this->actingAs($admin)->withSession(['current_company_id' => $company->id]);
 
         Volt::test('users.index')
-            ->call('openWorkerLinkPanel', $target->id)
+            ->call('openEditPanel', $target->id)
             ->assertSee('Teléfono de prueba')
-            ->assertSee('Autorizado');
+            ->assertSee('Autorizado')
+            ->call('authorizeMobileDevice')
+            ->assertHasNoErrors()
+            ->assertSee('Código de vinculación móvil generado')
+            ->call('closeEditPanel')
+            ->assertSet('mobileDeviceBindingAuthorizationCode', null);
+
+        $this->assertDatabaseHas('mobile_device_binding_authorizations', [
+            'company_id' => $company->id,
+            'user_id' => $target->id,
+            'worker_id' => $worker->id,
+        ]);
     }
 
     /**
