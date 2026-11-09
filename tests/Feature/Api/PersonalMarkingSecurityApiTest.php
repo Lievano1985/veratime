@@ -300,17 +300,17 @@ it('lists only the linked workers devices and preserves a revoked binding as evi
     ]);
 });
 
-it('requires signed in-area evidence when an active policy protects a personal marking', function (): void {
+it('validates signed personal markings with or without location according to the policy', function (?string $flagWithoutLocation): void {
     [$company, $user, $worker, $token] = personalSecurityContext();
     $policy = MobileMarkingPolicy::factory()->for($company)->active()->create([
         'version' => 9,
-        'mode' => MobileMarkingPolicy::MODE_CIRCLE,
+        'mode' => $flagWithoutLocation === null ? MobileMarkingPolicy::MODE_CIRCLE : MobileMarkingPolicy::MODE_FREE,
         'requires_device_binding' => true,
         'center_latitude' => '19.4326080',
         'center_longitude' => '-99.1332090',
         'radius_meters' => 150,
-        'max_accuracy_meters' => 25,
-        'max_location_age_seconds' => 60,
+        'max_accuracy_meters' => $flagWithoutLocation === null ? 25 : null,
+        'max_location_age_seconds' => $flagWithoutLocation === null ? 60 : null,
     ]);
     $privateKey = <<<'PEM'
 -----BEGIN PRIVATE KEY-----
@@ -328,7 +328,10 @@ PEM;
     $occurredAt = now('UTC')->format('Y-m-d\\TH:i:s\\Z');
     $location = ['latitude' => '19.4326080', 'longitude' => '-99.1332090', 'accuracy_meters' => '8.50', 'captured_at' => $occurredAt, 'is_mocked' => false];
     $idempotencyKey = 'mobile-secure-clock-in-001';
-    $payload = implode("\n", ['VERA-MOBILE-EVENT-V1', $idempotencyKey, 'clock_in', $occurredAt, '', $binding->public_id, $policy->public_id, '9', $reference['id'], '19.4326080', '-99.1332090', '8.50', $occurredAt, '0']);
+    $locationFields = $flagWithoutLocation === null
+        ? ['19.4326080', '-99.1332090', '8.50', $occurredAt, '0']
+        : ['', '', '', '', $flagWithoutLocation];
+    $payload = implode("\n", ['VERA-MOBILE-EVENT-V1', $idempotencyKey, 'clock_in', $occurredAt, '', $binding->public_id, $policy->public_id, '9', $reference['id'], ...$locationFields]);
     openssl_sign($payload, $signature, $privateKey, OPENSSL_ALGO_SHA256);
     $encode = fn (string $value): string => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
 
@@ -339,7 +342,7 @@ PEM;
             'binding_id' => $binding->public_id,
             'time_reference_id' => $reference['id'],
             'signature' => $encode($signature),
-            'location' => $location,
+            'location' => $flagWithoutLocation === null ? $location : null,
         ],
     ])->assertCreated();
 
@@ -356,7 +359,7 @@ PEM;
     expect($storedEvent->metadata)->not->toHaveKey('security')
         ->and(json_encode($storedEvent->metadata))->not->toContain('19.4326080')
         ->and(json_encode($storedEvent->metadata))->not->toContain($encode($signature));
-});
+})->with(['ubicación obligatoria' => [null], 'sin ubicación según la guía de Android' => ['0'], 'sin ubicación con formato anterior' => ['']]);
 
 it('rejects an ineligible location before it creates a personal marking', function (): void {
     [$company, $user, $worker, $token] = personalSecurityContext();

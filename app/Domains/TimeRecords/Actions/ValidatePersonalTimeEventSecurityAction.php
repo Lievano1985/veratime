@@ -50,7 +50,17 @@ class ValidatePersonalTimeEventSecurityAction
 
             $payload = $this->signaturePayload($data, $policy, $reference, $binding, $location);
             try {
-                $this->verifySignature->handle($binding->public_key_spki, $payload, $signature);
+                try {
+                    $this->verifySignature->handle($binding->public_key_spki, $payload, $signature);
+                } catch (InvalidArgumentException $exception) {
+                    if ($location !== null) {
+                        throw $exception;
+                    }
+
+                    // The Android contract specifies 0 for the final flag even without location.
+                    $payload .= '0';
+                    $this->verifySignature->handle($binding->public_key_spki, $payload, $signature);
+                }
             } catch (InvalidArgumentException $exception) {
                 throw new PersonalTimeEventSecurityException('biometric_key_invalid', $exception->getMessage());
             }
