@@ -8,7 +8,7 @@ use App\Domains\LegalRules\Actions\ResolveCompanyLegalConfigurationAction;
 use App\Domains\LegalRules\Actions\UpdateCompanyLegalParameterAction;
 use App\Domains\TimeRecords\Actions\ApproveKioskTerminalAccessRequestAction;
 use App\Domains\TimeRecords\Actions\ActivateMobileMarkingPolicyAction;
-use App\Domains\TimeRecords\Actions\ArchiveMobileMarkingPolicyAction;
+use App\Domains\TimeRecords\Actions\DeleteMobileMarkingPolicyAction;
 use App\Domains\TimeRecords\Actions\CreateMobileMarkingPolicyDraftVersionAction;
 use App\Domains\TimeRecords\Actions\DeactivateMobileMarkingPolicyAction;
 use App\Domains\TimeRecords\Actions\DeleteKioskDeviceAction;
@@ -46,7 +46,6 @@ new class extends Component {
 
     public ?int $viewingMobilePolicyId = null;
     public bool $showMobilePolicyDetails = false;
-    public bool $showArchivedMobilePolicies = false;
     public mixed $companyBrandImage = null;
 
     public function mount(CurrentCompany $currentCompany): void
@@ -254,7 +253,7 @@ new class extends Component {
         $this->showMobilePolicyDetails = false;
     }
 
-    public function archiveMobileMarkingPolicy(int $policyId, ArchiveMobileMarkingPolicyAction $action, CurrentCompany $currentCompany): void
+    public function deleteMobileMarkingPolicy(int $policyId, DeleteMobileMarkingPolicyAction $action, CurrentCompany $currentCompany): void
     {
         $company = $this->currentCompanyOrFail($currentCompany);
         Gate::authorize('update', $company);
@@ -266,7 +265,7 @@ new class extends Component {
             $this->closeMobileMarkingPolicyDetails();
         }
 
-        Session::flash('status', 'La política se archivó. Puedes consultarla en el historial.');
+        Session::flash('status', 'La política se eliminó.');
     }
 
     public function createMobileMarkingPolicyDraftVersion(int $policyId, CreateMobileMarkingPolicyDraftVersionAction $action, CurrentCompany $currentCompany): void
@@ -426,7 +425,6 @@ new class extends Component {
             'mobileMarkingPolicies' => MobileMarkingPolicy::query()
                 ->with(['center', 'organizationalUnit.center'])
                 ->where('company_id', $company->id)
-                ->when(! $this->showArchivedMobilePolicies, fn ($query) => $query->where('status', '!=', MobileMarkingPolicy::STATUS_ARCHIVED))
                 ->latest('id')
                 ->get(),
             'viewingMobileMarkingPolicy' => $this->viewingMobilePolicyId
@@ -947,7 +945,7 @@ new class extends Component {
             <div class="space-y-3">
                 <div>
                     <flux:heading size="lg">Versiones de políticas</flux:heading>
-                    <flux:subheading>Las versiones inactivas se conservan para consultar la configuración que originó evidencias anteriores.</flux:subheading>
+                    <flux:subheading>Puedes eliminar versiones inactivas que no tengan evidencias ni autorizaciones de marcaje asociadas.</flux:subheading>
                 </div>
 
                 <div class="table-wrap rounded-lg border border-zinc-200 dark:border-zinc-700">
@@ -1001,8 +999,8 @@ new class extends Component {
                                                 <button type="button" wire:click="createMobileMarkingPolicyDraftVersion({{ $policy->id }})" class="btn-secondary btn-sm">Crear nueva versión</button>
                                                 @if ($policy->status === 'active')
                                                     <button type="button" wire:click="deactivateMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Desactivar esta política? La app volverá a la política menos específica o al flujo actual." class="btn-secondary btn-sm">Desactivar</button>
-                                                @elseif ($policy->status === 'inactive')
-                                                    <button type="button" wire:click="archiveMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Archivar esta política? Podrás consultarla en el historial." class="btn-danger btn-sm">Archivar</button>
+                                                @elseif (in_array($policy->status, ['inactive', 'archived'], true))
+                                                    <button type="button" wire:click="deleteMobileMarkingPolicy({{ $policy->id }})" wire:confirm="¿Eliminar definitivamente esta política?" class="btn-danger btn-sm">Eliminar</button>
                                                 @endif
                                             @endif
                                         </div>
@@ -1015,7 +1013,6 @@ new class extends Component {
                     </table>
                 </div>
 
-                <flux:checkbox wire:model.live="showArchivedMobilePolicies" label="Mostrar políticas archivadas" />
                 @error('policyForm')
                     <p role="alert" class="text-sm text-red-600">{{ $message }}</p>
                 @enderror

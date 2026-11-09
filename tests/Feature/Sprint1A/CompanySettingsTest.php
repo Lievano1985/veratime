@@ -17,7 +17,7 @@ class CompanySettingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_view_the_active_mobile_policy_and_archive_only_inactive_versions(): void
+    public function test_admin_can_view_the_active_mobile_policy_and_delete_only_inactive_versions(): void
     {
         $company = Company::factory()->create();
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
@@ -36,16 +36,13 @@ class CompanySettingsTest extends TestCase
             ->assertSee('Autorizado requerido')
             ->call('closeMobileMarkingPolicyDetails')
             ->assertSet('showMobilePolicyDetails', false)
-            ->call('archiveMobileMarkingPolicy', $active->id)
+            ->call('deleteMobileMarkingPolicy', $active->id)
             ->assertHasErrors('policyForm')
-            ->call('archiveMobileMarkingPolicy', $inactive->id)
-            ->assertDontSee('v6')
-            ->set('showArchivedMobilePolicies', true)
-            ->assertSee('v6')
-            ->assertSee('Archivada');
+            ->call('deleteMobileMarkingPolicy', $inactive->id)
+            ->assertDontSee('v6');
 
         $this->assertSame(MobileMarkingPolicy::STATUS_ACTIVE, $active->fresh()->status);
-        $this->assertSame(MobileMarkingPolicy::STATUS_ARCHIVED, $inactive->fresh()->status);
+        $this->assertModelMissing($inactive);
     }
 
     public function test_admin_can_create_or_update_company_settings(): void
