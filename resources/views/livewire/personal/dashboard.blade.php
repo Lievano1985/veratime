@@ -90,6 +90,8 @@ new class extends Component {
         <p class="mt-4 text-xs leading-relaxed text-surface-muted">Las horas calculadas pueden cambiar por revisión o corrección. Este resumen no confirma horas pagadas ni sustituye un periodo cerrado.</p>
     </section>
 
+    <livewire:personal.kiosk-credential />
+
     <div class="grid gap-6 lg:grid-cols-2">
         <section class="rounded-2xl border border-surface-line bg-white p-5">
             <x-ui.panel-heading title="Mis marcajes recientes" tone="blue" />

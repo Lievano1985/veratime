@@ -116,6 +116,16 @@ Artisan::command('companies:suspend-expired-trials', function (SuspendExpiredTri
 
 Schedule::command('work-days:auto-refresh')->everyMinute()->withoutOverlapping();
 Schedule::command('companies:suspend-expired-trials')->everyMinute()->withoutOverlapping();
+Artisan::command('companies:send-trial-reminders', function (\App\Domains\Companies\Actions\SendCompanyTrialRemindersAction $action): int {
+    $result = $action->handle();
+    if (! $result['enabled']) {
+        $this->warn('Correo transaccional deshabilitado; no se enviaron recordatorios.');
+    }
+    $this->info('Recordatorios enviados: '.$result['sent'].'. Fallidos: '.$result['failed'].'.');
+
+    return $result['failed'] ? 1 : 0;
+})->purpose('Recordar a administradores el vencimiento de pruebas en los próximos tres días.');
+Schedule::command('companies:send-trial-reminders')->hourly()->withoutOverlapping();
 Schedule::command('queue:work database --queue=work-days,default --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping();

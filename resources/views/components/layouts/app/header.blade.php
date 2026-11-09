@@ -160,6 +160,7 @@
             </flux:navlist>
         </flux:sidebar>
 
+        <x-company-trial-banner />
         {{ $slot }}
 
         @fluxScripts

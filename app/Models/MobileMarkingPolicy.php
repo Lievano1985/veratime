@@ -19,6 +19,8 @@ class MobileMarkingPolicy extends Model
 
     public const STATUS_INACTIVE = 'inactive';
 
+    public const STATUS_ARCHIVED = 'archived';
+
     public const MODE_FREE = 'free';
 
     public const MODE_CIRCLE = 'circle';

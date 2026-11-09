@@ -17,6 +17,37 @@ class CompanySettingsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_view_the_active_mobile_policy_and_archive_only_inactive_versions(): void
+    {
+        $company = Company::factory()->create();
+        $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
+        $user = User::factory()->create();
+        $user->companies()->attach($company, ['role_id' => $role->id, 'status' => 'active', 'is_default' => true]);
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        $active = MobileMarkingPolicy::factory()->for($company)->active()->create(['version' => 7, 'requires_device_binding' => true]);
+        $inactive = MobileMarkingPolicy::factory()->for($company)->create(['status' => MobileMarkingPolicy::STATUS_INACTIVE, 'version' => 6]);
+
+        Volt::test('company-settings.index')
+            ->set('activeTab', 'mobile-marking')
+            ->call('viewMobileMarkingPolicy', $active->id)
+            ->assertSet('showMobilePolicyDetails', true)
+            ->assertSee('Detalle de política v7')
+            ->assertSee('Autorizado requerido')
+            ->call('closeMobileMarkingPolicyDetails')
+            ->assertSet('showMobilePolicyDetails', false)
+            ->call('archiveMobileMarkingPolicy', $active->id)
+            ->assertHasErrors('policyForm')
+            ->call('archiveMobileMarkingPolicy', $inactive->id)
+            ->assertDontSee('v6')
+            ->set('showArchivedMobilePolicies', true)
+            ->assertSee('v6')
+            ->assertSee('Archivada');
+
+        $this->assertSame(MobileMarkingPolicy::STATUS_ACTIVE, $active->fresh()->status);
+        $this->assertSame(MobileMarkingPolicy::STATUS_ARCHIVED, $inactive->fresh()->status);
+    }
+
     public function test_admin_can_create_or_update_company_settings(): void
     {
         $role = Role::factory()->create(['key' => RoleKey::ADMIN_EMPRESA]);
