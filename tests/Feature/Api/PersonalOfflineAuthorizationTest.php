@@ -40,6 +40,22 @@ PEM;
         $this->seed(ProductSeeder::class);
     }
 
+    public function test_offline_markings_without_location_accept_the_documented_and_legacy_signature_formats(): void
+    {
+        [, , , $token, $policy, $binding] = $this->offlineContext();
+        $authorization = $this->issueAuthorization($token, $binding, 1_000_000);
+        $startedAt = CarbonImmutable::parse($authorization['issued_at'])->utc()->startOfSecond();
+        $events = [
+            $this->offlineEvent('offline-no-location-zero', 'clock_in', $startedAt, 1_000_000, $authorization, $binding, $policy, '0'),
+            $this->offlineEvent('offline-no-location-empty', 'clock_out', $startedAt->addMinute(), 1_060_000, $authorization, $binding, $policy, ''),
+        ];
+
+        $this->withToken($token)->postJson('/api/v1/time/me/time-events/sync', ['events' => $events])
+            ->assertOk()
+            ->assertJsonPath('meta.accepted', 2);
+        $this->assertDatabaseCount('time_events', 2);
+    }
+
     public function test_deleting_an_inactive_policy_preserves_offline_history_and_applies_the_current_location_rule(): void
     {
         [$company, , , $token, $oldPolicy, $binding] = $this->offlineContext();
@@ -188,14 +204,17 @@ PEM;
     }
 
     /** @param array<string, mixed> $authorization @return array<string, mixed> */
-    private function offlineEvent(string $id, string $type, CarbonImmutable $occurredAt, int $monotonic, array $authorization, MobileDeviceBinding $binding, MobileMarkingPolicy $policy): array
+    private function offlineEvent(string $id, string $type, CarbonImmutable $occurredAt, int $monotonic, array $authorization, MobileDeviceBinding $binding, MobileMarkingPolicy $policy, ?string $flagWithoutLocation = null): array
     {
         $timestamp = $occurredAt->format('Y-m-d\\TH:i:s\\Z');
         $location = ['latitude' => '19.4326080', 'longitude' => '-99.1332090', 'accuracy_meters' => '8.50', 'captured_at' => $timestamp, 'is_mocked' => false];
+        $locationFields = $flagWithoutLocation === null
+            ? [$location['latitude'], $location['longitude'], $location['accuracy_meters'], $location['captured_at'], '0']
+            : ['', '', '', '', $flagWithoutLocation];
         $payload = implode("\n", [
             'VERA-MOBILE-OFFLINE-EVENT-V1', $id, $type, $timestamp, 'America/Mexico_City', $binding->public_id,
             $policy->public_id, (string) $policy->version, $authorization['id'], (string) $monotonic,
-            $location['latitude'], $location['longitude'], $location['accuracy_meters'], $location['captured_at'], '0',
+            ...$locationFields,
         ]);
         openssl_sign($payload, $signature, self::PRIVATE_KEY, OPENSSL_ALGO_SHA256);
 
@@ -211,7 +230,7 @@ PEM;
                 'policy_version' => $policy->version,
                 'monotonic_elapsed_milliseconds' => $monotonic,
                 'signature' => $this->base64Url($signature),
-                'location' => $location,
+                'location' => $flagWithoutLocation === null ? $location : null,
             ],
         ];
     }

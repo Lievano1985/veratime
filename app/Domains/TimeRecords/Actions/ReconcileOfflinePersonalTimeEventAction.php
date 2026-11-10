@@ -208,13 +208,20 @@ class ReconcileOfflinePersonalTimeEventAction
             return 'signature_missing';
         }
 
-        try {
-            $this->verifySignature->handle($binding->public_key_spki, $this->signaturePayload($data, $authorization, $bindingId, $policyId, $policyVersion, $monotonic, $location), $signature);
-        } catch (InvalidArgumentException) {
-            return 'signature_invalid';
+        $payload = $this->signaturePayload($data, $authorization, $bindingId, $policyId, $policyVersion, $monotonic, $location);
+        // The documented Android payload ends in 0 without location. Older clients leave the field empty.
+        $payloads = $location === null ? [$payload.'0', $payload] : [$payload];
+        foreach ($payloads as $candidate) {
+            try {
+                $this->verifySignature->handle($binding->public_key_spki, $candidate, $signature);
+
+                return null;
+            } catch (InvalidArgumentException) {
+                // Try the other representation only for a capture without location.
+            }
         }
 
-        return null;
+        return 'signature_invalid';
     }
 
     /** @param array<string, mixed> $snapshot @param array<string, mixed>|null $location @return array{reason: ?string, location: array<string, mixed>|null} */
