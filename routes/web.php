@@ -67,6 +67,10 @@ Route::middleware(['auth', 'current.company'])->group(function () {
         Volt::route('work-days', 'work-days.index')->name('work-days.index');
         Volt::route('testing/quick-events', 'testing.quick-events')->name('testing.quick-events');
         Volt::route('alerts', 'alerts.index')->name('alerts.index');
+        Volt::route('reports', 'reports.index')->name('reports.index');
+        Route::get('reports/inspection', \App\Http\Controllers\Attendance\InspectionReportController::class)->name('reports.inspection');
+        Route::post('reports/issued', [\App\Http\Controllers\Attendance\InspectionReportController::class, 'issue'])->name('reports.issue');
+        Route::get('reports/issued/{folio}', [\App\Http\Controllers\Attendance\InspectionReportController::class, 'issued'])->whereUuid('folio')->name('reports.issued');
         Volt::route('attendance-periods', 'attendance-periods.index')->name('attendance-periods.index');
         Route::get('attendance-periods/{attendancePeriod}/payroll-csv', AttendancePeriodPayrollCsvController::class)->name('attendance-periods.payroll-csv');
         Route::get('attendance-periods/{attendancePeriod}/payroll-xlsx', AttendancePeriodPayrollXlsxController::class)->name('attendance-periods.payroll-xlsx');

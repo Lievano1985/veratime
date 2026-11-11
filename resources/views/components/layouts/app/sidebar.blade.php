@@ -151,13 +151,17 @@
                         @can('viewAny', [\App\Models\WorkDay::class, $activeCompany])
                             <flux:navlist.item icon="calendar-days" :href="route('work-days.index')" :current="request()->routeIs('work-days.*')" wire:navigate>Jornadas</flux:navlist.item>
                         @endcan
-                        @if (! $isSupervisor && auth()->user()->can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany]))
-                            <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Exportar períodos</flux:navlist.item>
-                        @endif
                         <flux:navlist.item icon="computer-desktop" :href="route('kiosk.index')" :current="request()->routeIs('kiosk.*')" wire:navigate>Kiosco</flux:navlist.item>
                         @if (auth()->user()->isSuperAdmin())
                             <flux:navlist.item icon="beaker" :href="route('testing.quick-events')" :current="request()->routeIs('testing.quick-events')" wire:navigate>Eventos rapidos</flux:navlist.item>
                         @endif
+                    </flux:navlist.group>
+                @endif
+
+                @if ($activeCompany && auth()->user()->can('viewAny', [\App\Models\AttendancePeriod::class, $activeCompany]))
+                    <flux:navlist.group heading="Reportes" class="grid">
+                        <flux:navlist.item icon="document-text" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>Reportes de jornada</flux:navlist.item>
+                        <flux:navlist.item icon="document-check" :href="route('attendance-periods.index')" :current="request()->routeIs('attendance-periods.*')" wire:navigate>Exportar períodos</flux:navlist.item>
                     </flux:navlist.group>
                 @endif
 
