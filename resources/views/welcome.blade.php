@@ -23,10 +23,13 @@
                 linear-gradient(115deg, #f2f9ff 0%, #f8fbff 44%, #e2f0ff 100%);
         }
 
-        .hero-orbit { border: 1.5px dashed #91c6ff; border-radius: 50%; }
         .hero-glass { background: rgba(255,255,255,.88); box-shadow: 0 10px 28px -14px rgba(0,103,228,.28); backdrop-filter: blur(12px); }
-        .hero-phone { transform: rotate(7deg); box-shadow: 7px 10px 0 #0056ba, 12px 20px 35px -15px #0067e46b; }
-        .hero-map { background-color: #e6f3ff; background-image: linear-gradient(90deg, transparent 46%, #fff 46%, #fff 50%, transparent 50%), linear-gradient(0deg, transparent 42%, #fff 42%, #fff 47%, transparent 47%); background-size: 32px 42px; }
+        .hero-illustration {
+            -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 89%, transparent);
+            -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 89%, transparent);
+            mask-composite: intersect;
+        }
 
         @keyframes fadeInUp {
             from {
@@ -164,34 +167,9 @@
                     </ul>
                 </div>
 
-                <div class="animate-in-delay relative mx-auto h-[370px] w-full max-w-[820px] sm:h-[500px] lg:h-[530px] 2xl:h-[590px]" role="img" aria-label="Ilustración de un registro de asistencia, app con ubicación y ejemplo de indicador. Datos ilustrativos.">
-                    <div aria-hidden="true" class="absolute inset-x-4 bottom-0 top-8 rounded-[48%] bg-blue-200/25"></div>
-                    <div aria-hidden="true" class="hero-orbit absolute -left-6 top-16 h-[72%] w-[105%] -rotate-[18deg]"></div>
-                    <div aria-hidden="true" class="hero-orbit absolute right-4 top-0 h-[90%] w-[64%] rotate-[30deg] opacity-60"></div>
-                    <svg aria-hidden="true" class="absolute right-[42%] top-0 h-12 w-12 fill-blue-300/60 text-blue-300/60 sm:h-16 sm:w-16" viewBox="0 0 24 24"><path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3.5" fill="#eef7ff"/></svg>
-                    <span aria-hidden="true" class="absolute right-4 top-9 h-7 w-7 rounded-full border-[8px] border-blue-300/60"></span>
-                    <div aria-hidden="true" class="hero-phone absolute right-[16%] top-0 z-[25] w-[96px] rounded-[24px] border-[5px] border-[#08254b] bg-white p-2 sm:w-[155px] sm:rounded-[28px] sm:p-3 2xl:w-[180px]">
-                        <div class="flex justify-between text-[7px] font-semibold text-brand-navy"><span>9:41</span><span>▰ ▪</span></div>
-                        <img src="{{ asset('images/logo vera time.png') }}" alt="" class="mx-auto my-2 h-6 w-auto sm:h-8">
-                        <p class="text-center text-[10px] font-bold text-brand-navy sm:text-xs">Jornada activa</p><p class="text-center text-[8px] text-surface-muted">Oficina CDMX</p>
-                        <div class="hero-map relative my-2 h-14 overflow-hidden rounded-lg sm:h-28"><svg class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-brand-blue" viewBox="0 0 24 24" fill="currentColor"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg></div>
-                        <span class="block rounded-lg bg-brand-blue px-1 py-2 text-center text-[8px] font-semibold text-white sm:text-[10px]">Registrar salida</span>
-                        <div class="mx-auto mt-2 h-0.5 w-8 rounded-full bg-slate-300"></div>
-                    </div>
-                    <img src="{{ asset('images/marketing/hero_img.png') }}" alt="" class="absolute bottom-0 left-0 z-20 w-full object-contain" fetchpriority="high">
-                    <div aria-hidden="true" class="hero-glass absolute left-0 top-6 z-30 flex items-center gap-3 rounded-2xl border border-white/80 px-3 py-3 sm:left-3 sm:top-10 sm:px-4 sm:py-4">
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/85 text-white sm:h-11 sm:w-11"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4 10-10" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <div><p class="text-xs font-bold text-brand-navy sm:text-sm">Entrada registrada</p><p class="mt-0.5 text-[10px] text-surface-muted sm:text-xs">08:00 am · Kiosco Oficina</p></div>
-                        <svg class="hidden h-4 w-4 text-brand-blue sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg>
-                    </div>
-                    <div aria-hidden="true" class="hero-glass absolute right-0 top-[33%] z-30 w-[112px] rounded-2xl border border-white/80 p-3 sm:top-[24%] sm:w-[150px] sm:p-4">
-                        <p class="text-[10px] text-surface-muted sm:text-xs">Cumplimiento</p>
-                        <div class="mt-1 flex items-end justify-between"><strong class="text-xl text-brand-navy sm:text-3xl">98%</strong><div class="flex items-end gap-1" aria-hidden="true">@foreach ([10, 16, 23, 30] as $bar)<span class="w-1.5 rounded-sm bg-blue-400/70" style="height: {{ $bar }}px"></span>@endforeach</div></div>
-                        <div class="mt-2 h-1.5 rounded-full bg-blue-100"><div class="h-full w-[90%] rounded-full bg-emerald-500/80"></div></div>
-                        <p class="mt-1.5 text-[8px] text-surface-muted">Indicador ilustrativo</p>
-                    </div>
-                    <p class="absolute bottom-0 right-0 z-30 rounded bg-white/75 px-2 py-1 text-[8px] text-surface-muted">Vista ilustrativa del producto</p>
-                </div>
+                <figure class="animate-in-delay relative mx-auto w-full max-w-[820px]">
+                    <img src="{{ asset('images/marketing/hero_img.png') }}" alt="Ilustración de un kiosco de asistencia y una app con ubicación." width="1448" height="1086" class="hero-illustration block h-auto w-full" fetchpriority="high">
+                </figure>
             </div>
 
             <div class="hero-glass relative z-30 mt-6 grid grid-cols-2 gap-y-6 rounded-[28px] border border-white/80 px-4 py-6 md:grid-cols-4 md:gap-y-0 sm:px-6 lg:mt-2 lg:px-8">
