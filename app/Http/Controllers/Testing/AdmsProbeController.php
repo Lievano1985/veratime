@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Testing;
 
 use App\Domains\TimeRecords\Actions\ImportAttendanceClockAction;
+use App\Domains\TimeRecords\Exceptions\AttendanceClockImportException;
 use App\Models\AttendanceClock;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 final class AdmsProbeController
@@ -53,8 +55,14 @@ final class AdmsProbeController
             try {
                 $count = app(ImportAttendanceClockAction::class)->handle($serial, $request->getContent());
             } catch (InvalidArgumentException $exception) {
-                if (! $production) {
-                    $this->record(['tipo' => 'importacion_rechazada', 'motivo' => $exception->getMessage()]);
+                $diagnostic = $exception instanceof AttendanceClockImportException
+                    ? ['motivo' => $exception->getMessage(), 'fila' => $exception->row,
+                        'id_en_reloj' => $exception->clockUserId, 'estado' => $exception->state]
+                    : ['motivo' => 'evento_invalido', 'fila' => null];
+                if ($production) {
+                    Log::channel('adms')->warning('adms.importacion_rechazada', $diagnostic);
+                } else {
+                    $this->record(['tipo' => 'importacion_rechazada', ...$diagnostic]);
                 }
 
                 return $this->plain('', 503);

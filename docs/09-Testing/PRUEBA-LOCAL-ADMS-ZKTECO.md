@@ -1,5 +1,11 @@
 # Prueba local ADMS del ZKTeco MB10-VL
 
+## Diagnóstico y desvinculación
+
+Después de desplegar, ejecuta `php artisan config:cache` en cPanel. Los rechazos de importación se escriben en `storage/logs/adms-AAAA-MM-DD.log`, con rotación diaria y retención configurada de siete archivos. Busca `adms.importacion_rechazada`. Se registra el motivo, la primera fila rechazada (numerada desde 1) y, cuando ayuda a corregir el problema, el ID numérico del reloj o el código de estado. El archivo no contiene cuerpos de solicitudes, rostros ni huellas.
+
+En **Configuración de empresa → Relojes de asistencia → Relojes registrados**, usa **Desvincular** junto al ID exacto. Si `1` y `3` apuntan al mismo trabajador, eliminar uno conserva el otro y el historial. Si el reloj reenvía checadas pendientes de un ID desvinculado, el lote seguirá rechazado hasta que ese ID tenga un vínculo válido.
+
 ## Piloto directo en producción
 
 El piloto viene desactivado. Despliega el código y aplica las migraciones pendientes revisadas en el servidor con el procedimiento habitual de Vera Time. Registra el reloj y vincula al trabajador en la empresa correcta. En el `.env` del servidor configura `VERA_ADMS_PILOT_SERIAL` con el número de serie y `VERA_ADMS_PILOT_IP` con la IP pública fija de salida de la red del reloj. Habilita con `VERA_ADMS_ENABLED=true` y reconstruye la caché con `php artisan config:cache`. Para desactivar, cambia el valor a `false` y reconstruye la caché.

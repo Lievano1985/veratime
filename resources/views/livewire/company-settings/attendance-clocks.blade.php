@@ -40,6 +40,12 @@ new class extends Component {
         session()->flash('status', 'Trabajador vinculado al reloj.');
     }
 
+    public function unlinkWorker(int $clockId, int $workerId, string $clockUserId, ConfigureAttendanceClockAction $action): void
+    {
+        $removed = $action->unlink($this->company(), $clockId, $workerId, $clockUserId);
+        session()->flash('status', $removed ? 'Vínculo eliminado. Se conservan las checadas registradas.' : 'El vínculo ya no existe.');
+    }
+
     public function with(): array
     {
         $company = $this->company();
@@ -109,7 +115,14 @@ new class extends Component {
                 <flux:text>{{ $clock->serial }} · {{ $clock->center?->name }}</flux:text>
                 <ul class="mt-2 space-y-1 text-sm">
                     @forelse ($clock->workers as $worker)
-                        <li>ID {{ $worker->pivot->clock_user_id }} → {{ $worker->employee_code }}</li>
+                        <li class="flex items-center gap-3">
+                            <span>ID {{ $worker->pivot->clock_user_id }} → {{ $worker->employee_code }}</span>
+                            <flux:button type="button" size="sm"
+                                wire:click="unlinkWorker({{ $clock->id }}, {{ $worker->id }}, @js($worker->pivot->clock_user_id))"
+                                wire:confirm="¿Desvincular este ID del trabajador? Las checadas registradas se conservan.">
+                                Desvincular
+                            </flux:button>
+                        </li>
                     @empty
                         <li>Sin trabajadores vinculados.</li>
                     @endforelse

@@ -51,6 +51,12 @@ return [
     */
 
     'channels' => [
+        'adms' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/adms.log'),
+            'level' => 'warning',
+            'days' => 7,
+        ],
 
         'stack' => [
             'driver' => 'stack',

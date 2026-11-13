@@ -32,4 +32,12 @@ it('scopes clock assignments to the company and makes the local ID unique per cl
     expect(fn () => $action->link($company, $link))->toThrow(ValidationException::class);
     expect($clock->workers()->first()->id)->toBe($worker->id)
         ->and($second->workers()->first()->pivot->clock_user_id)->toBe('1');
+
+    $action->link($company, [...$link, 'clockUserId' => '3']);
+    expect(fn () => $action->unlink($other, $clock->id, $worker->id, '1'))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    expect($action->unlink($company, $clock->id, $otherWorker->id, '1'))->toBeFalse()
+        ->and($action->unlink($company, $clock->id, $worker->id, '1'))->toBeTrue()
+        ->and($clock->workers()->sole()->pivot->clock_user_id)->toBe('3')
+        ->and($second->workers()->sole()->pivot->clock_user_id)->toBe('1');
 });

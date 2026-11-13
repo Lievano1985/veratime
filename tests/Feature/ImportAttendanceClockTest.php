@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\TimeRecords\Actions\ImportAttendanceClockAction;
+use App\Domains\TimeRecords\Exceptions\AttendanceClockImportException;
 use App\Models\AttendanceClock;
 use App\Models\Center;
 use App\Models\Company;
@@ -20,7 +21,11 @@ it('imports the four ADMS states once and leaves rejected batches unconfirmed', 
     $import = app(ImportAttendanceClockAction::class);
 
     expect(fn () => $import->handle('TEST1', "1\t2026-11-12 07:59:00\t0\n2\t2026-11-12 08:00:00\t0"))
-        ->toThrow(InvalidArgumentException::class);
+        ->toThrow(function (AttendanceClockImportException $exception) {
+            expect($exception->getMessage())->toBe('sin_vinculo_con_trabajador_activo')
+                ->and($exception->row)->toBe(2)
+                ->and($exception->clockUserId)->toBe('2');
+        });
     expect(TimeEvent::count())->toBe(0);
 
     $batch = "1\t2026-11-12 08:00:00\t0\t1\n1\t2026-11-12 12:00:00\t4\t1\n1\t2026-11-12 13:00:00\t5\t1\n1\t2026-11-12 17:00:00\t1\t1";

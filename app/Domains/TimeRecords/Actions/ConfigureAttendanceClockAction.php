@@ -5,10 +5,20 @@ namespace App\Domains\TimeRecords\Actions;
 use App\Models\AttendanceClock;
 use App\Models\Company;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ConfigureAttendanceClockAction
 {
+    public function unlink(Company $company, int $clockId, int $workerId, string $clockUserId): bool
+    {
+        return DB::transaction(function () use ($company, $clockId, $workerId, $clockUserId): bool {
+            $clock = AttendanceClock::query()->where('company_id', $company->id)->lockForUpdate()->findOrFail($clockId);
+
+            return $clock->workers()->wherePivot('clock_user_id', $clockUserId)->detach($workerId) > 0;
+        }, 3);
+    }
+
     public function register(Company $company, array $data): AttendanceClock
     {
         $center = $company->centers()->where('status', 'active')->find($data['centerId']);
