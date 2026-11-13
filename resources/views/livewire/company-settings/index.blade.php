@@ -595,6 +595,9 @@ new class extends Component {
         <button type="button" wire:click="$set('activeTab', 'kiosk')" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition {{ $activeTab === 'kiosk' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-surface-muted hover:border-surface-line hover:text-brand-navy' }}" aria-selected="{{ $activeTab === 'kiosk' ? 'true' : 'false' }}">
             Terminales de kiosco
         </button>
+        <a href="{{ route('company-settings.attendance-clocks') }}" wire:navigate class="shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-surface-muted hover:border-surface-line hover:text-brand-navy">
+            Relojes de asistencia
+        </a>
     </nav>
 
     @if ($activeTab === 'operation')

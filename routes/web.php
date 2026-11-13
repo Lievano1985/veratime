@@ -41,6 +41,7 @@ Route::middleware(['auth', 'current.company'])->group(function () {
         Volt::route('users', 'users.index')->name('users.index');
         Volt::route('api-tokens', 'api-tokens.index')->name('api-tokens.index');
         Volt::route('company-settings', 'company-settings.index')->name('company-settings.index');
+        Volt::route('company-settings/attendance-clocks', 'company-settings.attendance-clocks')->name('company-settings.attendance-clocks');
         Route::get('workers/excel/template', \App\Http\Controllers\Workers\WorkerWorkbookTemplateController::class)->name('workers.xlsx.template');
         Route::redirect('configuration/csv-periodos', '/time/configuration/export-layouts')->name('payroll-export-templates.index');
         Volt::route('configuration/export-layouts', 'export-layouts.index')->name('export-layouts.index');
