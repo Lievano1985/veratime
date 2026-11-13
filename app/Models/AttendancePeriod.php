@@ -22,6 +22,7 @@ class AttendancePeriod extends Model
     use HasFactory;
 
     public const SCOPE_CENTER = 'center';
+    public const SCOPE_COMPANY = 'company';
 
     public const SCOPE_ORGANIZATIONAL_UNITS = 'organizational_units';
 
@@ -35,6 +36,7 @@ class AttendancePeriod extends Model
 
     public const SCOPES = [
         self::SCOPE_CENTER,
+        self::SCOPE_COMPANY,
         self::SCOPE_ORGANIZATIONAL_UNITS,
     ];
 

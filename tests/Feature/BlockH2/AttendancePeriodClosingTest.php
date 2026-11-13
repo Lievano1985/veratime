@@ -24,6 +24,36 @@ class AttendancePeriodClosingTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_company_wide_period_closes_and_exports_workdays_from_multiple_centers(): void
+    {
+        [$company, $user] = $this->companyUser(RoleKey::ADMIN_EMPRESA);
+        $this->actingAs($user)->withSession(['current_company_id' => $company->id]);
+
+        foreach (['Centro Norte', 'Centro Sur'] as $name) {
+            $center = Center::factory()->for($company)->create(['name' => $name]);
+            $worker = Worker::factory()->for($company)->create();
+            WorkDay::factory()->for($company)->for($center)->for($worker)->create([
+                'work_date' => '2026-08-05',
+                'status' => WorkDay::STATUS_CALCULATED,
+            ]);
+        }
+        WorkDay::factory()->create(['work_date' => '2026-08-05', 'status' => WorkDay::STATUS_CALCULATED]);
+
+        Volt::test('attendance-periods.index')->call('openCreatePanel')
+            ->set('form.scope_mode', 'company')
+            ->set('form.period_start', '2026-08-03')->set('form.period_end', '2026-08-09')
+            ->call('create')->assertHasNoErrors()->assertSee('Toda la empresa');
+
+        $period = AttendancePeriod::query()->where('company_id', $company->id)->sole();
+        $this->assertNull($period->center_id);
+        $this->assertSame(AttendancePeriod::SCOPE_COMPANY, $period->scope_type);
+        $closed = app(CloseAttendancePeriodAction::class)->handle($company, $period, $user);
+        $rows = data_get(json_decode($closed->snapshot_canonical_json, true), 'payroll_export.rows');
+        $this->assertCount(2, $rows);
+        $this->assertStringContainsString('Centro Norte', json_encode($rows));
+        $this->assertStringContainsString('Centro Sur', json_encode($rows));
+    }
+
     public function test_validation_detects_work_day_blockers_and_keeps_period_open(): void
     {
         [$company, $user] = $this->companyUser(RoleKey::RH_ADMIN);

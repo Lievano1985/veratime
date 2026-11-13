@@ -13,11 +13,11 @@ class SuggestAttendancePeriodRangeAction
     /**
      * @return array{period_start: string, period_end: string}
      */
-    public function handle(Company $company, Center $center): array
+    public function handle(Company $company, ?Center $center): array
     {
         $lastEnd = AttendancePeriod::query()
             ->where('company_id', $company->id)
-            ->where('center_id', $center->id)
+            ->where('center_id', $center?->id)
             ->where('status', '!=', AttendancePeriod::STATUS_CANCELLED)
             ->orderByDesc('period_end')
             ->value('period_end');
@@ -31,7 +31,7 @@ class SuggestAttendancePeriodRangeAction
             ];
         }
 
-        $start = CarbonImmutable::parse(now($center->timezone ?: $company->timezone))
+        $start = CarbonImmutable::parse(now($center?->timezone ?: $company->timezone))
             ->startOfWeek(CarbonInterface::MONDAY);
 
         return [

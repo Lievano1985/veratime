@@ -36,7 +36,7 @@ class BuildAttendancePeriodReportAction
                 'id' => $period->id,
                 'company_id' => $period->company_id,
                 'center_id' => $period->center_id,
-                'center_name' => $period->center?->name,
+                'center_name' => $period->center?->name ?? 'Toda la empresa',
                 'scope_type' => $period->scope_type,
                 'scope_units' => $period->scopes->map(fn ($scope) => [
                     'id' => $scope->organizational_unit_id,
@@ -58,10 +58,12 @@ class BuildAttendancePeriodReportAction
     private function workerRows(Collection $workDays): array
     {
         $rows = [];
+        $centersByWorker = [];
 
         foreach ($workDays as $workDay) {
             $workerId = (int) $workDay->worker_id;
             $calculation = $workDay->activeCalculation;
+            $centersByWorker[$workerId][$workDay->center_id] = true;
 
             if (! isset($rows[$workerId])) {
                 $rows[$workerId] = [
@@ -107,6 +109,13 @@ class BuildAttendancePeriodReportAction
                 $rows[$workerId]['early_departure_minutes'] += (int) $calculation->early_departure_minutes;
                 $rows[$workerId]['sunday_minutes'] += (int) $calculation->sunday_minutes;
                 $rows[$workerId]['mandatory_rest_minutes'] += (int) $calculation->mandatory_rest_minutes;
+            }
+        }
+
+        foreach ($centersByWorker as $workerId => $centers) {
+            if (count($centers) > 1) {
+                $rows[$workerId]['center_name'] = 'Varios centros';
+                $rows[$workerId]['organizational_unit_name'] = null;
             }
         }
 

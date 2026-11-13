@@ -17,10 +17,11 @@ class CreateAttendancePeriodAction
     /**
      * @param list<int> $organizationalUnitIds
      */
-    public function handle(Company $company, Center $center, array $data, array $organizationalUnitIds = [], ?User $createdBy = null): AttendancePeriod
+    public function handle(Company $company, ?Center $center, array $data, array $organizationalUnitIds = [], ?User $createdBy = null): AttendancePeriod
     {
         return DB::transaction(function () use ($company, $center, $data, $organizationalUnitIds, $createdBy): AttendancePeriod {
-            if ($company->status !== 'active' || $center->company_id !== $company->id || $center->status !== 'active') {
+            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+            if ($company->status !== 'active' || ($center && ($center->company_id !== $company->id || $center->status !== 'active'))) {
                 throw new InvalidArgumentException('El centro debe pertenecer a la empresa activa.');
             }
 
@@ -31,8 +32,12 @@ class CreateAttendancePeriodAction
                 throw new InvalidArgumentException('La fecha final debe ser igual o posterior a la fecha inicial.');
             }
 
-            $unitIds = $this->validateUnits($company, $center, $organizationalUnitIds);
-            $scopeType = $unitIds === [] ? AttendancePeriod::SCOPE_CENTER : AttendancePeriod::SCOPE_ORGANIZATIONAL_UNITS;
+            if (! $center && $organizationalUnitIds !== []) {
+                throw new InvalidArgumentException('Selecciona un centro para acotar el periodo a unidades.');
+            }
+            $unitIds = $center ? $this->validateUnits($company, $center, $organizationalUnitIds) : [];
+            $scopeType = ! $center ? AttendancePeriod::SCOPE_COMPANY
+                : ($unitIds === [] ? AttendancePeriod::SCOPE_CENTER : AttendancePeriod::SCOPE_ORGANIZATIONAL_UNITS);
 
             $this->ensureNoDuplicateOrOverlap($company, $center, $scopeType, $unitIds, $start, $end);
 
@@ -41,7 +46,7 @@ class CreateAttendancePeriodAction
                 'name' => blank($data['name'] ?? null) ? null : trim((string) $data['name']),
                 'period_start' => $start,
                 'period_end' => $end,
-                'timezone' => $center->timezone ?: $company->timezone,
+                'timezone' => $center?->timezone ?: $company->timezone,
                 'status' => AttendancePeriod::STATUS_OPEN,
                 'notes' => blank($data['notes'] ?? null) ? null : trim((string) $data['notes']),
                 'metadata' => ['created_from' => 'manual_range'],
@@ -92,18 +97,18 @@ class CreateAttendancePeriodAction
     /**
      * @param list<int> $unitIds
      */
-    private function ensureNoDuplicateOrOverlap(Company $company, Center $center, string $scopeType, array $unitIds, string $start, string $end): void
+    private function ensureNoDuplicateOrOverlap(Company $company, ?Center $center, string $scopeType, array $unitIds, string $start, string $end): void
     {
         $query = AttendancePeriod::query()
             ->where('company_id', $company->id)
-            ->where('center_id', $center->id)
+            ->where('center_id', $center?->id)
             ->where('status', '!=', AttendancePeriod::STATUS_CANCELLED)
             ->whereDate('period_start', '<=', $end)
             ->whereDate('period_end', '>=', $start);
 
-        if ($scopeType === AttendancePeriod::SCOPE_CENTER) {
+        if ($scopeType !== AttendancePeriod::SCOPE_ORGANIZATIONAL_UNITS) {
             $exists = (clone $query)
-                ->where('scope_type', AttendancePeriod::SCOPE_CENTER)
+                ->where('scope_type', $scopeType)
                 ->exists();
         } else {
             $exists = (clone $query)

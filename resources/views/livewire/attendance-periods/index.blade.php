@@ -50,6 +50,7 @@ new class extends Component {
 
         if ($property === 'form.scope_mode') {
             $this->form['organizational_unit_ids'] = [];
+            $this->suggestRange();
         }
     }
 
@@ -74,12 +75,13 @@ new class extends Component {
     {
         $company = $currentCompany ? $this->currentCompanyOrFail($currentCompany) : app(CurrentCompany::class)->get();
 
-        if (! $company || blank($this->form['center_id'] ?? null)) {
+        if (! $company) {
             return;
         }
 
-        $center = $company->centers()->where('status', 'active')->whereKey((int) $this->form['center_id'])->first();
-        if (! $center) {
+        $companyWide = $this->form['scope_mode'] === 'company';
+        $center = $companyWide ? null : $company->centers()->where('status', 'active')->whereKey((int) $this->form['center_id'])->first();
+        if (! $companyWide && ! $center) {
             return;
         }
 
@@ -95,8 +97,8 @@ new class extends Component {
         Gate::authorize('create', [AttendancePeriod::class, $company]);
 
         $validated = $this->validate([
-            'form.center_id' => ['required', 'integer', Rule::exists('centers', 'id')->where('company_id', $company->id)->where('status', 'active')],
-            'form.scope_mode' => ['required', Rule::in(['center', 'units'])],
+            'form.center_id' => ['exclude_if:form.scope_mode,company', 'required', 'integer', Rule::exists('centers', 'id')->where('company_id', $company->id)->where('status', 'active')],
+            'form.scope_mode' => ['required', Rule::in(['company', 'center', 'units'])],
             'form.organizational_unit_ids' => ['array'],
             'form.organizational_unit_ids.*' => ['integer'],
             'form.period_start' => ['required', 'date'],
@@ -105,7 +107,7 @@ new class extends Component {
             'form.notes' => ['nullable', 'string', 'max:1000'],
         ])['form'];
 
-        $center = $company->centers()->whereKey((int) $validated['center_id'])->firstOrFail();
+        $center = $validated['scope_mode'] === 'company' ? null : $company->centers()->whereKey((int) $validated['center_id'])->firstOrFail();
         $unitIds = $validated['scope_mode'] === 'units'
             ? array_values(array_unique(array_map('intval', $validated['organizational_unit_ids'] ?? [])))
             : [];
@@ -335,6 +337,10 @@ new class extends Component {
 
     private function scopeLabel(AttendancePeriod $period): string
     {
+        if ($period->scope_type === AttendancePeriod::SCOPE_COMPANY) {
+            return 'Toda la empresa';
+        }
+
         if ($period->scope_type === AttendancePeriod::SCOPE_CENTER) {
             return 'Todo el centro';
         }
@@ -404,7 +410,7 @@ new class extends Component {
                 @forelse ($periods as $period)
                     <tr>
                         <td class="px-4 py-3">
-                            <div class="font-medium text-zinc-900">{{ $period->center->name }}</div>
+                            <div class="font-medium text-zinc-900">{{ $period->center?->name ?? 'Todos los centros' }}</div>
                             <div class="text-xs text-zinc-500">{{ $period->name ?: 'Sin nombre adicional' }}</div>
                         </td>
                         <td class="px-4 py-3 text-zinc-700">{{ $this->scopeLabel($period) ?: 'Sin unidades' }}</td>
@@ -482,7 +488,7 @@ new class extends Component {
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div class="text-sm font-semibold text-zinc-900">
-                        {{ $selectedPeriod->center->name }} - {{ $selectedPeriod->period_start?->format('Y-m-d') }} a {{ $selectedPeriod->period_end?->format('Y-m-d') }}
+                        {{ $selectedPeriod->center?->name ?? 'Toda la empresa' }} - {{ $selectedPeriod->period_start?->format('Y-m-d') }} a {{ $selectedPeriod->period_end?->format('Y-m-d') }}
                     </div>
                     <div class="text-xs text-zinc-500">
                         {{ $this->scopeLabel($selectedPeriod) }} - {{ $this->statusLabel($selectedPeriod->status) }}
@@ -587,24 +593,27 @@ new class extends Component {
     <x-side-panel
         wire:model="showCreatePanel"
         title="Nuevo periodo de asistencia"
-        subheading="Selecciona el centro, alcance y rango que se entregara despues a nomina o integraciones."
+        subheading="Selecciona el alcance y las fechas del periodo para nómina o integraciones."
         labelledby="attendance-period-form-title"
         max-width="max-w-xl"
     >
         <form wire:submit="create" class="flex flex-1 flex-col overflow-y-auto">
             <div class="flex-1 space-y-5 p-4 sm:p-6">
                 <x-ui.panel-section title="Alcance del periodo" tone="blue">
-                    <flux:select label="Centro" wire:model.live="form.center_id">
-                        <flux:select.option value="">Selecciona centro</flux:select.option>
-                        @foreach ($centers as $center)
-                            <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-
                     <flux:select label="Alcance" wire:model.live="form.scope_mode">
+                        <flux:select.option value="company">Toda la empresa</flux:select.option>
                         <flux:select.option value="center">Todo el centro</flux:select.option>
                         <flux:select.option value="units">Unidades seleccionadas</flux:select.option>
                     </flux:select>
+
+                    @if ($form['scope_mode'] !== 'company')
+                        <flux:select label="Centro" wire:model.live="form.center_id">
+                            <flux:select.option value="">Selecciona centro</flux:select.option>
+                            @foreach ($centers as $center)
+                                <flux:select.option value="{{ $center->id }}">{{ $center->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    @endif
 
                     @if (($form['scope_mode'] ?? 'center') === 'units')
                         <div class="space-y-2 rounded-md border border-zinc-200 p-3">

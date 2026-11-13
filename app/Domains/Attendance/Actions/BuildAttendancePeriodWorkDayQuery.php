@@ -21,7 +21,7 @@ class BuildAttendancePeriodWorkDayQuery
     {
         $query = WorkDay::query()
             ->where('company_id', $period->company_id)
-            ->where('center_id', $period->center_id)
+            ->when($period->scope_type !== AttendancePeriod::SCOPE_COMPANY, fn (Builder $query) => $query->where('center_id', $period->center_id))
             ->whereDate('work_date', '>=', $period->period_start)
             ->whereDate('work_date', '<=', $period->period_end);
 

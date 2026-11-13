@@ -53,7 +53,7 @@ class ExportAttendancePeriodPayrollCsvAction
 
         return sprintf(
             'vera-time-asistencia-%s-%s-%s.%s',
-            $this->slug((string) $period->center?->name),
+            $this->slug($period->center?->name ?? 'Toda la empresa'),
             $period->period_start?->format('Ymd'),
             $period->period_end?->format('Ymd'),
             $extension,
