@@ -4,7 +4,11 @@
 
 Después de desplegar, ejecuta `php artisan config:cache` en cPanel. Los rechazos de importación se escriben en `storage/logs/adms-AAAA-MM-DD.log`, con rotación diaria y retención configurada de siete archivos. Busca `adms.importacion_rechazada`. Se registra el motivo, la primera fila rechazada (numerada desde 1) y, cuando ayuda a corregir el problema, el ID numérico del reloj o el código de estado. El archivo no contiene cuerpos de solicitudes, rostros ni huellas.
 
-En **Configuración de empresa → Relojes de asistencia → Relojes registrados**, usa **Desvincular** junto al ID exacto. Si `1` y `3` apuntan al mismo trabajador, eliminar uno conserva el otro y el historial. Si el reloj reenvía checadas pendientes de un ID desvinculado, el lote seguirá rechazado hasta que ese ID tenga un vínculo válido.
+En **Configuración de empresa → Relojes de asistencia → Relojes registrados**, usa **Desvincular** junto al ID exacto. Si `1` y `3` apuntan al mismo trabajador, eliminar uno conserva el otro y el historial.
+
+La migración `2026_11_13_000000_create_attendance_clock_pending_events.php` agrega un registro para checadas de IDs sin vínculo activo o sin relación laboral vigente en el centro. Se guardan el ID del reloj, la fecha, la hora, el tipo y el motivo, sin guardar el cuerpo de la solicitud. El receptor confirma el lote después de guardar los eventos válidos y los pendientes en la misma transacción. Los reintentos no duplican registros. Las filas con formato, estado u hora inválidos siguen rechazando el lote.
+
+En **Relojes de asistencia → Checadas pendientes de identificar** se muestran las 50 más recientes de la empresa. Estas checadas quedan fuera de la jornada. Dar de alta un vínculo afecta marcajes futuros. La reclasificación de pendientes históricos requiere un flujo posterior.
 
 ## Piloto directo en producción
 
@@ -18,7 +22,7 @@ Una vez habilitado, configura el reloj con dominio `gotvera.com`, puerto 443, AD
 
 Para guardar eventos en `time_events`, inicia el script como administrador con `-ImportAttendance` y MySQL local activo. Sin ese parámetro el receptor sigue en modo diagnóstico. En el modo de importación el equipo debe tener el número de serie registrado, su centro activo y el usuario vinculado con una relación laboral de ese centro que cubra la fecha del evento.
 
-El estado ADMS es el tercer campo de cada fila. Se mapea `0` a entrada, `1` a salida, `4` a inicio de pausa y `5` a fin de pausa. Se interpreta la hora en la zona del centro y se registra con fuente `integration` y canal `adms`. La clave de deduplicación combina el equipo, ID de usuario en el reloj, hora y estado. Se confirma el lote al reloj después de guardarlo. Si una fila no se puede resolver se revierte el lote y se registra el motivo sin guardar la carga. Si el reloj reenvía eventos anteriores válidos, también pueden aparecer en el historial.
+El estado ADMS es el tercer campo de cada fila. Se mapea `0` a entrada, `1` a salida, `4` a inicio de pausa y `5` a fin de pausa. Se interpreta la hora en la zona del centro y se registra con fuente `integration` y canal `adms`. La clave de deduplicación combina el equipo, ID de usuario en el reloj, hora y estado. Se confirma el lote al reloj después de guardarlo. Si el reloj reenvía eventos anteriores válidos, también pueden aparecer en el historial.
 
 Verificación local del 12 de noviembre de 2026. MySQL registró cinco checadas distintas del reloj para `DEMO-DIA-001`, entre ellas una entrada a las 21:28:35 y una salida a las 20:40:47. Los cuatro estados se probaron también con datos simulados, incluidos los dos estados de pausa y el reenvío sin duplicados.
 

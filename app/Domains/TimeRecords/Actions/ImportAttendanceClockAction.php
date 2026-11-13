@@ -5,6 +5,7 @@ namespace App\Domains\TimeRecords\Actions;
 use App\Domains\TimeRecords\Exceptions\AttendanceClockImportException;
 use App\Models\AttendanceClock;
 use App\Models\Company;
+use App\Models\TimeEvent;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,9 @@ class ImportAttendanceClockAction
                 }
 
                 [$deviceUser, $localTime, $state] = $fields;
+                if (! preg_match('/\A[0-9]{1,32}\z/', $deviceUser)) {
+                    throw new AttendanceClockImportException('id_en_reloj_invalido', $row);
+                }
                 if (str_contains($localTime, "\0")) {
                     throw new AttendanceClockImportException('hora_invalida', $row);
                 }
@@ -47,27 +51,43 @@ class ImportAttendanceClockAction
                     throw new AttendanceClockImportException('hora_invalida', $row);
                 }
 
+                $externalId = 'adms:'.hash('sha256', implode('|', [$clock->id, $deviceUser, $localTime, $state]));
+                $pending = DB::table('attendance_clock_pending_events')->where('attendance_clock_id', $clock->id);
+                if ((clone $pending)->where('external_id', $externalId)->exists()
+                    || TimeEvent::query()->where('company_id', $company->id)->where('source', 'integration')
+                        ->where('external_id', $externalId)->exists()) {
+                    continue;
+                }
+
                 $worker = $clock->workers()->wherePivot('clock_user_id', $deviceUser)
                     ->where('workers.company_id', $company->id)->where('workers.status', 'active')->first();
-                $safeClockUserId = preg_match('/\A[0-9]{1,32}\z/', $deviceUser) ? $deviceUser : null;
-                if (! $worker) {
-                    throw new AttendanceClockImportException('sin_vinculo_con_trabajador_activo', $row, $safeClockUserId);
-                }
                 $date = $time->format('Y-m-d');
-                $relationship = $worker->employmentRelationships()->where('company_id', $company->id)
+                $relationship = $worker?->employmentRelationships()->where('company_id', $company->id)
                     ->where('center_id', $center->id)->whereDate('started_at', '<=', $date)
                     ->where(fn ($query) => $query->whereDate('ended_at', '>=', $date)
                         ->orWhere(fn ($open) => $open->whereNull('ended_at')->where('status', 'active')))
                     ->latest('started_at')->first();
                 if (! $relationship) {
-                    throw new AttendanceClockImportException('sin_relacion_laboral_vigente_en_centro', $row, $safeClockUserId);
+                    $pending->insert([
+                        'attendance_clock_id' => $clock->id,
+                        'external_id' => $externalId,
+                        'clock_user_id' => $deviceUser,
+                        'occurred_local_date' => $date,
+                        'occurred_local_time' => $time->format('H:i:s'),
+                        'timezone' => $zone->getName(),
+                        'event_type' => self::TYPES[$state],
+                        'reason' => $worker ? 'sin_relacion_laboral_vigente_en_centro' : 'sin_vinculo_con_trabajador_activo',
+                        'received_at' => now('UTC'),
+                    ]);
+
+                    continue;
                 }
 
                 $this->createTimeEvent->handle($company, $worker, [
                     'event_type' => self::TYPES[$state],
                     'occurred_at_utc' => $time->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM),
                     'source' => 'integration',
-                    'external_id' => 'adms:'.hash('sha256', implode('|', [$clock->id, $deviceUser, $localTime, $state])),
+                    'external_id' => $externalId,
                     'metadata' => ['channel' => 'adms', 'attendance_clock_id' => $clock->id],
                 ], $relationship, $center);
             }

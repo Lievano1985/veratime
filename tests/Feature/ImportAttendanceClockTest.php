@@ -20,17 +20,25 @@ it('imports the four ADMS states once and leaves rejected batches unconfirmed', 
     $clock->workers()->attach($worker->id, ['clock_user_id' => '1']);
     $import = app(ImportAttendanceClockAction::class);
 
-    expect(fn () => $import->handle('TEST1', "1\t2026-11-12 07:59:00\t0\n2\t2026-11-12 08:00:00\t0"))
+    expect(fn () => $import->handle('TEST1', "2\t2026-11-12 08:00:00\t0\n1\t2026-11-12 08:00:00\t9"))
         ->toThrow(function (AttendanceClockImportException $exception) {
-            expect($exception->getMessage())->toBe('sin_vinculo_con_trabajador_activo')
+            expect($exception->getMessage())->toBe('estado_no_admitido')
                 ->and($exception->row)->toBe(2)
-                ->and($exception->clockUserId)->toBe('2');
+                ->and($exception->state)->toBe('9');
         });
     expect(TimeEvent::count())->toBe(0);
+    $this->assertDatabaseCount('attendance_clock_pending_events', 0);
 
     $batch = "1\t2026-11-12 08:00:00\t0\t1\n1\t2026-11-12 12:00:00\t4\t1\n1\t2026-11-12 13:00:00\t5\t1\n1\t2026-11-12 17:00:00\t1\t1";
-    expect($import->handle('test1', $batch))->toBe(4)
-        ->and($import->handle('TEST1', $batch))->toBe(4);
+    $batch = "2\t2026-11-12 08:00:00\t0\n".$batch;
+    expect($import->handle('test1', $batch))->toBe(5)
+        ->and($import->handle('TEST1', $batch))->toBe(5);
+    $this->assertDatabaseCount('attendance_clock_pending_events', 1);
+    $this->assertDatabaseHas('attendance_clock_pending_events', [
+        'attendance_clock_id' => $clock->id,
+        'clock_user_id' => '2',
+        'reason' => 'sin_vinculo_con_trabajador_activo',
+    ]);
     expect(TimeEvent::where('company_id', $company->id)->where('worker_id', $worker->id)
         ->where('source', 'integration')->orderBy('occurred_at_utc')->pluck('event_type')->all())
         ->toBe(['clock_in', 'break_start', 'break_end', 'clock_out']);
