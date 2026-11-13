@@ -148,6 +148,10 @@ new class extends Component {
                         {{ $event->name }} · ID {{ $event->clock_user_id }} · {{ $event->occurred_local_date }} {{ $event->occurred_local_time }}
                         · {{ match ($event->reason) {
                             'sin_vinculo_con_trabajador_activo' => 'Sin trabajador activo vinculado',
+                            'marcaje_repetido_en_un_minuto' => 'Marcaje repetido en un minuto',
+                            'entrada_ya_registrada' => 'Ya existe una entrada para la jornada',
+                            'jornada_ya_cerrada' => 'La jornada ya está cerrada',
+                            'secuencia_de_marcaje_invalida' => 'Marcaje fuera de secuencia',
                             'estado_no_admitido' => 'Estado del reloj sin clasificar ('.str($event->event_type)->after('adms:').')',
                             default => 'Sin relación laboral vigente en el centro',
                         } }}

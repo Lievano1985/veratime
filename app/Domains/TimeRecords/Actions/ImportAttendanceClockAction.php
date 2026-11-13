@@ -28,6 +28,7 @@ class ImportAttendanceClockAction
 
             $zone = new DateTimeZone($center->timezone ?: $company->timezone);
             $lines = preg_split('/\r?\n/', rtrim($body, "\r\n"));
+            $marks = [];
             foreach ($lines as $index => $line) {
                 $row = $index + 1;
                 $fields = explode("\t", $line, 4);
@@ -51,6 +52,11 @@ class ImportAttendanceClockAction
                     throw new AttendanceClockImportException('hora_invalida', $row);
                 }
 
+                $marks[] = [$deviceUser, $localTime, $state, $eventType, $time];
+            }
+
+            usort($marks, fn (array $left, array $right) => $left[4] <=> $right[4]);
+            foreach ($marks as [$deviceUser, $localTime, $state, $eventType, $time]) {
                 $externalId = 'adms:'.hash('sha256', implode('|', [$clock->id, $deviceUser, $localTime, $state]));
                 $pending = DB::table('attendance_clock_pending_events')->where('attendance_clock_id', $clock->id);
                 if ((clone $pending)->where('external_id', $externalId)->exists()
@@ -66,8 +72,10 @@ class ImportAttendanceClockAction
                     ->where('center_id', $center->id)->whereDate('started_at', '<=', $date)
                     ->where(fn ($query) => $query->whereDate('ended_at', '>=', $date)
                         ->orWhere(fn ($open) => $open->whereNull('ended_at')->where('status', 'active')))
-                    ->latest('started_at')->first();
-                if (! $relationship) {
+                    ->latest('started_at')->lockForUpdate()->first();
+                $utc = $time->setTimezone(new DateTimeZone('UTC'));
+                $sequenceReason = $relationship ? $this->sequenceReason($company->id, $relationship->id, $eventType, $time) : null;
+                if (! $relationship || $sequenceReason) {
                     $pending->insert([
                         'attendance_clock_id' => $clock->id,
                         'external_id' => $externalId,
@@ -77,6 +85,7 @@ class ImportAttendanceClockAction
                         'timezone' => $zone->getName(),
                         'event_type' => $eventType ?? 'adms:'.$state,
                         'reason' => match (true) {
+                            $sequenceReason !== null => $sequenceReason,
                             $eventType === null => 'estado_no_admitido',
                             $worker === null => 'sin_vinculo_con_trabajador_activo',
                             default => 'sin_relacion_laboral_vigente_en_centro',
@@ -89,7 +98,7 @@ class ImportAttendanceClockAction
 
                 $this->createTimeEvent->handle($company, $worker, [
                     'event_type' => $eventType,
-                    'occurred_at_utc' => $time->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM),
+                    'occurred_at_utc' => $utc->format(DATE_ATOM),
                     'source' => 'integration',
                     'external_id' => $externalId,
                     'metadata' => ['channel' => 'adms', 'attendance_clock_id' => $clock->id],
@@ -98,5 +107,87 @@ class ImportAttendanceClockAction
 
             return count($lines);
         }, 3);
+    }
+
+    private function sequenceReason(int $companyId, int $relationshipId, string $eventType, DateTimeImmutable $time): ?string
+    {
+        $date = $time->format('Y-m-d');
+        $utc = $time->setTimezone(new DateTimeZone('UTC'));
+        $events = TimeEvent::query()->where('company_id', $companyId)
+            ->where('employment_relationship_id', $relationshipId)
+            ->where('status', 'valid')->whereNull('voided_at')
+            ->whereIn('event_type', self::TYPES)
+            ->whereDate('occurred_local_date', '>=', $time->modify('-1 day')->format('Y-m-d'))
+            ->whereDate('occurred_local_date', '<=', $time->modify('+1 day')->format('Y-m-d'))
+            ->orderBy('occurred_at_utc')->orderBy('id')->lockForUpdate()->get();
+
+        $state = 'waiting';
+        $start = null;
+        foreach ($events as $event) {
+            if ($event->occurred_at_utc->greaterThan($utc)) {
+                break;
+            }
+            $eventDate = $event->occurred_local_date->toDateString();
+            if ($state === 'closed' && $start !== $eventDate) {
+                $state = 'waiting';
+            }
+            $next = $this->nextState($state, $event->event_type);
+            if ($next !== null) {
+                if ($event->event_type === 'clock_in') {
+                    $start = $eventDate;
+                }
+                $state = $next;
+            }
+        }
+
+        if ($state === 'closed' && $start !== $date) {
+            $state = 'waiting';
+        }
+        $next = $this->nextState($state, $eventType);
+        if ($next === null) {
+            return match (true) {
+                $state === 'closed' => 'jornada_ya_cerrada',
+                $eventType === 'clock_in' => 'entrada_ya_registrada',
+                default => 'secuencia_de_marcaje_invalida',
+            };
+        }
+
+        // A late arrival must not invalidate a sequence that was already recorded.
+        $candidateStart = $eventType === 'clock_in' ? $date : $start;
+        foreach ($events as $event) {
+            if (! $event->occurred_at_utc->greaterThan($utc)) {
+                continue;
+            }
+            $eventDate = $event->occurred_local_date->toDateString();
+            if ($state === 'closed' && $start !== $eventDate) {
+                $state = 'waiting';
+            }
+            if ($next === 'closed' && $candidateStart !== $eventDate) {
+                $next = 'waiting';
+            }
+            $original = $this->nextState($state, $event->event_type);
+            $withCandidate = $this->nextState($next, $event->event_type);
+            if ($original !== null && $withCandidate === null) {
+                return 'secuencia_de_marcaje_invalida';
+            }
+            if ($event->event_type === 'clock_in') {
+                $start = $original !== null ? $eventDate : $start;
+                $candidateStart = $withCandidate !== null ? $eventDate : $candidateStart;
+            }
+            $state = $original ?? $state;
+            $next = $withCandidate ?? $next;
+        }
+
+        return null;
+    }
+
+    private function nextState(string $state, string $type): ?string
+    {
+        return match ([$state, $type]) {
+            ['waiting', 'clock_in'], ['paused', 'break_end'] => 'working',
+            ['working', 'break_start'] => 'paused',
+            ['working', 'clock_out'] => 'closed',
+            default => null,
+        };
     }
 }
