@@ -115,13 +115,13 @@ new class extends Component {
                 <flux:text>{{ $clock->serial }} · {{ $clock->center?->name }}</flux:text>
                 <ul class="mt-2 space-y-1 text-sm">
                     @forelse ($clock->workers as $worker)
-                        <li class="flex items-center gap-3">
+                        <li wire:key="clock-link-{{ $clock->id }}-{{ $worker->pivot->clock_user_id }}" class="flex items-center gap-3">
                             <span>ID {{ $worker->pivot->clock_user_id }} → {{ $worker->employee_code }}</span>
-                            <flux:button type="button" size="sm"
-                                wire:click="unlinkWorker({{ $clock->id }}, {{ $worker->id }}, @js($worker->pivot->clock_user_id))"
+                            <button type="button" class="btn-danger btn-sm" wire:loading.attr="disabled"
+                                wire:click="unlinkWorker({{ $clock->id }}, {{ $worker->id }}, {{ json_encode((string) $worker->pivot->clock_user_id, JSON_THROW_ON_ERROR) }})"
                                 wire:confirm="¿Desvincular este ID del trabajador? Las checadas registradas se conservan.">
                                 Desvincular
-                            </flux:button>
+                            </button>
                         </li>
                     @empty
                         <li>Sin trabajadores vinculados.</li>
