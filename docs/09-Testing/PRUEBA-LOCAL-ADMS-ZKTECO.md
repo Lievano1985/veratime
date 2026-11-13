@@ -8,7 +8,9 @@ En **Configuración de empresa → Relojes de asistencia → Relojes registrados
 
 La migración `2026_11_13_000000_create_attendance_clock_pending_events.php` agrega un registro para checadas de IDs sin vínculo activo o sin relación laboral vigente en el centro. Se guardan el ID del reloj, la fecha, la hora, el tipo y el motivo, sin guardar el cuerpo de la solicitud. El receptor confirma el lote después de guardar los eventos válidos y los pendientes en la misma transacción. Los reintentos no duplican registros. Las filas con formato, estado u hora inválidos siguen rechazando el lote.
 
-En **Relojes de asistencia → Checadas pendientes de identificar** se muestran las 50 más recientes de la empresa. Estas checadas quedan fuera de la jornada. Dar de alta un vínculo afecta marcajes futuros. La reclasificación de pendientes históricos requiere un flujo posterior.
+Los códigos numéricos de estado sin mapeo, como `255`, también se conservan como pendientes. Se guarda el código original y se confirma el lote junto con las checadas válidas. Un estado con formato inválido sigue rechazando el lote.
+
+En **Relojes de asistencia → Checadas pendientes de identificar o clasificar** se muestran las 50 más recientes de la empresa. Estas checadas quedan fuera de la jornada. Dar de alta un vínculo afecta marcajes futuros. La reclasificación de pendientes históricos requiere un flujo posterior.
 
 ## Piloto directo en producción
 

@@ -34,12 +34,12 @@ class ImportAttendanceClockAction
                 if (count($fields) < 3) {
                     throw new AttendanceClockImportException('formato_de_fila_invalido', $row);
                 }
-                if (! isset(self::TYPES[$fields[2]])) {
-                    $state = preg_match('/\A[0-9]{1,3}\z/', $fields[2]) ? $fields[2] : null;
-                    throw new AttendanceClockImportException('estado_no_admitido', $row, state: $state);
+                if (! preg_match('/\A[0-9]{1,3}\z/', $fields[2])) {
+                    throw new AttendanceClockImportException('estado_no_admitido', $row);
                 }
 
                 [$deviceUser, $localTime, $state] = $fields;
+                $eventType = self::TYPES[$state] ?? null;
                 if (! preg_match('/\A[0-9]{1,32}\z/', $deviceUser)) {
                     throw new AttendanceClockImportException('id_en_reloj_invalido', $row);
                 }
@@ -59,7 +59,7 @@ class ImportAttendanceClockAction
                     continue;
                 }
 
-                $worker = $clock->workers()->wherePivot('clock_user_id', $deviceUser)
+                $worker = $eventType === null ? null : $clock->workers()->wherePivot('clock_user_id', $deviceUser)
                     ->where('workers.company_id', $company->id)->where('workers.status', 'active')->first();
                 $date = $time->format('Y-m-d');
                 $relationship = $worker?->employmentRelationships()->where('company_id', $company->id)
@@ -75,8 +75,12 @@ class ImportAttendanceClockAction
                         'occurred_local_date' => $date,
                         'occurred_local_time' => $time->format('H:i:s'),
                         'timezone' => $zone->getName(),
-                        'event_type' => self::TYPES[$state],
-                        'reason' => $worker ? 'sin_relacion_laboral_vigente_en_centro' : 'sin_vinculo_con_trabajador_activo',
+                        'event_type' => $eventType ?? 'adms:'.$state,
+                        'reason' => match (true) {
+                            $eventType === null => 'estado_no_admitido',
+                            $worker === null => 'sin_vinculo_con_trabajador_activo',
+                            default => 'sin_relacion_laboral_vigente_en_centro',
+                        },
                         'received_at' => now('UTC'),
                     ]);
 
@@ -84,7 +88,7 @@ class ImportAttendanceClockAction
                 }
 
                 $this->createTimeEvent->handle($company, $worker, [
-                    'event_type' => self::TYPES[$state],
+                    'event_type' => $eventType,
                     'occurred_at_utc' => $time->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM),
                     'source' => 'integration',
                     'external_id' => $externalId,

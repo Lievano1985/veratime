@@ -56,7 +56,7 @@ new class extends Component {
                 ->join('attendance_clocks as clock', 'clock.id', '=', 'pending.attendance_clock_id')
                 ->where('clock.company_id', $company->id)
                 ->latest('pending.id')->limit(50)
-                ->get(['clock.name', 'pending.clock_user_id', 'pending.occurred_local_date', 'pending.occurred_local_time', 'pending.reason']),
+                ->get(['clock.name', 'pending.clock_user_id', 'pending.occurred_local_date', 'pending.occurred_local_time', 'pending.reason', 'pending.event_type']),
             'centers' => $company->centers()->where('status', 'active')->orderBy('name')->get(),
             'clocks' => AttendanceClock::query()->where('company_id', $company->id)
                 ->with(['center' => fn ($query) => $query->where('company_id', $company->id),
@@ -140,13 +140,17 @@ new class extends Component {
     </section>
     @if ($pendingEvents->isNotEmpty())
         <section class="space-y-3">
-            <flux:heading>Checadas pendientes de identificar</flux:heading>
+            <flux:heading>Checadas pendientes de identificar o clasificar</flux:heading>
             <flux:text>Últimas 50 checadas pendientes. Se conservan fuera del historial de jornada.</flux:text>
             <ul class="space-y-2 text-sm">
                 @foreach ($pendingEvents as $event)
                     <li>
                         {{ $event->name }} · ID {{ $event->clock_user_id }} · {{ $event->occurred_local_date }} {{ $event->occurred_local_time }}
-                        · {{ $event->reason === 'sin_vinculo_con_trabajador_activo' ? 'Sin trabajador activo vinculado' : 'Sin relación laboral vigente en el centro' }}
+                        · {{ match ($event->reason) {
+                            'sin_vinculo_con_trabajador_activo' => 'Sin trabajador activo vinculado',
+                            'estado_no_admitido' => 'Estado del reloj sin clasificar ('.str($event->event_type)->after('adms:').')',
+                            default => 'Sin relación laboral vigente en el centro',
+                        } }}
                     </li>
                 @endforeach
             </ul>
