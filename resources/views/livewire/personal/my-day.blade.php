@@ -124,12 +124,14 @@ new class extends Component {
                         <div class="overflow-x-auto pb-1" style="overflow-x: auto;">
                             <div class="gap-3" style="display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); gap: 0.75rem; min-width: 980px;">
                                 @foreach($week['days'] as $day)
-                                    @php($assignment = $day['assignment'])
-                                    @php($workSegments = $assignment?->segments->where('segment_type', 'work'))
-                                    @php($breakSegments = $assignment?->segments->where('segment_type', 'break'))
+                                    @php
+                                        $assignment = $day['assignment'];
+                                        $workSegments = $assignment?->segments->where('segment_type', 'work');
+                                        $breakSegments = $assignment?->segments->where('segment_type', 'break');
+                                    @endphp
                                     <article class="{{ $this->calendarCardClasses($assignment) }} min-h-44 px-3 py-3">
                                         <div class="flex items-start justify-between gap-2">
-                                            <p class="text-sm font-semibold text-surface-text">{{ $day['date']->translatedFormat('D') }}</p>
+                                            <p class="text-sm font-semibold text-surface-text">{{ ucfirst($day['date']->locale('es')->translatedFormat('D')) }}</p>
                                             <span class="shrink-0 text-sm text-surface-muted">{{ $day['date']->format('d/m') }}</span>
                                         </div>
 
@@ -173,7 +175,62 @@ new class extends Component {
         @endif
     </section>
     <div class="grid gap-6 lg:grid-cols-2">
-        <section class="rounded-lg border p-5"><flux:heading>Mis eventos recientes</flux:heading><div class="mt-4 space-y-2">@forelse($events as $event)<p class="text-sm">{{ $event->occurred_at_utc?->setTimezone($event->timezone)->format('d/m H:i') }} · {{ $event->event_type }}</p>@empty<p class="text-sm text-surface-muted">Sin eventos.</p>@endforelse</div></section>
-        <section class="rounded-lg border p-5"><flux:heading>Mis jornadas</flux:heading><div class="mt-4 space-y-2">@forelse($workDays as $day)<p class="text-sm">{{ $day->work_date?->format('d/m/Y') }} · {{ $day->status }}</p>@empty<p class="text-sm text-surface-muted">Sin jornadas.</p>@endforelse</div></section>
+        <section class="rounded-xl border border-surface-line p-5">
+            <flux:heading>Mis marcajes recientes</flux:heading>
+            <ul class="mt-2 divide-y divide-surface-line">
+                @forelse ($events as $event)
+                    @php
+                        $label = match ($event->event_type) {
+                            'clock_in' => 'Entrada',
+                            'clock_out' => 'Salida',
+                            'break_start' => 'Inicio de descanso',
+                            'break_end' => 'Regreso del descanso',
+                            'manual_entry' => 'Captura manual',
+                            'logical_void' => 'Anulación',
+                            default => 'Marcaje',
+                        };
+                        [$status, $tone] = match ($event->isVoided() ? 'voided' : $event->status) {
+                            'valid' => ['Válido', 'success'],
+                            'voided' => ['Anulado', 'danger'],
+                            'pending_review' => ['En revisión', 'warning'],
+                            'replaced' => ['Reemplazado', 'neutral'],
+                            'ignored' => ['Ignorado', 'neutral'],
+                            default => ['Estado por confirmar', 'neutral'],
+                        };
+                    @endphp
+                    <li class="flex items-center justify-between gap-3 py-3">
+                        <div>
+                            <p class="text-sm font-medium">{{ $label }}</p>
+                            <p class="mt-1 text-xs text-surface-muted">{{ $event->occurred_at_utc?->setTimezone($event->timezone)->format('d/m/Y · H:i') }}</p>
+                        </div>
+                        <x-ui.badge :variant="$tone">{{ $status }}</x-ui.badge>
+                    </li>
+                @empty
+                    <li class="py-3 text-sm text-surface-muted">Todavía no hay marcajes.</li>
+                @endforelse
+            </ul>
+        </section>
+        <section class="rounded-xl border border-surface-line p-5">
+            <flux:heading>Mis jornadas</flux:heading>
+            <ul class="mt-2 divide-y divide-surface-line">
+                @forelse ($workDays as $day)
+                    @php
+                        [$status, $tone] = match ($day->status) {
+                            WorkDay::STATUS_CALCULATED => ['Calculada', 'success'],
+                            WorkDay::STATUS_WITH_ALERTS => ['Con avisos', 'warning'],
+                            WorkDay::STATUS_UNDER_REVIEW => ['En revisión', 'warning'],
+                            WorkDay::STATUS_PENDING => ['Pendiente', 'neutral'],
+                            default => ['Estado por confirmar', 'neutral'],
+                        };
+                    @endphp
+                    <li class="flex items-center justify-between gap-3 py-3">
+                        <span class="whitespace-nowrap text-sm font-medium">{{ $day->work_date?->format('d/m/Y') }}</span>
+                        <x-ui.badge :variant="$tone">{{ $status }}</x-ui.badge>
+                    </li>
+                @empty
+                    <li class="py-3 text-sm text-surface-muted">Todavía no hay jornadas registradas.</li>
+                @endforelse
+            </ul>
+        </section>
     </div>
 </section>
