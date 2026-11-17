@@ -14,9 +14,9 @@ En **Relojes de asistencia → Checadas pendientes de identificar o clasificar**
 
 ## Piloto directo en producción
 
-El piloto viene desactivado. Despliega el código y aplica las migraciones pendientes revisadas en el servidor con el procedimiento habitual de Vera Time. Registra el reloj y vincula al trabajador en la empresa correcta. En el `.env` del servidor configura `VERA_ADMS_PILOT_SERIAL` con el número de serie y `VERA_ADMS_PILOT_IP` con la IP pública fija de salida de la red del reloj. Habilita con `VERA_ADMS_ENABLED=true` y reconstruye la caché con `php artisan config:cache`. Para desactivar, cambia el valor a `false` y reconstruye la caché.
+El receptor viene desactivado. Despliega el código y aplica las migraciones pendientes revisadas en el servidor con el procedimiento habitual de Vera Time. Registra cada reloj y vincula al trabajador en la empresa correcta. Habilita con `VERA_ADMS_ENABLED=true` y reconstruye la caché con `php artisan config:cache`. Para desactivar, cambia el valor a `false` y reconstruye la caché.
 
-El piloto exige HTTPS y comprueba la dirección remota que ve PHP. El número de serie identifica al equipo, y la IP limita el acceso a la red de origen autorizada. Este piloto es para un reloj en una red de confianza con IP fija. Si el alojamiento presenta la IP de un proxy como dirección remota, deja el piloto desactivado hasta verificar la configuración del alojamiento. Una solicitud sin autorización recibe 404.
+El receptor exige HTTPS y una serie registrada en una empresa y centro activos del mismo tenant. Acepta cambios de IP pública. Una solicitud sin autorización recibe 404. Consulta la limitación de identificación por serie al final de este documento.
 
 Una vez habilitado, configura el reloj con dominio `gotvera.com`, puerto 443, ADMS y HTTPS. Verifica primero que el firmware pueda usar el certificado del sitio. Luego valida una entrada y una salida en el historial de la empresa y comprueba que cada una aparezca una sola vez. MySQL permanece privado y el reloj inicia la conexión desde la sucursal.
 
@@ -64,3 +64,13 @@ El 12 de noviembre de 2026 a las 15:51:02 de Ciudad de México, Laravel registr�
 En esa ejecución el receptor permaneció abierto más allá del plazo previsto. Se cambió el arranque para comprobar la hora límite cada segundo. Este ajuste se debe verificar en la siguiente ejecución.
 
 En una ejecución posterior el reloj envió `ATTLOG` con una fila válida del 12 de noviembre de 2026 a las 20:38:38 (Ciudad de México). El archivo `storage/logs/adms-local.jsonl` muestra varias recepciones de la misma hora, coherentes con los reintentos por HTTP 503. La prueba confirma recepción en Laravel. Quedan pendientes la vinculación por dispositivo y trabajador, la deduplicación y el registro en `time_events`. Se detectaron dos procesos escuchando en el puerto de prueba al coincidir dos ejecuciones.
+
+## Autorización por serie para varias empresas (17/11/2026)
+
+Sustituye la restricción del piloto anterior. En producción se conserva únicamente `VERA_ADMS_ENABLED=true` como interruptor general y HTTPS es obligatorio. Las variables `VERA_ADMS_PILOT_SERIAL` y `VERA_ADMS_PILOT_IP` ya no se consultan y pueden retirarse del `.env`.
+
+Cada terminal debe registrarse en Configuración de empresa → Relojes de asistencia con su serie única y su centro. Se aceptan varios equipos por empresa y equipos de distintas empresas. La empresa y el centro deben estar activos y pertenecer al mismo tenant. La IP pública puede cambiar sin reconfigurar el receptor. La importación conserva el aislamiento por empresa, los vínculos por reloj y la deduplicación existentes.
+
+Esta modalidad identifica por serie, no autentica mediante una credencial secreta: conocer una serie registrada permite suplantar su origen. Es una limitación aceptada temporalmente; no presentar esta modalidad como autenticación criptográfica del dispositivo.
+
+Despliegue: actualizar código y ejecutar `php artisan config:cache`. No necesita migraciones ni volver a registrar equipos existentes.

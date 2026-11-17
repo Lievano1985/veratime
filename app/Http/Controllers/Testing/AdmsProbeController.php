@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Testing;
 
+use App\Domains\TimeRecords\Actions\AuthorizeAttendanceClockAction;
 use App\Domains\TimeRecords\Actions\ImportAttendanceClockAction;
 use App\Domains\TimeRecords\Exceptions\AttendanceClockImportException;
 use App\Models\AttendanceClock;
@@ -112,16 +113,12 @@ final class AdmsProbeController
     {
         if (app()->environment('production')) {
             $serial = $request->query('SN');
-            $allowedSerial = config('adms.pilot_serial');
-            $allowedIp = config('adms.pilot_ip');
             abort_unless(
                 config('adms.enabled') === true
                 && $request->isSecure()
-                && is_string($allowedIp) && filter_var($allowedIp, FILTER_VALIDATE_IP)
-                && $request->server('REMOTE_ADDR') === $allowedIp
-                && is_string($allowedSerial) && is_string($serial)
+                && is_string($serial)
                 && preg_match('/\A[A-Za-z0-9_-]{1,64}\z/', $serial)
-                && hash_equals(strtoupper($allowedSerial), strtoupper($serial)),
+                && app(AuthorizeAttendanceClockAction::class)->handle($serial),
                 404,
             );
 
