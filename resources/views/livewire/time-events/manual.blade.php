@@ -611,7 +611,7 @@ new class extends Component {
                             <td class="px-4 py-3">
                                 @if ($event->voided_at)
                                     <div class="space-y-1">
-                                        <p class="whitespace-nowrap font-medium">{{ $event->voided_at->utc()->format('Y-m-d H:i') }} UTC</p>
+                                        <p class="whitespace-nowrap font-medium" title="{{ $event->timezone }}">{{ $event->voided_at->setTimezone($event->timezone)->format('Y-m-d H:i') }}</p>
                                         <p class="text-xs text-zinc-500">{{ $event->voidedBy?->name ?? 'Usuario no disponible' }}</p>
                                     </div>
                                 @else
