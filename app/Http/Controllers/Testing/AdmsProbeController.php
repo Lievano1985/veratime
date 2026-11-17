@@ -48,12 +48,12 @@ final class AdmsProbeController
 
         $table = $request->query('table');
         abort_unless(is_string($table) && strcasecmp($table, 'ATTLOG') === 0, 403);
-        $length = (string) $request->server('CONTENT_LENGTH', '');
-        abort_unless(ctype_digit($length) && (int) $length <= 65536, 413);
+        $body = $request->getContent();
+        abort_if(strlen($body) > 65536, 413);
 
         if ($import) {
             try {
-                $count = app(ImportAttendanceClockAction::class)->handle($serial, $request->getContent());
+                $count = app(ImportAttendanceClockAction::class)->handle($serial, $body);
             } catch (InvalidArgumentException $exception) {
                 $diagnostic = $exception instanceof AttendanceClockImportException
                     ? ['motivo' => $exception->getMessage(), 'fila' => $exception->row,
@@ -77,9 +77,10 @@ final class AdmsProbeController
         $timezone = new DateTimeZone('America/Mexico_City');
         $now = new DateTimeImmutable('now', $timezone);
         $recent = [];
+        $recentStates = [];
         $count = 0;
-        foreach (preg_split('/\r?\n/', $request->getContent()) as $line) {
-            if (! preg_match('/\A[^\t\r\n]+\t(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\t/', $line, $fields)) {
+        foreach (preg_split('/\r?\n/', $body) as $line) {
+            if (! preg_match('/\A[^\t\r\n]+\t(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\t([0-9]{1,3})(?:\t|\z)/', $line, $fields)) {
                 continue;
             }
 
@@ -91,10 +92,11 @@ final class AdmsProbeController
             $count++;
             if (abs($now->getTimestamp() - $timestamp->getTimestamp()) <= 600) {
                 $recent[$timestamp->format(DATE_ATOM)] = true;
+                $recentStates[$fields[1].'|'.$fields[2]] = ['hora' => $fields[1], 'estado' => $fields[2]];
             }
         }
 
-        $this->record(['tipo' => 'ATTLOG', 'filas' => $count, 'horas_recientes' => array_keys($recent)]);
+        $this->record(['tipo' => 'ATTLOG', 'filas' => $count, 'horas_recientes' => array_keys($recent), 'estados_recientes' => array_values($recentStates)]);
 
         return $this->plain('', 503);
     }

@@ -61,10 +61,20 @@ it('imports the four ADMS states once and leaves rejected batches unconfirmed', 
     $this->assertDatabaseCount('attendance_clock_pending_events', 4);
     expect(TimeEvent::count())->toBe(4);
 
-    $overnight = "1\t2026-11-14 06:00:00\t1\n1\t2026-11-14 02:30:00\t5\n1\t2026-11-13 22:00:00\t0\n1\t2026-11-14 02:00:00\t4";
-    expect($import->handle('TEST1', $overnight))->toBe(4);
+    $overnight = "1\t2026-11-14 06:00:00\t1\n1\t2026-11-14 02:30:00\t5\n1\t2026-11-13 22:00:00\t0\n1\t2026-11-14 02:00:00\t4\n1\t2026-11-14 02:01:00\t4";
+    expect($import->handle('TEST1', $overnight))->toBe(5);
+    $this->assertDatabaseHas('attendance_clock_pending_events', [
+        'occurred_local_time' => '02:01:00',
+        'reason' => 'secuencia_de_marcaje_invalida',
+    ]);
     expect(app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-11-13')->pluck('event_type')->all())
         ->toBe(['clock_in', 'break_start', 'break_end', 'clock_out']);
     $import->handle('TEST1', "1\t2026-11-14 06:05:00\t1\n1\t2026-11-14 22:00:00\t0");
     expect(TimeEvent::count())->toBe(9);
+
+    $import->handle('TEST1', "1\t2026-11-15 05:00:00\t0\n1\t2026-11-15 22:15:00\t0\n1\t2026-11-16 06:00:00\t1");
+    expect(app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-11-14')->pluck('event_type')->all())
+        ->toBe(['clock_in']);
+    expect(app(ResolveValidTimeEventsForWorkDateAction::class)->handle($company, $relationship, '2026-11-15')->pluck('event_type')->all())
+        ->toBe(['clock_in', 'clock_out']);
 });

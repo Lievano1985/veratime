@@ -12,7 +12,12 @@ use Illuminate\Support\Facades\DB;
 
 class ImportAttendanceClockAction
 {
-    private const TYPES = ['0' => 'clock_in', '1' => 'clock_out', '4' => 'break_start', '5' => 'break_end'];
+    private const TYPES = [
+        '0' => 'clock_in',
+        '1' => 'clock_out',
+        '4' => 'break_start',
+        '5' => 'break_end',
+    ];
 
     public function __construct(private readonly CreateTimeEventAction $createTimeEvent) {}
 
@@ -128,21 +133,17 @@ class ImportAttendanceClockAction
                 break;
             }
             $eventDate = $event->occurred_local_date->toDateString();
-            if ($state === 'closed' && $start !== $eventDate) {
-                $state = 'waiting';
-            }
+            $state = $this->stateAt($state, $start, $eventDate, $event->occurred_at_utc);
             $next = $this->nextState($state, $event->event_type);
             if ($next !== null) {
                 if ($event->event_type === 'clock_in') {
-                    $start = $eventDate;
+                    $start = $event;
                 }
                 $state = $next;
             }
         }
 
-        if ($state === 'closed' && $start !== $date) {
-            $state = 'waiting';
-        }
+        $state = $this->stateAt($state, $start, $date, $utc);
         $next = $this->nextState($state, $eventType);
         if ($next === null) {
             return match (true) {
@@ -153,32 +154,44 @@ class ImportAttendanceClockAction
         }
 
         // A late arrival must not invalidate a sequence that was already recorded.
-        $candidateStart = $eventType === 'clock_in' ? $date : $start;
+        $candidateStart = $eventType === 'clock_in'
+            ? new TimeEvent(['occurred_local_date' => $date, 'occurred_at_utc' => $utc])
+            : $start;
         foreach ($events as $event) {
             if (! $event->occurred_at_utc->greaterThan($utc)) {
                 continue;
             }
             $eventDate = $event->occurred_local_date->toDateString();
-            if ($state === 'closed' && $start !== $eventDate) {
-                $state = 'waiting';
-            }
-            if ($next === 'closed' && $candidateStart !== $eventDate) {
-                $next = 'waiting';
-            }
+            $state = $this->stateAt($state, $start, $eventDate, $event->occurred_at_utc);
+            $next = $this->stateAt($next, $candidateStart, $eventDate, $event->occurred_at_utc);
             $original = $this->nextState($state, $event->event_type);
             $withCandidate = $this->nextState($next, $event->event_type);
             if ($original !== null && $withCandidate === null) {
                 return 'secuencia_de_marcaje_invalida';
             }
             if ($event->event_type === 'clock_in') {
-                $start = $original !== null ? $eventDate : $start;
-                $candidateStart = $withCandidate !== null ? $eventDate : $candidateStart;
+                $start = $original !== null ? $event : $start;
+                $candidateStart = $withCandidate !== null ? $event : $candidateStart;
             }
             $state = $original ?? $state;
             $next = $withCandidate ?? $next;
         }
 
         return null;
+    }
+
+    private function stateAt(string $state, ?TimeEvent $start, string $date, DateTimeImmutable $utc): string
+    {
+        if ($start === null || $start->occurred_local_date->toDateString() === $date) {
+            return $state;
+        }
+
+        // Leave the old day incomplete when its open sequence is too old to continue.
+        if ($state === 'closed' || $utc->getTimestamp() - $start->occurred_at_utc->getTimestamp() >= 86400) {
+            return 'waiting';
+        }
+
+        return $state;
     }
 
     private function nextState(string $state, string $type): ?string
