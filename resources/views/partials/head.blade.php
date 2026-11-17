@@ -41,4 +41,16 @@
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance
+@if (config('app.force_light_appearance'))
+    <style>:root { color-scheme: light; }</style>
+    <script>
+        window.Flux = {
+            applyAppearance() {
+                document.documentElement.classList.remove('dark');
+            },
+        };
+        window.Flux.applyAppearance();
+    </script>
+@else
+    @fluxAppearance
+@endif

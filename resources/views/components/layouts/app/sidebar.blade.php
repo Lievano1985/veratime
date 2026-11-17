@@ -1,6 +1,6 @@
 @php($homeRouteName = \App\Support\WebHomeRoute::forUser(auth()->user(), app(\App\Domains\Tenancy\Support\CurrentCompany::class)->get()))
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ! config('app.force_light_appearance')])>
     <head>
         @include('partials.head')
     </head>

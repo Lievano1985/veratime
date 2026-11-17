@@ -67,6 +67,8 @@ return [
 
     'timezone' => 'UTC',
 
+    'force_light_appearance' => env('VERA_FORCE_LIGHT_APPEARANCE', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
